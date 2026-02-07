@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord ASE - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-tachometer-alt text-blue-500 mr-3"></i>
+            Tableau de bord Protection Enfance
+        </h1>
+        <p class="text-gray-600 mt-2">Vue d'ensemble de l'activité ASE</p>
+    </div>
+
+    <!-- Message temporaire -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle text-blue-500 text-xl mr-3"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-blue-800">Module en construction</h3>
+                <p class="text-blue-700 mt-1">
+                    Le module Protection Enfance est en cours de développement. 
+                    Les fonctionnalités seront disponibles progressivement.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartes d'accès rapide -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="{% url 'protection_enfance:ip_liste' %}" 
+           class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300 border-l-4 border-orange-500">
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-3xl text-orange-500 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Informations Préoccupantes</h3>
+                <p class="text-gray-600">Gestion des signalements et IP</p>
+            </div>
+        </a>
+
+        <a href="{% url 'protection_enfance:placements_liste' %}" 
+           class="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300 border-l-4 border-green-500">
+            <div class="text-center">
+                <i class="fas fa-home text-3xl text-green-500 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Placements</h3>
+                <p class="text-gray-600">Suivi des placements ASE</p>
+            </div>
+        </a>
+
+        <div class="bg-gray-100 p-6 rounded-lg border-l-4 border-gray-400 opacity-75">
+            <div class="text-center">
+                <i class="fas fa-heart text-3xl text-gray-400 mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-500 mb-2">Adoption</h3>
+                <p class="text-gray-500">Bientôt disponible</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

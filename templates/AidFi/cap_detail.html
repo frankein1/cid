@@ -1,0 +1,251 @@
+<!-- /templates/AidFi/cap_detail.html -->
+{% extends "base.html" %}
+{% load capacites %}
+
+{% block title %}Chèque CAP - Détail{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <!-- En-tête -->
+    <div class="mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-ticket-alt text-emerald-600 mr-2"></i>
+                    Chèque d'Accompagnement Personnalisé (CAP)
+                </h1>
+                <p class="text-gray-600 mt-1">
+                    Pour {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
+                </p>
+            </div>
+            <div class="flex space-x-2">
+                <a href="{% url 'AidFi:dashboard_beneficiaire' demande.beneficiaire.id %}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Retour au dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte principale -->
+    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200 mb-6">
+        <!-- En-tête de la carte -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-emerald-50">
+            <div class="flex justify-between items-center">
+                <div>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold 
+                        {% if demande.statut == 'ATTRIBUE' %}bg-emerald-100 text-emerald-800
+                        {% elif demande.statut == 'UTILISE' %}bg-blue-100 text-blue-800
+                        {% elif demande.statut == 'EXPIRE' %}bg-gray-100 text-gray-800
+                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                        {{ demande.get_statut_display }}
+                    </span>
+                    <span class="ml-3 text-sm text-gray-600">
+                        N° {{ demande.numero_cap|default:demande.id }} • 
+                        Attribué le {{ demande.date_attribution|date:"d/m/Y" }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-2xl font-bold text-gray-900">
+                        {{ demande.montant|default:"0.00" }} €
+                    </span>
+                    <div class="text-sm text-gray-500">Valeur faciale</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Corps de la carte -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Colonne gauche : Informations du CAP -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-info-circle text-gray-400 mr-2"></i>
+                        Caractéristiques du CAP
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Type de CAP</label>
+                            <p class="mt-1 text-gray-900">{{ demande.get_type_cap_display|default:"Standard" }}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Prestataire partenaire</label>
+                            <p class="mt-1 text-gray-900">{{ demande.prestataire.nom|default:"Non spécifié" }}</p>
+                            {% if demande.prestataire.activite %}
+                            <p class="text-sm text-gray-500">{{ demande.prestataire.activite }}</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Validité</label>
+                            <p class="mt-1 text-gray-900">
+                                Du {{ demande.date_debut_validite|date:"d/m/Y" }} 
+                                au {{ demande.date_fin_validite|date:"d/m/Y" }}
+                            </p>
+                            {% if demande.est_expire %}
+                            <p class="text-sm text-red-600 font-medium mt-1">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                Expiré depuis {{ demande.jours_depuis_expiration }} jour{{ demande.jours_depuis_expiration|pluralize }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne droite : Utilisation -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-shopping-cart text-gray-400 mr-2"></i>
+                        Utilisation
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Statut d'utilisation</label>
+                            <div class="mt-1">
+                                {% if demande.date_utilisation %}
+                                <p class="text-gray-900">
+                                    Utilisé le {{ demande.date_utilisation|date:"d/m/Y à H:i" }}
+                                </p>
+                                {% if demande.lieu_utilisation %}
+                                <p class="text-sm text-gray-600 mt-1">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>
+                                    {{ demande.lieu_utilisation }}
+                                </p>
+                                {% endif %}
+                                {% else %}
+                                <p class="text-gray-900">Non encore utilisé</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Montant utilisé</label>
+                            <p class="mt-1 text-gray-900">
+                                {{ demande.montant_utilise|default:"0.00" }} €
+                                {% if demande.montant_restant %}
+                                <span class="text-sm text-gray-500">
+                                    (reste {{ demande.montant_restant }} €)
+                                </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        {% if demande.objet_utilisation %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Objet de l'utilisation</label>
+                            <p class="mt-1 text-gray-900">{{ demande.objet_utilisation }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes/Justification -->
+            {% if demande.justification or demande.notes %}
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-sticky-note text-gray-400 mr-2"></i>
+                    Notes et justifications
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if demande.justification %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Justification de l'attribution</label>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-gray-700 whitespace-pre-line">{{ demande.justification }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if demande.notes %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 mb-2">Notes complémentaires</label>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-gray-700 whitespace-pre-line">{{ demande.notes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Métadonnées -->
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-user-cog text-gray-400 mr-2"></i>
+                    Métadonnées
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Attribué par</label>
+                        <p class="mt-1 text-gray-900">{{ demande.attribue_par.get_full_name|default:demande.attribue_par.username }}</p>
+                    </div>
+                    
+                    {% if demande.valide_par %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Validé par</label>
+                        <p class="mt-1 text-gray-900">{{ demande.valide_par.get_full_name|default:demande.valide_par.username }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Date de création</label>
+                        <p class="mt-1 text-gray-900">{{ demande.date_creation|date:"d/m/Y à H:i" }}</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500">Dernière modification</label>
+                        <p class="mt-1 text-gray-900">{{ demande.date_modification|date:"d/m/Y à H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pied de carte : Actions -->
+        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    {% if demande.qr_code %}
+                    <a href="{{ demande.qr_code.url }}" 
+                       target="_blank"
+                       class="text-emerald-600 hover:text-emerald-800 inline-flex items-center">
+                        <i class="fas fa-qrcode mr-1"></i>
+                        Voir QR Code
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="flex space-x-2">
+                    {% if demande.statut == 'ATTRIBUE' and user.a_la_capacite('peut_gerer_finance') %}
+                    <button type="button"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">
+                        <i class="fas fa-check mr-2"></i>
+                        Marquer comme utilisé
+                    </button>
+                    {% endif %}
+                    
+                    {% if user.a_la_capacite('peut_gerer_finance') %}
+                    <button type="button"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fas fa-print mr-2"></i>
+                        Imprimer le CAP
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retour au bénéficiaire -->
+    <div class="mt-4">
+        <a href="{% url 'beneficiaire:detail_beneficiaire' demande.beneficiaire.code_interne %}"
+           class="text-sm text-gray-600 hover:text-gray-800 inline-flex items-center">
+            <i class="fas fa-user mr-1"></i>
+            Voir la fiche complète de {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
+        </a>
+    </div>
+</div>
+{% endblock %}

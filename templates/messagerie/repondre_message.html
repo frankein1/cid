@@ -1,0 +1,123 @@
+<!-- templates/messagerie/repondre_message.html -->
+{% extends 'base.html' %}
+
+{% block title %}Répondre - {{ message_original.objet }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Bouton retour -->
+        <a href="{% url 'messagerie:voir_message' message_original.id %}" 
+           class="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+            <i class="fas fa-arrow-left mr-2"></i>Retour au message
+        </a>
+
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-reply mr-3 text-blue-600"></i>
+            Répondre
+        </h1>
+
+        <!-- Contexte du message original -->
+        <div class="bg-gray-50 border-l-4 border-blue-500 p-4 mb-6">
+            <div class="flex items-center text-sm text-gray-600 mb-2">
+                <i class="fas fa-user mr-2"></i>
+                <span class="font-medium">{{ message_original.expediteur.get_full_name }}</span>
+                <span class="mx-2">•</span>
+                <span>{{ message_original.date_creation|date:"d/m/Y à H:i" }}</span>
+            </div>
+            <div class="font-medium text-gray-800 mb-1">{{ message_original.objet }}</div>
+            <p class="text-gray-600 text-sm line-clamp-3">{{ message_original.contenu|truncatewords:30 }}</p>
+        </div>
+
+        <!-- Formulaire de réponse -->
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <!-- Informations automatiques -->
+                <div class="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm">
+                    <div class="flex items-center text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <div>
+                            <div><strong>Destinataire :</strong> {{ message_original.expediteur.get_full_name }}</div>
+                            {% if message_original.copie %}
+                            <div><strong>Copie :</strong> {{ message_original.copie.get_full_name }}</div>
+                            {% endif %}
+                            <div class="text-xs text-blue-600 mt-1">
+                                <strong>Objet :</strong> Re: {{ message_original.objet }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenu de la réponse -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Votre réponse <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="contenu" rows="10" required 
+                              placeholder="Tapez votre réponse ici..."
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Pièces jointes GED existantes -->
+                {% if mes_documents %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Attacher des documents existants (GED)
+                    </label>
+                    <div class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                        {% for doc in mes_documents %}
+                        <label class="flex items-center py-2 hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="documents_ged" value="{{ doc.id }}" 
+                                   class="mr-3 h-4 w-4 text-blue-600">
+                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                            <span class="text-sm">{{ doc.titre }}</span>
+                            <span class="text-xs text-gray-500 ml-2">({{ doc.date_creation|date:"d/m/Y" }})</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Nouveaux fichiers -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Ajouter de nouveaux fichiers
+                    </label>
+                    <input type="file" name="nouveaux_fichiers" multiple 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-gray-500 mt-1">Les fichiers seront automatiquement ajoutés à la GED</p>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex justify-end space-x-3 mt-6">
+                <a href="{% url 'messagerie:voir_message' message_original.id %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Envoyer la réponse
+                </button>
+            </div>
+        </form>
+
+        <!-- Historique du fil (optionnel - aperçu) -->
+        {% if message_original.fil_conversation.count > 1 %}
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <h3 class="text-sm font-medium text-gray-700 mb-3">
+                <i class="fas fa-history mr-2"></i>
+                Historique de la conversation ({{ message_original.fil_conversation.count }} messages)
+            </h3>
+            <a href="{% url 'messagerie:voir_message' message_original.id %}" 
+               class="text-sm text-blue-600 hover:text-blue-700">
+                Voir la conversation complète →
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

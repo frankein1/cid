@@ -1,0 +1,11 @@
+<!-- /templates/ged/alerte_badge.html -->
+{# FRAGMENT UNIQUEMENT — PAS DE extends #}
+{% if count > 0 %}
+<span
+  class="inline-flex items-center justify-center px-2 py-1 ml-1
+         text-[10px] font-black leading-none text-white
+         bg-red-600 rounded-full shadow-sm animate-pulse"
+  title="{{ count }} document(s) à renouveler impérativement">
+    {{ count }}
+</span>
+{% endif %}

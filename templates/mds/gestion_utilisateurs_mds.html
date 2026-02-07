@@ -1,0 +1,176 @@
+<!-- ================================================================ -->
+<!-- 2. templates/mds/gestion_utilisateurs_mds.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Équipe {{ mds.code_mds }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4">
+    <div class="mb-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+                <nav class="flex mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+                    <a href="{% url 'mds:liste_mds' %}" class="hover:text-purple-600 transition">MDS</a>
+                    <i class="fas fa-chevron-right mx-2 text-[10px] mt-1"></i>
+                    <a href="{% url 'mds:detail_mds' mds.id %}" class="hover:text-purple-600 transition">{{ mds.code_mds }}</a>
+                    <i class="fas fa-chevron-right mx-2 text-[10px] mt-1"></i>
+                    <span class="text-gray-900 font-medium">Gestion du personnel</span>
+                </nav>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                    <i class="fas fa-users-cog text-purple-600 mr-3"></i>Équipe opérationnelle
+                </h1>
+                <p class="text-gray-600 mt-1">Gestion des agents affectés à la structure : <strong>{{ mds.nom }}</strong></p>
+            </div>
+            
+            <div class="flex gap-3">
+                <a href="{% url 'mds:detail_mds' mds.id %}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                    <i class="fas fa-arrow-left mr-2"></i> Dashboard
+                </a>
+                <a href="{% url 'mds:ajouter_utilisateur_mds' mds.id %}" class="inline-flex items-center px-5 py-2.5 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 shadow-sm transition">
+                    <i class="fas fa-user-plus mr-2"></i> Affecter un agent
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center">
+                <div class="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mr-4">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Total Effectif</p>
+                    <p class="text-2xl font-black text-gray-900">{{ profiles.count }}</p>
+                </div>
+            </div>
+        </div>
+        {% for nom_profil, count in stats_profils.items %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center">
+                <div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mr-4">
+                    <i class="fas fa-user-tag text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase truncate w-32">{{ nom_profil }}</p>
+                    <p class="text-2xl font-black text-gray-900">{{ count }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row gap-4 items-center">
+        <div class="relative flex-1 w-full">
+            <input type="text" id="userSearch" placeholder="Rechercher un nom, un email ou un rôle..." 
+                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all">
+            <div class="absolute left-3 top-2.5 text-gray-400">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+        <div class="flex items-center text-xs font-medium text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 italic">
+            <i class="fas fa-info-circle mr-2 text-purple-400"></i>
+            Les agents en "Secondaire" ne sont pas comptés dans la capacité physique max de la MDS.
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left" id="userTable">
+                <thead class="bg-gray-50/80 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Identité de l'agent</th>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Compétences / Profils</th>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Type Affectation</th>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Role Spécifique</th>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for profile in profiles %}
+                    <tr class="hover:bg-purple-50/30 transition-colors duration-150 user-row">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                    {{ profile.user.first_name.0|upper }}{{ profile.user.last_name.0|upper }}
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-extrabold text-gray-900">{{ profile.user.get_full_name }}</div>
+                                    <div class="text-[11px] text-gray-500 font-mono">{{ profile.user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for p_core in profile.user.profils.all %}
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-50 text-blue-600 border border-blue-100">
+                                    {{ p_core.nom }}
+                                </span>
+                                {% empty %}
+                                <span class="text-xs italic text-gray-400">Aucun profil core</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if profile.principale %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase bg-green-100 text-green-700">
+                                <i class="fas fa-home mr-1.5"></i> Principale
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase bg-gray-100 text-gray-600">
+                                <i class="fas fa-map-marker-alt mr-1.5"></i> Secondaire
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-xs font-medium text-gray-600">
+                                {{ profile.role_specifique|default:"—" }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <a href="{% url 'mds:modifier_profil_utilisateur' mds.id profile.user.id %}" 
+                               class="inline-flex items-center justify-center h-8 w-8 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition shadow-sm"
+                               title="Modifier les droits">
+                                <i class="fas fa-user-edit text-xs"></i>
+                            </a>
+                            <a href="{% url 'mds:supprimer_utilisateur_mds' mds.id profile.user.id %}" 
+                               onclick="return confirm('Retirer cet agent de la MDS ? (Cela ne supprime pas son compte DITAS)')"
+                               class="inline-flex items-center justify-center h-8 w-8 rounded-lg text-red-600 bg-red-50 hover:bg-red-600 hover:text-white transition shadow-sm"
+                               title="Retirer l'affectation">
+                                <i class="fas fa-user-minus text-xs"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center">
+                            <div class="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-user-friends text-3xl text-gray-200"></i>
+                            </div>
+                            <p class="text-gray-500 font-medium">L'équipe est vide pour le moment.</p>
+                            <a href="{% url 'mds:ajouter_utilisateur_mds' mds.id %}" class="text-purple-600 font-bold hover:underline mt-2 inline-block">Ajouter un premier collaborateur</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Script de recherche en temps réel
+    document.getElementById('userSearch').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('.user-row');
+        
+        rows.forEach(row => {
+            let text = row.innerText.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

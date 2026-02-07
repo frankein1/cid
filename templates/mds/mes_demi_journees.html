@@ -1,0 +1,159 @@
+<!-- ================================================================ -->
+<!-- 1. templates/mds/mes_demi_journees.html - COMPLET -->
+<!-- ================================================================ -->
+
+{% extends 'base.html' %}
+
+{% block title %}Mon Planning de Réception - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between border-b border-gray-200 pb-5">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                <i class="fas fa-user-clock text-blue-600 mr-3"></i>Mon Planning
+            </h1>
+            <p class="text-gray-500 mt-1 flex items-center">
+                <i class="fas fa-building text-xs mr-2"></i>Affectation : <span class="font-semibold ml-1">{{ mds.nom }}</span>
+            </p>
+        </div>
+        <div class="hidden sm:block">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Cycle hebdomadaire
+            </span>
+        </div>
+    </div>
+
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-lightbulb text-blue-600"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-800 font-medium">
+                    Définissez vos demi-journées de présence physique pour l'accueil du public.
+                </p>
+                <p class="text-xs text-blue-600 mt-1 italic">
+                    Les modifications sont enregistrées instantanément après chaque clic.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <table class="w-full border-collapse">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-100">
+                    <th class="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Jour de la semaine</th>
+                    <th class="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest border-l border-gray-100">Matinée</th>
+                    <th class="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest border-l border-gray-100">Après-midi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for item in grille %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <span class="text-sm font-bold text-gray-700">{{ item.jour_nom }}</span>
+                    </td>
+                    
+                    <td class="px-6 py-5 text-center border-l border-gray-50">
+                        <button type="button" 
+                                class="toggle-btn w-full max-w-[140px] py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-tighter transition-all transform active:scale-95 shadow-sm
+                                {% if item.matin and item.matin.actif %}
+                                    bg-green-500 text-white hover:bg-green-600 hover:shadow-green-100
+                                {% else %}
+                                    bg-gray-100 text-gray-400 hover:bg-gray-200
+                                {% endif %}"
+                                data-jour="{{ item.jour_num }}"
+                                data-type="MATIN">
+                            {% if item.matin and item.matin.actif %}
+                                <i class="fas fa-check mr-2"></i>Permanence
+                            {% else %}
+                                <i class="fas fa-minus mr-2"></i>Libre
+                            {% endif %}
+                        </button>
+                    </td>
+
+                    <td class="px-6 py-5 text-center border-l border-gray-50">
+                        <button type="button" 
+                                class="toggle-btn w-full max-w-[140px] py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-tighter transition-all transform active:scale-95 shadow-sm
+                                {% if item.apresmidi and item.apresmidi.actif %}
+                                    bg-green-500 text-white hover:bg-green-600 hover:shadow-green-100
+                                {% else %}
+                                    bg-gray-100 text-gray-400 hover:bg-gray-200
+                                {% endif %}"
+                                data-jour="{{ item.jour_num }}"
+                                data-type="APRES_MIDI">
+                            {% if item.apresmidi and item.apresmidi.actif %}
+                                <i class="fas fa-check mr-2"></i>Permanence
+                            {% else %}
+                                <i class="fas fa-minus mr-2"></i>Libre
+                            {% endif %}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center pt-4">
+        <a href="{% url 'mds:detail_mds' mds_id=mds.id %}" 
+           class="inline-flex items-center text-sm font-bold text-gray-500 hover:text-blue-600 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Retour aux détails de la MDS
+        </a>
+    </div>
+</div>
+
+<style>
+    .toggle-btn:hover {
+        filter: brightness(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const jour = this.dataset.jour;
+        const type = this.dataset.type;
+        const csrftoken = '{{ csrf_token }}';
+
+        const formData = new FormData();
+        formData.append('jour_semaine', jour);
+        formData.append('type_demi_journee', type);
+
+        // Appel AJAX vers la vue toggle_demi_journee
+        fetch("{% url 'mds:toggle_demi_journee' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mise à jour visuelle dynamique du bouton sans recharger la page
+                if (data.actif) {
+                    this.className = "toggle-btn w-full max-w-[140px] py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-tighter transition-all transform active:scale-95 shadow-sm bg-green-500 text-white hover:bg-green-600 hover:shadow-green-100";
+                    this.innerHTML = '<i class="fas fa-check mr-2"></i>Permanence';
+                } else {
+                    this.className = "toggle-btn w-full max-w-[140px] py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-tighter transition-all transform active:scale-95 shadow-sm bg-gray-100 text-gray-400 hover:bg-gray-200";
+                    this.innerHTML = '<i class="fas fa-minus mr-2"></i>Libre';
+                }
+            } else {
+                alert("Erreur lors de la mise à jour : " + (data.error || "Inconnue"));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert("Erreur de connexion au serveur.");
+        });
+    });
+});
+</script>
+{% endblock %}

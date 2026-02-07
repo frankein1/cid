@@ -1,0 +1,93 @@
+<!-- ================================================================ -->
+<!-- 1. templates/mds/mes_demi_journees.html - COMPLET -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Mes demi-journées de réception - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-calendar-check text-blue-500 mr-3"></i>
+            Mes demi-journées de réception
+        </h1>
+        <p class="text-gray-600 mt-2">MDS : {{ mds.nom }}</p>
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <p class="text-blue-700 text-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            Cliquez sur une case pour activer/désactiver votre disponibilité
+        </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jour</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Matin (9h-12h)</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Après-midi (13h30-17h)</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for item in grille %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        {{ item.jour_nom }}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <form method="post" action="{% url 'mds:toggle_demi_journee' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="jour_semaine" value="{{ item.jour_num }}">
+                            <input type="hidden" name="type_demi_journee" value="MATIN">
+                            <button type="submit" 
+                                    class="px-4 py-2 rounded-md transition duration-150
+                                    {% if item.matin and item.matin.actif %}
+                                        bg-green-100 text-green-800 hover:bg-green-200
+                                    {% else %}
+                                        bg-gray-100 text-gray-500 hover:bg-gray-200
+                                    {% endif %}">
+                                {% if item.matin and item.matin.actif %}
+                                    <i class="fas fa-check-circle mr-1"></i>Disponible
+                                {% else %}
+                                    <i class="fas fa-times-circle mr-1"></i>Indisponible
+                                {% endif %}
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <form method="post" action="{% url 'mds:toggle_demi_journee' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="jour_semaine" value="{{ item.jour_num }}">
+                            <input type="hidden" name="type_demi_journee" value="APRES_MIDI">
+                            <button type="submit" 
+                                    class="px-4 py-2 rounded-md transition duration-150
+                                    {% if item.apres_midi and item.apres_midi.actif %}
+                                        bg-green-100 text-green-800 hover:bg-green-200
+                                    {% else %}
+                                        bg-gray-100 text-gray-500 hover:bg-gray-200
+                                    {% endif %}">
+                                {% if item.apres_midi and item.apres_midi.actif %}
+                                    <i class="fas fa-check-circle mr-1"></i>Disponible
+                                {% else %}
+                                    <i class="fas fa-times-circle mr-1"></i>Indisponible
+                                {% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-6 text-center">
+        <a href="{% url 'mds:detail_mds' mds_id=mds.id %}" 
+           class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la MDS
+        </a>
+    </div>
+</div>
+{% endblock %}

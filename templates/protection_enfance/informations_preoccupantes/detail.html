@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Détail IP - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-file-alt text-blue-500 mr-3"></i>
+            Détail de l'IP
+        </h1>
+        <p class="text-gray-600 mt-2">Consultation d'une Information Préoccupante</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        {% if ip %}
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Numéro</label>
+                    <p class="mt-1 text-lg font-semibold">{{ ip.numero }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Statut</label>
+                    <p class="mt-1">
+                        <span class="inline-block px-2 py-1 text-xs font-semibold rounded 
+                                    {% if ip.statut == 'NOUVEAU' %}bg-yellow-100 text-yellow-800
+                                    {% elif ip.statut == 'EN_EVALUATION' %}bg-blue-100 text-blue-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ ip.get_statut_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Enfant concerné</label>
+                <p class="mt-1">{{ ip.enfant_nom|default:"Non renseigné" }}</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <p class="mt-1 bg-gray-50 p-3 rounded">{{ ip.description|default:"Aucune description" }}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date de création</label>
+                    <p class="mt-1">{{ ip.date_creation|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Auteur</label>
+                    <p class="mt-1">{{ ip.auteur.get_full_name|default:ip.auteur.username }}</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+            <i class="fas fa-search text-4xl mb-4"></i>
+            <p>Information Préoccupante non trouvée</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-8 pt-6 border-t">
+            <a href="{% url 'protection_enfance:ip_liste' %}" 
+               class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition duration-150">
+                <i class="fas fa-arrow-left mr-2"></i>Retour à la liste
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

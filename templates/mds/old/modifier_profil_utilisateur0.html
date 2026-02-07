@@ -1,0 +1,188 @@
+<!-- templates/mds/modifier_profil_utilisateur.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Modifier le profil - {{ mds.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Modifier le profil</h1>
+            <p class="mt-2 text-gray-600">
+                Utilisateur : {{ profile.user.get_full_name }}<br>
+                MDS : {{ mds.nom }} ({{ mds.code }})
+            </p>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Modification du profil</h2>
+            </div>
+            <div class="px-6 py-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-6">
+                        <!-- Information utilisateur -->
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-900 mb-2">Information utilisateur</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Nom complet</p>
+                                    <p class="font-medium">{{ profile.user.get_full_name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Nom d'utilisateur</p>
+                                    <p class="font-medium">{{ profile.user.username }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="font-medium">{{ profile.user.email|default:"Non renseigné" }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Date d'ajout</p>
+                                    <p class="font-medium">{{ profile.date_creation|date:"d/m/Y" }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section profil -->
+                        <div>
+                            <h3 class="text-md font-medium text-gray-900 mb-4">Profil et période</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% with field=form.profil %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                        {{ field.label }}
+                                    </label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                                
+                                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {% with field=form.date_debut %}
+                                    <div>
+                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                            {{ field.label }}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.errors %}
+                                        <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                    
+                                    {% with field=form.date_fin %}
+                                    <div>
+                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                                            {{ field.label }}
+                                        </label>
+                                        {{ field }}
+                                        {% if field.help_text %}
+                                        <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                                        {% endif %}
+                                        {% if field.errors %}
+                                        <p class="mt-1 text-sm text-red-600">{{ field.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                    {% endwith %}
+                                </div>
+                                
+                                {% with field=form.principale %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                    {% if field.help_text %}
+                                    <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+
+                        <!-- Section permissions -->
+                        <div>
+                            <h3 class="text-md font-medium text-gray-900 mb-4">Permissions</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% with field=form.peut_creer_beneficiaire %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                </div>
+                                {% endwith %}
+                                
+                                {% with field=form.peut_modifier_beneficiaire %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                </div>
+                                {% endwith %}
+                                
+                                {% with field=form.peut_supprimer_beneficiaire %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                </div>
+                                {% endwith %}
+                                
+                                {% with field=form.peut_voir_statistiques %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                </div>
+                                {% endwith %}
+                                
+                                {% with field=form.peut_gerer_utilisateurs %}
+                                <div class="flex items-center">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}" class="ml-2 block text-sm text-gray-900">
+                                        {{ field.label }}
+                                    </label>
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'action -->
+                    <div class="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+                        <a href="{% url 'mds:supprimer_utilisateur_mds' mds.id profile.user.id %}" 
+                           class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Retirer de la MDS
+                        </a>
+                        <div class="flex space-x-4">
+                            <a href="{% url 'mds:gestion_utilisateurs_mds' mds.id %}" 
+                               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Annuler
+                            </a>
+                            <button type="submit" 
+                                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Enregistrer les modifications
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

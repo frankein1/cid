@@ -1,0 +1,232 @@
+<!-- /templates/mds/mds_export_pdf.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>DITAS - Fiche MDS {{ mds.code_mds }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @top-right {
+                content: "Réf: {{ mds.code_mds }}";
+                font-size: 9pt;
+                color: #999;
+            }
+            @bottom-left {
+                content: "Document confidentiel - DITAS";
+                font-size: 8pt;
+                color: #999;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 9pt;
+            }
+        }
+        
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #2d3748;
+        }
+
+        /* En-tête institutionnel */
+        .header-table {
+            width: 100%;
+            border-bottom: 3px solid #3182ce;
+            margin-bottom: 1cm;
+        }
+        .header-title {
+            text-align: right;
+            vertical-align: bottom;
+            padding-bottom: 10px;
+        }
+        .header-title h1 {
+            margin: 0;
+            color: #2b6cb0;
+            font-size: 22pt;
+            text-transform: uppercase;
+        }
+
+        /* Sections */
+        .section {
+            margin-bottom: 1cm;
+            page-break-inside: avoid; /* Évite de couper une section en deux */
+        }
+        .section-title {
+            background-color: #ebf8ff;
+            color: #2c5282;
+            padding: 8px 15px;
+            font-weight: bold;
+            font-size: 12pt;
+            border-left: 5px solid #3182ce;
+            margin-bottom: 15px;
+        }
+
+        /* Grid simulé pour PDF */
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .info-label {
+            width: 30%;
+            font-weight: bold;
+            color: #4a5568;
+            background-color: #f7fafc;
+            padding: 8px;
+            border: 1px solid #edf2f7;
+        }
+        .info-value {
+            width: 70%;
+            padding: 8px;
+            border: 1px solid #edf2f7;
+        }
+
+        /* Tableaux de données */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .data-table th {
+            background-color: #2d3748;
+            color: white;
+            text-align: left;
+            padding: 10px;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 9pt;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        .bg-success { background-color: #c6f6d5; color: #22543d; }
+        .bg-info { background-color: #bee3f8; color: #2a4365; }
+        .bg-warning { background-color: #feebc8; color: #744210; }
+
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 80pt;
+            color: rgba(0, 0, 0, 0.03);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">DITAS</div>
+
+    <table class="header-table">
+        <tr>
+            <td>
+                <div style="font-size: 14pt; font-weight: bold; color: #4a5568;">
+                    CONSEIL DÉPARTEMENTAL
+                </div>
+                <div style="font-size: 10pt; color: #718096;">Direction de l'Action Sociale</div>
+            </td>
+            <td class="header-title">
+                <h1>Fiche MDS</h1>
+                <div style="color: #718096;">{{ mds.nom }} ({{ mds.code_mds }})</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <div class="section-title">1. IDENTIFICATION ET CONTACT</div>
+        <table class="info-table">
+            <tr>
+                <td class="info-label">Adresse complète</td>
+                <td class="info-value">
+                    {{ mds.adresse }}<br>
+                    {{ mds.code_postal }} {{ mds.ville }}
+                </td>
+            </tr>
+            <tr>
+                <td class="info-label">Contact Direct</td>
+                <td class="info-value">
+                    Tél: {{ mds.telephone|default:"-" }}<br>
+                    Email: {{ mds.email|default:"-" }}
+                </td>
+            </tr>
+            <tr>
+                <td class="info-label">Responsable Structure</td>
+                <td class="info-value"><strong>{{ mds.responsable|default:"Non désigné" }}</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. EFFECTIFS ET AGENTS ({{ profiles.count }})</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Matricule</th>
+                    <th>Rôle MDS</th>
+                    <th>Affectation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                <tr>
+                    <td><strong>{{ profile.user.last_name|upper }}</strong> {{ profile.user.first_name }}</td>
+                    <td><code>{{ profile.user.matricule|default:"-" }}</code></td>
+                    <td>{{ profile.role_specifique|default:"Agent" }}</td>
+                    <td>
+                        {% if profile.principale %}
+                        <span class="badge bg-success">Principale</span>
+                        {% else %}
+                        <span class="badge bg-info">Secondaire</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. CAPACITÉ PHYSIQUE ET SALLES</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nom de la salle</th>
+                    <th>Type</th>
+                    <th>Capacité</th>
+                    <th>PMR</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for salle in salles %}
+                <tr>
+                    <td>{{ salle.nom }}</td>
+                    <td>{{ salle.get_type_salle_display }}</td>
+                    <td>{{ salle.capacite }} places</td>
+                    <td>{% if salle.accessibilite_pmr %}Oui{% else %}Non{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 50px; font-size: 8pt; color: #a0aec0; text-align: center;">
+        Document extrait du système DITAS le {{ today|date:"d/m/Y à H:i" }}<br>
+        Identifiant unique système : MDS-{{ mds.id }}-{{ mds.code_mds }}
+    </div>
+</body>
+</html>

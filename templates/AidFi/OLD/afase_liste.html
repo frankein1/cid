@@ -1,0 +1,97 @@
+<!-- /templates/AidFi/afase/afase_liste.html -->
+
+{% extends "base.html" %}
+{% load ged_tags capacites %}
+
+{% block title %}Demandes AFASE{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+        <i class="fa-solid fa-hand-holding-heart mr-2 text-blue-700"></i>
+        Demandes d'aide AFASE
+        {% if beneficiaire %}
+            — {{ beneficiaire.prenom }} {{ beneficiaire.nom }}
+        {% endif %}
+    </h1>
+</div>
+
+<!-- ✅ VUE CORE : Vérif accès -->
+{% if not user|a_la_capacite:"peut_voir" %}
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+    <p class="font-medium">Accès refusé</p>
+    <p>Vous n'avez pas les permissions pour voir les demandes AFASE.</p>
+</div>
+{% else %}
+
+{% if can_create %}
+<div class="flex justify-end mb-4">
+    <a href="{% url 'AidFi:afase_creer' beneficiaire.id %}"
+       class="bg-blue-700 text-white px-4 py-2 rounded shadow hover:bg-blue-800 inline-flex items-center">
+        <i class="fa-solid fa-plus mr-2"></i> Nouvelle demande AFASE
+    </a>
+</div>
+{% endif %}
+
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <table class="w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Créée le</th>
+                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for d in demandes %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">AFASE</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                        {% if d.statut_metier == 'BROUILLON' %}bg-gray-200 text-gray-700
+                        {% elif d.statut_metier == 'EVALUATION' %}bg-blue-100 text-blue-800
+                        {% elif d.statut_metier == 'INSTRUCTION' %}bg-yellow-100 text-yellow-800
+                        {% elif d.statut_metier == 'DECISION' %}bg-purple-100 text-purple-800
+                        {% elif d.statut_metier == 'CLOTUREE' %}bg-green-100 text-green-800
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {{ d.get_statut_metier_display }}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ d.montant_solicite|floatformat:2 }} €
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ d.created_at|date:"d/m/Y" }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <a href="{% url 'AidFi:afase_detail' d.id %}"
+                       class="text-blue-600 hover:text-blue-900">
+                        <i class="fa-solid fa-eye"></i>
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fa-solid fa-inbox text-4xl mb-4 text-gray-400"></i>
+                    <p class="text-lg">Aucune demande AFASE enregistrée.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-6">
+    <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}"
+       class="text-sm text-indigo-600 hover:text-indigo-500 font-medium inline-flex items-center">
+        <i class="fa-solid fa-arrow-left mr-1"></i>
+        Retour au bénéficiaire
+    </a>
+</div>
+
+{% endif %}
+{% endblock %}
+

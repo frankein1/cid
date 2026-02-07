@@ -1,0 +1,71 @@
+<!-- /templates/AidFi/liste.html -->
+{% extends "base.html" %}
+{% load ged_tags %} 
+{% block title %}Demandes d'aide{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+        <i class="fa-solid fa-hand-holding-heart mr-2 text-blue-700"></i>
+        Demandes d'aide financière
+        {% if beneficiaire %}
+            — {{ beneficiaire.prenom }} {{ beneficiaire.nom }}
+        {% endif %}
+    </h1>
+</div>
+
+{% if can_create and beneficiaire %}
+<div class="flex justify-end mb-4">
+    <a href="{% url 'AidFi:creer_demande' beneficiaire.id %}"
+       class="bg-blue-700 text-white px-4 py-2 rounded shadow hover:bg-blue-800">
+        <i class="fa-solid fa-plus mr-1"></i> Nouvelle demande
+    </a>
+</div>
+{% endif %}
+
+<div class="bg-white shadow rounded-lg">
+    <table class="w-full border-collapse divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="p-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                <th class="p-3 text-left text-sm font-semibold text-gray-700">Statut</th>
+                <th class="p-3 text-left text-sm font-semibold text-gray-700">Montant</th>
+                <th class="p-3 text-left text-sm font-semibold text-gray-700">Créée le</th>
+                <th class="p-3 text-center text-sm font-semibold text-gray-700">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+            {% for d in demandes %}
+            <tr class="hover:bg-gray-100">
+                <td class="p-3 text-sm">{{ d.type_aide.nom }}</td>
+                <td class="p-3">
+                    <span class="px-2 py-1 rounded text-xs font-medium {{ d.statut_badge_classes }}">
+                        {{ d.get_statut_display }}
+                    </span>
+                </td>
+                <td class="p-3 text-sm">{{ d.montant_sollicite|floatformat:2 }} €</td>
+                <td class="p-3 text-sm">{{ d.date_creation|date:"d/m/Y" }}</td>
+                <td class="p-3 text-center">
+                    {% if d.can_view %}
+    <a href="{% url 'AidFi:detail_demande' d.id %}"
+       class="text-blue-700 hover:text-blue-900">
+        <i class="fa-solid fa-eye"></i>
+    </a>
+{% else %}
+    <span class="text-gray-400" title="Accès non autorisé">
+        <i class="fa-solid fa-eye-slash"></i>
+    </span>
+{% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="p-4 text-center text-gray-500">
+                    Aucune demande enregistrée.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

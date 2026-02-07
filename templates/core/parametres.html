@@ -1,0 +1,68 @@
+<!-- ================================================================ -->
+<!-- 1. templates/core/parametres.html - NOUVEAU -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Paramètres - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-cog text-blue-500 mr-3"></i>
+            Paramètres
+        </h1>
+        <p class="text-gray-600 mt-2">Configuration de votre compte</p>
+    </div>
+
+    <!-- Notifications -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Notifications</h2>
+        
+        <div class="space-y-4">
+            <label class="flex items-center">
+                <input type="checkbox" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <span class="ml-3 text-gray-700">Recevoir des notifications par email</span>
+            </label>
+            
+            <label class="flex items-center">
+                <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <span class="ml-3 text-gray-700">Notifications pour les nouveaux documents</span>
+            </label>
+            
+            <label class="flex items-center">
+                <input type="checkbox" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <span class="ml-3 text-gray-700">Rappels de rendez-vous</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Apparence -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Apparence</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Thème</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option>Clair</option>
+                    <option>Sombre</option>
+                    <option>Automatique</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end space-x-4">
+        <a href="{% url 'core:dashboard' %}" 
+           class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            Annuler
+        </a>
+        <button type="submit" 
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+            Enregistrer
+        </button>
+    </div>
+</div>
+{% endblock %}

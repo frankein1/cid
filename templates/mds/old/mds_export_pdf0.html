@@ -1,0 +1,404 @@
+<!-- /templates/mds/mds_export_pdf.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche MDS - {{ mds.nom }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @top-center {
+                content: "Fiche signalétique MDS";
+                font-size: 12pt;
+                color: #666;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " sur " counter(pages);
+                font-size: 10pt;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2cm;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 1cm;
+        }
+        
+        .header h1 {
+            color: #007bff;
+            font-size: 24pt;
+            margin-bottom: 0.5cm;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 12pt;
+        }
+        
+        .section {
+            margin-bottom: 1.5cm;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 0.5cm;
+            margin-bottom: 0.8cm;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8cm;
+            margin-bottom: 1cm;
+        }
+        
+        .info-item {
+            margin-bottom: 0.5cm;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 0.2cm;
+            font-size: 10pt;
+        }
+        
+        .info-value {
+            padding: 0.3cm;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+            border-left: 2px solid #dee2e6;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1cm;
+            font-size: 9pt;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 0.4cm;
+            text-align: left;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        td {
+            border: 1px solid #dee2e6;
+            padding: 0.4cm;
+            vertical-align: top;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.2cm 0.4cm;
+            border-radius: 3px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        
+        .badge-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-secondary {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        
+        .badge-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .footer {
+            margin-top: 2cm;
+            padding-top: 1cm;
+            border-top: 1px solid #dee2e6;
+            font-size: 9pt;
+            color: #666;
+            text-align: center;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 1cm;
+        }
+        
+        .logo img {
+            max-height: 2cm;
+        }
+        
+        .qr-code {
+            float: right;
+            width: 3cm;
+            height: 3cm;
+            margin-left: 1cm;
+            margin-bottom: 1cm;
+            border: 1px solid #dee2e6;
+            padding: 0.2cm;
+        }
+        
+        .watermark {
+            position: fixed;
+            bottom: 5cm;
+            right: 2cm;
+            opacity: 0.1;
+            font-size: 60pt;
+            color: #007bff;
+            transform: rotate(-45deg);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        <div class="logo">
+            <!-- Logo département à ajouter si disponible -->
+            <h2>DÉPARTEMENT</h2>
+        </div>
+        <h1>FICHE SIGNALÉTIQUE MDS</h1>
+        <div class="subtitle">
+            {{ mds.nom }} - Export du {{ today|date:"d/m/Y" }}
+        </div>
+    </div>
+    
+    <!-- Marque d'eau -->
+    <div class="watermark">
+        CONFIDENTIEL
+    </div>
+    
+    <!-- Section 1 : Informations générales -->
+    <div class="section">
+        <div class="section-title">1. INFORMATIONS GÉNÉRALES</div>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Nom de la MDS</div>
+                <div class="info-value">{{ mds.nom }}</div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-label">Responsable</div>
+                <div class="info-value">{{ mds.responsable|default:"Non renseigné" }}</div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-label">Adresse</div>
+                <div class="info-value">
+                    {{ mds.adresse|default:"Non renseigné" }}<br>
+                    {% if mds.code_postal or mds.ville %}
+                    {{ mds.code_postal|default:"" }} {{ mds.ville|default:"" }}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-label">Coordonnées</div>
+                <div class="info-value">
+                    <strong>Téléphone :</strong> {{ mds.telephone|default:"Non renseigné" }}<br>
+                    <strong>Email :</strong> {{ mds.email|default:"Non renseigné" }}
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-label">Horaires d'ouverture</div>
+                <div class="info-value">{{ mds.horaires_ouverture|default:"Non renseigné" }}</div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-label">Capacité d'accueil</div>
+                <div class="info-value">
+                    <span class="badge badge-info">{{ mds.capacite_accueil|default:"0" }} personnes</span>
+                </div>
+            </div>
+        </div>
+        
+        {% if mds.description %}
+        <div class="info-item">
+            <div class="info-label">Description</div>
+            <div class="info-value">{{ mds.description|linebreaks }}</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 2 : Salles de réception -->
+    <div class="section">
+        <div class="section-title">2. SALLES DE RÉCEPTION ({{ salles.count }})</div>
+        
+        {% if salles %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Type</th>
+                    <th>Capacité</th>
+                    <th>Équipements</th>
+                    <th>Accessibilité PMR</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for salle in salles %}
+                <tr>
+                    <td><strong>{{ salle.nom }}</strong></td>
+                    <td>{{ salle.get_type_salle_display }}</td>
+                    <td>
+                        <span class="badge badge-info">{{ salle.capacite }} pers.</span>
+                    </td>
+                    <td>{{ salle.equipements|default:"Aucun"|truncatechars:50 }}</td>
+                    <td>
+                        {% if salle.accessibilite_pmr %}
+                        <span class="badge badge-success">PMR</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Non PMR</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if salle.actif %}
+                        <span class="badge badge-success">Actif</span>
+                        {% else %}
+                        <span class="badge badge-danger">Inactif</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if salle.description %}
+                <tr>
+                    <td colspan="6" style="font-size: 8pt; color: #666;">
+                        <em>Description : {{ salle.description|truncatechars:100 }}</em>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="info-value" style="text-align: center; padding: 1cm;">
+            Aucune salle de réception configurée
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 3 : Personnel affecté -->
+    <div class="section">
+        <div class="section-title">3. PERSONNEL AFFECTÉ ({{ profiles.count }})</div>
+        
+        {% if profiles %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Matricule</th>
+                    <th>Email professionnel</th>
+                    <th>Téléphone pro</th>
+                    <th>Rôle</th>
+                    <th>MDS principale</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                {% with user=profile.user %}
+                <tr>
+                    <td><strong>{{ user.last_name|upper }}</strong></td>
+                    <td>{{ user.first_name }}</td>
+                    <td><code>{{ user.matricule }}</code></td>
+                    <td>{{ user.email|default:"-" }}</td>
+                    <td>{{ user.telephone_professionnel|default:"-" }}</td>
+                    <td>
+                        <span class="badge badge-secondary">{{ profile.get_role_display }}</span>
+                    </td>
+                    <td>
+                        {% if profile.principale %}
+                        <span class="badge badge-success">Oui</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Non</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="info-value" style="text-align: center; padding: 1cm;">
+            Aucun personnel affecté à cette MDS
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Section 4 : Équipements -->
+    {% if equipements %}
+    <div class="section">
+        <div class="section-title">4. ÉQUIPEMENTS DISPONIBLES</div>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5cm;">
+            {% for equipement in equipements %}
+            <div style="border: 1px solid #dee2e6; padding: 0.5cm; border-radius: 5px; width: calc(50% - 0.5cm);">
+                <strong>{{ equipement.nom }}</strong><br>
+                <small>Type : {{ equipement.get_type_equipement_display }}</small><br>
+                {% if equipement.description %}
+                <small>{{ equipement.description|truncatechars:80 }}</small>
+                {% endif %}
+                <div style="margin-top: 0.3cm;">
+                    {% if equipement.quantite %}
+                    <span class="badge badge-info">Quantité : {{ equipement.quantite }}</span>
+                    {% endif %}
+                    {% if equipement.etat == 'FONCTIONNEL' %}
+                    <span class="badge badge-success">Fonctionnel</span>
+                    {% elif equipement.etat == 'EN_PANNE' %}
+                    <span class="badge badge-danger">En panne</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>
+            <strong>Document généré le :</strong> {{ today|date:"d/m/Y à H:i" }}<br>
+            <strong>ID MDS :</strong> {{ mds.id }} | <strong>Dernière modification :</strong> {{ mds.date_modification|date:"d/m/Y H:i" }}
+        </p>
+        <p>
+            Ce document est confidentiel et destiné à un usage interne exclusivement.<br>
+            Toute reproduction ou diffusion non autorisée est interdite.
+        </p>
+        <div style="margin-top: 0.5cm; font-size: 8pt; color: #999;">
+            Généré par le système de gestion des MDS - v1.0
+        </div>
+    </div>
+</body>
+</html>

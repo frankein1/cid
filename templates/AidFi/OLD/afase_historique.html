@@ -1,0 +1,41 @@
+<!-- /templates/AidFi/afase_historique.html -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-blue-800 text-white">
+            <tr>
+                <th class="px-4 py-3 text-left">Date</th>
+                <th class="px-4 py-3 text-left">Statut</th>
+                <th class="px-4 py-3 text-left">Libellé Décision</th>
+                <th class="px-4 py-3 text-right">Montant Accordé</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in demandes %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3">{{ d.date_creation|date:"d/m/Y" }}</td>
+                <td class="px-4 py-3">
+                    {% if d.decision %}
+                        {% if d.decision.type_decision == "ACCORD" %}
+                            <span class="text-green-600 font-bold">ACCORD</span>
+                        {% else %}
+                            <span class="text-red-600 font-bold">REFUS</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-orange-500 italic">EN COURS</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700 italic">
+                    {{ d.decision.libelle_decision|default:"-" }}
+                </td>
+                <td class="px-4 py-3 text-right font-bold">
+                    {% if d.decision.montant_accorde %}
+                        {{ d.decision.montant_accorde }} €
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

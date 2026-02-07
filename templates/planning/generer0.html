@@ -1,0 +1,91 @@
+<!-- templates/planning/generer.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Générer créneaux - SI DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Génération automatique de créneaux</h1>
+        <p class="text-gray-600">Générez des créneaux de rendez-vous pour les semaines à venir</p>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                <h3 class="text-sm font-medium text-red-800 mb-2">Veuillez corriger les erreurs ci-dessous :</h3>
+                <ul class="list-disc pl-5 text-sm text-red-700">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="space-y-6">
+                <!-- Date de début -->
+                <div>
+                    <label for="{{ form.date_debut.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.date_debut.label }} *
+                    </label>
+                    {{ form.date_debut }}
+                    {% if form.date_debut.help_text %}
+                    <p class="mt-1 text-sm text-gray-500">{{ form.date_debut.help_text }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Nombre de semaines -->
+                <div>
+                    <label for="{{ form.nombre_semaines.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.nombre_semaines.label }} *
+                    </label>
+                    {{ form.nombre_semaines }}
+                    <p class="mt-1 text-sm text-gray-500">Génère des créneaux pour les jours ouvrés uniquement</p>
+                </div>
+                
+                <!-- Type de RDV -->
+                <div>
+                    <label for="{{ form.type_rdv.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.type_rdv.label }} *
+                    </label>
+                    {{ form.type_rdv }}
+                </div>
+                
+                <!-- Information -->
+                <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <h3 class="text-sm font-medium text-blue-800 mb-2">Information</h3>
+                    <ul class="list-disc pl-5 text-sm text-blue-700 space-y-1">
+                        <li>Les créneaux seront générés pour votre MDS actuelle</li>
+                        <li>Seuls les jours où la salle est disponible seront utilisés</li>
+                        <li>Les agents actifs de votre MDS seront assignés</li>
+                        <li>Les créneaux existants ne seront pas écrasés</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Boutons -->
+            <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-4">
+                <a href="{% url 'planning:calendrier_rdv' %}" 
+                   class="px-6 py-3 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-6 py-3 bg-green-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Générer les créneaux
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

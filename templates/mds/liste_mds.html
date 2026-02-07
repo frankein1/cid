@@ -1,0 +1,167 @@
+<!--/templates/mds/liste_mds.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                <i class="fas fa-map-marked-alt mr-3 text-blue-600"></i>{{ title }}
+            </h1>
+            <p class="text-gray-500 mt-1">
+                Pilotez les {{ mds_list.paginator.count }} structures du territoire.
+            </p>
+        </div>
+        
+        {% if perms.mds.add_mds %}
+        <a href="{% url 'mds:creer_mds' %}" 
+           class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm transition-all transform hover:scale-105">
+            <i class="fas fa-plus-circle mr-2"></i>Nouvelle structure
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+        <form method="get" class="flex flex-col md:flex-row gap-2">
+            <div class="flex-1 relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" 
+                       name="q" 
+                       class="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+                       placeholder="Rechercher par nom, code postal, ville ou identifiant..."
+                       value="{{ query|default:'' }}">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" 
+                        class="bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold text-sm transition-colors">
+                    Filtrer
+                </button>
+                {% if query %}
+                <a href="{% url 'mds:liste_mds' %}" 
+                   class="bg-white border border-gray-200 text-gray-500 hover:text-red-600 px-4 py-3 rounded-xl transition-colors"
+                   title="Réinitialiser">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        {% if mds_list %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50/50">
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Structure</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Localisation</th>
+                        <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Ressources</th>
+                        <th class="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Statut</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    {% for mds in mds_list %}
+                    <tr class="hover:bg-blue-50/40 transition-colors group cursor-pointer" onclick="window.location='{% url 'mds:detail_mds' mds.id %}'">
+                        <td class="px-6 py-5">
+                            <div class="flex items-center">
+                                <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
+                                    <span class="font-black text-sm">{{ mds.code_mds|slice:":3" }}</span>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ mds.nom }}</div>
+                                    <div class="text-[11px] font-mono text-gray-400 uppercase tracking-tighter">{{ mds.code_mds }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="text-sm text-gray-600 font-medium">{{ mds.ville }}</div>
+                            <div class="text-xs text-gray-400 flex items-center">
+                                <i class="fas fa-map-pin mr-1 text-[10px]"></i> {{ mds.code_postal }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            <div class="flex justify-center space-x-3">
+                                <div class="text-center" title="Nombre de salles">
+                                    <span class="block text-sm font-bold text-gray-700">{{ mds.salles_reception.count }}</span>
+                                    <span class="text-[9px] uppercase font-bold text-gray-400">Salles</span>
+                                </div>
+                                <div class="text-center" title="Nombre d'agents">
+                                    <span class="block text-sm font-bold text-gray-700">{{ mds.profils_utilisateurs.filter.count }}</span>
+                                    <span class="text-[9px] uppercase font-bold text-gray-400">Agents</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 text-center">
+                            {% if mds.active %} 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase bg-green-100 text-green-700 border border-green-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-2 animate-pulse"></span>Ouverte
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase bg-gray-100 text-gray-500 border border-gray-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>Fermée
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-5 text-right">
+                            <a href="{% url 'mds:detail_mds' mds.id %}" 
+                               class="inline-flex items-center justify-center h-9 w-9 rounded-lg bg-gray-100 text-gray-600 hover:bg-blue-600 hover:text-white transition-all">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if mds_list.has_other_pages %}
+        <div class="bg-gray-50/80 px-6 py-4 flex items-center justify-between border-t border-gray-100">
+            <div class="hidden sm:flex text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Page {{ mds_list.number }} / {{ mds_list.paginator.num_pages }}
+            </div>
+            <div class="flex space-x-1">
+                {% if mds_list.has_previous %}
+                    <a href="?page={{ mds_list.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" class="p-2 w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-blue-50 transition-colors">
+                        <i class="fas fa-chevron-left text-xs"></i>
+                    </a>
+                {% endif %}
+
+                {% for i in mds_list.paginator.page_range %}
+                    {% if i == mds_list.number %}
+                        <span class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-200">
+                            {{ i }}
+                        </span>
+                    {% elif i > mds_list.number|add:'-3' and i < mds_list.number|add:'3' %}
+                        <a href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}" class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-blue-50 transition-colors text-xs font-bold">
+                            {{ i }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if mds_list.has_next %}
+                    <a href="?page={{ mds_list.next_page_number }}{% if query %}&q={{ query }}{% endif %}" class="p-2 w-10 h-10 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-blue-50 transition-colors">
+                        <i class="fas fa-chevron-right text-xs"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="py-20 text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 text-gray-300 mb-4">
+                <i class="fas fa-building text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Aucune MDS trouvée</h3>
+            <p class="text-gray-500 max-w-xs mx-auto mt-2">Ajustez vos critères de recherche ou créez une nouvelle structure pour commencer.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

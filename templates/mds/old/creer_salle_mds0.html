@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <h1 class="text-2xl font-bold mb-6">
+        {% if salle %}Modifier la salle{% else %}Créer une nouvelle salle{% endif %} - {{ mds.nom }}
+    </h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Colonne gauche -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la salle *</label>
+                        {{ form.nom }}
+                        {% if form.nom.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.nom.errors }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type de salle</label>
+                        {{ form.type_salle }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Capacité</label>
+                        {{ form.capacite }}
+                        <p class="mt-1 text-xs text-gray-500">Nombre maximum de personnes</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
+                        {{ form.localisation }}
+                        <p class="mt-1 text-xs text-gray-500">Ex: 1er étage, aile gauche</p>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <label class="flex items-center">
+                            {{ form.actif }}
+                            <span class="ml-2 text-sm text-gray-700">Salle active et disponible</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Colonne droite -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Équipements</label>
+                        {{ form.equipements }}
+                        <p class="mt-1 text-xs text-gray-500">Équipements disponibles (optionnel)</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Jours de disponibilité</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center">
+                                {{ form.disponible_lundi }}
+                                <span class="ml-2 text-sm text-gray-700">Lundi</span>
+                            </label>
+                            <label class="flex items-center">
+                                {{ form.disponible_mardi }}
+                                <span class="ml-2 text-sm text-gray-700">Mardi</span>
+                            </label>
+                            <label class="flex items-center">
+                                {{ form.disponible_mercredi }}
+                                <span class="ml-2 text-sm text-gray-700">Mercredi</span>
+                            </label>
+                            <label class="flex items-center">
+                                {{ form.disponible_jeudi }}
+                                <span class="ml-2 text-sm text-gray-700">Jeudi</span>
+                            </label>
+                            <label class="flex items-center">
+                                {{ form.disponible_vendredi }}
+                                <span class="ml-2 text-sm text-gray-700">Vendredi</span>
+                            </label>
+                            <label class="flex items-center">
+                                {{ form.disponible_samedi }}
+                                <span class="ml-2 text-sm text-gray-700">Samedi</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Horaire début</label>
+                            {{ form.horaire_debut }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Horaire fin</label>
+                            {{ form.horaire_fin }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Boutons -->
+            <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
+                <a href="{% url 'mds:gestion_salles_mds' mds.id %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700">
+                    {% if salle %}Mettre à jour{% else %}Créer la salle{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

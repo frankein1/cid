@@ -1,0 +1,64 @@
+<!-- Version de test simplifiée -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <h1>Test Upload Simple</h1>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div>
+            <label>Fichier:</label>
+            <input type="file" name="file" required>
+        </div>
+        
+        <div>
+            <label>Titre:</label>
+            <input type="text" name="titre" required>
+        </div>
+        
+        <div>
+            <label>Type de document:</label>
+            <select name="type_document" required>
+                {% for type in form.type_document.field.queryset %}
+                <option value="{{ type.id }}">{{ type.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit">Envoyer</button>
+    </form>
+    
+    <!-- Debug info -->
+    <div style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
+        <h3>Debug Info:</h3>
+        <p>Form errors: {{ form.errors }}</p>
+        <p>FIELDS:</p>
+        <ul>
+            <li>file: {{ form.file }}</li>
+            <li>type_document: {{ form.type_document }}</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+<!-- DEBUG SECTION - À ajouter après le formulaire -->
+<div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+    <h3 class="font-bold text-yellow-800 mb-2">DEBUG - Type Document</h3>
+    
+    <p><strong>Form type_document field exists:</strong> {{ form.type_document|yesno:"Oui,Non" }}</p>
+    <p><strong>Queryset count:</strong> {{ form.type_document.field.queryset.count }}</p>
+    
+    <p><strong>Type Document queryset:</strong></p>
+    <ul class="text-sm">
+        {% for type in form.type_document.field.queryset %}
+        <li>{{ type.id }} - {{ type.code }} - {{ type.nom }} (Actif: {{ type.actif }})</li>
+        {% empty %}
+        <li class="text-red-600">AUCUN TYPE TROUVÉ</li>
+        {% endfor %}
+    </ul>
+    
+    <p><strong>Form errors:</strong> {{ form.errors }}</p>
+    <p><strong>User capacités:</strong> {{ request.user.profils.all|join:", " }}</p>
+</div>

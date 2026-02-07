@@ -1,0 +1,190 @@
+<!-- /templates/base.html -->
+{% load static %}
+{% load capacites %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CID - Portail Agent Social CD13{% endblock %}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hidden { display: none; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50">
+
+    <nav class="bg-blue-800 shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                
+                <div class="flex items-center space-x-8">
+                    <a href="{% url 'accueil' %}" class="flex-shrink-0 flex items-center text-white">
+                        <i class="fas fa-shield-halved mr-2 text-2xl"></i>
+                        <span class="font-bold text-xl tracking-tight">CID CD13</span>
+                    </a>
+
+                    {% if user.is_authenticated %}
+                    <div class="hidden md:flex space-x-4">
+                        
+                        {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                        <div class="relative">
+                            <button id="ben-button" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                <i class="fas fa-users mr-2"></i>Bénéficiaires
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div id="ben-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                                <a href="{% url 'beneficiaire:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liste complète</a>
+                                <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Ajouter un usager</a>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="relative">
+                            <button id="planning-button" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                <i class="fas fa-calendar-alt mr-2"></i>Planning
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div id="planning-menu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">Consultation</div>
+                                <a href="{% url 'planning:calendrier_rdv' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-calendar-day mr-2 w-4"></i>Calendrier mensuel
+                                </a>
+                                <a href="{% url 'planning:planning_accueil_jour' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-clock mr-2 w-4"></i>Vue Accueil (Jour)
+                                </a>
+
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">Mon Profil Agent</div>
+                                <a href="{% url 'mds:mes_demi_journees' %}" class="block px-4 py-2 text-sm text-blue-700 font-bold hover:bg-blue-50">
+                                    <i class="fas fa-user-clock mr-2 w-4"></i>Mes jours de permanence
+                                </a>
+
+                                {% if user.is_superuser or user|a_la_capacite:'peut_administrer' %}
+                                    <div class="border-t border-gray-100 my-1"></div>
+                                    <div class="px-4 py-2 text-xs font-semibold text-red-400 uppercase">Administration</div>
+                                    <a href="{% url 'planning:generer_creneaux' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                        <i class="fas fa-magic mr-2 w-4"></i>Générer les créneaux
+                                    </a>
+                                    <a href="{% url 'planning:ajouter_jour_bloque' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                        <i class="fas fa-ban mr-2 w-4"></i>Bloquer un jour
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="relative">
+                            <a href="{% url 'messagerie:boite_reception' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                                <i class="fas fa-envelope mr-2"></i>Messagerie
+                                <span id="msg-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold"></span>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center">
+    {% if user.is_authenticated %}
+    <span class="text-blue-100 text-sm mr-4 hidden sm:block">
+        <i class="fas fa-user-circle mr-1"></i>
+        {{ user.get_full_name|default:user.username }}
+        {% if user.groups.all %}
+            <br>
+            <span class="text-xs text-blue-200">
+                {% for group in user.groups.all %}
+                    {{ group.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        {% endif %}
+    </span>
+    <form action="{% url 'logout' %}" method="post" class="inline">
+        {% csrf_token %}
+        <button type="submit" class="bg-blue-700 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition duration-200">
+            Déconnexion
+        </button>
+    </form>
+    {% else %}
+    <a href="{% url 'login' %}" class="bg-white text-blue-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-50">
+        Connexion Agent
+    </a>
+    {% endif %}
+</div>
+            </div>
+        </div>
+    </nav>
+
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        {% for message in messages %}
+        <div class="p-4 rounded-md shadow-md mb-2 flex items-center {% if message.tags == 'success' %}bg-green-100 text-green-800 border-l-4 border-green-500{% elif message.tags == 'error' %}bg-red-100 text-red-800 border-l-4 border-red-500{% else %}bg-blue-100 text-blue-800 border-l-4 border-blue-500{% endif %}">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-3"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-500 text-sm">
+                &copy; 2026 Département des Bouches-du-Rhône - Direction de l'Action Sociale
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const setupDropdown = (btnId, menuId) => {
+                const btn = document.getElementById(btnId);
+                const menu = document.getElementById(menuId);
+                if (btn && menu) {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Fermer les autres menus
+                        document.querySelectorAll('[id$="-menu"]').forEach(m => {
+                            if (m.id !== menuId) m.classList.add('hidden');
+                        });
+                        menu.classList.toggle('hidden');
+                    });
+                }
+            };
+
+            setupDropdown('ben-button', 'ben-menu');
+            setupDropdown('planning-button', 'planning-menu');
+
+            document.addEventListener('click', () => {
+                document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
+            });
+
+            function actualiserBadgeMessages() {
+                {% if user.is_authenticated %}
+                fetch('{% url "messagerie:nb_non_lus" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        const badge = document.getElementById('msg-badge');
+                        if (badge && data.nb_non_lus > 0) {
+                            badge.textContent = data.nb_non_lus > 99 ? '99+' : data.nb_non_lus;
+                            badge.classList.remove('hidden');
+                        } else if (badge) {
+                            badge.classList.add('hidden');
+                        }
+                    }).catch(e => console.log('Erreur badge'));
+                {% endif %}
+            }
+            actualiserBadgeMessages();
+            setInterval(actualiserBadgeMessages, 30000);
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

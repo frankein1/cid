@@ -1,0 +1,165 @@
+<!-- /templates/AidFi/detail_demande.html -->
+{% extends "base.html" %}
+{% load ged_tags %}
+{% load capacites %}
+{% block title %}Dossier #{{ demande.id }} — {{ demande.type_aide.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto pb-10">
+    <div class="mb-4">
+        <a href="{% url 'AidFi:dashboard_beneficiaire' demande.beneficiaire.id %}" class="text-blue-700 hover:underline text-sm">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Retour à la liste
+        </a>
+    </div>
+
+    <div class="flex flex-wrap justify-between items-center mb-6 gap-4 bg-white p-4 rounded-lg shadow-sm">
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-file-invoice-dollar text-blue-700 mr-3"></i>
+            Dossier #{{ demande.id }} — {{ demande.type_aide.nom }}
+        </h1>
+        
+        <div class="flex items-center space-x-3">
+            <span class="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide
+                {% if demande.statut == 'ACCORDEE' %} bg-emerald-100 text-emerald-800
+                {% elif demande.statut == 'ANNULEE' %} bg-red-100 text-red-800
+                {% elif demande.statut == 'EN_INSTRUCTION' %} bg-blue-100 text-blue-800
+                {% else %} bg-gray-100 text-gray-800 {% endif %} border shadow-sm">
+                {{ demande.get_statut_display }}
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">Résumé de la demande</h2>
+                    {% if peut_modifier %}
+                    <a href="{% url 'AidFi:modifier_demande' demande.id %}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                        <i class="fa-solid fa-pen mr-1"></i> Modifier
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Montant Sollicité</p>
+                        <p class="text-2xl font-black text-gray-900">{{ demande.montant_sollicite }} <span class="text-lg font-normal">€</span></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Durée</p>
+                        <p class="text-xl font-bold text-gray-800">{{ demande.nombre_mois }} mois</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold">Date de dépôt</p>
+                        <p class="text-lg text-gray-800">{{ demande.date_depot|date:"d/m/Y"|default:"Non déposée" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">Documents joints</h2>
+                    <a href="{% url 'ged:document_upload' code_interne=demande.beneficiaire.code_interne %}" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Ajouter
+                    </a>
+                </div>
+                <div class="p-0">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-xs text-gray-500">
+                            <tr>
+                                <th class="px-6 py-3">Type de document</th>
+                                <th class="px-6 py-3">Fichier</th>
+                                <th class="px-6 py-3">Statut</th>
+                                <th class="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for p in pieces %}
+                            <tr>
+                                <td class="px-6 py-4 font-medium text-gray-800">{{ p.get_type_piece_display }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-500">{{ p.nom_original|truncatechars:20 }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-bold {% if p.statut == 'VALIDE' %}text-green-600{% else %}text-orange-600{% endif %}">
+                                        {{ p.get_statut_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if p.fichier %}
+                                    <a href="{{ p.fichier.url }}" target="_blank" class="text-blue-600 hover:text-blue-900">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="px-6 py-10 text-center text-gray-400 italic">Aucune pièce jointe.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-lg p-6 text-white">
+                <h3 class="font-bold mb-4 flex items-center border-b border-gray-700 pb-2">
+                    <i class="fa-solid fa-gears mr-2 text-blue-400"></i> Actions de gestion
+                </h3>
+                <div class="grid grid-cols-1 gap-3">
+                    {% if peut_decider %}
+                    <a href="{% url 'AidFi:changement_statut' demande.id %}" class="flex items-center justify-center bg-white text-gray-900 px-4 py-3 rounded-lg font-bold hover:bg-blue-50 transition">
+                        <i class="fa-solid fa-gavel mr-2"></i> Rendre une décision
+                    </a>
+                    {% endif %}
+                    
+                    {% if demande.type_aide_code == 'CAP' %}
+                    <a href="{% url 'AidFi:cap_attribution' demande.id %}" class="flex items-center justify-center bg-blue-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                        <i class="fa-solid fa-ticket mr-2"></i> Attribuer CAP
+                    </a>
+                    {% endif %}
+
+                    {% if demande.statut == 'ACCORDEE' or user|a_la_capacite:"peut_finance" %}
+<div class="border-t border-gray-200 pt-4 mt-4">
+    <a href="{% url 'AidFi:generer_pdf_demande' demande.id %}"	
+       class="w-full flex items-center justify-center bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:from-emerald-600 hover:to-green-700 transition-all transform hover:-translate-y-0.5">
+        <i class="fas fa-file-pdf mr-3 text-lg"></i>
+        📄 Télécharger PDF complet (Formulaire + Documents)
+    </a>
+</div>
+{% endif %}
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-6 uppercase text-xs tracking-widest border-b pb-2">Historique du dossier</h3>
+                <div class="flow-root">
+                    <ul class="-mb-8">
+                        {% for s in suivis %}
+                        <li>
+                            <div class="relative pb-8">
+                                {% if not forloop.last %}<span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>{% endif %}
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center ring-8 ring-white text-blue-600">
+                                            <i class="fa-solid fa-check text-xs"></i>
+                                        </span>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-sm font-bold text-gray-900">{{ s.get_statut_nouveau_display }}</div>
+                                        <div class="text-xs text-gray-500 italic mt-1">"{{ s.commentaire|default:"Aucun commentaire" }}"</div>
+                                        <div class="mt-2 text-xs text-blue-600 font-semibold">
+                                            {{ s.agent.get_full_name|default:s.agent.username }} — {{ s.date_action|date:"d/m H:i" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

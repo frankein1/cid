@@ -1,0 +1,210 @@
+<!-- templates/prestations/confirmer_suppression.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmer la suppression - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- En-tête d'avertissement -->
+        <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold text-red-900 mb-2">
+                        Confirmer la suppression
+                    </h1>
+                    <p class="text-red-700">
+                        Cette action est <strong>irréversible</strong>. Toutes les données liées à cette prestation seront définitivement supprimées.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Détails de la prestation à supprimer -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                Prestation à supprimer
+            </h2>
+
+            <div class="space-y-4">
+                <!-- Type et statut -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Type de prestation</p>
+                        <p class="text-base font-medium text-gray-900">
+                            {{ prestation.get_type_prestation_display }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Statut</p>
+                        <div class="mt-1">
+                            {% if prestation.statut == 'DEMANDE' %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% elif prestation.statut == 'ETUDE' %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% elif prestation.statut == 'ACCORDEE' %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% elif prestation.statut == 'REFUSEE' %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% elif prestation.statut == 'VERSEE' %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 inline-flex text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {{ prestation.get_statut_display }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bénéficiaire -->
+                <div class="pt-4 border-t">
+                    <p class="text-sm text-gray-500">Bénéficiaire</p>
+                    <p class="text-base font-medium text-gray-900">
+                        {{ prestation.beneficiaire.prenom }} {{ prestation.beneficiaire.nom }}
+                        <span class="text-sm text-gray-500 ml-2">({{ prestation.beneficiaire.code_interne }})</span>
+                    </p>
+                </div>
+
+                <!-- Date de demande -->
+                <div>
+                    <p class="text-sm text-gray-500">Date de demande</p>
+                    <p class="text-base text-gray-900">
+                        <i class="fas fa-calendar-alt text-gray-400 mr-2"></i>
+                        {{ prestation.date_demande|date:"d/m/Y" }}
+                    </p>
+                </div>
+
+                <!-- Montants -->
+                {% if prestation.montant_demande or prestation.montant_accorde %}
+                <div class="pt-4 border-t">
+                    <p class="text-sm text-gray-500 mb-2">Montants</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        {% if prestation.montant_demande %}
+                        <div class="bg-blue-50 rounded p-3">
+                            <p class="text-xs text-blue-700">Demandé</p>
+                            <p class="text-lg font-semibold text-blue-900">
+                                {{ prestation.montant_demande|floatformat:2 }} €
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if prestation.montant_accorde %}
+                        <div class="bg-green-50 rounded p-3">
+                            <p class="text-xs text-green-700">Accordé</p>
+                            <p class="text-lg font-semibold text-green-900">
+                                {{ prestation.montant_accorde|floatformat:2 }} €
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Observations -->
+                {% if prestation.observations %}
+                <div class="pt-4 border-t">
+                    <p class="text-sm text-gray-500 mb-1">Observations</p>
+                    <p class="text-sm text-gray-700 bg-gray-50 rounded p-3">
+                        {{ prestation.observations|truncatewords:30 }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Avertissement supplémentaire si prestation accordée/versée -->
+        {% if prestation.statut == 'ACCORDEE' or prestation.statut == 'VERSEE' %}
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-circle text-yellow-600"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Attention : Prestation {{ prestation.get_statut_display|lower }}
+                    </h3>
+                    <p class="mt-1 text-sm text-yellow-700">
+                        Cette prestation a déjà été 
+                        {% if prestation.statut == 'ACCORDEE' %}accordée{% else %}versée{% endif %}.
+                        Assurez-vous que cette suppression n'affecte pas votre comptabilité ou vos rapports.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Formulaire de confirmation -->
+        <form method="post" class="bg-white rounded-lg shadow-md p-6">
+            {% csrf_token %}
+
+            <div class="mb-6">
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           id="confirm_delete" 
+                           required
+                           class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">
+                        Je confirme vouloir supprimer définitivement cette prestation
+                    </span>
+                </label>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' prestation.beneficiaire.code_interne %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    <i class="fas fa-times mr-2"></i>Annuler
+                </a>
+                <button type="submit" 
+                        id="delete_button"
+                        disabled
+                        class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-trash mr-2"></i>Supprimer définitivement
+                </button>
+            </div>
+        </form>
+
+        <!-- Information complémentaire -->
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <i class="fas fa-info-circle mr-1"></i>
+            Vous serez redirigé vers la fiche du bénéficiaire après la suppression
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Activer le bouton de suppression uniquement si la case est cochée
+const confirmCheckbox = document.getElementById('confirm_delete');
+const deleteButton = document.getElementById('delete_button');
+
+if (confirmCheckbox && deleteButton) {
+    confirmCheckbox.addEventListener('change', function() {
+        deleteButton.disabled = !this.checked;
+    });
+}
+
+// Confirmation supplémentaire avant soumission
+document.querySelector('form').addEventListener('submit', function(e) {
+    if (!confirm('Êtes-vous ABSOLUMENT sûr(e) de vouloir supprimer cette prestation ? Cette action ne peut pas être annulée.')) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

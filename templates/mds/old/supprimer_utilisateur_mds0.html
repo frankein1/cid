@@ -1,0 +1,114 @@
+<!-- templates/mds/supprimer_utilisateur_mds.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Retirer un utilisateur - {{ mds.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-md mx-auto">
+        <!-- En-tête -->
+        <div class="text-center mb-8">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+            </div>
+            <h1 class="mt-4 text-3xl font-bold text-gray-900">Retirer un utilisateur</h1>
+            <p class="mt-2 text-gray-600">MDS : {{ mds.nom }} ({{ mds.code }})</p>
+        </div>
+
+        <!-- Confirmation -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-red-50 border-b border-red-100">
+                <h2 class="text-lg font-medium text-red-800">Confirmation requise</h2>
+            </div>
+            
+            <div class="px-6 py-4">
+                <div class="text-center mb-6">
+                    <div class="mx-auto h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                        <span class="text-2xl font-bold text-gray-600">
+                            {{ profile.user.get_full_name|slice:":1" }}
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900">
+                        {{ profile.user.get_full_name }}
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        {{ profile.user.username }}
+                    </p>
+                </div>
+
+                <!-- Informations du profil -->
+                <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-500">Profil</p>
+                            <p class="font-medium">{{ profile.get_profil_display }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Période</p>
+                            <p class="font-medium">
+                                {{ profile.date_debut|date:"d/m/Y" }}
+                                {% if profile.date_fin %}
+                                    - {{ profile.date_fin|date:"d/m/Y" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-gray-500">Ajouté le</p>
+                            <p class="font-medium">{{ profile.date_creation|date:"d/m/Y à H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Avertissement -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800">Attention</h3>
+                            <div class="mt-2 text-sm text-yellow-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    <li>L'utilisateur sera retiré de cette MDS</li>
+                                    <li>Il sera également retiré du groupe principal : {{ mds.groupe_principal.name|default:"Non défini" }}</li>
+                                    <li>Cette action est irréversible</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire de suppression -->
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="flex flex-col space-y-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="confirm" name="confirm" required
+                                   class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                            <label for="confirm" class="ml-2 block text-sm text-gray-900">
+                                Je confirme vouloir retirer cet utilisateur de la MDS
+                            </label>
+                        </div>
+                        
+                        <div class="flex space-x-4 pt-4">
+                            <a href="{% url 'mds:gestion_utilisateurs_mds' mds.id %}" 
+                               class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                Annuler
+                            </a>
+                            <button type="submit" 
+                                    class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                Retirer l'utilisateur
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

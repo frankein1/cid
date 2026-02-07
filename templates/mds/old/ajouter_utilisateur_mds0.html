@@ -1,0 +1,177 @@
+<!-- ================================================================ -->
+<!-- 3. templates/mds/ajouter_utilisateur_mds.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Ajouter utilisateur - {{ mds.code_mds }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-user-plus text-green-500 mr-3"></i>
+            Ajouter un utilisateur
+        </h1>
+        <p class="text-gray-600 mt-2">{{ mds.nom }} - {{ mds.code_mds }}</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-red-800 mb-2">Erreurs détectées :</h3>
+                <ul class="list-disc pl-5 text-sm text-red-700">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Mode de sélection -->
+            <div class="border-b pb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Mode d'ajout</label>
+                {{ form.mode }}
+            </div>
+
+            <!-- Utilisateur existant -->
+            <div id="existant-section" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Sélectionner un utilisateur existant
+                    </label>
+                    {{ form.user_existant }}
+                </div>
+            </div>
+
+            <!-- Nouvel utilisateur -->
+            <div id="nouveau-section" class="space-y-4" style="display: none;">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Matricule *</label>
+                        {{ form.nouveau_matricule }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        {{ form.nouveau_email }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Prénom *</label>
+                        {{ form.nouveau_prenom }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                        {{ form.nouveau_nom }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Mot de passe *</label>
+                        {{ form.nouveau_mdp1 }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirmation *</label>
+                        {{ form.nouveau_mdp2 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profil Core -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Profil Core *</label>
+                {{ form.profil_core }}
+                <p class="mt-1 text-sm text-gray-500">
+                    Sélectionnez un profil du système centralisé (MDS_Agents_Sociaux, MDS_Cadres, etc.)
+                </p>
+            </div>
+
+            <!-- Configuration du profil MDS -->
+            <div class="border-t pt-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Configuration MDS</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+                        {{ form.date_debut }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date de fin (optionnelle)</label>
+                        {{ form.date_fin }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rôle spécifique</label>
+                    {{ form.role_specifique }}
+                    <p class="mt-1 text-sm text-gray-500">Ex: Référent RSA, Référent PMI</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Bureau</label>
+                        {{ form.bureau }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone interne</label>
+                        {{ form.telephone_interne }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="flex items-center">
+                        {{ form.principale }}
+                        <span class="ml-2 text-sm text-gray-700">MDS principale pour cet utilisateur</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="pt-6 border-t flex justify-end space-x-4">
+                <a href="{% url 'mds:gestion_utilisateurs_mds' mds_id=mds.id %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                    <i class="fas fa-user-plus mr-2"></i>Ajouter l'utilisateur
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modeInputs = document.querySelectorAll('input[name="mode"]');
+    const existantSection = document.getElementById('existant-section');
+    const nouveauSection = document.getElementById('nouveau-section');
+    
+    function toggleSections() {
+        const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+        
+        if (selectedMode === 'existant') {
+            existantSection.style.display = 'block';
+            nouveauSection.style.display = 'none';
+        } else {
+            existantSection.style.display = 'none';
+            nouveauSection.style.display = 'block';
+        }
+    }
+    
+    modeInputs.forEach(input => {
+        input.addEventListener('change', toggleSections);
+    });
+    
+    // Initialiser l'affichage
+    toggleSections();
+});
+</script>
+{% endblock %}

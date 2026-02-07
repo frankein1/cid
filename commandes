@@ -1,0 +1,77 @@
+#trouver commande utilisant port 6000 
+lsof -i :60000 
+#tuer toutes les instances travaillant sur port 60000
+fuser -k 60000/tcp
+
+# trouver une commande 
+ps aux | grep manage.py
+
+#tuer la commande 
+kill -9 numcommande
+
+#lancer l'install 
+(source venv/bin/activate) 
+python manage.py install 
+
+
+
+Gunicorn : 
+
+VÉRIFICATION qu'il n'y en a pas un de lancé 
+bash
+# Plus de Gunicorn ?
+ps aux | grep gunicorn  # Rien = OK
+
+# Port libre ?
+sudo netstat -tulpn | grep 60000  # Rien = OK
+
+LANCEMENT Gunicorn : 
+cd /srv/django/si-ditas/
+(venv) gunicorn cid.wsgi:application --bind 0.0.0.0:60000 --workers 3
+
+
+
+FERMETURE Gunicorn : 
+Situation			>>		Commande
+Terminal actuel		>>		Ctrl+C ✅
+Plusieurs instances	>>		pkill -f gunicorn
+Par port			>>		sudo lsof -i :60000 → kill PID
+MODE SAUVAGE 		>>		sudo pkill -9 -f gunicorn  
+
+
+
+
+
+RESTE A FAIRE : 
+AidFI OK ged OK cid OK core OK 
+beneficiaire 
+planning 
+messagerie ok
+Templates <> modules 
+
+
+
+Script install peuplé : 
+je vais donc lancer le script d'install pour effacer la base et recommencer proprement avec ma MDS de test. 
+Serait-il possible de créer la MDS de test, 1 agent cadre, 1 social, 1 administratif, 2 usagers dont 1 en couple avec 2 enfants ? 
+Puis, en admettant que l'agent social reçoit le mercredi matin et le vendredi matin, dans le même script, de créer des créneaux de réception pour l'agent social qui est rattaché au couple avec enfants puis de planifier 2 rdv dont 1 pour cette famille et l'autre pour l'usager en attente de rdv ? 
+Enfin, quitte à tout tester, faire une afase 
+
+
+SCRIPT ZIP 
+
+
+DROPDB : 
+sudo -u postgres dropdb <nomdelabase>
+recréer la base : 
+/srv/django/si-ditas/core/management/commands puis ./create_db.sh
+
+supprimer pycache et migrations 
+find . -path ./venv -prune -o -type d -name "__pycache__" -print -exec rm -rf {} +
+find . -path ./venv -prune -o -type d -name "migrations" -print -exec rm -rf {} +
+
+entrer psql : 
+(venv) fred@debian:/srv/django/si-ditas$  >>>>> psql -U nabu -d cid
+entrer Shell Django :
+python manage.py shell
+

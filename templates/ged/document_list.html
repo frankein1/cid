@@ -1,0 +1,76 @@
+<!-- /templates/ged/document_list.html -->
+{% extends "base.html" %}
+{% load ged_tags %}
+
+{% block title %}GED{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+
+<h1 class="text-3xl font-black mb-6">
+    <i class="fas fa-archive mr-2 text-indigo-600"></i>GED
+</h1>
+
+<div class="bg-white border rounded-xl overflow-hidden">
+<table class="min-w-full divide-y divide-gray-200">
+<thead class="bg-gray-50">
+<tr>
+    <th class="px-6 py-3 text-xs font-black">Document</th>
+    <th class="px-6 py-3 text-xs font-black">Type / Catégorie</th>
+    <th class="px-6 py-3 text-xs font-black">Expiration</th>
+    <th class="px-6 py-3 text-xs font-black">Statut</th>
+    <th class="px-6 py-3 text-xs font-black text-right">Actions</th>
+</tr>
+</thead>
+
+<tbody class="divide-y">
+{% for doc in documents %}
+<tr class="hover:bg-gray-50">
+    <td class="px-6 py-4 font-bold">{{ doc.titre }}</td>
+
+    <td class="px-6 py-4">
+        <div class="font-medium">{{ doc.type_document.nom }}</div>
+        <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+            {{ doc.type_document.get_categorie_display }}
+        </span>
+    </td>
+
+    <td class="px-6 py-4">
+        {% if doc.date_expiration %}
+            {{ doc.date_expiration|date:"d/m/Y" }}
+        {% else %}
+            <span class="text-xs italic text-gray-400">Illimité</span>
+        {% endif %}
+    </td>
+
+    <td class="px-6 py-4">
+        {{ doc.get_statut_display }}
+    </td>
+
+    <td class="px-6 py-4 text-right">
+        <a href="{% url 'ged:document_detail' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-eye"></i>
+        </a>
+        <a href="{% url 'ged:download_document' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-download"></i>
+        </a>
+        {% if doc|peut_modifier_ged:user %}
+        <a href="{% url 'ged:document_edit' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr>
+<td colspan="5" class="p-8 text-center text-gray-400 italic">
+    Aucun document
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+{% endblock %}
+

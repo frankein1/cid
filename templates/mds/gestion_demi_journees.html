@@ -1,0 +1,186 @@
+<!-- ================================================================ -->
+<!-- 5. templates/mds/gestion_demi_journees.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Planning Réception - {{ mds.code_mds }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <nav class="flex mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+                <a href="{% url 'mds:liste_mds' %}" class="hover:text-blue-600">MDS</a>
+                <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
+                <a href="{% url 'mds:detail_mds' mds.id %}" class="hover:text-blue-600">{{ mds.code_mds }}</a>
+                <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
+                <span class="text-gray-900 font-medium">Planning de réception</span>
+            </nav>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                <i class="fas fa-calendar-check text-blue-600 mr-2"></i>Permanences de Réception
+            </h1>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg flex items-center">
+            <div class="mr-4 text-blue-700">
+                <i class="fas fa-info-circle text-xl"></i>
+            </div>
+            <p class="text-xs text-blue-800 leading-tight">
+                Cochez les demi-journées où l'agent est <br><strong>assigné à l'accueil du public</strong>.
+            </p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-8">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div class="md:col-span-3">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Sélection de l'agent
+                </label>
+                <div class="relative">
+                    <select name="agent_id" onchange="this.form.submit()" class="block w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white">
+                        <option value="">-- Choisir un agent de la MDS --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" {% if agent_selected and agent.id == agent_selected.id %}selected{% endif %}>
+                            {{ agent.last_name|upper }} {{ agent.first_name }} 
+                            {% if agent.profile %} ({{ agent.profile.nom_profil }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="absolute left-3 top-3 text-gray-400">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-gray-900 text-white font-bold py-2.5 rounded-lg hover:bg-gray-800 transition">
+                Charger le planning
+            </button>
+        </form>
+    </div>
+
+    {% if agent_selected %}
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="font-bold text-gray-800">
+                Semaine type de : <span class="text-blue-600">{{ agent_selected.get_full_name }}</span>
+            </h2>
+            <div class="flex space-x-4 text-xs">
+                <span class="flex items-center"><span class="w-3 h-3 bg-emerald-500 rounded-full mr-1"></span> Réception</span>
+                <span class="flex items-center"><span class="w-3 h-3 bg-gray-300 rounded-full mr-1"></span> Bureau / Absent</span>
+            </div>
+        </div>
+
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] bg-gray-50/50">
+                    <th class="px-8 py-4 border-b">Jour de la semaine</th>
+                    <th class="px-6 py-4 border-b text-center">Matinée (AM)</th>
+                    <th class="px-6 py-4 border-b text-center">Après-midi (PM)</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for jour_num, jour_nom in jours_semaine.items %}
+                {% if jour_num < 5 %} {# On s'arrête au Vendredi par défaut #}
+                <tr class="hover:bg-blue-50/30 transition group">
+                    <td class="px-8 py-5">
+                        <span class="text-sm font-bold text-gray-700 group-hover:text-blue-700">{{ jour_nom }}</span>
+                    </td>
+                    
+                    <td class="px-6 py-4">
+                        <div class="flex justify-center">
+                            {% with key=jour_num|stringformat:"s"|add:"_MATIN" %}
+                            <form action="{% url 'mds:toggle_demi_journee' %}" method="POST" class="toggle-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="agent_id" value="{{ agent_selected.id }}">
+                                <input type="hidden" name="jour_semaine" value="{{ jour_num }}">
+                                <input type="hidden" name="type_demi_journee" value="MATIN">
+                                
+                                <button type="submit" 
+                                    class="toggle-btn w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 
+                                    {% if key in permanences_actives %}bg-emerald-500 justify-end{% else %}bg-gray-300 justify-start{% endif %}">
+                                    <span class="bg-white w-4 h-4 rounded-full shadow-sm"></span>
+                                </button>
+                            </form>
+                            {% endwith %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="flex justify-center">
+                            {% with key=jour_num|stringformat:"s"|add:"_APRES_MIDI" %}
+                            <form action="{% url 'mds:toggle_demi_journee' %}" method="POST" class="toggle-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="agent_id" value="{{ agent_selected.id }}">
+                                <input type="hidden" name="jour_semaine" value="{{ jour_num }}">
+                                <input type="hidden" name="type_demi_journee" value="APRES_MIDI">
+                                
+                                <button type="submit" 
+                                    class="toggle-btn w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 
+                                    {% if key in permanences_actives %}bg-emerald-500 justify-end{% else %}bg-gray-300 justify-start{% endif %}">
+                                    <span class="bg-white w-4 h-4 rounded-full shadow-sm"></span>
+                                </button>
+                            </form>
+                            {% endwith %}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+            <p class="text-xs text-gray-500 italic">
+                <i class="fas fa-save mr-1"></i> Les modifications sont enregistrées automatiquement lors du clic.
+            </p>
+            <a href="{% url 'mds:detail_mds' mds.id %}" class="text-sm font-bold text-blue-600 hover:text-blue-800">
+                Terminer et revenir au tableau de bord
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
+        <div class="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-calendar-alt text-4xl text-gray-200"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-800">Aucun agent sélectionné</h3>
+        <p class="text-gray-500 max-w-xs mx-auto mt-2">Veuillez choisir un agent dans la liste ci-dessus pour définir ses créneaux de réception.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Optionnel : Script pour faire du toggle sans rechargement de page (AJAX)
+    document.querySelectorAll('.toggle-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('.toggle-btn');
+            const formData = new FormData(this);
+
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Animation visuelle du toggle
+                    if (data.is_active) {
+                        btn.classList.replace('bg-gray-300', 'bg-emerald-500');
+                        btn.classList.replace('justify-start', 'justify-end');
+                    } else {
+                        btn.classList.replace('bg-emerald-500', 'bg-gray-300');
+                        btn.classList.replace('justify-end', 'justify-start');
+                    }
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+        });
+    });
+</script>
+{% endblock %}

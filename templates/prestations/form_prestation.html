@@ -1,0 +1,207 @@
+<!-- templates/prestations/form_prestation.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ action }} - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                {{ action }}
+            </h1>
+            <p class="text-gray-600">
+                Pour : <strong>{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</strong> 
+                ({{ beneficiaire.code_interne }})
+            </p>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Affichage des erreurs générales -->
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">
+                                Erreurs de validation
+                            </h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside space-y-1">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Informations de la prestation -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Type de prestation -->
+                    <div>
+                        <label for="{{ form.type_prestation.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Type de prestation *
+                        </label>
+                        {{ form.type_prestation }}
+                        {% if form.type_prestation.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.type_prestation.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Statut -->
+                    <div>
+                        <label for="{{ form.statut.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Statut *
+                        </label>
+                        {{ form.statut }}
+                        {% if form.statut.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.statut.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Date de demande -->
+                    <div>
+                        <label for="{{ form.date_demande.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Date de demande *
+                        </label>
+                        {{ form.date_demande }}
+                        {% if form.date_demande.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.date_demande.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Date de traitement -->
+                    <div>
+                        <label for="{{ form.date_traitement.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Date de traitement
+                        </label>
+                        {{ form.date_traitement }}
+                        {% if form.date_traitement.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.date_traitement.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Montants -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Montant demandé -->
+                    <div>
+                        <label for="{{ form.montant_demande.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Montant demandé (€)
+                        </label>
+                        {{ form.montant_demande }}
+                        {% if form.montant_demande.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.montant_demande.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Montant accordé -->
+                    <div>
+                        <label for="{{ form.montant_accorde.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            Montant accordé (€)
+                        </label>
+                        {{ form.montant_accorde }}
+                        {% if form.montant_accorde.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.montant_accorde.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Motif de refus -->
+                <div>
+                    <label for="{{ form.motif_refus.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Motif de refus
+                    </label>
+                    {{ form.motif_refus }}
+                    {% if form.motif_refus.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.motif_refus.errors.0 }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">
+                        À remplir uniquement si la prestation est refusée
+                    </p>
+                </div>
+
+                <!-- Observations -->
+                <div>
+                    <label for="{{ form.observations.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        Observations
+                    </label>
+                    {{ form.observations }}
+                    {% if form.observations.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.observations.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+                       class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i>Annuler
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        <i class="fas fa-save mr-2"></i>{{ action }}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Aide contextuelle -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">
+                        Types de prestations
+                    </h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Aide financière :</strong> Secours d'urgence, aide ponctuelle</li>
+                            <li><strong>Aide alimentaire :</strong> Bons alimentaires, colis</li>
+                            <li><strong>Aide énergétique :</strong> Factures énergétiques</li>
+                            <li><strong>Accompagnement :</strong> Suivi social, orientation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Afficher/masquer le motif de refus selon le statut
+const statutSelect = document.getElementById('id_statut');
+const motifRefusDiv = document.querySelector('[for="id_motif_refus"]').parentElement;
+
+if (statutSelect && motifRefusDiv) {
+    function toggleMotifRefus() {
+        if (statutSelect.value === 'REFUSEE') {
+            motifRefusDiv.style.display = 'block';
+        } else {
+            motifRefusDiv.style.display = 'none';
+        }
+    }
+    
+    statutSelect.addEventListener('change', toggleMotifRefus);
+    toggleMotifRefus(); // Appel initial
+}
+</script>
+{% endblock %}

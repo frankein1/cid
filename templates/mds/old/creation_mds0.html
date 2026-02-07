@@ -1,0 +1,145 @@
+<!-- ================================================================ -->
+<!-- 4. templates/mds/creation_mds.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-building text-purple-500 mr-3"></i>
+            {{ title }}
+        </h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-red-800 mb-2">Erreurs détectées :</h3>
+                <ul class="list-disc pl-5 text-sm text-red-700">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Identification -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Code MDS *</label>
+                    {{ form.code_mds }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom *</label>
+                    {{ form.nom }}
+                </div>
+            </div>
+
+            <!-- Adresse -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adresse *</label>
+                {{ form.adresse }}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Code postal *</label>
+                    {{ form.code_postal }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
+                    {{ form.ville }}
+                </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                    {{ form.telephone }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    {{ form.email }}
+                </div>
+            </div>
+
+            <!-- Gestion -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Responsable</label>
+                    {{ form.responsable }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Capacité max agents</label>
+                    {{ form.nb_agents_max }}
+                </div>
+            </div>
+
+            <div>
+                <label class="flex items-center">
+                    {{ form.active }}
+                    <span class="ml-2 text-sm text-gray-700">MDS active</span>
+                </label>
+            </div>
+
+            <!-- Boutons -->
+            <div class="pt-6 border-t flex justify-end space-x-4">
+                <a href="{% url 'mds:liste_mds' %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
+                    <i class="fas fa-save mr-2"></i>Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cpInput = document.querySelector('input[name="code_postal"]');
+    const villeInput = document.querySelector('input[name="ville"]');
+
+    if (cpInput && villeInput) {
+        cpInput.addEventListener('input', function() {
+            const cp = this.value.trim();
+            
+            if (cp.length === 5) {
+                // On affiche un petit indicateur visuel (optionnel)
+                villeInput.placeholder = "Recherche en cours...";
+                
+                // Appel vers l'URL nommée dans mds/urls.py
+                fetch(`{% url 'mds:get_ville_by_cp' %}?cp=${cp}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            villeInput.value = data.ville;
+                            villeInput.classList.add('bg-green-50');
+                            setTimeout(() => villeInput.classList.remove('bg-green-50'), 1000);
+                        } else {
+                            console.log("Ville non trouvée");
+                        }
+                    })
+                    .catch(error => console.error('Erreur Ajax:', error))
+                    .finally(() => {
+                        villeInput.placeholder = "";
+                    });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

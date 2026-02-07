@@ -1,0 +1,105 @@
+<!-- templates/messagerie/messages_envoyes.html -->
+{% extends 'base.html' %}
+
+{% block title %}Messages envoyés - Messagerie{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- En-tête -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-paper-plane mr-3 text-blue-600"></i>
+                    Messages envoyés
+                </h1>
+                <p class="text-gray-500 text-sm mt-1">
+                    {{ messages.count }} message{{ messages.count|pluralize }}
+                </p>
+            </div>
+            <a href="{% url 'messagerie:nouveau_message' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
+                <i class="fas fa-edit mr-2"></i>
+                Nouveau message
+            </a>
+        </div>
+
+        <!-- Navigation -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-4">
+                <a href="{% url 'messagerie:boite_reception' %}" 
+                   class="pb-3 px-1 border-b-2 border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-700">
+                    Réception
+                </a>
+                <a href="{% url 'messagerie:messages_envoyes' %}" 
+                   class="pb-3 px-1 border-b-2 border-blue-500 font-medium text-blue-600">
+                    Envoyés
+                </a>
+            </nav>
+        </div>
+
+        <!-- Liste des messages -->
+        {% if messages %}
+        <div class="space-y-2">
+            {% for msg in messages %}
+            <a href="{% url 'messagerie:voir_message' msg.id %}" 
+               class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-arrow-right text-blue-500"></i>
+                            
+                            <span class="font-semibold text-gray-900">
+                                → {{ msg.destinataire.get_full_name }}
+                            </span>
+                            
+                            {% if msg.copie %}
+                            <span class="text-sm text-gray-500">
+                                (Cc: {{ msg.copie.get_full_name }})
+                            </span>
+                            {% endif %}
+                            
+                            {% if msg.priorite == 'urgente' %}
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
+                                <i class="fas fa-exclamation-triangle"></i> Urgent
+                            </span>
+                            {% elif msg.priorite == 'importante' %}
+                            <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                Important
+                            </span>
+                            {% endif %}
+                            
+                            {% if msg.pieces_jointes.count > 0 %}
+                            <i class="fas fa-paperclip text-gray-400 text-sm"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <h3 class="font-medium text-gray-800 mt-2">{{ msg.objet }}</h3>
+                        <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ msg.contenu|truncatewords:20 }}</p>
+                    </div>
+                    
+                    <div class="text-right text-sm text-gray-500 ml-4">
+                        <div>{{ msg.date_creation|date:"d/m/Y" }}</div>
+                        <div class="text-xs">{{ msg.date_creation|time:"H:i" }}</div>
+                        {% if msg.reponses.count > 0 %}
+                        <div class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-reply"></i> {{ msg.reponses.count }} réponse{{ msg.reponses.count|pluralize }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-paper-plane text-gray-300 text-6xl mb-4"></i>
+            <p class="text-gray-500">Aucun message envoyé</p>
+            <a href="{% url 'messagerie:nouveau_message' %}" class="mt-4 inline-block text-blue-600 hover:text-blue-700">
+                <i class="fas fa-plus-circle mr-1"></i>
+                Envoyer votre premier message
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

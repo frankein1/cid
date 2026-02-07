@@ -1,0 +1,8 @@
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+    <p class="font-medium">Accès refusé</p>
+    <p>{{ message|default:"Vous n'avez pas les permissions nécessaires." }}</p>
+    <a href="{{ back_url|default:'#' }}"
+       class="text-red-600 hover:text-red-800 underline mt-2 inline-block">
+        Retour
+    </a>
+</div>

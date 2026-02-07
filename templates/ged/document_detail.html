@@ -1,0 +1,109 @@
+<!-- /templates/ged/document_detail.html-->
+{% extends "base.html" %}
+{% load ged_tags %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <nav class="flex text-sm text-gray-500 font-medium mb-6 uppercase tracking-wider">
+        <a href="{% url 'ged:document_list' %}" class="hover:text-indigo-600">GED</a>
+        <span class="mx-2">/</span>
+        {% if document.content_object %}
+            <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=document.content_object.code_interne %}" class="hover:text-indigo-600">Dossier {{ document.content_object.nom }}</a>
+            <span class="mx-2">/</span>
+        {% endif %}
+        <span class="text-gray-400">{{ document.titre }}</span>
+    </nav>
+
+    <div class="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-gray-900">{{ document.titre }}</h1>
+                <p class="text-sm text-gray-500">Déposé le {{ document.date_creation|date:"d/m/Y à H:i" }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                {% if document.confidentialite == 'CONFIDENTIEL' %}
+                    <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-black"><i class="fas fa-eye-slash mr-1"></i> CONFIDENTIEL</span>
+                {% endif %}
+                <span class="px-3 py-1 {% if document.statut == 'VALIDE' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %} rounded-full text-[10px] font-black">
+                    {{ document.get_statut_display|upper }}
+                </span>
+            </div>
+        </div>
+
+        <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div>
+                <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Informations Dossier</h3>
+                <dl class="space-y-4">
+                    <div class="flex justify-between border-b border-gray-50 pb-2">
+                        <dt class="text-sm text-gray-500 font-medium">Bénéficiaire</dt>
+                        <dd class="text-sm font-bold text-gray-900">
+                            {% if document.content_object %}{{ document.content_object.nom }} {{ document.content_object.prenom }}{% else %}Non lié{% endif %}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-50 pb-2">
+                        <dt class="text-sm text-gray-500 font-medium">Catégorie</dt>
+                        <dd class="text-sm text-gray-900">{{ document.type_document.get_categorie_display }}</dd>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-50 pb-2">
+                        <dt class="text-sm text-gray-500 font-medium">Échéance</dt>
+                        <dd class="text-sm">
+                            {% if document.date_expiration %}
+                                <span class="font-mono {% if document.notification_envoyee %}text-red-600 font-bold{% endif %}">{{ document.date_expiration|date:"d/m/Y" }}</span>
+                            {% else %}<span class="italic text-gray-400 text-xs">Permanente</span>{% endif %}
+                        </dd>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-50 pb-2">
+                        <dt class="text-sm text-gray-500 font-medium">Poids</dt>
+                        <dd class="text-sm font-mono">{{ document.taille_octets|filesizeformat }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <div>
+                <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Description / Notes</h3>
+                <div class="p-4 bg-gray-50 rounded-xl text-sm text-gray-600 leading-relaxed italic">
+                    {{ document.description|default:"Aucune observation renseignée."|linebreaksbr }}
+                </div>
+                
+                {% if document.agents_autorises.exists %}
+                <div class="mt-6">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Accès restreints</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for agent in document.agents_autorises.all %}
+                            <span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold border border-indigo-100">{{ agent.get_full_name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex flex-wrap gap-3">
+            <a href="{% url 'ged:download_document' pk=document.pk %}" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-700 transition shadow-sm">
+                <i class="fas fa-download mr-2"></i> TÉLÉCHARGER
+            </a>
+
+            {% if document|peut_modifier_ged:request.user %}
+            <a href="{% url 'ged:document_edit' pk=document.pk %}" class="bg-white border border-gray-200 text-gray-700 px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-gray-50 transition">
+                <i class="fas fa-edit mr-2 text-orange-500"></i> MODIFIER
+            </a>
+            {% endif %}
+
+            {% if user|a_la_capacite:"peut_valider" and document.statut != "VALIDE" %}
+<form method="post" action="{% url 'ged:validate_document' pk=document.pk %}">
+    {% csrf_token %}
+    <button class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold">
+        <i class="fas fa-check mr-2"></i>VALIDER
+    </button>
+</form>
+{% endif %}
+
+            {% if document|peut_modifier_ged:user or user.is_superuser %}
+            <a href="{% url 'ged:document_delete' pk=document.pk %}" class="ml-auto text-red-500 hover:text-red-700 font-bold text-sm transition">
+                <i class="fas fa-trash-alt mr-1"></i> SUPPRIMER L'ARCHIVE
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+<!-- /templates/ged/document_upload.html -->
+
+{% extends "base.html" %}
+{% load ged_tags %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="mb-8 text-center">
+        <h1 class="text-3xl font-black text-gray-900 uppercase tracking-tight">
+            {% if form.instance.pk %}Modification{% else %}Nouvel Archivage{% endif %}
+        </h1>
+
+        {% if beneficiaire %}
+        <p class="mt-3">
+            <span class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full border border-indigo-100 text-sm font-bold">
+                <i class="fas fa-user-folder mr-2"></i>
+                {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
+            </span>
+        </p>
+        {% endif %}
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="bg-white border-2 border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+        {% csrf_token %}
+
+        <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Fichier *</label>
+                    <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-gray-50 hover:border-indigo-400">
+                        {{ form.file }}
+                        <p id="filename-display" class="text-xs text-gray-400 font-bold">
+                            CLIQUEZ OU GLISSEZ UN FICHIER
+                        </p>
+                    </div>
+                    {% if form.file.errors %}
+                        <p class="text-xs text-red-600 font-bold mt-2">{{ form.file.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Titre *</label>
+                    {{ form.titre }}
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Type de document *</label>
+                    {{ form.type_document }}
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Date d’expiration</label>
+                    {{ form.date_expiration }}
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Confidentialité</label>
+                    {{ form.confidentialite }}
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase mb-2">Description</label>
+                    {{ form.description }}
+                </div>
+            </div>
+        </div>
+
+        <div class="px-8 py-6 bg-gray-50 border-t flex justify-between">
+            <a href="javascript:history.back()" class="text-xs font-black text-gray-400 uppercase">
+                Annuler
+            </a>
+            <button type="submit" class="bg-indigo-600 text-white px-10 py-3 rounded-xl font-black text-xs uppercase">
+                Archiver
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+input[type="file"] {
+    position:absolute;
+    inset:0;
+    opacity:0;
+    cursor:pointer;
+}
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"]');
+    const filenameDisplay = document.getElementById('filename-display');
+    
+    if (fileInput && filenameDisplay) {
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                filenameDisplay.textContent = this.files[0].name;
+                filenameDisplay.classList.remove('text-gray-400');
+                filenameDisplay.classList.add('text-indigo-600', 'font-bold');
+            } else {
+                filenameDisplay.textContent = 'CLIQUEZ OU GLISSEZ UN FICHIER';
+                filenameDisplay.classList.remove('text-indigo-600', 'font-bold');
+                filenameDisplay.classList.add('text-gray-400');
+            }
+        });
+        
+        // Drag & drop
+        const dropZone = fileInput.parentElement;
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
+        }
+        
+        function unhighlight() {
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+        }
+        
+        dropZone.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            fileInput.dispatchEvent(new Event('change'));
+        });
+    }
+});
+</script>
+{% endblock %}

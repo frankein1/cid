@@ -1,0 +1,132 @@
+<!-- templates/messagerie/boite_reception.html - MODIFICATION -->
+{% extends 'base.html' %}
+
+{% block title %}Boîte de réception - Messagerie{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- En-tête -->
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-inbox mr-3 text-blue-600"></i>
+                    Boîte de réception
+                </h1>
+                <p class="text-gray-500 text-sm mt-1">
+                    {{ nb_non_lus }} message{{ nb_non_lus|pluralize }} non lu{{ nb_non_lus|pluralize }} sur {{ nb_total }}
+                </p>
+            </div>
+            <a href="{% url 'messagerie:nouveau_message' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
+                <i class="fas fa-edit mr-2"></i>
+                Nouveau message
+            </a>
+        </div>
+
+        <!-- Navigation -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-4">
+                <a href="{% url 'messagerie:boite_reception' %}" 
+                   class="pb-3 px-1 border-b-2 border-blue-500 font-medium text-blue-600">
+                    Réception
+                </a>
+                <a href="{% url 'messagerie:messages_envoyes' %}" 
+                   class="pb-3 px-1 border-b-2 border-transparent hover:border-gray-300 text-gray-500 hover:text-gray-700">
+                    Envoyés
+                </a>
+            </nav>
+        </div>
+
+        <!-- Filtres -->
+        <div class="flex space-x-2 mb-4">
+            <a href="?filtre=tous" 
+               class="px-3 py-1 rounded-full text-sm {% if filtre == 'tous' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                Tous
+            </a>
+            <a href="?filtre=non_lus" 
+               class="px-3 py-1 rounded-full text-sm {% if filtre == 'non_lus' %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                Non lus ({{ nb_non_lus }})
+            </a>
+            <a href="?filtre=urgents" 
+               class="px-3 py-1 rounded-full text-sm {% if filtre == 'urgents' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                Urgents
+            </a>
+        </div>
+
+        <!-- Liste des messages -->
+        {% if messages %}
+        <div class="space-y-2">
+            {% for msg in messages %}
+            <a href="{% url 'messagerie:voir_message' msg.id %}" 
+               class="block p-4 border rounded-lg hover:bg-gray-50 transition {% if not msg.statuts_lecture.first.lu %}bg-blue-50 border-blue-200{% else %}bg-white border-gray-200{% endif %}">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 flex-wrap">
+                            {% if not msg.statuts_lecture.first.lu %}
+                            <span class="w-2 h-2 bg-blue-600 rounded-full"></span>
+                            {% endif %}
+                            
+                            <span class="font-semibold text-gray-900">
+                                {{ msg.expediteur.get_full_name }}
+                            </span>
+                            
+                            <!-- NOUVEAU : Affichage du bénéficiaire -->
+                            {% if msg.beneficiaire %}
+                            <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                                <i class="fas fa-user mr-1"></i>
+                                {{ msg.beneficiaire.nom }} {{ msg.beneficiaire.prenom }}
+                            </span>
+                            {% endif %}
+                            
+                            <!-- NOUVEAU : Affichage du motif -->
+                            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">
+                                {{ msg.get_motif_display }}
+                            </span>
+                            
+                            {% if msg.priorite == 'urgente' %}
+                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
+                                <i class="fas fa-exclamation-triangle"></i> Urgent
+                            </span>
+                            {% elif msg.priorite == 'importante' %}
+                            <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
+                                Important
+                            </span>
+                            {% endif %}
+                            
+                            {% if msg.pieces_jointes.count > 0 %}
+                            <i class="fas fa-paperclip text-gray-400 text-sm"></i>
+                            {% endif %}
+                            
+                            {% if msg.copie == user %}
+                            <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                Copie
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <h3 class="font-medium text-gray-800 mt-2">{{ msg.objet }}</h3>
+                        <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ msg.contenu|truncatewords:20 }}</p>
+                    </div>
+                    
+                    <div class="text-right text-sm text-gray-500 ml-4">
+                        <div>{{ msg.created_at|date:"d/m/Y" }}</div>
+                        <div class="text-xs">{{ msg.created_at|time:"H:i" }}</div>
+                        {% if msg.nb_reponses > 0 %}
+                        <div class="text-xs text-blue-600 mt-1">
+                            <i class="fas fa-reply"></i> {{ msg.nb_reponses }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+            <p class="text-gray-500">Aucun message</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

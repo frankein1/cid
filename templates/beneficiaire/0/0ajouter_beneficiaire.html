@@ -1,0 +1,241 @@
+<!-- templates/beneficiaire/ajouter_beneficiaire.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ajouter un bénéficiaire - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Ajouter un bénéficiaire</h1>
+            <p class="text-gray-600">Remplissez le formulaire pour ajouter un nouveau bénéficiaire au système.</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <form method="post" class="space-y-6" id="mainForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Erreurs de validation</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.civilite.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Civilité</label>
+                            {{ form.civilite }}
+                        </div>
+                        <div>
+                            <label for="{{ form.nom.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                            {{ form.nom }}
+                        </div>
+                        <div>
+                            <label for="{{ form.prenom.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
+                            {{ form.prenom }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.situation_familiale.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Situation familiale</label>
+                            {{ form.situation_familiale }}
+                        </div>
+
+                        <div>
+                            <label for="{{ form.telephone_mobile.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Téléphone mobile</label>
+                            {{ form.telephone_mobile }}
+                        </div>
+                        <div>
+                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            {{ form.email }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Adresse</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.adresse.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                            {{ form.adresse }}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.code_postal.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
+                                {{ form.code_postal }}
+                            </div>
+                            <div>
+                                <label for="{{ form.ville.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                                {{ form.ville }}
+                                <datalist id="villes-list"></datalist>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Rattachement territorial</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="{{ form.mds.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">MDS de rattachement</label>
+                            {{ form.mds }}
+                        </div>
+                        <div>
+                            <label for="{{ form.referent_mds.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Référent MDS</label>
+                            {{ form.referent_mds }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <a href="{% url 'beneficiaire:liste' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // -------------------------------------------------------------------------
+    // 1. CHARGEMENT DYNAMIQUE DES RÉFÉRENTS MDS
+    // -------------------------------------------------------------------------
+    const mdsSelect = document.getElementById('id_mds');
+    const referentSelect = document.getElementById('id_referent_mds');
+
+    if (mdsSelect && referentSelect) {
+        mdsSelect.addEventListener('change', function() {
+            const mdsId = this.value;
+            if (mdsId) {
+                fetch('/beneficiaire/ajax/load-referents/?mds_id=' + mdsId)
+                    .then(response => response.json())
+                    .then(data => {
+                        referentSelect.innerHTML = '<option value="">---------</option>';
+                        data.referents.forEach(ref => {
+                            const option = new Option(ref.nom_complet, ref.id);
+                            referentSelect.add(option);
+                        });
+                    });
+            } else {
+                referentSelect.innerHTML = '<option value="">---------</option>';
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. RECHERCHE CP / VILLE (API GÉO)
+    // -------------------------------------------------------------------------
+    const cpInput = document.getElementById('id_code_postal');
+    const villeInput = document.getElementById('id_ville');
+    const villesDatalist = document.getElementById('villes-list');
+
+    // On lie l'input ville au datalist pour activer les suggestions
+    if (villeInput) {
+        villeInput.setAttribute('list', 'villes-list');
+    }
+
+    function searchCityData(params) {
+        const query = new URLSearchParams(params).toString();
+        fetch('/beneficiaire/ajax/get-ville-from-cp/?' + query)
+            .then(response => response.json())
+            .then(data => {
+                // On vide les anciennes suggestions
+                villesDatalist.innerHTML = '';
+                
+                // Si on a un résultat unique et qu'on cherchait par CP
+                if (data.villes.length === 1 && params.cp) {
+                    villeInput.value = data.villes[0].ville;
+                } else {
+                    // Sinon, on remplit la liste de suggestions
+                    data.villes.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.ville;
+                        // On stocke le code postal dans un attribut "data" pour le récupérer après
+                        option.setAttribute('data-cp', item.cp);
+                        // Texte affiché dans la liste : "13001 - Marseille"
+                        option.textContent = item.cp + ' - ' + item.ville;
+                        villesDatalist.appendChild(option);
+                    });
+                }
+            });
+    }
+
+    // Événement sur le Code Postal
+    if (cpInput) {
+        cpInput.addEventListener('input', function() {
+            if (this.value.length === 5) {
+                searchCityData({ cp: this.value });
+            }
+        });
+    }
+
+    // Événement sur la Ville (recherche après 3 lettres)
+    if (villeInput) {
+        villeInput.addEventListener('input', function() {
+            if (this.value.length >= 3) {
+                searchCityData({ ville: this.value });
+            }
+        });
+
+        // Si l'utilisateur sélectionne une suggestion, on met à jour le CP automatiquement
+        villeInput.addEventListener('change', function() {
+            const val = this.value;
+            const options = villesDatalist.childNodes;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === val) {
+                    cpInput.value = options[i].getAttribute('data-cp');
+                    break;
+                }
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. VALIDATION CLIENT
+    // -------------------------------------------------------------------------
+    const form = document.getElementById('mainForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('border-red-500', 'bg-red-50');
+                } else {
+                    field.classList.remove('border-red-500', 'bg-red-50');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir les champs obligatoires (*)');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+<!-- ================================================================ -->
+<!-- 4. templates/mds/detail_mds.html - COMPLET -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}{{ mds.nom }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <nav class="flex mb-2 text-sm text-gray-500" aria-label="Breadcrumb">
+                    <a href="{% url 'mds:liste_mds' %}" class="hover:text-purple-600">MDS</a>
+                    <span class="mx-2">/</span>
+                    <span class="text-gray-900 font-medium">Détails</span>
+                </nav>
+                <h1 class="text-3xl font-bold text-gray-900">
+                    {{ mds.code_mds }} - {{ mds.nom }}
+                </h1>
+                <p class="text-gray-600 mt-2">
+                    <i class="fas fa-map-marker-alt mr-2"></i>{{ mds.coordonnees_completes }}
+                </p>
+            </div>
+            <span class="px-4 py-1.5 text-sm font-bold rounded-full shadow-sm
+                {% if mds.active %}bg-green-100 text-green-800 border border-green-200{% else %}bg-gray-100 text-gray-800 border border-gray-200{% endif %}">
+                {% if mds.active %}● Active{% else %}○ Inactive{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Agents Actifs</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ capacite_actuelle }}</p>
+                </div>
+                <div class="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-users text-xl text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Salles de réunion</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ salles.count }}</p>
+                </div>
+                <div class="h-12 w-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-door-open text-xl text-green-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Taux d'occupation</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ pourcentage_occupation }}%</p>
+                </div>
+                <div class="h-12 w-12 bg-orange-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-pie text-xl text-orange-600"></i>
+                </div>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="h-2 rounded-full {% if pourcentage_occupation > 90 %}bg-red-500{% elif pourcentage_occupation > 75 %}bg-orange-500{% else %}bg-blue-500{% endif %}" 
+                     style="width: {{ pourcentage_occupation }}%"></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Statut actuel</p>
+                    <div class="flex items-center mt-1">
+                        <span class="relative flex h-3 w-3 mr-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full {% if est_ouverte %}bg-green-400{% else %}bg-red-400{% endif %} opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 {% if est_ouverte %}bg-green-500{% else %}bg-red-500{% endif %}"></span>
+                        </span>
+                        <p class="text-lg font-bold {% if est_ouverte %}text-green-700{% else %}text-red-700{% endif %}">
+                            {% if est_ouverte %}Ouverte{% else %}Fermée{% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="h-12 w-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-xl text-purple-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8 border-l-4 border-purple-600">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 uppercase tracking-wider text-sm">Actions de gestion</h2>
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'mds:gestion_utilisateurs_mds' mds_id=mds.id %}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-sm">
+                <i class="fas fa-users-cog mr-2"></i>Utilisateurs
+            </a>
+            <a href="{% url 'mds:gestion_salles_mds' mds_id=mds.id %}" 
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition shadow-sm">
+                <i class="fas fa-door-open mr-2"></i>Salles
+            </a>
+            <a href="{% url 'mds:statistiques_mds' mds_id=mds.id %}" 
+               class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition shadow-sm">
+                <i class="fas fa-chart-bar mr-2"></i>Statistiques
+            </a>
+            
+            {% if perms.mds.change_mds %}
+            <a href="{% url 'mds:modifier_mds' mds_id=mds.id %}" 
+               class="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition shadow-sm">
+                <i class="fas fa-edit mr-2"></i>Modifier la fiche
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 class="font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-address-card mr-2 text-purple-500"></i>Coordonnées & Contact
+                </h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex items-start">
+                    <div class="w-8 text-gray-400 mt-1"><i class="fas fa-phone"></i></div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Téléphone</p>
+                        <p class="text-gray-900 font-medium">{{ mds.telephone|default:"Non renseigné" }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 text-gray-400 mt-1"><i class="fas fa-envelope"></i></div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Email professionnel</p>
+                        <p class="text-gray-900 font-medium">{{ mds.email|default:"Non renseigné" }}</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="w-8 text-gray-400 mt-1"><i class="fas fa-user-tie"></i></div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-semibold">Responsable de structure</p>
+                        <p class="text-gray-900 font-medium">
+                            {% if mds.responsable %}
+                                {{ mds.responsable.get_full_name }}
+                            {% else %}
+                                <span class="text-gray-400 italic">Aucun responsable assigné</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 class="font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-id-badge mr-2 text-blue-500"></i>Répartition du personnel
+                </h2>
+            </div>
+            <div class="p-6">
+                {% if stats_profils %}
+                <div class="space-y-3">
+                    {% for nom_profil, count in stats_profils.items %}
+                    <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md transition">
+                        <span class="text-sm font-medium text-gray-700">{{ nom_profil }}</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                            {{ count }} agent{{ count|pluralize }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-user-slash text-gray-300 text-4xl mb-3"></i>
+                    <p class="text-gray-500 text-sm font-medium">Aucun personnel enregistré dans cette MDS</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

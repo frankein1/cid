@@ -1,0 +1,37 @@
+asgiref==3.11.0
+certifi==2025.11.12
+charset-normalizer==3.4.4
+Django==6.0
+django-wkhtmltopdf==3.4.0
+et_xmlfile==2.0.0
+gunicorn==23.0.0
+idna==3.11
+lxml==6.0.2
+openpyxl==3.1.5
+packaging==25.0
+pillow==12.0.0
+psycopg==3.3.2
+python-decouple==3.8
+python-docx==1.2.0
+python-dotenv==1.2.1
+requests==2.32.5
+seaweedfs-bin==4.2
+six==1.17.0
+sqlparse==0.5.4
+typing_extensions==4.15.0
+urllib3==2.6.1
+
+# Export iCalendar (.ics) pour Outlook
+icalendar==5.0.13
+
+# Génération de PDF
+reportlab==4.0.9
+
+# Future: Microsoft Graph API (quand vous aurez les accès)
+# msal==1.28.0
+# msgraph-core==1.0.0
+# microsoft-graph-client==0.2.1
+
+# Utilitaires supplémentaires
+python-dateutil==2.8.2
+pytz==2024.1

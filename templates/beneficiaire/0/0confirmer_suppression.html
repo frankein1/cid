@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmer la suppression - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- En-tête d'avertissement -->
+        <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl"></i>
+                </div>
+                <div class="ml-4">
+                    <h1 class="text-2xl font-bold text-red-900 mb-2">
+                        ⚠️ Suppression définitive
+                    </h1>
+                    <p class="text-red-700">
+                        Cette action est <strong>irréversible</strong>. Toutes les données liées à ce bénéficiaire 
+                        (documents, prestations, historique) seront <strong>définitivement supprimées</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations du bénéficiaire -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                Bénéficiaire à supprimer
+            </h2>
+
+            <div class="space-y-4">
+                <!-- Identité -->
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-times text-red-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-lg">{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</p>
+                        <p class="text-sm text-gray-600">
+                            {{ beneficiaire.get_type_beneficiaire_display }} - {{ beneficiaire.code_interne }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Informations clés -->
+                <div class="pt-3 border-t space-y-2">
+                    {% if beneficiaire.date_naissance %}
+                    <p class="text-sm">
+                        <strong>Date de naissance:</strong> {{ beneficiaire.date_naissance|date:"d/m/Y" }}
+                    </p>
+                    {% endif %}
+                    
+                    <p class="text-sm">
+                        <strong>Statut:</strong> 
+                        <span class="px-2 py-1 rounded-full text-xs
+                            {% if beneficiaire.est_decede %}bg-gray-800 text-white
+                            {% elif beneficiaire.statut == 'SORTI' %}bg-orange-100 text-orange-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ beneficiaire.get_statut_display }}
+                        </span>
+                    </p>
+                    
+                    {% if beneficiaire.date_sortie %}
+                    <p class="text-sm">
+                        <strong>Date de sortie:</strong> {{ beneficiaire.date_sortie|date:"d/m/Y" }}
+                        {% if beneficiaire.motif_sortie %} - {{ beneficiaire.get_motif_sortie_display }}{% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    {% if beneficiaire.date_deces %}
+                    <p class="text-sm">
+                        <strong>Date de décès:</strong> {{ beneficiaire.date_deces|date:"d/m/Y" }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Conditions de suppression -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                Conditions de suppression
+            </h2>
+
+            {% if beneficiaire.peut_etre_supprime %}
+            <div class="bg-green-50 border border-green-200 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800">
+                            Suppression autorisée
+                        </h3>
+                        <p class="mt-1 text-sm text-green-700">
+                            {% if beneficiaire.est_decede %}
+                                Ce bénéficiaire est décédé. La suppression est autorisée.
+                            {% else %}
+                                Ce bénéficiaire est sorti depuis plus de 2 ans. La suppression est autorisée.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-red-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">
+                            Suppression non autorisée
+                        </h3>
+                        <p class="mt-1 text-sm text-red-700">
+                            Ce bénéficiaire ne peut pas être supprimé. Seuls les bénéficiaires décédés 
+                            ou sortis depuis plus de 2 ans peuvent être supprimés définitivement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Avertissement données liées -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Données qui seront supprimées
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Toutes les informations personnelles</li>
+                            <li>Les documents liés dans la GED</li>
+                            <li>L'historique des prestations</li>
+                            <li>Les liens avec les ayants droit (si bénéficiaire principal)</li>
+                            <li>Tous les logs et l'historique d'activité</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if beneficiaire.peut_etre_supprime %}
+        <!-- Formulaire de confirmation -->
+        <form method="post" class="bg-white rounded-lg shadow-md p-6">
+            {% csrf_token %}
+
+            <div class="mb-6">
+                <label class="flex items-start">
+                    <input type="checkbox" 
+                           id="confirm_delete" 
+                           required
+                           class="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                    <span class="ml-3 text-sm text-gray-700">
+                        Je comprends que cette action est <strong>irréversible</strong> et que toutes les données 
+                        de <strong>{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</strong> seront 
+                        <strong>définitivement supprimées</strong> sans possibilité de récupération.
+                    </span>
+                </label>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex justify-end space-x-4 pt-6 border-t">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    <i class="fas fa-arrow-left mr-2"></i>Annuler
+                </a>
+                <button type="submit" 
+                        id="delete_button"
+                        disabled
+                        class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-trash mr-2"></i>Supprimer définitivement
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <!-- Bouton retour si pas autorisé -->
+        <div class="flex justify-center">
+            <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+               class="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                <i class="fas fa-arrow-left mr-2"></i>Retour à la fiche
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Activer le bouton de suppression uniquement si la case est cochée
+const confirmCheckbox = document.getElementById('confirm_delete');
+const deleteButton = document.getElementById('delete_button');
+
+if (confirmCheckbox && deleteButton) {
+    confirmCheckbox.addEventListener('change', function() {
+        deleteButton.disabled = !this.checked;
+    });
+}
+
+// Double confirmation avant soumission
+const form = document.querySelector('form');
+if (form) {
+    form.addEventListener('submit', function(e) {
+        const benefNom = '{{ beneficiaire.prenom }} {{ beneficiaire.nom }}';
+        if (!confirm(`DERNIÈRE CONFIRMATION\n\nÊtes-vous ABSOLUMENT certain(e) de vouloir supprimer définitivement ${benefNom} ?\n\nToutes les données seront perdues sans possibilité de récupération.\n\nTapez OK pour confirmer.`)) {
+            e.preventDefault();
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,373 @@
+<!-- templates/messagerie/nouveau_message.html - VERSION AMÉLIORÉE -->
+{% extends 'base.html' %}
+
+{% block title %}Nouveau message{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Style pour l'autocomplétion */
+    .autocomplete-results {
+        position: absolute;
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .autocomplete-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .autocomplete-item:hover {
+        background-color: #f3f4f6;
+    }
+    .autocomplete-item.selected {
+        background-color: #dbeafe;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <i class="fas fa-edit mr-3 text-blue-600"></i>
+            Nouveau message
+            {% if beneficiaire %}
+            <span class="text-lg text-gray-600 ml-2">concernant {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</span>
+            {% endif %}
+        </h1>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <!-- Bénéficiaire concerné avec recherche -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1"></i>
+                        Bénéficiaire concerné
+                    </label>
+                    
+                    {% if beneficiaire %}
+                    <!-- Bénéficiaire pré-sélectionné (depuis fiche bénéficiaire) -->
+                    <input type="hidden" name="beneficiaire" value="{{ beneficiaire.id }}">
+                    <div class="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+                        <i class="fas fa-user-check text-green-600 mr-2"></i>
+                        <strong>{{ beneficiaire.nom }} {{ beneficiaire.prenom }}</strong>
+                        {% if beneficiaire.numero_caf %}
+                        - N° CAF: {{ beneficiaire.numero_caf }}
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <!-- Recherche de bénéficiaire -->
+                    <input type="hidden" name="beneficiaire" id="beneficiaire-id">
+                    <input 
+                        type="text" 
+                        id="beneficiaire-search"
+                        placeholder="Tapez le nom, prénom ou numéro CAF..."
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                        autocomplete="off"
+                    >
+                    <div id="beneficiaire-results" class="autocomplete-results hidden"></div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle"></i>
+                        Facultatif - Tapez au moins 2 caractères pour rechercher
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Destinataire -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Destinataire <span class="text-red-500">*</span>
+                    </label>
+                    <select name="destinataire" required 
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Sélectionner un destinataire</option>
+                        {% for user in utilisateurs %}
+                        <option value="{{ user.id }}">
+                            {{ user.get_full_name }} ({{ user.username }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Copie -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Copie (cadre ou autre)
+                    </label>
+                    <select name="copie" 
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">Aucune copie</option>
+                        {% for user in utilisateurs %}
+                        <option value="{{ user.id }}">
+                            {{ user.get_full_name }} ({{ user.username }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Objet -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Objet <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="objet" required 
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Motif et Priorité -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-1"></i>Motif
+                        </label>
+                        <select name="motif" 
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            <optgroup label="Dossier et suivi">
+                                <option value="suivi_dossier">Suivi de dossier</option>
+                                <option value="piece_manquante">Pièce manquante</option>
+                                <option value="validation_document">Validation de document</option>
+                                <option value="mise_a_jour_situation">Mise à jour situation</option>
+                            </optgroup>
+                            <optgroup label="Rendez-vous">
+                                <option value="demande_rdv">Demande de rendez-vous</option>
+                                <option value="modification_rdv">Modification de rendez-vous</option>
+                                <option value="annulation_rdv">Annulation de rendez-vous</option>
+                                <option value="compte_rendu_rdv">Compte-rendu de rendez-vous</option>
+                            </optgroup>
+                            <optgroup label="Bénéficiaire">
+                                <option value="demande_beneficiaire">Demande du bénéficiaire</option>
+                                <option value="information_beneficiaire">Information sur le bénéficiaire</option>
+                                <option value="changement_situation">Changement de situation</option>
+                                <option value="urgence_sociale">🔴 Urgence sociale</option>
+                            </optgroup>
+                            <optgroup label="Financier">
+                                <option value="question_aide">Question sur aide financière</option>
+                                <option value="justificatif_paiement">Justificatif de paiement</option>
+                                <option value="reclamation_paiement">Réclamation de paiement</option>
+                            </optgroup>
+                            <optgroup label="Coordination">
+                                <option value="coordination_equipe">Coordination équipe</option>
+                                <option value="transmission_info">Transmission d'information</option>
+                                <option value="demande_avis">Demande d'avis</option>
+                                <option value="validation_cadre">Validation cadre</option>
+                            </optgroup>
+                            <optgroup label="Administratif">
+                                <option value="question_procedure">Question sur procédure</option>
+                                <option value="demande_support">Demande de support</option>
+                                <option value="signalement">Signalement</option>
+                            </optgroup>
+                            <option value="autre">Autre motif</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Priorité</label>
+                        <select name="priorite" 
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            <option value="normale">Normale</option>
+                            <option value="importante">Importante</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Contenu -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Message <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="contenu" rows="8" required 
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- NOUVEAU : Catégorie GED si fichiers joints -->
+                <div id="categorie-ged-section" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-folder mr-1"></i>
+                        Catégorie des documents (pour classement GED)
+                    </label>
+                    <select name="categorie_ged" 
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        {% for value, label in categories_ged %}
+                        <option value="{{ value }}" {% if value == 'divers' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Les fichiers seront classés dans cette catégorie dans la GED du bénéficiaire
+                    </p>
+                </div>
+
+                <!-- Pièces jointes GED existantes -->
+                {% if mes_documents %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-paperclip mr-1"></i>
+                        Attacher des documents existants (GED)
+                    </label>
+                    <div class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                        {% for doc in mes_documents %}
+                        <label class="flex items-center py-2 hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" name="documents_ged" value="{{ doc.id }}" 
+                                   class="mr-3 h-4 w-4 text-blue-600">
+                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                            <span class="text-sm">{{ doc.titre }}</span>
+                            <span class="text-xs text-gray-500 ml-2">({{ doc.date_creation|date:"d/m/Y" }})</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Nouveaux fichiers -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-upload mr-1"></i>
+                        Ajouter de nouveaux fichiers
+                    </label>
+                    <input type="file" name="nouveaux_fichiers" multiple id="fichiers-input"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <p class="text-xs text-gray-500 mt-1">
+                        {% if beneficiaire %}
+                        Les fichiers seront automatiquement ajoutés à la GED de <strong>{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</strong>
+                        {% else %}
+                        ⚠️ Sélectionnez un bénéficiaire pour que les fichiers soient classés dans sa GED
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex justify-end space-x-3 mt-6">
+                <a href="{% url 'messagerie:boite_reception' %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Envoyer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if not beneficiaire %}
+    // Autocomplétion pour la recherche de bénéficiaire
+    const searchInput = document.getElementById('beneficiaire-search');
+    const resultsDiv = document.getElementById('beneficiaire-results');
+    const beneficiaireIdInput = document.getElementById('beneficiaire-id');
+    let selectedIndex = -1;
+    let results = [];
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            resultsDiv.classList.add('hidden');
+            beneficiaireIdInput.value = '';
+            return;
+        }
+
+        // Appel AJAX
+        fetch(`{% url 'messagerie:rechercher_beneficiaire' %}?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                results = data.results;
+                displayResults(results);
+            })
+            .catch(error => console.error('Erreur recherche:', error));
+    });
+
+    function displayResults(items) {
+        if (items.length === 0) {
+            resultsDiv.innerHTML = '<div class="p-4 text-gray-500 text-sm">Aucun bénéficiaire trouvé</div>';
+            resultsDiv.classList.remove('hidden');
+            return;
+        }
+
+        resultsDiv.innerHTML = items.map((item, index) => `
+            <div class="autocomplete-item" data-index="${index}" data-id="${item.id}">
+                <div class="font-medium">${item.nom} ${item.prenom}</div>
+                <div class="text-xs text-gray-500">N° CAF: ${item.numero_caf || 'Non renseigné'}</div>
+            </div>
+        `).join('');
+        
+        resultsDiv.classList.remove('hidden');
+        
+        // Ajouter les événements de clic
+        resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', function() {
+                selectBeneficiaire(this.dataset.id, this.textContent.trim());
+            });
+        });
+    }
+
+    function selectBeneficiaire(id, text) {
+        beneficiaireIdInput.value = id;
+        searchInput.value = text.split('\n')[0]; // Première ligne (nom prénom)
+        resultsDiv.classList.add('hidden');
+    }
+
+    // Navigation au clavier
+    searchInput.addEventListener('keydown', function(e) {
+        const items = resultsDiv.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSelection(items);
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+            e.preventDefault();
+            items[selectedIndex].click();
+        } else if (e.key === 'Escape') {
+            resultsDiv.classList.add('hidden');
+        }
+    });
+
+    function updateSelection(items) {
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    // Fermer les résultats si on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+            resultsDiv.classList.add('hidden');
+        }
+    });
+    {% endif %}
+
+    // Afficher la section catégorie GED si des fichiers sont sélectionnés
+    const fichiersInput = document.getElementById('fichiers-input');
+    const categorieSection = document.getElementById('categorie-ged-section');
+    
+    fichiersInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            categorieSection.classList.remove('hidden');
+        } else {
+            categorieSection.classList.add('hidden');
+        }
+    });
+});
+</script>
+{% endblock %}

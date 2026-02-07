@@ -1,0 +1,491 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Planning Accueil - {{ date_affichage|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .planning-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .header-planning {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .header-planning h1 {
+        margin: 0 0 10px 0;
+        font-size: 2rem;
+    }
+    
+    .header-planning .date-info {
+        font-size: 1.2rem;
+        opacity: 0.95;
+    }
+    
+    .navigation-dates {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .btn-nav {
+        padding: 10px 20px;
+        background: #4F46E5;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+    
+    .btn-nav:hover {
+        background: #4338CA;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .btn-print {
+        background: #10B981;
+    }
+    
+    .btn-print:hover {
+        background: #059669;
+    }
+    
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-left: 4px solid #4F46E5;
+    }
+    
+    .stat-card h3 {
+        margin: 0 0 5px 0;
+        color: #6B7280;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    
+    .stat-card .value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1F2937;
+    }
+    
+    .alert-ferie {
+        background: #FEE2E2;
+        border-left: 4px solid #DC2626;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        color: #991B1B;
+        font-weight: 500;
+    }
+    
+    .periode-section {
+        margin-bottom: 40px;
+    }
+    
+    .periode-titre {
+        background: #F3F4F6;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-left: 5px solid #4F46E5;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #1F2937;
+    }
+    
+    .creneaux-table {
+        width: 100%;
+        background: white;
+        border-radius: 0 0 8px 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .creneaux-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .creneaux-table th {
+        background: #1F2937;
+        color: white;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .creneaux-table td {
+        padding: 15px;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .creneaux-table tr:hover {
+        background: #F9FAFB;
+    }
+    
+    .badge-statut {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-disponible {
+        background: #D1FAE5;
+        color: #065F46;
+    }
+    
+    .badge-reserve {
+        background: #DBEAFE;
+        color: #1E40AF;
+    }
+    
+    .badge-annule {
+        background: #FEE2E2;
+        color: #991B1B;
+    }
+    
+    .badge-venu {
+        background: #E5E7EB;
+        color: #374151;
+    }
+    
+    .lien-beneficiaire {
+        color: #4F46E5;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s;
+    }
+    
+    .lien-beneficiaire:hover {
+        color: #4338CA;
+        text-decoration: underline;
+    }
+    
+    .no-creneaux {
+        padding: 40px;
+        text-align: center;
+        color: #6B7280;
+        font-style: italic;
+    }
+    
+    .heure-cell {
+        font-weight: 700;
+        color: #4F46E5;
+        font-size: 1.1rem;
+    }
+    
+    @media print {
+        .navigation-dates, .btn-nav, .btn-print {
+            display: none;
+        }
+        .creneaux-table {
+            box-shadow: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="planning-container">
+    <!-- Header -->
+    <div class="header-planning">
+        <h1>📅 Planning d'Accueil</h1>
+        <div class="date-info">
+            {{ date_affichage|date:"l d F Y" }}
+            {% if mds_courante %}
+            - {{ mds_courante.nom }}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation-dates">
+        <a href="{% url 'planning:planning_accueil_jour_date' date_precedente|date:'Y-m-d' %}" class="btn-nav">
+            ← Jour précédent
+        </a>
+        
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'planning:planning_accueil_jour' %}" class="btn-nav">
+                Aujourd'hui
+            </a>
+            
+            {% if peut_imprimer %}
+            <a href="{% url 'planning:imprimer_planning_pdf' date_affichage|date:'Y-m-d' %}" 
+               class="btn-nav btn-print" target="_blank">
+                🖨️ Imprimer PDF
+            </a>
+            {% endif %}
+        </div>
+        
+        <a href="{% url 'planning:planning_accueil_jour_date' date_suivante|date:'Y-m-d' %}" class="btn-nav">
+            Jour suivant →
+        </a>
+    </div>
+
+    <!-- Alertes -->
+    {% if est_ferie %}
+    <div class="alert-ferie">
+        ⚠️ <strong>JOUR FÉRIÉ</strong> - L'établissement est fermé
+    </div>
+    {% endif %}
+
+    {% if blocages %}
+    <div class="alert-ferie">
+        🚫 <strong>FERMETURE EXCEPTIONNELLE</strong>
+        {% for blocage in blocages %}
+        <div>{{ blocage.get_raison_display }} : {{ blocage.raison_detail }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Statistiques -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <h3>Total créneaux</h3>
+            <div class="value">{{ total_creneaux }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Réservés</h3>
+            <div class="value" style="color: #3B82F6;">{{ creneaux_reserves }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Disponibles</h3>
+            <div class="value" style="color: #10B981;">{{ total_creneaux|add:"-"|add:creneaux_reserves }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Taux occupation</h3>
+            <div class="value" style="color: #F59E0B;">
+                {% if total_creneaux > 0 %}
+                {{ creneaux_reserves|floatformat:0|add:" / "|add:total_creneaux }}
+                {% else %}
+                0%
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Planning MATIN -->
+    <div class="periode-section">
+        <div class="periode-titre">
+            🌅 Matinée (9h - 12h)
+        </div>
+        
+        <div class="creneaux-table">
+            {% if creneaux_matin %}
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Heure</th>
+                        <th style="width: 150px;">Salle</th>
+                        <th>Bénéficiaire</th>
+                        <th style="width: 140px;">Téléphone</th>
+                        <th>Motif / Type</th>
+                        <th style="width: 150px;">Agent social</th>
+                        <th style="width: 120px;">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for creneau in creneaux_matin %}
+                    <tr>
+                        <td class="heure-cell">
+                            {{ creneau.heure_debut|time:"H:i" }} - {{ creneau.heure_fin|time:"H:i" }}
+                        </td>
+                        <td>
+                            <strong>{{ creneau.salle.nom }}</strong>
+                        </td>
+                        <td>
+                            {% if creneau.beneficiaire %}
+    <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=creneau.beneficiaire.code_interne %}" 
+       class="lien-beneficiaire">
+        {{ creneau.beneficiaire.nom }} {{ creneau.beneficiaire.prenom }}
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="display: inline-block; vertical-align: middle;">
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z"/>
+        </svg>
+    </a>
+{% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.beneficiaire %}
+                                {% if creneau.beneficiaire.telephone_mobile %}
+                                    📱 {{ creneau.beneficiaire.telephone_mobile }}
+                                {% elif creneau.beneficiaire.telephone_fixe %}
+                                    ☎️ {{ creneau.beneficiaire.telephone_fixe }}
+                                {% else %}
+                                    <span style="color: #9CA3AF;">Non renseigné</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #9CA3AF;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.description %}
+                                {{ creneau.description|truncatewords:10 }}
+                            {% else %}
+                                {{ creneau.get_type_rdv_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.agent %}
+                                <strong>{{ creneau.agent.last_name }}</strong><br>
+                                <small style="color: #6B7280;">{{ creneau.agent.first_name }}</small>
+                            {% else %}
+                                <span style="color: #9CA3AF;">Non assigné</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.statut == 'DISPONIBLE' %}
+                                <span class="badge-statut badge-disponible">Disponible</span>
+                            {% elif creneau.statut == 'RESERVE' %}
+                                <span class="badge-statut badge-reserve">Réservé</span>
+                            {% elif 'ANNULE' in creneau.statut %}
+                                <span class="badge-statut badge-annule">Annulé</span>
+                            {% else %}
+                                <span class="badge-statut badge-venu">{{ creneau.get_statut_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-creneaux">
+                Aucun créneau prévu pour la matinée
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Planning APRÈS-MIDI -->
+    <div class="periode-section">
+        <div class="periode-titre">
+            ☀️ Après-midi (13h30 - 17h)
+        </div>
+        
+        <div class="creneaux-table">
+            {% if creneaux_apres_midi %}
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Heure</th>
+                        <th style="width: 150px;">Salle</th>
+                        <th>Bénéficiaire</th>
+                        <th style="width: 140px;">Téléphone</th>
+                        <th>Motif / Type</th>
+                        <th style="width: 150px;">Agent social</th>
+                        <th style="width: 120px;">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for creneau in creneaux_apres_midi %}
+                    <tr>
+                        <td class="heure-cell">
+                            {{ creneau.heure_debut|time:"H:i" }} - {{ creneau.heure_fin|time:"H:i" }}
+                        </td>
+                        <td>
+                            <strong>{{ creneau.salle.nom }}</strong>
+                        </td>
+                        <td>
+                            {% if creneau.beneficiaire and creneau.statut == 'RESERVE' %}
+                                <a href="{% url 'beneficiaire:detail' creneau.beneficiaire.pk %}" 
+                                   class="lien-beneficiaire">
+                                    {{ creneau.beneficiaire.nom }} {{ creneau.beneficiaire.prenom }}
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5z"/>
+                                    </svg>
+                                </a>
+                                <div style="font-size: 0.85rem; color: #6B7280; margin-top: 3px;">
+                                    📋 {{ creneau.beneficiaire.code_interne }}
+                                </div>
+                            {% else %}
+                                <span style="color: #9CA3AF;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.beneficiaire %}
+                                {% if creneau.beneficiaire.telephone_mobile %}
+                                    📱 {{ creneau.beneficiaire.telephone_mobile }}
+                                {% elif creneau.beneficiaire.telephone_fixe %}
+                                    ☎️ {{ creneau.beneficiaire.telephone_fixe }}
+                                {% else %}
+                                    <span style="color: #9CA3AF;">Non renseigné</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #9CA3AF;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.description %}
+                                {{ creneau.description|truncatewords:10 }}
+                            {% else %}
+                                {{ creneau.get_type_rdv_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.agent %}
+                                <strong>{{ creneau.agent.last_name }}</strong><br>
+                                <small style="color: #6B7280;">{{ creneau.agent.first_name }}</small>
+                            {% else %}
+                                <span style="color: #9CA3AF;">Non assigné</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if creneau.statut == 'DISPONIBLE' %}
+                                <span class="badge-statut badge-disponible">Disponible</span>
+                            {% elif creneau.statut == 'RESERVE' %}
+                                <span class="badge-statut badge-reserve">Réservé</span>
+                            {% elif 'ANNULE' in creneau.statut %}
+                                <span class="badge-statut badge-annule">Annulé</span>
+                            {% else %}
+                                <span class="badge-statut badge-venu">{{ creneau.get_statut_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-creneaux">
+                Aucun créneau prévu pour l'après-midi
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

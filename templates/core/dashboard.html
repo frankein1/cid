@@ -1,0 +1,111 @@
+<!-- templates/core/dashboard.html - ADAPTÉ -->
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-tachometer-alt text-blue-500 mr-3"></i>
+            Tableau de bord
+        </h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Carte de bienvenue -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h5 class="text-lg font-semibold text-gray-800 mb-4">
+                Bienvenue {{ user.get_full_name|default:user.username }}
+            </h5>
+            
+            <div class="space-y-3 text-sm text-gray-600">
+                <p><strong class="text-gray-700">Matricule :</strong> {{ user.matricule|default:"Non renseigné" }}</p>
+
+                <p>
+                    <strong class="text-gray-700">Service actif :</strong><br>
+                    {% if request.service_actif %}
+                        {{ request.service_actif.nom }} ({{ request.service_actif.code }})
+                    {% else %}
+                        <span class="text-orange-500">Aucun service défini</span>
+                    {% endif %}
+                </p>
+
+                <div>
+                    <strong class="text-gray-700">Profils métier :</strong>
+                    <div class="mt-2 space-y-1">
+                    {% for p in user.profils.all %}
+                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            {{ p.nom }}
+                        </span>
+                    {% empty %}
+                        <span class="text-orange-500">Aucun profil</span>
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques utilisateur -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h5 class="text-lg font-semibold text-gray-800 mb-4">
+                Statistiques utilisateur
+            </h5>
+            
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Dernière IP :</span>
+                    <span class="font-medium">{{ user.derniere_connexion_ip|default:"-" }}</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Nombre de connexions :</span>
+                    <span class="font-medium">{{ user.nombre_connexions|default:0 }}</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Dernière connexion :</span>
+                    <span class="font-medium">{{ user.last_login|date:"d/m/Y H:i"|default:"-" }}</span>
+                </div>
+                
+                {% if user.date_arrivee %}
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Date d'arrivée :</span>
+                    <span class="font-medium">{{ user.date_arrivee|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <a href="{% url 'protection_enfance:dashboard_ase' %}" 
+           class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 text-center">
+            <i class="fas fa-child text-2xl text-blue-500 mb-2"></i>
+            <div class="font-medium text-gray-800">Protection Enfance</div>
+        </a>
+
+        <a href="{% url 'beneficiaires:liste' %}" 
+           class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 text-center">
+            <i class="fas fa-users text-2xl text-green-500 mb-2"></i>
+            <div class="font-medium text-gray-800">Bénéficiaires</div>
+        </a>
+
+        <a href="{% url 'dossiers:liste' %}" 
+           class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 text-center">
+            <i class="fas fa-folder text-2xl text-purple-500 mb-2"></i>
+            <div class="font-medium text-gray-800">Dossiers</div>
+        </a>
+
+        <a href="{% url 'core:mon_profil' %}" 
+           class="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition duration-300 text-center">
+            <i class="fas fa-user-cog text-2xl text-orange-500 mb-2"></i>
+            <div class="font-medium text-gray-800">Mon profil</div>
+        </a>
+    </div>
+</div>
+{% endblock %}

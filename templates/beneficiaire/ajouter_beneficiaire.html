@@ -1,0 +1,207 @@
+<!-- templates/beneficiaire/ajouter_beneficiaire.html -->
+{% extends "base.html" %}
+{% load static %}
+{% load ged_tags %}
+
+{% block title %}Ajouter un bénéficiaire - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Ajouter un bénéficiaire</h1>
+            <p class="text-gray-600">Remplissez le formulaire pour ajouter un nouveau bénéficiaire au système.</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <form method="post" class="space-y-6" id="mainForm">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Erreurs de validation</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc list-inside">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.civilite.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Civilité</label>
+                            {{ form.civilite }}
+                        </div>
+                        <div>
+                            <label for="{{ form.nom.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                            {{ form.nom }}
+                        </div>
+                        <div>
+                            <label for="{{ form.prenom.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
+                            {{ form.prenom }}
+                        </div>
+                        <div>
+                            <label for="{{ form.marital_status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Situation familiale</label>
+                            {{ form.marital_status }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.date_naissance.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Date de naissance *</label>
+                            {{ form.date_naissance }}
+                            <p class="text-[10px] text-gray-400">Format accepté : DDMMYY ou DD/MM/YYYY</p>
+                        </div>
+                        <div>
+                            <label for="{{ form.lieu_naissance.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Lieu de naissance</label>
+                            {{ form.lieu_naissance }}
+                        </div>
+                        <div>
+                            <label for="{{ form.telephone_mobile.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Téléphone mobile</label>
+                            {{ form.telephone_mobile }}
+                        </div>
+                        <div>
+                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            {{ form.email }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Adresse</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="{{ form.adresse.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                            {{ form.adresse }}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.code_postal.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Code postal</label>
+                                {{ form.code_postal }}
+                            </div>
+                            <div>
+                                <label for="{{ form.ville.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                                {{ form.ville }}
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Rattachement territorial</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="{{ form.mds.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">MDS de rattachement</label>
+                            {{ form.mds }}
+                        </div>
+                        <div>
+                            <label for="{{ form.referent_mds.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Référent MDS</label>
+                            {{ form.referent_mds }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-6 border-t">
+                    <a href="{% url 'beneficiaire:liste' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 transition">
+                        <i class="fas fa-save mr-2"></i>Enregistrer le bénéficiaire
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. CHARGEMENT DYNAMIQUE DES RÉFÉRENTS MDS
+    const mdsSelect = document.getElementById('id_mds');
+    const referentSelect = document.getElementById('id_referent_mds');
+
+    if (mdsSelect && referentSelect) {
+        mdsSelect.addEventListener('change', function() {
+            const mdsId = this.value;
+            if (mdsId) {
+                fetch('/beneficiaire/ajax/load-referents/?mds_id=' + mdsId)
+                    .then(response => response.json())
+                    .then(data => {
+                        referentSelect.innerHTML = '<option value="">---------</option>';
+                        data.referents.forEach(ref => {
+                            const option = new Option(ref.nom_complet, ref.id);
+                            referentSelect.add(option);
+                        });
+                    });
+            } else {
+                referentSelect.innerHTML = '<option value="">---------</option>';
+            }
+        });
+    }
+
+    // 2. AUTO-COMPLÉTATION VILLE / CP (SYSTÈME CENTRALISÉ)
+    const cpField = document.getElementById('id_code_postal');
+    const cityField = document.getElementById('id_ville');
+
+    function fetchGeo(codePostal) {
+        // Utilisation du nom de la route configuré dans urls.py
+        const url = "{% url 'core:ajax_ville_par_cp' %}?cp=" + codePostal;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.ville) {
+                    cityField.value = data.ville;
+                    // Feedback visuel discret
+                    cityField.classList.add('bg-green-50');
+                    setTimeout(() => cityField.classList.remove('bg-green-50'), 1500);
+                }
+            })
+            .catch(err => console.error('Erreur Géo:', err));
+    }
+
+    if (cpField) {
+        cpField.addEventListener('input', function() {
+            if (this.value.length === 5) {
+                fetchGeo(this.value);
+            }
+        });
+    }
+
+    // 3. VALIDATION CLIENT SIMPLE
+    const formElement = document.getElementById('mainForm');
+    if (formElement) {
+        formElement.addEventListener('submit', function(e) {
+            let isValid = true;
+            const requiredFields = formElement.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('border-red-500', 'bg-red-50');
+                } else {
+                    field.classList.remove('border-red-500', 'bg-red-50');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir les champs obligatoires (*)');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

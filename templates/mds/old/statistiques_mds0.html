@@ -1,0 +1,240 @@
+<!-- templates/mds/statistiques_mds.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Statistiques - {{ mds.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Statistiques</h1>
+                <p class="mt-2 text-gray-600">MDS : {{ mds.nom }} ({{ mds.code }})</p>
+            </div>
+            <div class="flex space-x-4">
+                <a href="{% url 'mds:liste_mds' %}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Retour
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Total utilisateurs -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.67 3.137a4 4 0 00-5.477-5.477"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900">Utilisateurs</h3>
+                    <p class="text-3xl font-bold text-gray-900">{{ total_utilisateurs }}</p>
+                    <p class="text-sm text-gray-500">Nombre total d'utilisateurs</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MDS active -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 {% if mds.actif %}text-green-500{% else %}text-red-500{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900">Statut</h3>
+                    <p class="text-xl font-bold {% if mds.actif %}text-green-600{% else %}text-red-600{% endif %}">
+                        {% if mds.actif %}Active{% else %}Inactive{% endif %}
+                    </p>
+                    <p class="text-sm text-gray-500">État de la MDS</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Communes -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-lg font-medium text-gray-900">Couverture</h3>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ mds.communes|linebreaksbr|wordcount }}
+                    </p>
+                    <p class="text-sm text-gray-500">Communes couvertes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition par profil -->
+    <div class="bg-white shadow rounded-lg mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Répartition par profil</h2>
+        </div>
+        <div class="p-6">
+            {% if utilisateurs_par_profil %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for item in utilisateurs_par_profil %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {% if item.profil == 'Cadre' %}Cadres
+                                    {% elif item.profil == 'Agent_Social' %}Agents Sociaux
+                                    {% elif item.profil == 'Administratif' %}Administratifs
+                                    {% else %}{{ item.profil }}
+                                    {% endif %}
+                                </p>
+                                <p class="text-2xl font-bold text-gray-900">{{ item.count }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    {% if item.profil == 'Cadre' %}bg-purple-100 text-purple-800
+                                    {% elif item.profil == 'Agent_Social' %}bg-blue-100 text-blue-800
+                                    {% elif item.profil == 'Administratif' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ item.count }} utilisateur{{ item.count|pluralize }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <p class="text-gray-500">Aucune donnée disponible</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Informations détaillées -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Informations MDS -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Informations MDS</h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Nom</p>
+                        <p class="font-medium">{{ mds.nom }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Adresse</p>
+                        <p class="font-medium">{{ mds.adresse }}</p>
+                        <p class="text-sm text-gray-500">{{ mds.code_postal }} {{ mds.ville }}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Téléphone</p>
+                            <p class="font-medium">{{ mds.telephone|default:"Non renseigné" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Email</p>
+                            <p class="font-medium">{{ mds.email|default:"Non renseigné" }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Groupes associés</p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            {% if mds.groupe_principal %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ mds.groupe_principal.name }}
+                            </span>
+                            {% endif %}
+                            {% if mds.groupe_agents_sociaux %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {{ mds.groupe_agents_sociaux.name }}
+                            </span>
+                            {% endif %}
+                            {% if mds.groupe_administratifs %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                {{ mds.groupe_administratifs.name }}
+                            </span>
+                            {% endif %}
+                            {% if mds.groupe_cadres %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                {{ mds.groupe_cadres.name }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions rapides -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-medium text-gray-900">Actions rapides</h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <a href="{% url 'mds:gestion_utilisateurs_mds' mds.id %}" 
+                       class="block w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center">
+                            <svg class="h-5 w-5 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.67 3.137a4 4 0 00-5.477-5.477"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium text-gray-900">Gérer les utilisateurs</p>
+                                <p class="text-sm text-gray-500">Ajouter, modifier ou retirer des utilisateurs</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <a href="{% url 'mds:modifier_mds' mds.id %}" 
+                       class="block w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center">
+                            <svg class="h-5 w-5 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium text-gray-900">Modifier la MDS</p>
+                                <p class="text-sm text-gray-500">Modifier les informations de la MDS</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                        <h3 class="text-sm font-medium text-gray-900 mb-2">Export</h3>
+                        <div class="flex space-x-3">
+                            <button type="button" 
+                                    class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                PDF
+                            </button>
+                            <button type="button" 
+                                    class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

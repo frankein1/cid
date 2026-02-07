@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                <i class="fas fa-building mr-2 text-blue-600"></i>
+                {{ title }}
+            </h1>
+            <p class="text-gray-600 mt-1">
+                Gestion des Maisons Départementales des Solidarités
+            </p>
+        </div>
+        
+        {% if perms.mds.add_mds %}
+        <a href="{% url 'mds:creer_mds' %}" 
+           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md font-medium transition-colors">
+            <i class="fas fa-plus mr-2"></i>Nouvelle MDS
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Barre de recherche -->
+    <div class="bg-white rounded-lg border border-gray-200 p-4">
+        <form method="get" class="flex gap-4">
+            <div class="flex-1 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" 
+                       name="q" 
+                       class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Rechercher une MDS par nom, code, ville..."
+                       value="{{ query|default:'' }}">
+            </div>
+            <button type="submit" 
+                    class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2.5 rounded-md font-medium">
+                Rechercher
+            </button>
+            {% if query %}
+            <a href="{% url 'mds:liste_mds' %}" 
+               class="text-gray-600 hover:text-gray-900 px-4 py-2.5 rounded-md border border-gray-300 hover:border-gray-400 font-medium">
+                Effacer
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Tableau des MDS -->
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <!-- En-tête du tableau -->
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    Liste des MDS
+                    {% if query %}
+                    <span class="text-gray-600 font-normal">({{ mds_list.paginator.count }} résultat{{ mds_list.paginator.count|pluralize }})</span>
+                    {% endif %}
+                </h2>
+                <div class="text-sm text-gray-500">
+                    Page {{ mds_list.number }} sur {{ mds_list.paginator.num_pages }}
+                </div>
+            </div>
+        </div>
+
+        {% if mds_list %}
+        <!-- Tableau -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                            CODE
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                            NOM
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                            ADRESSE
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                            VILLE
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            STATUT
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for mds in mds_list %}
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer group"
+                        onclick="window.location='{% url 'mds:detail_mds' mds.id %}'">
+                        <td class="px-6 py-4 whitespace-nowrap border-r border-gray-100">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8 bg-blue-50 rounded-md flex items-center justify-center mr-3 group-hover:bg-blue-100 transition-colors">
+                                    <i class="fas fa-building text-blue-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ mds.code }}</div>
+                                    <div class="text-xs text-gray-500">ID: {{ mds.id|stringformat:"04d" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 border-r border-gray-100">
+                            <div class="text-sm font-medium text-gray-900">{{ mds.nom }}</div>
+                            {% if mds.email %}
+                            <div class="text-xs text-gray-500">{{ mds.email }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 border-r border-gray-100">
+                            <div class="text-sm text-gray-900">
+                                {% if mds.adresse %}
+                                {{ mds.adresse|truncatechars:40 }}
+                                {% else %}
+                                <span class="text-gray-400">Non renseignée</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 border-r border-gray-100">
+                            <div class="text-sm text-gray-900">{{ mds.ville }}</div>
+                            {% if mds.code_postal %}
+                            <div class="text-xs text-gray-500">{{ mds.code_postal }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if mds.active %} 
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1.5"></i>Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <i class="fas fa-times-circle mr-1.5"></i>Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if mds_list.has_other_pages %}
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <nav class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Affichage de <span class="font-medium">{{ mds_list.start_index }}</span> à 
+                    <span class="font-medium">{{ mds_list.end_index }}</span> sur 
+                    <span class="font-medium">{{ mds_list.paginator.count }}</span> résultats
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <!-- Première page -->
+                    {% if mds_list.has_previous %}
+                    <a href="?page=1{% if query %}&q={{ query }}{% endif %}" 
+                       class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?page={{ mds_list.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+                       class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <i class="fas fa-angle-double-left"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <i class="fas fa-angle-left"></i>
+                    </span>
+                    {% endif %}
+
+                    <!-- Pages -->
+                    {% for i in mds_list.paginator.page_range %}
+                        {% if i >= mds_list.number|add:'-2' and i <= mds_list.number|add:'2' %}
+                            {% if mds_list.number == i %}
+                            <span class="px-4 py-2 border border-blue-500 bg-blue-50 text-blue-600 rounded-md text-sm font-medium">
+                                {{ i }}
+                            </span>
+                            {% else %}
+                            <a href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}" 
+                               class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                {{ i }}
+                            </a>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Dernière page -->
+                    {% if mds_list.has_next %}
+                    <a href="?page={{ mds_list.next_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+                       class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="?page={{ mds_list.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}" 
+                       class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                    {% else %}
+                    <span class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <i class="fas fa-angle-right"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-400 cursor-not-allowed">
+                        <i class="fas fa-angle-double-right"></i>
+                    </span>
+                    {% endif %}
+                </div>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- État vide -->
+        <div class="px-6 py-16 text-center">
+            <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <i class="fas fa-building text-gray-400 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">
+                {% if query %}
+                Aucun résultat trouvé
+                {% else %}
+                Aucune MDS enregistrée
+                {% endif %}
+            </h3>
+            <p class="text-gray-600 max-w-md mx-auto mb-6">
+                {% if query %}
+                Aucune MDS ne correspond à votre recherche "{{ query }}".
+                {% else %}
+                Commencez par créer votre première Maison Départementale des Solidarités.
+                {% endif %}
+            </p>
+            {% if perms.mds.add_mds %}
+            <a href="{% url 'mds:creer_mds' %}" 
+               class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md font-medium">
+                <i class="fas fa-plus mr-2"></i>Créer une MDS
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* Styles supplémentaires pour améliorer la lisibilité */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+table th,
+table td {
+    border-color: #e5e7eb; /* gray-200 */
+}
+
+table tbody tr:last-child td {
+    border-bottom-width: 0;
+}
+
+/* Effet de survol amélioré */
+.group:hover td {
+    background-color: #f9fafb; /* gray-50 */
+}
+
+/* Bordures visibles pour les colonnes */
+.border-r {
+    border-right-color: #e5e7eb; /* gray-200 */
+}
+</style>
+{% endblock %}

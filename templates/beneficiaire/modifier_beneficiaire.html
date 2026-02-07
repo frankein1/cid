@@ -1,0 +1,247 @@
+<!-- templates/beneficiaire/modifier_beneficiaire.html-->
+{% extends 'base.html' %}
+{% load static %}
+{% load ged_tags %}
+
+{% block title %}{{ action }} - {{ beneficiaire.nom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                <i class="fas fa-user-edit text-blue-600 mr-3"></i>{{ action }}
+            </h1>
+            <p class="text-gray-500 mt-1">Dossier n° <strong>{{ beneficiaire.code_interne }}</strong></p>
+        </div>
+        <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=beneficiaire.code_interne %}" 
+           class="text-gray-400 hover:text-gray-600 transition" title="Annuler et retourner au dossier">
+            <i class="fas fa-times text-2xl"></i>
+        </a>
+    </div>
+
+    <form method="post" class="space-y-8 bg-white shadow-xl border border-gray-100 rounded-2xl p-8" id="formModifier">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-md mb-6">
+            <h3 class="text-sm font-bold text-red-800">Le formulaire contient des erreurs :</h3>
+            <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
+                {% for field in form %}
+                    {% if field.errors %}
+                        <li><strong>{{ field.label }}</strong> : {{ field.errors|striptags }}</li>
+                    {% endif %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                <span class="bg-blue-600 text-white h-6 w-6 rounded-full inline-flex items-center justify-center text-xs mr-2">1</span>
+                État Civil & Situation
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Civilité *</label>
+                    {{ form.civilite }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nom *</label>
+                    {{ form.nom }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Prénom *</label>
+                    {{ form.prenom }}
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nom de naissance</label>
+                    {{ form.nom_naissance }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Date de naissance *</label>
+                    {{ form.date_naissance }}
+                    <p class="text-[10px] text-gray-400 mt-1">Format: DDMMYY ou DD/MM/YYYY</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Situation Familiale</label>
+                    {{ form.marital_status }}
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Lieu de naissance</label>
+                {{ form.lieu_naissance }}
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                <span class="bg-blue-600 text-white h-6 w-6 rounded-full inline-flex items-center justify-center text-xs mr-2">2</span>
+                Coordonnées
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Code Postal</label>
+                    {{ form.code_postal }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Ville</label>
+                    {{ form.ville }}
+                    </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Adresse complète</label>
+                {{ form.adresse }}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mobile</label>
+                    {{ form.telephone_mobile }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Fixe</label>
+                    {{ form.telephone_fixe }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    {{ form.email }}
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                <span class="bg-blue-600 text-white h-6 w-6 rounded-full inline-flex items-center justify-center text-xs mr-2">3</span>
+                Informations Administratives
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">NIR (Sécurité Sociale)</label>
+                    {{ form.nir }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Numéro CAF</label>
+                    {{ form.numero_caf }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">N° France Travail</label>
+                    {{ form.numero_france_travail }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">N° Fiscal (Impôts)</label>
+                    {{ form.numero_fiscal }}
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-4 border-t border-dashed">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">MDS de rattachement</label>
+                    {{ form.mds }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Référent Social</label>
+                    {{ form.referent_mds }}
+                </div>
+            </div>
+        </section>
+
+        <div class="flex justify-end gap-4 pt-8 border-t">
+            <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=beneficiaire.code_interne %}" 
+               class="px-6 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition font-medium">
+                Annuler
+            </a>
+            <button type="submit" class="px-8 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200 transition">
+                <i class="fas fa-save mr-2"></i> Enregistrer les modifications
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // === 1. CHARGEMENT DYNAMIQUE RÉFÉRENTS MDS ===
+    const mdsField = document.getElementById('id_mds');
+    const refField = document.getElementById('id_referent_mds');
+
+    if (mdsField && refField) {
+        mdsField.addEventListener('change', function() {
+            const mdsId = this.value;
+            if (mdsId) {
+                // On utilise la route AJAX pour charger les référents
+                fetch(`/beneficiaire/ajax/load-referents/?mds_id=${mdsId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        refField.innerHTML = '<option value="">---------</option>';
+                        data.referents.forEach(ref => {
+                            const option = new Option(ref.nom_complet, ref.id);
+                            refField.add(option);
+                        });
+                    })
+                    .catch(err => console.error('Erreur Référents:', err));
+            } else {
+                refField.innerHTML = '<option value="">---------</option>';
+            }
+        });
+    }
+
+    // === 2. AUTO-COMPLÉTATION VILLE / CP (SYSTÈME CENTRALISÉ) ===
+    const cpField = document.getElementById('id_code_postal');
+    const cityField = document.getElementById('id_ville');
+
+    function fetchGeo(codePostal) {
+        // Utilisation de la route centralisée dans core
+        const url = "{% url 'core:ajax_ville_par_cp' %}?cp=" + codePostal;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.ville) {
+                    cityField.value = data.ville;
+                    // Feedback visuel de succès
+                    cityField.classList.add('bg-green-50');
+                    setTimeout(() => cityField.classList.remove('bg-green-50'), 1500);
+                }
+            })
+            .catch(err => console.error('Erreur Géo:', err));
+    }
+
+    if (cpField) {
+        cpField.addEventListener('input', function() {
+            if (this.value.length === 5) {
+                fetchGeo(this.value);
+            }
+        });
+    }
+
+    // === 3. VALIDATION CLIENT AVANT ENVOI ===
+    const formModifier = document.getElementById('formModifier');
+    if (formModifier) {
+        formModifier.addEventListener('submit', function(e) {
+            let isValid = true;
+            const requiredFields = formModifier.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('border-red-500', 'bg-red-50');
+                } else {
+                    field.classList.remove('border-red-500', 'bg-red-50');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Certains champs obligatoires (*) sont vides.');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

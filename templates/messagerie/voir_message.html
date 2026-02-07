@@ -1,0 +1,87 @@
+<!-- templates/messagerie/voir_message.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ message.objet }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Bouton retour -->
+        <a href="{% url 'messagerie:boite_reception' %}" 
+           class="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la boîte de réception
+        </a>
+
+        <!-- Fil de conversation -->
+        {% for msg in fil %}
+        <div class="{% if not forloop.first %}border-t border-gray-200 mt-4 pt-4{% endif %}">
+            <!-- En-tête du message -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {{ msg.expediteur.first_name|first|upper }}{{ msg.expediteur.last_name|first|upper }}
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900">{{ msg.expediteur.get_full_name }}</div>
+                        <div class="text-sm text-gray-500">{{ msg.date_creation|date:"d/m/Y à H:i" }}</div>
+                    </div>
+                </div>
+                
+                {% if msg.priorite == 'urgente' %}
+                <span class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">
+                    <i class="fas fa-exclamation-triangle"></i> Urgent
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Destinataires -->
+            <div class="text-sm text-gray-600 mb-4">
+                <span class="font-medium">À:</span> {{ msg.destinataire.get_full_name }}
+                {% if msg.copie %}
+                <span class="ml-3"><span class="font-medium">Cc:</span> {{ msg.copie.get_full_name }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Objet (seulement pour le premier message) -->
+            {% if forloop.first %}
+            <h1 class="text-xl font-bold text-gray-800 mb-4">{{ msg.objet }}</h1>
+            {% endif %}
+
+            <!-- Contenu -->
+            <div class="prose max-w-none mb-4">
+                <p class="whitespace-pre-wrap text-gray-700">{{ msg.contenu }}</p>
+            </div>
+
+            <!-- Pièces jointes -->
+            {% if msg.pieces_jointes.all %}
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="font-medium text-gray-700 mb-2">
+                    <i class="fas fa-paperclip mr-2"></i>
+                    Pièces jointes ({{ msg.pieces_jointes.count }})
+                </div>
+                <div class="space-y-2">
+                    {% for doc in msg.pieces_jointes.all %}
+                    <a href="{% url 'ged:download_document' doc.id %}"
+                       class="flex items-center p-2 hover:bg-gray-100 rounded">
+                        <i class="fas fa-file-pdf text-red-500 mr-3"></i>
+                        <span class="flex-1">{{ doc.titre }}</span>
+                        <span class="text-xs text-gray-500">{{ doc.taille_octets|filesizeformat }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Bouton répondre -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <a href="{% url 'messagerie:repondre_message' message.id %}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md inline-block">
+                <i class="fas fa-reply mr-2"></i>
+                Répondre
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

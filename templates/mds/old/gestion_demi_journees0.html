@@ -1,0 +1,94 @@
+<!-- ================================================================ -->
+<!-- 5. templates/mds/gestion_demi_journees.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Gestion demi-journées - {{ mds.code_mds }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-calendar-alt text-blue-500 mr-3"></i>
+            Gestion des demi-journées de réception
+        </h1>
+        <p class="text-gray-600 mt-2">{{ mds.nom }}</p>
+    </div>
+
+    <!-- Filtre par agent -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <form method="get" class="flex gap-4 items-end">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Sélectionner un agent
+                </label>
+                <select name="agent_id" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="">Tous les agents</option>
+                    {% for agent in agents %}
+                    <option value="{{ agent.id }}" {% if agent_selected and agent.id == agent_selected.id %}selected{% endif %}>
+                        {{ agent.last_name }} {{ agent.first_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" 
+                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Filtrer
+            </button>
+        </form>
+    </div>
+
+    {% if agent_selected %}
+    <!-- Tableau de gestion -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jour</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Matin</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Après-midi</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for jour_num, jour_nom in jours_semaine.items %}
+                {% if jour_num < 5 %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        {{ jour_nom }}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <form method="post" action="{% url 'mds:toggle_demi_journee' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="agent_id" value="{{ agent_selected.id }}">
+                            <input type="hidden" name="jour_semaine" value="{{ jour_num }}">
+                            <input type="hidden" name="type_demi_journee" value="MATIN">
+                            <button type="submit" class="px-4 py-2 rounded-md transition">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <form method="post" action="{% url 'mds:toggle_demi_journee' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="agent_id" value="{{ agent_selected.id }}">
+                            <input type="hidden" name="jour_semaine" value="{{ jour_num }}">
+                            <input type="hidden" name="type_demi_journee" value="APRES_MIDI">
+                            <button type="submit" class="px-4 py-2 rounded-md transition">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        <i class="fas fa-user-clock text-4xl text-gray-400 mb-4"></i>
+        <p class="text-gray-600">Sélectionnez un agent pour gérer ses demi-journées</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

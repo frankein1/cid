@@ -1,0 +1,97 @@
+<!-- /templates/beneficiaire/liste_beneficiaires.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load ged_tags %}
+
+{% block title %}Recherche Bénéficiaires - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Rechercher un dossier</h1>
+        <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow-sm transition flex items-center">
+            <i class="fas fa-plus mr-2"></i> Nouveau bénéficiaire
+        </a>
+    </div>
+
+    <form method="GET" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nom</label>
+                <input type="text" name="nom" value="{{ nom }}" placeholder="Ex: MARTIN" 
+                       class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Prénom</label>
+                <input type="text" name="prenom" value="{{ prenom }}" placeholder="Ex: Jean" 
+                       class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">NIR, CAF, FT, Tél...</label>
+                <input type="text" name="identifiant" value="{{ identifiant }}" placeholder="Numéro de dossier..." 
+                       class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date de naissance</label>
+                <input type="date" name="date_naiss" value="{{ date_naiss }}" 
+                       class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="text-sm text-gray-400">
+                <i class="fas fa-info-circle mr-1"></i> Remplissez un ou plusieurs champs pour affiner.
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'beneficiaire:liste' %}" class="px-6 py-2 text-gray-500 hover:text-gray-700">Réinitialiser</a>
+                <button type="submit" class="bg-blue-600 text-white px-8 py-2 rounded-lg shadow hover:bg-blue-700 transition font-bold">
+                    <i class="fas fa-search mr-2"></i> Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
+
+    {% if beneficiaires is not None %}
+        {% if beneficiaires %}
+            <div class="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="p-4 font-bold text-xs text-gray-500 uppercase">Code</th>
+                            <th class="p-4 font-bold text-xs text-gray-500 uppercase">Identité</th>
+                            <th class="p-4 font-bold text-xs text-gray-500 uppercase">Date Naiss.</th>
+                            <th class="p-4 font-bold text-xs text-gray-500 uppercase">Ville</th>
+                            <th class="p-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for b in beneficiaires %}
+                        <tr class="hover:bg-blue-50/50 transition cursor-pointer" onclick="window.location='{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}'">
+                            <td class="p-4 font-mono text-xs text-gray-400">{{ b.code_interne }}</td>
+                            <td class="p-4">
+                                <span class="font-bold text-gray-800">{{ b.nom|upper }}</span> {{ b.prenom }}
+                            </td>
+                            <td class="p-4 text-sm text-gray-600">{{ b.date_naissance|date:"d/m/Y" }}</td>
+                            <td class="p-4 text-sm text-gray-600">{{ b.ville }} ({{ b.code_postal }})</td>
+                            <td class="p-4 text-right">
+                                <span class="text-blue-600 hover:underline font-medium">Voir fiche</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="bg-white p-12 rounded-xl border border-dashed text-center">
+                <p class="text-gray-500 font-medium text-lg">Aucun résultat trouvé.</p>
+                <p class="text-gray-400">Essayez de modifier vos critères de recherche.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="py-20 text-center text-gray-300">
+            <i class="fas fa-id-card text-7xl mb-4 opacity-20"></i>
+            <p class="text-xl">Saisissez des informations pour trouver un bénéficiaire</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

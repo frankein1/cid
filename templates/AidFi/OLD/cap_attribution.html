@@ -1,0 +1,84 @@
+<!-- /templates/AidFi/cap_attribution.html -->
+{% extends "base.html" %}
+{% load ged_tags %}
+{% load capacites %}
+{% block title %}Chèques CAP — Demande #{{ demande.id }}{% endblock %}
+
+{% block content %}
+
+{# CORRECTION CORE : Vérification d'accès #}
+{% if not user|a_la_capacite:"peut_creer" %}
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+    <p class="font-medium">Accès refusé</p>
+    <p>Vous n'avez pas les permissions nécessaires pour gérer les chèques CAP.</p>
+</div>
+{% else %}
+
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+        <i class="fa-solid fa-ticket text-blue-700 mr-2"></i>
+        Demande de chèques CAP
+    </h1>
+    <p class="text-gray-600 mt-2">
+        Bénéficiaire : {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
+    </p>
+</div>
+
+<div class="bg-white p-6 rounded shadow-lg">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Affichage amélioré du formulaire -->
+        {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                {{ field.label }}
+                {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            
+            {{ field }}
+            
+            {% if field.help_text %}
+            <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+            {% endif %}
+            
+            {% if field.errors %}
+            <div class="mt-1 text-sm text-red-600">
+                {% for error in field.errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="pt-6 border-t border-gray-200">
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fa-solid fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            <strong>Information :</strong> Les chèques CAP (Chèque d'Accompagnement Personnalisé) sont des aides en nature pour des biens et services spécifiques.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <a href="{% url 'AidFi:detail_demande' demande.id %}"
+                   class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 inline-flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Retour
+                </a>
+                
+                <button type="submit" class="bg-blue-700 text-white px-5 py-2 rounded hover:bg-blue-800 inline-flex items-center">
+                    <i class="fa-solid fa-check-circle mr-2"></i> Enregistrer la demande CAP
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% endif %}
+{% endblock %}

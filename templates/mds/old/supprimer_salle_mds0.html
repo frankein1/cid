@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-md">
+    <h1 class="text-2xl font-bold mb-6 text-red-600">Supprimer la salle</h1>
+    
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <p class="mb-4 text-gray-700">Êtes-vous sûr de vouloir supprimer la salle <strong>{{ salle.nom }}</strong> de la MDS {{ mds.nom }} ?</p>
+        
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div class="flex">
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Attention :</strong> Cette action est irréversible. Toutes les réservations associées à cette salle seront également supprimées.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded mb-6">
+            <p class="font-medium">{{ salle.nom }}</p>
+            <p class="text-sm text-gray-600">Type : {{ salle.get_type_salle_display }}</p>
+            <p class="text-sm text-gray-600">Capacité : {{ salle.capacite }} personnes</p>
+            <p class="text-sm text-gray-600">Localisation : {{ salle.localisation|default:"Non spécifié" }}</p>
+        </div>
+        
+        <form method="post" class="flex justify-end space-x-3">
+            {% csrf_token %}
+            <a href="{% url 'mds:gestion_salles_mds' mds.id %}" 
+               class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Annuler
+            </a>
+            <button type="submit" 
+                    class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700">
+                Supprimer définitivement
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+<!-- 1. templates/beneficiaire/confirmer_suppression.html - COMPLET -->
+{% extends "base.html" %}
+{% load static %}
+{% load ged_tags %}
+
+{% block title %}Suppression définitive - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <div class="bg-red-50 border-l-4 border-red-600 rounded-r-2xl p-6 mb-8 shadow-sm">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 bg-red-100 p-3 rounded-full">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h1 class="text-2xl font-black text-red-900 uppercase tracking-tight">Suppression Définitive</h1>
+                <p class="text-red-700 text-sm">Action irréversible • Conformité RGPD</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8">
+        <div class="p-6">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 border-2 border-white shadow-inner">
+                        <i class="fas fa-user-slash text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</h2>
+                        <p class="text-sm font-mono text-blue-600 font-bold">{{ beneficiaire.code_interne }}</p>
+                    </div>
+                </div>
+                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest 
+                    {% if beneficiaire.est_decede %}bg-gray-800 text-white
+                    {% elif beneficiaire.statut == 'SORTI' %}bg-amber-100 text-amber-700
+                    {% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ beneficiaire.get_statut_display }}
+                </span>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-50">
+                <p class="text-sm text-gray-600"><strong>Né(e) le :</strong> {{ beneficiaire.date_naissance|date:"d/m/Y"|default:"-" }}</p>
+                {% if beneficiaire.date_deces %}
+                    <p class="text-sm text-red-600 font-semibold"><strong>Décès le :</strong> {{ beneficiaire.date_deces|date:"d/m/Y" }}</p>
+                {% elif beneficiaire.date_sortie %}
+                    <p class="text-sm text-amber-600 font-semibold"><strong>Sortie le :</strong> {{ beneficiaire.date_sortie|date:"d/m/Y" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-8">
+        {% if beneficiaire.peut_etre_supprime %}
+            <div class="bg-green-50 border border-green-100 rounded-2xl p-5 flex items-start gap-4">
+                <i class="fas fa-check-circle text-green-500 text-xl mt-1"></i>
+                <div>
+                    <h3 class="font-bold text-green-900">Critères de suppression respectés</h3>
+                    <p class="text-sm text-green-700 mt-1">
+                        {% if beneficiaire.est_decede %}
+                            Dossier clos pour cause de décès. La purge est autorisée.
+                        {% else %}
+                            Le délai légal de conservation (2 ans après sortie) est atteint.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        {% else %}
+            <div class="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-start gap-4">
+                <i class="fas fa-lock text-orange-500 text-xl mt-1"></i>
+                <div>
+                    <h3 class="font-bold text-orange-900">Suppression restreinte</h3>
+                    <p class="text-sm text-orange-700 mt-1">
+                        Ce dossier ne peut pas encore être supprimé. Conformément à la politique de conservation, seuls les bénéficiaires décédés ou sortis depuis plus de 2 ans sont éligibles à la purge définitive.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200 mb-8">
+        <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Données impactées par la purge</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-sm text-gray-600">
+            <div class="flex items-center gap-2"><i class="fas fa-minus-circle text-red-400 text-[10px]"></i> Fiche d'identité complète</div>
+            <div class="flex items-center gap-2"><i class="fas fa-minus-circle text-red-400 text-[10px]"></i> Documents GED (PDF, Scans...)</div>
+            <div class="flex items-center gap-2"><i class="fas fa-minus-circle text-red-400 text-[10px]"></i> Historique des prestations</div>
+            <div class="flex items-center gap-2"><i class="fas fa-minus-circle text-red-400 text-[10px]"></i> Logs de traçabilité</div>
+        </div>
+    </div>
+
+    {% if beneficiaire.peut_etre_supprime %}
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            <div class="p-4 bg-white border-2 border-red-100 rounded-2xl shadow-inner">
+                <label class="flex items-center cursor-pointer group">
+                    <input type="checkbox" id="confirm_delete" required
+                           class="h-6 w-6 text-red-600 focus:ring-red-500 border-gray-300 rounded-lg transition-all">
+                    <span class="ml-4 text-sm text-gray-700 font-medium group-hover:text-red-700 transition-colors">
+                        Je confirme vouloir supprimer <strong>définitivement</strong> toutes les données liées à ce bénéficiaire.
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+                   class="text-gray-500 hover:text-gray-800 font-medium transition text-sm">
+                    <i class="fas fa-chevron-left mr-1"></i> Retour à la fiche
+                </a>
+                <button type="submit" id="delete_button" disabled
+                        class="px-8 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                    <i class="fas fa-trash-alt mr-2"></i> Purger le dossier
+                </button>
+            </div>
+        </form>
+    {% else %}
+        <div class="text-center">
+            <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+               class="inline-flex items-center px-8 py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition shadow-lg shadow-gray-200">
+                <i class="fas fa-arrow-left mr-2"></i> Retourner à la fiche
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const checkbox = document.getElementById('confirm_delete');
+    const btn = document.getElementById('delete_button');
+
+    if (checkbox && btn) {
+        checkbox.addEventListener('change', function() {
+            btn.disabled = !this.checked;
+            if (this.checked) {
+                btn.classList.add('scale-105', 'shadow-red-300');
+            } else {
+                btn.classList.remove('scale-105', 'shadow-red-300');
+            }
+        });
+    }
+
+    document.querySelector('form')?.addEventListener('submit', function(e) {
+        if (!confirm("ATTENTION : Cette action efface réellement les fichiers sur le serveur et les lignes en base de données.\n\nConfirmer définitivement ?")) {
+            e.preventDefault();
+        }
+    });
+</script>
+{% endblock %}

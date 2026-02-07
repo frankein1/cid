@@ -1,0 +1,96 @@
+<!-- ================================================================ -->
+<!-- 2. templates/beneficiaire/declarer_deces.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+{% load static %}
+{% load ged_tags %}
+
+{% block title %}Déclaration de décès - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+            <i class="fas fa-heart-broken text-red-600 mr-4"></i>
+            Déclarer un décès
+        </h1>
+        <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 uppercase tracking-wider font-semibold">Bénéficiaire concerné</p>
+                <p class="text-lg font-bold text-gray-800">{{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500 uppercase tracking-wider font-semibold">N° Dossier</p>
+                <p class="text-lg font-mono font-bold text-blue-600">{{ beneficiaire.code_interne }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-red-50 border-l-4 border-red-600 p-4 mb-8 rounded-r-lg shadow-sm">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-bold text-red-800">Action irréversible</h3>
+                <p class="text-sm text-red-700 mt-1">
+                    La validation de ce formulaire clôturera définitivement le dossier. Le bénéficiaire passera en état <strong>"Décédé"</strong> et ne pourra plus faire l'objet de nouvelles actions administratives courantes.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <form method="post" class="space-y-6" id="formDeces">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <ul class="list-disc pl-5 text-sm text-red-700">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li><strong>{{ field.label }}</strong> : {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="id_date_deces" class="block text-sm font-bold text-gray-700 mb-2">
+                    Date du décès *
+                </label>
+                {{ form.date_deces }}
+                <p class="mt-2 text-[11px] text-gray-400 flex items-center">
+                    <i class="fas fa-keyboard mr-1"></i> Saisie rapide autorisée (ex: 231225 pour 23/12/2025)
+                </p>
+            </div>
+
+            <div>
+                <label for="id_detail_sortie" class="block text-sm font-bold text-gray-700 mb-2">
+                    Informations ou circonstances (optionnel)
+                </label>
+                {{ form.detail_sortie }}
+                <p class="mt-2 text-xs text-gray-400">
+                    Ces notes seront conservées dans l'historique de clôture du dossier.
+                </p>
+            </div>
+
+            <div class="pt-8 border-t flex flex-col sm:flex-row justify-end gap-4">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=beneficiaire.code_interne %}" 
+                   class="px-6 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50 transition text-center font-medium">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        onclick="return confirm('Êtes-vous certain de vouloir déclarer le décès de ce bénéficiaire ? Cette action est définitive.')"
+                        class="px-8 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 shadow-lg shadow-red-200 transition font-bold">
+                    <i class="fas fa-skull mr-2"></i>Confirmer la déclaration
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,222 @@
+<!-- ================================================================ -->
+<!-- 3. templates/mds/ajouter_utilisateur_mds.html -->
+<!-- ================================================================ -->
+{% extends 'base.html' %}
+
+{% block title %}Ajouter utilisateur - {{ mds.code_mds }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3 text-sm">
+                <li class="inline-flex items-center">
+                    <a href="{% url 'mds:liste_mds' %}" class="text-gray-500 hover:text-blue-600">MDS</a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2 text-xs"></i>
+                        <a href="{% url 'mds:detail_mds' mds.id %}" class="text-gray-500 hover:text-blue-600">{{ mds.code_mds }}</a>
+                    </div>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-gray-400 mx-2 text-xs"></i>
+                        <span class="text-gray-900 font-medium">Ajouter un agent</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-user-plus text-green-500 mr-3"></i>
+            Ajouter un agent
+        </h1>
+        <p class="text-gray-600 mt-2">{{ mds.nom }} ({{ mds.ville }})</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors or form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Des erreurs empêchent l'enregistrement :</h3>
+                        <ul class="mt-2 list-disc list-inside text-sm text-red-700">
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }} : {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Origine de l'agent</label>
+                <div class="flex space-x-6">
+                    {% for radio in form.mode %}
+                        <label class="inline-flex items-center cursor-pointer">
+                            {{ radio.tag }}
+                            <span class="ml-2 text-gray-700">{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="existant-section" class="transition-opacity duration-300">
+                <div class="p-4 border border-blue-100 bg-blue-50 rounded-lg">
+                    <label class="block text-sm font-medium text-blue-900 mb-2">
+                        Rechercher un agent dans la base départementale
+                    </label>
+                    {{ form.user_existant }}
+                    <p class="mt-2 text-xs text-blue-700 italic">L'agent doit déjà posséder un compte DITAS.</p>
+                </div>
+            </div>
+
+            <div id="nouveau-section" class="space-y-4 border-l-4 border-green-400 pl-4 py-2" style="display: none;">
+                <h3 class="text-sm font-bold text-green-800 uppercase tracking-wider">Informations d'identité</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Matricule (Identifiant) *</label>
+                        {{ form.nouveau_matricule }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email professionnel *</label>
+                        {{ form.nouveau_email }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
+                        {{ form.nouveau_prenom }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                        {{ form.nouveau_nom }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mot de passe *</label>
+                        {{ form.nouveau_mdp1 }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Confirmation *</label>
+                        {{ form.nouveau_mdp2 }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-100">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Profil métier (CORE) *</label>
+                {{ form.profil_core }}
+                <p class="mt-1 text-xs text-gray-500">
+                    Définit les capacités logicielles de l'agent (ex: MDS_Agent, MDS_Instructeur).
+                </p>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <i class="fas fa-id-card-alt mr-2 text-blue-500"></i>Affectation locale
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date d'arrivée</label>
+                        {{ form.date_debut }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date de départ prévue</label>
+                        {{ form.date_fin }}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rôle au sein de la MDS</label>
+                    {{ form.role_specifique }}
+                    <p class="mt-1 text-xs text-gray-500 italic">Ex: Référent RSA, Secrétariat de direction...</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">N° Bureau</label>
+                        {{ form.bureau }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ligne directe</label>
+                        {{ form.telephone_interne }}
+                    </div>
+                </div>
+
+                <div class="mt-6 flex items-center p-3 bg-white rounded border border-gray-200">
+                    {{ form.principale }}
+                    <label for="{{ form.principale.id_for_label }}" class="ml-3 block text-sm font-medium text-gray-800 cursor-pointer">
+                        Définir comme MDS principale <span class="text-gray-500 font-normal">(pour l'accueil par défaut)</span>
+                    </label>
+                </div>
+                <div class="mt-6 flex items-center p-3 bg-white rounded border border-gray-200">
+    {{ form.actif }}
+    <label for="{{ form.actif.id_for_label }}" class="ml-3 block text-sm font-medium text-gray-800 cursor-pointer">
+        Agent actif dans cette MDS
+        <span class="text-gray-500 font-normal">(désactiver pour mettre en pause l'affectation)</span>
+    </label>
+</div>
+            <div class="pt-6 border-t flex justify-between items-center">
+                <p class="text-sm text-gray-500">* Champs obligatoires</p>
+                <div class="flex space-x-4">
+                    <a href="{% url 'mds:gestion_utilisateurs_mds' mds_id=mds.id %}" 
+                       class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition shadow-sm">
+                        Annuler
+                    </a>
+                    <button type="submit" 
+                            class="px-8 py-2 bg-blue-600 text-white font-bold rounded-md hover:bg-blue-700 transition shadow-md flex items-center">
+                        <i class="fas fa-check mr-2"></i>Valider le rattachement
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+    const existantSection = document.getElementById('existant-section');
+    const nouveauSection = document.getElementById('nouveau-section');
+    
+    function toggleSections() {
+        // On récupère le bouton radio coché
+        const checkedRadio = document.querySelector('input[name="mode"]:checked');
+        if (!checkedRadio) return;
+
+        const selectedMode = checkedRadio.value;
+        
+        if (selectedMode === 'existant') {
+            existantSection.style.display = 'block';
+            nouveauSection.style.display = 'none';
+        } else {
+            existantSection.style.display = 'none';
+            nouveauSection.style.display = 'block';
+        }
+    }
+    
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', toggleSections);
+    });
+    
+    // Initialiser l'affichage au chargement de la page
+    toggleSections();
+});
+</script>
+{% endblock %}

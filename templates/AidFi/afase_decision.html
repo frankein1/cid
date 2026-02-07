@@ -1,0 +1,31 @@
+<!-- templates/AidFi/afase_decision.html -->
+{% extends "base.html" %}
+{% load capacites %}
+
+{% block title %}Décision AFASE{% endblock %}
+
+{% block content %}
+<h1>Décision AFASE</h1>
+
+<h2>Dossier (lecture seule)</h2>
+<p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
+<p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} €</p>
+
+<hr>
+
+<h2>Décision</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    {% if user|a_la_capacite:"peut_decider" %}
+    <button type="submit" class="btn btn-danger">
+        Valider la décision
+    </button>
+    {% else %}
+    <div class="alert alert-warning">Vous n'avez pas les droits pour valider cette décision.</div>
+    {% endif %}
+
+    <a href="{% url 'AidFi:afase_detail' demande.id %}">Annuler</a>
+</form>
+{% endblock %}

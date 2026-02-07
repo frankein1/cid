@@ -1,0 +1,124 @@
+<!-- 2. templates/beneficiaire/annuler_deces.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Annuler un décès - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="bg-green-50 border-l-4 border-green-600 rounded-r-2xl p-6 mb-8 shadow-sm">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-undo-alt text-green-600 text-3xl"></i>
+            </div>
+            <div class="ml-4">
+                <h1 class="text-2xl font-bold text-green-900 mb-2">
+                    Annuler la déclaration de décès
+                </h1>
+                <p class="text-green-700">
+                    Cette procédure restaure le dossier du bénéficiaire en état <strong>Actif</strong> et efface les données de clôture.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Dossier concerné</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <i class="fas fa-user text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-gray-900">{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</p>
+                    <p class="text-sm font-mono text-blue-600 font-semibold">{{ beneficiaire.code_interne }}</p>
+                </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-2 gap-4 pt-6 border-t border-dashed">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Statut actuel</p>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-white mt-1">
+                        <i class="fas fa-cross mr-1 text-[10px]"></i> Décédé
+                    </span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Date de décès saisie</p>
+                    <p class="text-sm font-semibold text-gray-700 mt-1">
+                        {{ beneficiaire.date_deces|date:"d/m/Y"|default:"Non renseignée" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        {% csrf_token %}
+
+        <div class="space-y-6">
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-blue-800 mb-2 flex items-center">
+                    <i class="fas fa-info-circle mr-2"></i> Conséquences de l'action
+                </h3>
+                <ul class="text-xs text-blue-700 space-y-1 ml-6 list-disc">
+                    <li>Réintégration immédiate dans les listes actives.</li>
+                    <li>Possibilité de nouveau de saisir des prestations et interventions.</li>
+                    <li>Conservation de l'intégralité de l'historique GED et Core.</li>
+                </ul>
+            </div>
+
+            <div class="p-4 bg-orange-50 border border-orange-100 rounded-xl">
+                <label class="flex items-start cursor-pointer">
+                    <input type="checkbox" 
+                           id="confirm_annulation" 
+                           required
+                           class="mt-1 h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded-lg transition">
+                    <span class="ml-3 text-sm text-gray-700 leading-tight font-medium">
+                        Je confirme que le décès de <strong>{{ beneficiaire.prenom }} {{ beneficiaire.nom }}</strong> a été déclaré par erreur et je demande sa réactivation.
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex justify-end items-center gap-4 pt-4">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" 
+                   class="text-sm font-medium text-gray-500 hover:text-gray-700 transition">
+                    Abandonner
+                </a>
+                <button type="submit" 
+                        id="annuler_button"
+                        disabled
+                        class="px-8 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i> Restaurer le dossier
+                </button>
+            </div>
+        </div>
+    </form>
+    
+    <p class="mt-8 text-center text-xs text-gray-400 italic">
+        Toute action d'annulation de décès est tracée dans les logs de sécurité du SI-DITAS.
+    </p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const confirmCheckbox = document.getElementById('confirm_annulation');
+    const annulerButton = document.getElementById('annuler_button');
+
+    if (confirmCheckbox && annulerButton) {
+        confirmCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                annulerButton.disabled = false;
+                annulerButton.classList.remove('shadow-green-100');
+                annulerButton.classList.add('shadow-green-300', 'scale-[1.02]');
+            } else {
+                annulerButton.disabled = true;
+                annulerButton.classList.remove('shadow-green-300', 'scale-[1.02]');
+                annulerButton.classList.add('shadow-green-100');
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,136 @@
+# planning/forms.py
+
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import CreneauRdv, JourBloque
+
+from mds.models import MDSReception, UserMDSProfile
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+
+class RdvForm(forms.ModelForm):
+    class Meta:
+        model = CreneauRdv
+        fields = ['beneficiaire', 'type_rdv', 'description', 'priorite']
+
+        widgets = {
+            'beneficiaire': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+            }),
+            'type_rdv': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+            }),
+            'priorite': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+            }),
+            'description': forms.Textarea(attrs={
+                'rows': 4,
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Objet du rendez-vous, motif, informations importantes...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.creneau = kwargs.pop('creneau', None)
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+
+        if 'beneficiaire' in self.fields:
+            from beneficiaire.models import Beneficiaire
+
+            if self.request:
+                profile = UserMDSProfile.objects.filter(
+                    user=self.request.user, actif=True
+                ).first()
+                if profile and profile.mds:
+                    self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
+                        mds=profile.mds, actif=True
+                    ).order_by('nom', 'prenom')
+                else:
+                    self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
+                        actif=True
+                    ).order_by('nom', 'prenom')
+            else:
+                self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
+                    actif=True
+                ).order_by('nom', 'prenom')
+
+        self.fields['beneficiaire'].required = True
+        self.fields['type_rdv'].required = True
+        self.fields['description'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.creneau and not self.creneau.est_disponible():
+            raise ValidationError("Ce créneau n'est plus disponible.")
+        return cleaned_data
+
+
+class GenererCreneauxForm(forms.Form):
+    DATE_DEBUT_CHOICES = [
+        ('today', "Aujourd'hui"),
+        ('monday', "Lundi prochain"),
+        ('next_month', "Début du mois prochain"),
+    ]
+
+    date_debut = forms.ChoiceField(
+        choices=DATE_DEBUT_CHOICES,
+        label="Commencer à partir de",
+        widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md'})
+    )
+
+    nombre_semaines = forms.IntegerField(
+        min_value=1,
+        max_value=12,
+        initial=4,
+        label="Nombre de semaines à générer",
+        widget=forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md'})
+    )
+
+    type_rdv = forms.ChoiceField(
+        choices=CreneauRdv.TYPE_RDV_CHOICES,
+        initial='PERMANENCE',
+        label="Type de RDV",
+        widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md'})
+    )
+
+
+class JourBloqueForm(forms.ModelForm):
+    class Meta:
+        model = JourBloque
+        fields = ['date', 'raison', 'raison_detail', 'salle', 'agent', 'heure_debut', 'heure_fin']
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+
+        self.fields['salle'].queryset = MDSReception.objects.filter(actif=True)
+        self.fields['agent'].queryset = User.objects.filter(is_active=True)
+
+        if self.request and self.request.user.a_la_capacite('peut_administrer'):
+            profile = UserMDSProfile.objects.filter(
+                user=self.request.user, actif=True
+            ).first()
+            if profile and profile.mds:
+                self.fields['salle'].queryset = MDSReception.objects.filter(
+                    mds=profile.mds, actif=True
+                )
+                self.fields['agent'].queryset = User.objects.filter(
+                    profils__capacites__code='peut_creer',
+                    is_active=True
+                ).distinct()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        salle = cleaned_data.get('salle')
+        agent = cleaned_data.get('agent')
+
+        if self.request and self.request.method == 'POST':
+            if not salle and not agent:
+                raise ValidationError(
+                    "Vous devez sélectionner au moins une salle ou un agent."
+                )
+
+        return cleaned_data
+

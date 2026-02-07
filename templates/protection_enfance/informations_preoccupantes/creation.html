@@ -1,0 +1,127 @@
+<!-- templates/protection_enfance/informations_preoccupantes/creation.html -->
+{% extends 'base.html' %}
+
+{% block title %}Nouvelle Information Préoccupante - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-exclamation-triangle text-orange-500 mr-3"></i>
+            Nouvelle Information Préoccupante
+        </h1>
+        <p class="text-gray-600 mt-2">Saisie d'un nouveau signalement</p>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+            <span class="text-red-700">{{ error }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Informations enfant -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Nom de l'enfant *
+                    </label>
+                    <input type="text" name="enfant_nom" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Date de naissance
+                    </label>
+                    <input type="date" name="enfant_date_naissance"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Origine du signalement -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Origine du signalement *
+                </label>
+                <select name="origine" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Sélectionner...</option>
+                    <option value="MDS">Maison Départementale de la Solidarité</option>
+                    <option value="PARTENAIRE">Partenaire (médecin/école/assos)</option>
+                    <option value="NUM_ENFANCE">Numéro "enfance en danger"</option>
+                    <option value="AUTRE">Autre</option>
+                </select>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Description des faits constatés *
+                </label>
+                <textarea name="description" required rows="6"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Décrire de manière précise et factuelle les éléments observés..."></textarea>
+            </div>
+
+            <!-- Niveau d'urgence -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Niveau d'urgence
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="niveau_urgence" value="IMMEDIATE" class="mr-3 text-red-500">
+                        <div>
+                            <div class="font-medium text-red-600">Immédiate</div>
+                            <div class="text-xs text-gray-500">Danger grave et imminent</div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="niveau_urgence" value="RAPIDE" class="mr-3 text-orange-500">
+                        <div>
+                            <div class="font-medium text-orange-600">Rapide</div>
+                            <div class="text-xs text-gray-500">Danger avéré sous 48h</div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="niveau_urgence" value="COURANTE" class="mr-3 text-blue-500" checked>
+                        <div>
+                            <div class="font-medium text-blue-600">Courante</div>
+                            <div class="text-xs text-gray-500">Situation préoccupante</div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-center p-3 border rounded-md cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="niveau_urgence" value="DIFFERE" class="mr-3 text-gray-500">
+                        <div>
+                            <div class="font-medium text-gray-600">Différée</div>
+                            <div class="text-xs text-gray-500">Nécessite évaluation</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex justify-end space-x-4 pt-6 border-t">
+                <a href="{% url 'protection_enfance:ip_liste' %}" 
+                   class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition duration-150">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-150">
+                    <i class="fas fa-save mr-2"></i>Créer l'IP
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

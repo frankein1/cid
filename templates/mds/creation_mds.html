@@ -1,0 +1,195 @@
+<!-- templates/mds/creation_mds.html - VERSION UTILISANT CORE -->
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 text-sm text-gray-500">
+                <li class="inline-flex items-center">
+                    <a href="{% url 'mds:liste_mds' %}" class="hover:text-purple-600">MDS</a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right mx-2 text-xs text-gray-400"></i>
+                        <span class="text-gray-900 font-medium">{{ title }}</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+        <h1 class="text-3xl font-bold text-gray-900">
+            <i class="fas fa-building text-purple-500 mr-3"></i>
+            {{ title }}
+        </h1>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            {% if form.errors or form.non_field_errors %}
+            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+                <h3 class="text-sm font-medium text-red-800 mb-2">Erreurs détectées :</h3>
+                <ul class="list-disc pl-5 text-sm text-red-700">
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Informations Générales</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Code MDS *</label>
+                        {{ form.code_mds }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nom de la structure *</label>
+                        {{ form.nom }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-2">Localisation</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Adresse complète *</label>
+                    {{ form.adresse }}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Code postal *</label>
+                        {{ form.code_postal }}
+                        <div id="cp-loader" class="hidden absolute right-3 top-9">
+                            <i class="fas fa-circle-notch fa-spin text-purple-500"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ville *</label>
+                        {{ form.ville }}
+                        <div id="villes-suggestions" class="hidden mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 italic">
+                            Plusieurs villes trouvées. Précisez si besoin.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                    {{ form.telephone }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email de contact</label>
+                    {{ form.email }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Responsable MDS</label>
+                    {{ form.responsable }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Effectif max. d'agents</label>
+                    {{ form.nb_agents_max }}
+                </div>
+            </div>
+
+            <div class="flex items-center p-3 bg-purple-50 rounded border border-purple-100">
+                {{ form.active }}
+                <label for="{{ form.active.id_for_label }}" class="ml-3 block text-sm font-medium text-purple-900 cursor-pointer">
+                    Structure active <span class="text-purple-700 font-normal">(Visible dans les listes et filtres)</span>
+                </label>
+            </div>
+
+            <div class="pt-6 border-t flex justify-end space-x-4">
+                <a href="{% url 'mds:liste_mds' %}" 
+                   class="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition">
+                    Annuler
+                </a>
+                <button type="submit" 
+                        class="px-8 py-2 bg-purple-600 text-white font-bold rounded-md hover:bg-purple-700 transition shadow-md">
+                    <i class="fas fa-save mr-2"></i>Enregistrer la MDS
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cpInput = document.getElementById('id_code_postal');
+    const villeInput = document.getElementById('id_ville');
+    const loader = document.getElementById('cp-loader');
+    const suggestionBox = document.getElementById('villes-suggestions');
+
+    if (cpInput && villeInput) {
+        cpInput.addEventListener('input', function() {
+            const cp = this.value.trim();
+            
+            // Réinitialiser si le CP est invalide
+            if (cp.length !== 5) {
+                suggestionBox.classList.add('hidden');
+                return;
+            }
+            
+            // Afficher le loader
+            loader.classList.remove('hidden');
+            
+            // ✅ CHANGEMENT ICI : Utilisation de l'endpoint CORE au lieu de MDS
+            fetch(`{% url 'core:ajax_ville_par_cp' %}?cp=${cp}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Protection contre undefined
+                    const ville = data.ville || '';
+                    const villes = data.villes || [];
+                    
+                    if (data.success && ville) {
+                        // Remplir le champ ville
+                        villeInput.value = ville;
+                        
+                        // Si plusieurs villes possibles, afficher l'info
+                        if (villes.length > 1) {
+                            suggestionBox.classList.remove('hidden');
+                            suggestionBox.innerHTML = `<i class="fas fa-info-circle mr-1"></i> Choix multiples : ${villes.join(', ')}`;
+                        } else {
+                            suggestionBox.classList.add('hidden');
+                        }
+                        
+                        // Animation de succès
+                        villeInput.classList.remove('border-red-500');
+                        villeInput.classList.add('ring-2', 'ring-green-500');
+                        setTimeout(() => {
+                            villeInput.classList.remove('ring-2', 'ring-green-500');
+                        }, 1500);
+                    } else {
+                        // Code postal non trouvé
+                        villeInput.value = '';
+                        suggestionBox.classList.add('hidden');
+                        villeInput.classList.add('border-red-500');
+                        
+                        console.warn('Code postal non trouvé:', cp, data.error || 'Erreur inconnue');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur AJAX:', error);
+                    villeInput.value = '';
+                    suggestionBox.classList.add('hidden');
+                    villeInput.classList.add('border-red-500');
+                })
+                .finally(() => {
+                    loader.classList.add('hidden');
+                });
+        });
+    }
+});
+</script>
+{% endblock %}
