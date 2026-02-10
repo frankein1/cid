@@ -13,6 +13,13 @@ kill -9 numcommande
 (source venv/bin/activate) 
 python manage.py install 
 
+Token GIT : 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
+Info alwaysdata : 
+Serveur : postgresql-cid.alwaysdata.net
+Port : 5432
+Base : cid_cd13
+Utilisateur : cid
+Mot de passe : 1w2kcg!3.
 
 
 Gunicorn : 
