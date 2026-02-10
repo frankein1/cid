@@ -139,14 +139,12 @@ class AFASEWorkflowForm(forms.Form):
         cleaned["total_ressources"] = total_ressources
         cleaned["total_charges"] = total_charges
 
-    # ✅ CALCUL DU NOMBRE DE PERSONNES AU FOYER
-        nb_personnes = 1  # Le bénéficiaire lui-même
-    
-    # Compter les membres de la famille vivant au foyer
-        liens = self.beneficiaire.liens_familiaux
-        for lien in liens:
-            if lien.vit_au_foyer:
-                nb_personnes += 1
+        nb_personnes = 1
+        if hasattr(self.beneficiaire, "liens_familiaux"):
+            nb_personnes += sum(
+                1 for l in self.beneficiaire.liens_familiaux
+                if l.vit_au_foyer
+            )
 
         if nb_personnes <= 0:
             nb_personnes = 1
@@ -160,35 +158,36 @@ class AFASEWorkflowForm(forms.Form):
     # SAVE TRANSACTIONNEL
     # ==========================================================
 
-    @transaction.atomic
-    def save(self):  # ✅ MAINTENANT CORRECTEMENT INDENTÉ (4 espaces)
-        """
-        Crée ou met à jour l'ensemble du dossier AFASE.
-        """
-        # Import ici pour éviter les imports circulaires
-        from AidFi.models.m_generique import TypeAide
+@transaction.atomic
+def save(self):
+    """
+    Crée ou met à jour l'ensemble du dossier AFASE.
+    """
+    # Import ici pour éviter les imports circulaires
+    from AidFi.models.m_generique import TypeAide
+    
+    if self.demande:
+        demande = self.demande
+    else:
+        # S'assurer que le TypeAide AFASE existe
+        type_aide_afase, _ = TypeAide.objects.get_or_create(
+            code='AFASE',
+            defaults={
+                'nom': 'Aide Financière ASE',
+                'description': 'Aide financière pour les enfants relevant de l\'ASE',
+                'actif': True,
+                'cree_par': self.user,
+            }
+        )
         
-        if self.demande:
-            demande = self.demande
-        else:
-            # S'assurer que le TypeAide AFASE existe
-            type_aide_afase, _ = TypeAide.objects.get_or_create(
-                code='AFASE',
-                defaults={
-                    'nom': 'Aide Financière ASE',
-                    'description': 'Aide financière pour les enfants relevant de l\'ASE',
-                    'actif': True,
-                    'cree_par': self.user,
-                }
-            )
-            
-            demande = DemandeAFASE.objects.create(
-                beneficiaire=self.beneficiaire,
-                type_aide=type_aide_afase,
-                demandeur=self.cleaned_data["demandeur"],
-                cree_par=self.user,
-                statut="BROUILLON",
-            )
+        demande = DemandeAFASE.objects.create(
+            beneficiaire=self.beneficiaire,
+            type_aide=type_aide_afase,  # AJOUTEZ CETTE LIGNE
+            cree_par=self.user,
+            statut="BROUILLON",
+        )
+
+    # ... reste inchangé ...
 
         # --- DemandeAFASE
         demande.demandeur = self.cleaned_data["demandeur"]

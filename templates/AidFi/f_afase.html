@@ -1,3 +1,6 @@
+<!--/templates/AidFi/f_afase.html -->
+
+
 {% extends "base.html" %}
 {% load static %}
 
@@ -7,69 +10,79 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 
 {% block extra_css %}
 <style>
+    /* Styles pour les étapes */
     .form-step {
         display: none;
+        animation: fadeIn 0.3s ease-in-out;
     }
     .form-step.active {
         display: block;
-        animation: fadeIn 0.3s;
     }
+    
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    .budget-input-group {
-        transition: all 0.2s;
-    }
-    .budget-input-group:hover {
-        background-color: #f8fafc;
+    
+    /* Styles pour les onglets */
+    .step-tab {
+        transition: all 0.2s ease;
+        cursor: pointer;
     }
     
-    /* Styles pour les champs de formulaire */
+    .step-tab.active {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border-color: #93c5fd;
+    }
+    
+    /* Styles pour les champs */
     .form-input {
-        display: block;
         width: 100%;
         padding: 0.5rem 0.75rem;
         border: 1px solid #d1d5db;
         border-radius: 0.375rem;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        font-size: 0.875rem;
     }
+    
     .form-input:focus {
         outline: none;
-        ring: 2px;
-        ring-color: #3b82f6;
         border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
+    
     .form-textarea {
         min-height: 100px;
         resize: vertical;
     }
     
-    /* Styles pour les boutons */
+    /* Boutons */
     .btn-primary {
         background-color: #3b82f6;
         color: white;
-        padding: 0.5rem 1.5rem;
+        padding: 0.625rem 1.5rem;
         border-radius: 0.5rem;
         font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s;
     }
+    
     .btn-primary:hover {
         background-color: #2563eb;
     }
-    .btn-primary:focus {
-        outline: none;
-        ring: 2px;
-        ring-color: #3b82f6;
-        ring-offset: 2px;
-    }
     
     .btn-outline {
-        border: 1px solid #d1d5db;
+        background-color: white;
         color: #374151;
-        padding: 0.5rem 1.5rem;
+        padding: 0.625rem 1.5rem;
         border-radius: 0.5rem;
         font-weight: 500;
+        border: 1px solid #d1d5db;
+        cursor: pointer;
+        transition: all 0.2s;
     }
+    
     .btn-outline:hover {
         background-color: #f9fafb;
     }
@@ -77,12 +90,26 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
     .btn-success {
         background-color: #10b981;
         color: white;
-        padding: 0.5rem 2rem;
+        padding: 0.625rem 2rem;
         border-radius: 0.5rem;
         font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s;
     }
+    
     .btn-success:hover {
         background-color: #059669;
+    }
+    
+    /* Budget lines */
+    .budget-line {
+        transition: all 0.2s;
+    }
+    
+    .budget-line:hover {
+        background-color: #f8fafc;
+        border-color: #93c5fd;
     }
 </style>
 {% endblock %}
@@ -121,8 +148,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
         <div class="flex items-center">
             <div class="flex-1">
                 <div class="flex justify-between mb-2">
-                    <button type="button" data-step="step1"
-                            class="step-tab flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg transition-all bg-blue-50 text-blue-700 border border-blue-200">
+                    <button type="button" data-step="1"
+                            class="step-tab step-1 active flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
                         <div class="flex items-center mb-1">
                             <div class="w-6 h-6 rounded-full flex items-center justify-center mr-2 bg-blue-600 text-white">
                                 1
@@ -132,8 +159,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <div class="h-1 w-full mt-2 bg-blue-600 rounded-full"></div>
                     </button>
                     
-                    <button type="button" data-step="step2"
-                            class="step-tab flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg transition-all text-gray-500 hover:text-gray-700">
+                    <button type="button" data-step="2"
+                            class="step-tab step-2 flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-700 border border-transparent">
                         <div class="flex items-center mb-1">
                             <div class="w-6 h-6 rounded-full flex items-center justify-center mr-2 bg-gray-200 text-gray-500">
                                 2
@@ -143,8 +170,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <div class="h-1 w-full mt-2 bg-gray-200 rounded-full"></div>
                     </button>
                     
-                    <button type="button" data-step="step3"
-                            class="step-tab flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg transition-all text-gray-500 hover:text-gray-700">
+                    <button type="button" data-step="3"
+                            class="step-tab step-3 flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-700 border border-transparent">
                         <div class="flex items-center mb-1">
                             <div class="w-6 h-6 rounded-full flex items-center justify-center mr-2 bg-gray-200 text-gray-500">
                                 3
@@ -154,8 +181,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <div class="h-1 w-full mt-2 bg-gray-200 rounded-full"></div>
                     </button>
                     
-                    <button type="button" data-step="step4"
-                            class="step-tab flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg transition-all text-gray-500 hover:text-gray-700">
+                    <button type="button" data-step="4"
+                            class="step-tab step-4 flex flex-col items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-700 border border-transparent">
                         <div class="flex items-center mb-1">
                             <div class="w-6 h-6 rounded-full flex items-center justify-center mr-2 bg-gray-200 text-gray-500">
                                 4
@@ -186,13 +213,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-user mr-2"></i>Personne ayant formulé la demande
                         </label>
-                        <select name="demandeur" id="id_demandeur" class="form-input">
-                            {% for choice in form.demandeur.field.queryset %}
-                            <option value="{{ choice.id }}" {% if form.demandeur.value|stringformat:"s" == choice.id|stringformat:"s" %}selected{% endif %}>
-                                {{ choice.prenom }} {{ choice.nom }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        {{ form.demandeur }}
                         {% if form.demandeur.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.demandeur.errors }}</p>
                         {% endif %}
@@ -206,8 +227,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-hashtag mr-2"></i>Numéro GENESIS
                         </label>
-                        <input type="text" name="numero_genesis" id="id_numero_genesis" 
-                               value="{{ form.numero_genesis.value|default:'' }}" class="form-input">
+                        {{ form.numero_genesis }}
                         {% if form.numero_genesis.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.numero_genesis.errors }}</p>
                         {% endif %}
@@ -217,10 +237,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <!-- Première demande -->
                     <div class="flex items-center space-x-3">
-                        <input type="checkbox" name="premiere_demande" id="id_premiere_demande" 
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded" 
-                               {% if form.premiere_demande.value %}checked{% endif %}>
-                        <label for="id_premiere_demande" class="text-sm font-medium text-gray-700">
+                        {{ form.premiere_demande }}
+                        <label for="{{ form.premiere_demande.id_for_label }}" class="text-sm font-medium text-gray-700">
                             Première demande AFASE pour ce bénéficiaire
                         </label>
                     </div>
@@ -230,13 +248,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-comment-medical mr-2"></i>Avis du travailleur social
                         </label>
-                        <select name="avis_ts" id="id_avis_ts" class="form-input">
-                            {% for value, label in form.avis_ts.field.choices %}
-                            <option value="{{ value }}" {% if form.avis_ts.value == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        {{ form.avis_ts }}
                         {% if form.avis_ts.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.avis_ts.errors }}</p>
                         {% endif %}
@@ -246,7 +258,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
             
             <div class="flex justify-between">
                 <div></div>
-                <button type="button" class="next-step btn-primary inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-primary next-step-btn inline-flex items-center px-6 py-3" data-next="2">
                     Suivant <i class="fas fa-arrow-right ml-2"></i>
                 </button>
             </div>
@@ -267,10 +279,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                             <i class="fas fa-hand-holding-usd mr-2"></i>Montant sollicité
                         </label>
                         <div class="relative">
-                            <input type="number" name="montant_sollicite" id="id_montant_sollicite" 
-                                   step="0.01" min="0"
-                                   value="{{ form.montant_sollicite.value|default:'' }}"
-                                   class="form-input pr-10">
+                            {{ form.montant_sollicite }}
                             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                 <span class="text-gray-500">€</span>
                             </div>
@@ -289,9 +298,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                             <i class="fas fa-calendar-alt mr-2"></i>Durée de la demande
                         </label>
                         <div class="relative">
-                            <input type="number" name="duree_demande" id="id_duree_demande" 
-                                   min="1" value="{{ form.duree_demande.value|default:'1' }}"
-                                   class="form-input pr-12">
+                            {{ form.duree_demande }}
                             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                 <span class="text-gray-500">mois</span>
                             </div>
@@ -318,17 +325,17 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         </div>
                         <div class="text-center p-3 bg-white rounded-lg shadow-sm">
                             <div class="text-sm text-gray-500">Durée</div>
-                            <div class="text-xl font-bold text-gray-700" id="dureeAffichage">{{ form.duree_demande.value|default:"1" }} mois</div>
+                            <div id="dureeAffichage" class="text-xl font-bold text-gray-700">1 mois</div>
                         </div>
                     </div>
                 </div>
             </div>
             
             <div class="flex justify-between">
-                <button type="button" class="prev-step btn-outline inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-outline prev-step-btn inline-flex items-center px-6 py-3" data-prev="1">
                     <i class="fas fa-arrow-left mr-2"></i>Précédent
                 </button>
-                <button type="button" class="next-step btn-primary inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-primary next-step-btn inline-flex items-center px-6 py-3" data-next="3">
                     Suivant <i class="fas fa-arrow-right ml-2"></i>
                 </button>
             </div>
@@ -342,60 +349,84 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                     Évaluation sociale
                 </h2>
                 
-                <!-- Composition foyer -->
-<div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-    <h3 class="text-lg font-semibold text-blue-800 mb-3">
-        <i class="fas fa-home mr-2"></i>Composition du foyer (automatique)
-    </h3>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-            <div class="text-sm text-gray-500">Situation familiale</div>
-            <div class="font-medium text-gray-800">
-                {{ beneficiaire.get_situation_familiale_display|default:"Non renseignée" }}
-            </div>
-        </div>
-        
-        <div>
-            <div class="text-sm text-gray-500">Nombre d'enfants</div>
-            <div class="font-medium text-gray-800">
-                {{ beneficiaire.enfants.count }} enfant{{ beneficiaire.enfants.count|pluralize:"s" }}
-            </div>
-        </div>
-        
-        <div>
-            <div class="text-sm text-gray-500">Autorité parentale</div>
-            <div class="font-medium text-gray-800">
-                {{ beneficiaire.get_autorite_parentale_display|default:"Non renseignée" }}
-            </div>
-        </div>
-        
-        <div>
-            <div class="text-sm text-gray-500">Type de logement</div>
-            <div class="font-medium text-gray-800">
-                {{ beneficiaire.get_type_logement_display|default:"Non renseigné" }}
-            </div>
-        </div>
+                <!-- Infos automatiques du foyer -->
+                <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-3">
+                        <i class="fas fa-home mr-2"></i>Composition du foyer (automatique)
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if beneficiaire.situation_familiale %}
+                        <div>
+                            <div class="text-sm text-gray-500">Situation familiale</div>
+                            <div class="font-medium text-gray-800">
+                                {{ beneficiaire.get_situation_familiale_display|default:"Non renseignée" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% with nb_liens=beneficiaire.liens_familiaux.count %}
+{% if nb_liens > 0 %}
+<div>
+    <div class="text-sm text-gray-500">Membres du foyer</div>
+    <div class="font-medium text-gray-800">
+        {{ nb_liens }} personne{{ nb_liens|pluralize:"s" }}
     </div>
-    
-    {% if beneficiaire.telephone or beneficiaire.email %}
-    <div class="mt-4 pt-4 border-t border-blue-300">
-        <div class="text-sm text-gray-500">Coordonnées</div>
-        <div class="text-sm text-gray-700">
-            {% if beneficiaire.telephone %}<i class="fas fa-phone mr-2"></i>{{ beneficiaire.telephone }}{% endif %}
-            {% if beneficiaire.email %}<i class="fas fa-envelope ml-4 mr-2"></i>{{ beneficiaire.email }}{% endif %}
-        </div>
-    </div>
-    {% endif %}
 </div>
+{% endif %}
+{% endwith %}
+                        
+                        {% if beneficiaire.autorite_parentale %}
+                        <div>
+                            <div class="text-sm text-gray-500">Autorité parentale</div>
+                            <div class="font-medium text-gray-800">
+                                {{ beneficiaire.get_autorite_parentale_display|default:"Non renseignée" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if beneficiaire.type_logement %}
+                        <div>
+                            <div class="text-sm text-gray-500">Type de logement</div>
+                            <div class="font-medium text-gray-800">
+                                {{ beneficiaire.get_type_logement_display|default:"Non renseigné" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if beneficiaire.telephone or beneficiaire.email %}
+                    <div class="mt-4 pt-4 border-t border-blue-300">
+                        <div class="text-sm text-gray-500">Coordonnées</div>
+                        <div class="text-sm text-gray-700">
+                            {% if beneficiaire.telephone %}<i class="fas fa-phone mr-2"></i>{{ beneficiaire.telephone }}{% endif %}
+                            {% if beneficiaire.email %}<i class="fas fa-envelope ml-4 mr-2"></i>{{ beneficiaire.email }}{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Situation sociale -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-home mr-2"></i>Situation sociale et familiale
+                        </label>
+                        {{ form.situation_sociale }}
+                        {% if form.situation_sociale.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.situation_sociale.errors }}</p>
+                        {% endif %}
+                        <p class="mt-2 text-sm text-gray-500">
+                            Décrivez la composition du foyer, le logement, la situation familiale.
+                        </p>
+                    </div>
                     
                     <!-- Analyse problématique -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-search mr-2"></i>Analyse de la problématique
                         </label>
-                        <textarea name="analyse_problematique" id="id_analyse_problematique" 
-                                  class="form-input form-textarea">{{ form.analyse_problematique.value|default:'' }}</textarea>
+                        {{ form.analyse_problematique }}
                         {% if form.analyse_problematique.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.analyse_problematique.errors }}</p>
                         {% endif %}
@@ -410,8 +441,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                             <i class="fas fa-file-alt mr-2"></i>Justification de la demande
                             <span class="text-red-500">*</span>
                         </label>
-                        <textarea name="justification_demande" id="id_justification_demande" 
-                                  required class="form-input form-textarea">{{ form.justification_demande.value|default:'' }}</textarea>
+                        {{ form.justification_demande }}
                         {% if form.justification_demande.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.justification_demande.errors }}</p>
                         {% endif %}
@@ -422,8 +452,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-comments mr-2"></i>Commentaire familial
                         </label>
-                        <textarea name="commentaire_familial" id="id_commentaire_familial" 
-                                  class="form-input form-textarea">{{ form.commentaire_familial.value|default:'' }}</textarea>
+                        {{ form.commentaire_familial }}
                         {% if form.commentaire_familial.errors %}
                         <p class="mt-1 text-sm text-red-600">{{ form.commentaire_familial.errors }}</p>
                         {% endif %}
@@ -432,10 +461,10 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
             </div>
             
             <div class="flex justify-between">
-                <button type="button" class="prev-step btn-outline inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-outline prev-step-btn inline-flex items-center px-6 py-3" data-prev="2">
                     <i class="fas fa-arrow-left mr-2"></i>Précédent
                 </button>
-                <button type="button" class="next-step btn-primary inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-primary next-step-btn inline-flex items-center px-6 py-3" data-next="4">
                     Suivant <i class="fas fa-arrow-right ml-2"></i>
                 </button>
             </div>
@@ -452,92 +481,54 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-700">Ressources</h3>
-                        <button type="button" id="addResource" class="text-sm text-blue-600 hover:text-blue-800">
+                        <button type="button" id="addResourceBtn" class="text-sm text-blue-600 hover:text-blue-800">
                             <i class="fas fa-plus-circle mr-1"></i>Ajouter une ressource
                         </button>
                     </div>
                     
                     <div id="ressourcesContainer" class="space-y-3">
-                        <!-- Les ressources seront ajoutées dynamiquement ici -->
-                        {% if ressources_initial %}
-                            {% for label, montant in ressources_initial.items %}
-                            <div class="budget-input-group flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition">
-                                <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                       placeholder="Libellé (ex: Salaire)" value="{{ label }}">
-                                <div class="relative">
-                                    <input type="number" step="0.01" class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                           placeholder="0,00" value="{{ montant }}">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500">€</span>
-                                    </div>
+                        <!-- Les ressources seront ajoutées ici -->
+                        <div class="budget-line flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg">
+                            <input type="text" class="resource-label flex-1 px-3 py-2 border border-gray-300 rounded-md" 
+                                   placeholder="Ex: Salaire, Allocations...">
+                            <div class="relative">
+                                <input type="number" step="0.01" class="resource-amount w-32 px-3 py-2 border border-gray-300 rounded-md" 
+                                       placeholder="0,00" value="0">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500">€</span>
                                 </div>
-                                <button type="button" class="remove-line text-red-500 hover:text-red-700 p-2">
-                                    <i class="fas fa-times"></i>
-                                </button>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="budget-input-group flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition">
-                                <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                       placeholder="Libellé (ex: Salaire, Allocations, etc.)">
-                                <div class="relative">
-                                    <input type="number" step="0.01" class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                           placeholder="0,00">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500">€</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="remove-line text-red-500 hover:text-red-700 p-2">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        {% endif %}
+                            <button type="button" class="remove-resource text-red-500 hover:text-red-700 p-2">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-700">Charges</h3>
-                        <button type="button" id="addCharge" class="text-sm text-red-600 hover:text-red-800">
+                        <button type="button" id="addChargeBtn" class="text-sm text-red-600 hover:text-red-800">
                             <i class="fas fa-plus-circle mr-1"></i>Ajouter une charge
                         </button>
                     </div>
                     
                     <div id="chargesContainer" class="space-y-3">
-                        <!-- Les charges seront ajoutées dynamiquement ici -->
-                        {% if charges_initial %}
-                            {% for label, montant in charges_initial.items %}
-                            <div class="budget-input-group flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition">
-                                <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                       placeholder="Libellé (ex: Loyer)" value="{{ label }}">
-                                <div class="relative">
-                                    <input type="number" step="0.01" class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                           placeholder="0,00" value="{{ montant }}">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500">€</span>
-                                    </div>
+                        <!-- Les charges seront ajoutées ici -->
+                        <div class="budget-line flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg">
+                            <input type="text" class="charge-label flex-1 px-3 py-2 border border-gray-300 rounded-md" 
+                                   placeholder="Ex: Loyer, Électricité...">
+                            <div class="relative">
+                                <input type="number" step="0.01" class="charge-amount w-32 px-3 py-2 border border-gray-300 rounded-md" 
+                                       placeholder="0,00" value="0">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500">€</span>
                                 </div>
-                                <button type="button" class="remove-line text-red-500 hover:text-red-700 p-2">
-                                    <i class="fas fa-times"></i>
-                                </button>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                            <div class="budget-input-group flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition">
-                                <input type="text" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                       placeholder="Libellé (ex: Loyer, Électricité, etc.)">
-                                <div class="relative">
-                                    <input type="number" step="0.01" class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                                           placeholder="0,00">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500">€</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="remove-line text-red-500 hover:text-red-700 p-2">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        {% endif %}
+                            <button type="button" class="remove-charge text-red-500 hover:text-red-700 p-2">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -564,25 +555,24 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                         </div>
                     </div>
                     
-                    <div class="text-center p-4 bg-white rounded-lg border-2 border-dashed border-blue-300">
-                        <div class="text-sm text-gray-500 mb-1">Reste à vivre journalier</div>
-                        <div id="resteAVivre" class="text-3xl font-bold text-purple-700">0,00 €</div>
-                        <div class="text-sm text-gray-500 mt-2">
-                            Pour {{ beneficiaire.enfants.count|add:1 }} personne{{ beneficiaire.enfants.count|add:1|pluralize:"s" }} dans le foyer
-                        </div>
+                    <div class="text-sm text-gray-500 mt-2">
+    {% with nb_personnes_foyer=beneficiaire.liens_familiaux|length|add:1 %}
+        Pour {{ nb_personnes_foyer }} personne{{ nb_personnes_foyer|pluralize:"s" }} dans le foyer
+    {% endwith %}
+</div>
                     </div>
                     
                     <!-- Champs cachés pour le formulaire -->
-                    <input type="hidden" name="ressources" id="id_ressources" value="{{ form.ressources.value|default:'{}' }}">
-                    <input type="hidden" name="charges" id="id_charges" value="{{ form.charges.value|default:'{}' }}">
-                    <input type="hidden" name="total_ressources" id="id_total_ressources" value="{{ form.total_ressources.value|default:0 }}">
-                    <input type="hidden" name="total_charges" id="id_total_charges" value="{{ form.total_charges.value|default:0 }}">
-                    <input type="hidden" name="reste_a_vivre" id="id_reste_a_vivre" value="{{ form.reste_a_vivre.value|default:0 }}">
+                    {{ form.ressources.as_hidden }}
+                    {{ form.charges.as_hidden }}
+                    {{ form.total_ressources.as_hidden }}
+                    {{ form.total_charges.as_hidden }}
+                    {{ form.reste_a_vivre.as_hidden }}
                 </div>
             </div>
             
             <div class="flex justify-between">
-                <button type="button" class="prev-step btn-outline inline-flex items-center px-6 py-3">
+                <button type="button" class="btn-outline prev-step-btn inline-flex items-center px-6 py-3" data-prev="3">
                     <i class="fas fa-arrow-left mr-2"></i>Précédent
                 </button>
                 <button type="submit" class="btn-success inline-flex items-center px-8 py-3">
@@ -597,436 +587,257 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('AFASE Form - Initialisation');
+    console.log('=== DÉBUT INITIALISATION FORMULAIRE AFASE ===');
     
     // =====================================================================
-    // NAVIGATION ENTRE ÉTAPES (fonctionnel)
+    // 1. NAVIGATION ENTRE ÉTAPES - VERSION ULTRA SIMPLE
     // =====================================================================
     
     let currentStep = 1;
     
-    function showStep(stepNumber) {
-        // Limites
-        if (stepNumber < 1) stepNumber = 1;
-        if (stepNumber > 4) stepNumber = 4;
+    function goToStep(stepNumber) {
+        console.log('>>> Tentative de passage à l\'étape:', stepNumber);
         
-        // Masquer toutes les étapes
+        // Cacher TOUTES les étapes
         document.querySelectorAll('.form-step').forEach(step => {
             step.classList.remove('active');
         });
         
-        // Afficher l'étape courante
-        const currentStepElement = document.getElementById('step' + stepNumber);
-        if (currentStepElement) {
-            currentStepElement.classList.add('active');
+        // Retirer l'état actif de TOUS les onglets
+        document.querySelectorAll('.step-tab').forEach(tab => {
+            tab.classList.remove('active', 'bg-blue-50', 'text-blue-700', 'border-blue-200');
+        });
+        
+        // Afficher l'étape demandée
+        const targetStep = document.getElementById('step' + stepNumber);
+        if (targetStep) {
+            targetStep.classList.add('active');
+            console.log('✓ Étape', stepNumber, 'affichée');
+        } else {
+            console.error('✗ Étape introuvable:', 'step' + stepNumber);
         }
         
-        // Mettre à jour les onglets
-        document.querySelectorAll('.step-tab').forEach((tab, index) => {
-            if (index + 1 === stepNumber) {
-                tab.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
-                tab.classList.remove('text-gray-500');
-            } else {
-                tab.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-200');
-                tab.classList.add('text-gray-500');
-            }
-        });
+        // Activer l'onglet correspondant
+        const targetTab = document.querySelector('.step-' + stepNumber);
+        if (targetTab) {
+            targetTab.classList.add('active', 'bg-blue-50', 'text-blue-700', 'border-blue-200');
+            console.log('✓ Onglet', stepNumber, 'activé');
+        } else {
+            console.error('✗ Onglet introuvable:', '.step-' + stepNumber);
+        }
         
         currentStep = stepNumber;
-        console.log('Étape affichée:', currentStep);
+        console.log('>>> Étape courante:', currentStep);
     }
     
-    // Événements pour les onglets
-    document.querySelectorAll('.step-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const stepId = this.getAttribute('data-step');
-            const stepNumber = parseInt(stepId.replace('step', ''));
-            showStep(stepNumber);
+    // Attacher les événements aux ONGLETS (navigation par clic sur les onglets)
+    const allTabs = document.querySelectorAll('.step-tab');
+    console.log('Nombre d\'onglets trouvés:', allTabs.length);
+    
+    allTabs.forEach((tab, index) => {
+        const stepNum = tab.getAttribute('data-step');
+        console.log('Onglet', index + 1, '- data-step:', stepNum);
+        
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('!!! CLIC sur onglet - Étape:', stepNum);
+            goToStep(parseInt(stepNum));
         });
     });
     
-    // Événements pour les boutons
-    document.querySelectorAll('.next-step').forEach(btn => {
+    // Attacher les événements aux BOUTONS SUIVANT
+    const nextButtons = document.querySelectorAll('button[data-next]');
+    console.log('Nombre de boutons SUIVANT trouvés:', nextButtons.length);
+    
+    nextButtons.forEach((btn, index) => {
+        const nextStep = btn.getAttribute('data-next');
+        console.log('Bouton SUIVANT', index + 1, '- data-next:', nextStep);
+        
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            if (validateStep(currentStep)) {
-                showStep(currentStep + 1);
-            }
+            console.log('!!! CLIC sur SUIVANT - Vers étape:', nextStep);
+            goToStep(parseInt(nextStep));
         });
     });
     
-    document.querySelectorAll('.prev-step').forEach(btn => {
+    // Attacher les événements aux BOUTONS PRÉCÉDENT
+    const prevButtons = document.querySelectorAll('button[data-prev]');
+    console.log('Nombre de boutons PRÉCÉDENT trouvés:', prevButtons.length);
+    
+    prevButtons.forEach((btn, index) => {
+        const prevStep = btn.getAttribute('data-prev');
+        console.log('Bouton PRÉCÉDENT', index + 1, '- data-prev:', prevStep);
+        
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-            showStep(currentStep - 1);
+            console.log('!!! CLIC sur PRÉCÉDENT - Vers étape:', prevStep);
+            goToStep(parseInt(prevStep));
         });
     });
     
-    function validateStep(stepNumber) {
-        console.log('Validation étape:', stepNumber);
-        return true; // Pour l'instant, on valide tout
-    }
+    // Initialiser sur l'étape 1
+    goToStep(1);
     
     // =====================================================================
-    // GESTION DU BUDGET - CORRECTION COMPLÈTE
-    // =====================================================================
-    
-    // Données du budget
-    const budgetData = {
-        ressources: [],
-        charges: []
-    };
-    
-    // Initialiser depuis les champs cachés si données existent
-    function loadBudgetFromHiddenFields() {
-        try {
-            const ressourcesField = document.getElementById('id_ressources');
-            const chargesField = document.getElementById('id_charges');
-            
-            if (ressourcesField && ressourcesField.value && ressourcesField.value !== '{}') {
-                const parsed = JSON.parse(ressourcesField.value);
-                budgetData.ressources = Object.entries(parsed);
-                console.log('Ressources chargées:', budgetData.ressources);
-            }
-            
-            if (chargesField && chargesField.value && chargesField.value !== '{}') {
-                const parsed = JSON.parse(chargesField.value);
-                budgetData.charges = Object.entries(parsed);
-                console.log('Charges chargées:', budgetData.charges);
-            }
-        } catch (error) {
-            console.error('Erreur chargement budget:', error);
-        }
-    }
-    
-    // Fonction pour créer une ligne de budget
-    function createBudgetLine(label = '', montant = '', isRessource = true) {
-        const lineId = 'budget_line_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        const line = document.createElement('div');
-        line.className = 'budget-input-group flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition';
-        line.dataset.id = lineId;
-        
-        line.innerHTML = `
-            <input type="text" 
-                   class="budget-label flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                   placeholder="${isRessource ? 'Salaire, Allocations...' : 'Loyer, Électricité...'}" 
-                   value="${label}">
-            <div class="relative">
-                <input type="number" step="0.01" 
-                       class="budget-montant w-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                       placeholder="0,00" 
-                       value="${montant}">
-                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <span class="text-gray-500">€</span>
-                </div>
-            </div>
-            <button type="button" class="remove-line text-red-500 hover:text-red-700 p-2">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        // Ajouter les événements
-        const removeBtn = line.querySelector('.remove-line');
-        const labelInput = line.querySelector('.budget-label');
-        const montantInput = line.querySelector('.budget-montant');
-        
-        removeBtn.addEventListener('click', function() {
-            console.log('Suppression ligne:', lineId);
-            line.remove();
-            updateBudgetData();
-            updateBudgetTotals();
-        });
-        
-        const handleInput = function() {
-            updateBudgetData();
-            updateBudgetTotals();
-        };
-        
-        labelInput.addEventListener('input', handleInput);
-        montantInput.addEventListener('input', handleInput);
-        
-        return line;
-    }
-    
-    // Initialiser les lignes de budget
-    function initializeBudgetLines() {
-        console.log('Initialisation des lignes de budget...');
-        
-        const ressourcesContainer = document.getElementById('ressourcesContainer');
-        const chargesContainer = document.getElementById('chargesContainer');
-        
-        // Vider les conteneurs
-        ressourcesContainer.innerHTML = '';
-        chargesContainer.innerHTML = '';
-        
-        // Ajouter les ressources
-        if (budgetData.ressources.length > 0) {
-            budgetData.ressources.forEach(([label, montant]) => {
-                ressourcesContainer.appendChild(createBudgetLine(label, montant, true));
-            });
-        } else {
-            ressourcesContainer.appendChild(createBudgetLine('', '', true));
-        }
-        
-        // Ajouter les charges
-        if (budgetData.charges.length > 0) {
-            budgetData.charges.forEach(([label, montant]) => {
-                chargesContainer.appendChild(createBudgetLine(label, montant, false));
-            });
-        } else {
-            chargesContainer.appendChild(createBudgetLine('', '', false));
-        }
-        
-        updateBudgetTotals();
-    }
-    
-    // Mettre à jour les données du budget
-    function updateBudgetData() {
-        console.log('Mise à jour des données budget...');
-        
-        budgetData.ressources = [];
-        budgetData.charges = [];
-        
-        // Collecter les ressources
-        document.querySelectorAll('#ressourcesContainer .budget-input-group').forEach(line => {
-            const label = line.querySelector('.budget-label').value.trim();
-            const montant = line.querySelector('.budget-montant').value;
-            
-            if (label && montant && !isNaN(parseFloat(montant))) {
-                budgetData.ressources.push([label, parseFloat(montant)]);
-            }
-        });
-        
-        // Collecter les charges
-        document.querySelectorAll('#chargesContainer .budget-input-group').forEach(line => {
-            const label = line.querySelector('.budget-label').value.trim();
-            const montant = line.querySelector('.budget-montant').value;
-            
-            if (label && montant && !isNaN(parseFloat(montant))) {
-                budgetData.charges.push([label, parseFloat(montant)]);
-            }
-        });
-        
-        console.log('Ressources:', budgetData.ressources);
-        console.log('Charges:', budgetData.charges);
-    }
-    
-    // Mettre à jour les totaux
-    function updateBudgetTotals() {
-        console.log('Calcul des totaux...');
-        
-        let totalRessources = 0;
-        let totalCharges = 0;
-        
-        // Calculer le total des ressources
-        budgetData.ressources.forEach(([label, montant]) => {
-            totalRessources += parseFloat(montant) || 0;
-        });
-        
-        // Calculer le total des charges
-        budgetData.charges.forEach(([label, montant]) => {
-            totalCharges += parseFloat(montant) || 0;
-        });
-        
-        const solde = totalRessources - totalCharges;
-        
-        // Calcul du reste à vivre journalier
-        const nbPersonnes = {{ beneficiaire.enfants.count|add:1 }};
-        const resteAVivre = nbPersonnes > 0 ? (solde / nbPersonnes / 30) : 0;
-        
-        // Mettre à jour l'affichage
-        const totalRessourcesEl = document.getElementById('totalRessources');
-        const totalChargesEl = document.getElementById('totalCharges');
-        const soldeMensuelEl = document.getElementById('soldeMensuel');
-        const resteAVivreEl = document.getElementById('resteAVivre');
-        
-        if (totalRessourcesEl) {
-            totalRessourcesEl.textContent = totalRessources.toFixed(2).replace('.', ',') + ' €';
-        }
-        
-        if (totalChargesEl) {
-            totalChargesEl.textContent = totalCharges.toFixed(2).replace('.', ',') + ' €';
-        }
-        
-        if (soldeMensuelEl) {
-            soldeMensuelEl.textContent = solde.toFixed(2).replace('.', ',') + ' €';
-            
-            // Colorer selon le solde
-            if (solde >= 0) {
-                soldeMensuelEl.classList.remove('text-red-600');
-                soldeMensuelEl.classList.add('text-green-600');
-            } else {
-                soldeMensuelEl.classList.remove('text-green-600');
-                soldeMensuelEl.classList.add('text-red-600');
-            }
-        }
-        
-        if (resteAVivreEl) {
-            resteAVivreEl.textContent = resteAVivre.toFixed(2).replace('.', ',') + ' €';
-        }
-        
-        // Mettre à jour les champs cachés
-        const ressourcesField = document.getElementById('id_ressources');
-        const chargesField = document.getElementById('id_charges');
-        const totalRessourcesField = document.getElementById('id_total_ressources');
-        const totalChargesField = document.getElementById('id_total_charges');
-        const resteAVivreField = document.getElementById('id_reste_a_vivre');
-        
-        if (ressourcesField) {
-            ressourcesField.value = JSON.stringify(Object.fromEntries(budgetData.ressources));
-        }
-        
-        if (chargesField) {
-            chargesField.value = JSON.stringify(Object.fromEntries(budgetData.charges));
-        }
-        
-        if (totalRessourcesField) {
-            totalRessourcesField.value = totalRessources;
-        }
-        
-        if (totalChargesField) {
-            totalChargesField.value = totalCharges;
-        }
-        
-        if (resteAVivreField) {
-            resteAVivreField.value = resteAVivre.toFixed(2);
-        }
-        
-        console.log('Totaux calculés:', { totalRessources, totalCharges, solde, resteAVivre });
-    }
-    
-    // =====================================================================
-    // CALCULS DES MONTANTS (étape 2)
+    // 2. CALCULS DES MONTANTS (étape 2)
     // =====================================================================
     
     function updateMontantCalculs() {
         const montantInput = document.getElementById('id_montant_sollicite');
         const dureeInput = document.getElementById('id_duree_demande');
         
-        const montant = parseFloat(montantInput?.value) || 0;
-        const duree = parseInt(dureeInput?.value) || 1;
+        if (!montantInput || !dureeInput) return;
         
+        const montant = parseFloat(montantInput.value) || 0;
+        const duree = parseInt(dureeInput.value) || 1;
         const mensuel = montant / duree;
-        const total = montant;
         
         const montantMensuelEl = document.getElementById('montantMensuel');
         const montantTotalEl = document.getElementById('montantTotal');
         const dureeAffichageEl = document.getElementById('dureeAffichage');
         
-        if (montantMensuelEl) {
-            montantMensuelEl.textContent = mensuel.toFixed(2).replace('.', ',') + ' €';
-        }
-        
-        if (montantTotalEl) {
-            montantTotalEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
-        }
-        
-        if (dureeAffichageEl) {
-            dureeAffichageEl.textContent = duree + ' mois';
-        }
+        if (montantMensuelEl) montantMensuelEl.textContent = mensuel.toFixed(2).replace('.', ',') + ' €';
+        if (montantTotalEl) montantTotalEl.textContent = montant.toFixed(2).replace('.', ',') + ' €';
+        if (dureeAffichageEl) dureeAffichageEl.textContent = duree + ' mois';
+    }
+    
+    const montantInput = document.getElementById('id_montant_sollicite');
+    const dureeInput = document.getElementById('id_duree_demande');
+    
+    if (montantInput && dureeInput) {
+        montantInput.addEventListener('input', updateMontantCalculs);
+        dureeInput.addEventListener('input', updateMontantCalculs);
+        updateMontantCalculs();
     }
     
     // =====================================================================
-    // ÉVÉNEMENTS POUR LES BOUTONS BUDGET
+    // 3. GESTION DU BUDGET (étape 4)
     // =====================================================================
     
-    function initializeBudgetButtons() {
-        console.log('Initialisation des boutons budget...');
+    function createBudgetLine(type) {
+        const isResource = type === 'resource';
+        const container = document.getElementById(isResource ? 'ressourcesContainer' : 'chargesContainer');
+        if (!container) return;
         
-        const addResourceBtn = document.getElementById('addResource');
-        const addChargeBtn = document.getElementById('addCharge');
+        const line = document.createElement('div');
+        line.className = 'budget-line flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg';
         
-        if (addResourceBtn) {
-            addResourceBtn.addEventListener('click', function() {
-                console.log('Ajout ressource');
-                const container = document.getElementById('ressourcesContainer');
-                container.appendChild(createBudgetLine('', '', true));
-                updateBudgetData();
-                updateBudgetTotals();
-            });
-        } else {
-            console.error('Bouton addResource non trouvé!');
+        line.innerHTML = `
+            <input type="text" class="${isResource ? 'resource-label' : 'charge-label'} flex-1 px-3 py-2 border border-gray-300 rounded-md" 
+                   placeholder="${isResource ? 'Salaire, Allocations...' : 'Loyer, Électricité...'}">
+            <div class="relative">
+                <input type="number" step="0.01" class="${isResource ? 'resource-amount' : 'charge-amount'} w-32 px-3 py-2 border border-gray-300 rounded-md" 
+                       placeholder="0,00" value="0">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500">€</span>
+                </div>
+            </div>
+            <button type="button" class="${isResource ? 'remove-resource' : 'remove-charge'} text-red-500 hover:text-red-700 p-2">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        line.querySelector('button').addEventListener('click', () => {
+            line.remove();
+            updateBudgetCalculs();
+        });
+        
+        line.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', updateBudgetCalculs);
+        });
+        
+        container.appendChild(line);
+        return line;
+    }
+    
+    function updateBudgetCalculs() {
+        let totalRessources = 0;
+        let totalCharges = 0;
+        
+        document.querySelectorAll('.resource-amount').forEach(input => {
+            totalRessources += parseFloat(input.value) || 0;
+        });
+        
+        document.querySelectorAll('.charge-amount').forEach(input => {
+            totalCharges += parseFloat(input.value) || 0;
+        });
+        
+        const solde = totalRessources - totalCharges;
+        const nbPersonnes = {{ beneficiaire.liens_familiaux.count|add:1 }};
+        const resteAVivre = nbPersonnes > 0 ? (solde / nbPersonnes / 30) : 0;
+        const totalRessourcesEl = document.getElementById('totalRessources');
+        const totalChargesEl = document.getElementById('totalCharges');
+        const soldeMensuelEl = document.getElementById('soldeMensuel');
+        const resteAVivreEl = document.getElementById('resteAVivre');
+        
+        if (totalRessourcesEl) totalRessourcesEl.textContent = totalRessources.toFixed(2).replace('.', ',') + ' €';
+        if (totalChargesEl) totalChargesEl.textContent = totalCharges.toFixed(2).replace('.', ',') + ' €';
+        
+        if (soldeMensuelEl) {
+            soldeMensuelEl.textContent = solde.toFixed(2).replace('.', ',') + ' €';
+            soldeMensuelEl.className = solde >= 0 ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
         }
         
-        if (addChargeBtn) {
-            addChargeBtn.addEventListener('click', function() {
-                console.log('Ajout charge');
-                const container = document.getElementById('chargesContainer');
-                container.appendChild(createBudgetLine('', '', false));
-                updateBudgetData();
-                updateBudgetTotals();
-            });
-        } else {
-            console.error('Bouton addCharge non trouvé!');
-        }
+        if (resteAVivreEl) resteAVivreEl.textContent = resteAVivre.toFixed(2).replace('.', ',') + ' €';
         
-        // Événements pour les lignes existantes
-        document.querySelectorAll('.remove-line').forEach(btn => {
-            btn.addEventListener('click', function() {
-                console.log('Suppression ligne existante');
-                this.closest('.budget-input-group').remove();
-                updateBudgetData();
-                updateBudgetTotals();
-            });
+        // Mise à jour champs cachés
+        const ressourcesData = {};
+        const chargesData = {};
+        
+        document.querySelectorAll('.resource-label').forEach((label, i) => {
+            const amount = document.querySelectorAll('.resource-amount')[i];
+            if (label.value.trim()) ressourcesData[label.value.trim()] = parseFloat(amount.value) || 0;
+        });
+        
+        document.querySelectorAll('.charge-label').forEach((label, i) => {
+            const amount = document.querySelectorAll('.charge-amount')[i];
+            if (label.value.trim()) chargesData[label.value.trim()] = parseFloat(amount.value) || 0;
+        });
+        
+        const ressourcesField = document.getElementById('id_ressources');
+        const chargesField = document.getElementById('id_charges');
+        const totalRessourcesField = document.getElementById('id_total_ressources');
+        const totalChargesField = document.getElementById('id_total_charges');
+        const resteAVivreField = document.getElementById('id_reste_a_vivre');
+        
+        if (ressourcesField) ressourcesField.value = JSON.stringify(ressourcesData);
+        if (chargesField) chargesField.value = JSON.stringify(chargesData);
+        if (totalRessourcesField) totalRessourcesField.value = totalRessources;
+        if (totalChargesField) totalChargesField.value = totalCharges;
+        if (resteAVivreField) resteAVivreField.value = resteAVivre.toFixed(2);
+    }
+    
+    const addResourceBtn = document.getElementById('addResourceBtn');
+    const addChargeBtn = document.getElementById('addChargeBtn');
+    
+    if (addResourceBtn) {
+        addResourceBtn.addEventListener('click', () => {
+            createBudgetLine('resource');
+            updateBudgetCalculs();
         });
     }
     
-    // =====================================================================
-    // INITIALISATION COMPLÈTE
-    // =====================================================================
-    
-    function initializeForm() {
-        console.log('Initialisation du formulaire AFASE...');
-        
-        // 1. Navigation
-        showStep(1);
-        
-        // 2. Calculs de montant
-        const montantInput = document.getElementById('id_montant_sollicite');
-        const dureeInput = document.getElementById('id_duree_demande');
-        
-        if (montantInput && dureeInput) {
-            montantInput.addEventListener('input', updateMontantCalculs);
-            dureeInput.addEventListener('input', updateMontantCalculs);
-            updateMontantCalculs(); // Initialiser
-        }
-        
-        // 3. Budget
-        loadBudgetFromHiddenFields();
-        initializeBudgetLines();
-        initializeBudgetButtons();
-        
-        // 4. Validation du formulaire
-        const form = document.getElementById('afaseForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                console.log('Soumission du formulaire...');
-                
-                // Mettre à jour les données avant soumission
-                updateBudgetData();
-                updateBudgetTotals();
-                
-                // Validation
-                const justification = document.getElementById('id_justification_demande');
-                if (justification && !justification.value.trim()) {
-                    e.preventDefault();
-                    alert('Veuillez remplir la justification de la demande.');
-                    showStep(3);
-                    justification.focus();
-                    return false;
-                }
-                
-                return true;
-            });
-        }
-        
-        console.log('Formulaire AFASE initialisé avec succès!');
+    if (addChargeBtn) {
+        addChargeBtn.addEventListener('click', () => {
+            createBudgetLine('charge');
+            updateBudgetCalculs();
+        });
     }
     
-    // Démarrer l'initialisation
-    initializeForm();
+    document.querySelectorAll('.remove-resource, .remove-charge').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.budget-line').remove();
+            updateBudgetCalculs();
+        });
+    });
+    
+    document.querySelectorAll('.resource-amount, .charge-amount, .resource-label, .charge-label').forEach(input => {
+        input.addEventListener('input', updateBudgetCalculs);
+    });
+    
+    updateBudgetCalculs();
+    
+    console.log('=== FIN INITIALISATION - Tout est prêt! ===');
 });
 </script>
 {% endblock %}
-

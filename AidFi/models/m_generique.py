@@ -82,7 +82,48 @@ class DemandeAide(models.Model):
                 "EN_INSTRUCTION": "bg-yellow-100 text-yellow-800", "ACCORDEE": "bg-emerald-100 text-emerald-800"}.get(self.statut)
     
     def save(self, *args, **kwargs):
-        if self.type_aide and not self.type_aide_code: self.type_aide_code = self.type_aide.code
+        # Si type_aide n'est pas défini, chercher ou créer AFASE par défaut
+        if not self.type_aide_id:
+            try:
+                # Chercher AFASE
+                type_aide = TypeAide.objects.get(code='AFASE')
+            except TypeAide.DoesNotExist:
+                # Créer AFASE si inexistant
+                from django.contrib.auth.models import User
+                admin_user = User.objects.filter(is_superuser=True).first() or User.objects.first()
+                type_aide = TypeAide.objects.create(
+                    code='AFASE',
+                    nom='Aide Financière ASE',
+                    description='Aide financière pour les enfants relevant de l\'ASE',
+                    actif=True,
+                    cree_par=admin_user,
+                )
+                # Créer aussi les autres types pour plus tard
+                TypeAide.objects.get_or_create(
+                    code='REGIE',
+                    defaults={
+                        'nom': 'Régie d\'urgence',
+                        'description': 'Aide financière urgente',
+                        'actif': True,
+                        'cree_par': admin_user,
+                    }
+                )
+                TypeAide.objects.get_or_create(
+                    code='CAP',
+                    defaults={
+                        'nom': 'Chèque d\'Accompagnement Personnalisé',
+                        'description': 'Chèques services',
+                        'actif': True,
+                        'cree_par': admin_user,
+                    }
+                )
+            
+            self.type_aide = type_aide
+        
+        # Copier le code du type d'aide
+        if self.type_aide and not self.type_aide_code:
+            self.type_aide_code = self.type_aide.code
+        
         super().save(*args, **kwargs)
 
 class SuiviDemande(models.Model):
