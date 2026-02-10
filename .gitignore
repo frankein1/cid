@@ -8,6 +8,7 @@ media/
 .DS_Store
 *.log
 commandes
+sync_render.sh
 venv/
 commandes
 *.token
