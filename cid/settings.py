@@ -1,48 +1,78 @@
 """
-cid/settings.py
-Django settings for cid project.
-Version optimisée et structurée pour le module CORE et les futures apps métier.
+cid/settings.py - VERSION RENDER
+Optimisé pour Render.com avec PostgreSQL Alwaysdata
 """
-from decouple import config, Csv
-from dotenv import load_dotenv
 from pathlib import Path
 import os
 import sys
 
-
 # ============================================================
-# BASE
+# BASE DIR
 # ============================================================
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# Récupère la valeur de 'SECRET_KEY' dans .env
-SECRET_KEY = config('SECRET_KEY')
+# ============================================================
+# FONCTION UNIQUE POUR LES VARIABLES D'ENVIRONNEMENT
+# ============================================================
+def get_env(key, default=None):
+    """
+    Priorité : 1. Variables Render, 2. .env local, 3. default
+    """
+    # D'abord les variables d'environnement système (Render)
+    value = os.environ.get(key)
+    if value is not None:
+        return value
+    
+    # Ensuite .env pour le développement local
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        return os.environ.get(key, default)
+    except:
+        return default
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# Récupère la valeur de 'DEBUG' et la convertit en booléen (si non spécifié, False par défaut)
-DEBUG = config('DEBUG', default=False, cast=bool)
+# ============================================================
+# SÉCURITÉ
+# ============================================================
+SECRET_KEY = get_env('SECRET_KEY', 'django-insecure-change-me-now-12345')
 
-ALLOWED_HOSTS = ['*']  # En dev : accepter localhost, 127.0.0.1 EN PROD : CHOISIR LES HOTES REELLEMENT VALIDES
+# DEBUG: TRUE pour vendredi (voir les erreurs), FALSE après
+DEBUG = get_env('DEBUG', 'True').lower() == 'true'
 
-# Configuration de la base de données
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+# Hosts autorisés
+ALLOWED_HOSTS = get_env('ALLOWED_HOSTS', '.onrender.com,localhost,127.0.0.1').split(',')
+
+# ============================================================
+# BASE DE DONNÉES (Render + Alwaysdata)
+# ============================================================
+# Sur Render, on utilise DATABASE_URL, en local le .env
+if 'RENDER' in os.environ or 'DATABASE_URL' in os.environ:
+    # IMPORTANT: dj-database-url doit être dans requirements.txt
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=get_env('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
-
+    print(f"✅ Base de données Render configurée: {DATABASES['default']['ENGINE']}")
+else:
+    # Développement local
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': get_env('DB_NAME', 'cid_db'),
+            'USER': get_env('DB_USER', 'postgres'),
+            'PASSWORD': get_env('DB_PASSWORD', ''),
+            'HOST': get_env('DB_HOST', 'localhost'),
+            'PORT': get_env('DB_PORT', '5432'),
+        }
+    }
 
 # ============================================================
-# APPLICATIONS
+# APPLICATIONS (identique à votre version)
 # ============================================================
-
 INSTALLED_APPS = [
     # Django
     'django.contrib.admin',
@@ -51,26 +81,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # PostgreSQL features
     'django.contrib.postgres',
 
     # Apps locales
-    'core', # coeur de l application 
-    'beneficiaire', #geston des beneficiaires
-    'ged', #Gestion Electronique des documents 
-    'messagerie', #messagerie
-    'mds', #Maison Departementale de Solidarite
-    'planning', # plannings
-    'AidFi',#Aides Financières
-    #    'protection_enfance.apps.ProtectionEnfanceConfig',
+    'core',
+    'beneficiaire',
+    'ged',
+    'messagerie',
+    'mds',
+    'planning',
+    'AidFi',
 ]
 
-
 # ============================================================
-# MIDDLEWARE
+# MIDDLEWARE (identique)
 # ============================================================
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -79,62 +104,34 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-    # Middlewares SI DITAS
     'core.authentication.middleware.ServiceSelectorMiddleware',
     'core.authentication.middleware.AuditMiddleware',
 ]
 
-
 # ============================================================
-# AUTHENTIFICATION / UTILISATEURS
+# AUTHENTIFICATION
 # ============================================================
-
 AUTH_USER_MODEL = 'core.User'
-
-# 1. URL de la page de connexion : Indique à Django l'URL REELLE pour se connecter.
 LOGIN_URL = '/login/'
-
-# 2. Redirection après une connexion réussie (sans le paramètre ?next=)
-LOGIN_REDIRECT_URL = '/' 
-
-# 3. Redirection après une déconnexion réussie
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-
-
 AUTHENTICATION_BACKENDS = [
-    # Local authentication (fallback)
     'core.authentication.backends.CD13LocalBackend',
-
-    # Django standard
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-
 # ============================================================
-# URLS / WSGI
+# TEMPLATES (identique)
 # ============================================================
-
 ROOT_URLCONF = 'cid.urls'
 WSGI_APPLICATION = 'cid.wsgi.application'
-
-
-# ============================================================
-# TEMPLATES
-# ============================================================
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-
-        # Dossier templates global du projet
-        'DIRS': [
-            BASE_DIR / 'templates',
-        ],
-
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
-
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -144,22 +141,17 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.static',
             ],
-            # ================ AJOUTE CES 3 LIGNES ================
             'libraries': {
                 'ged_tags': 'ged.ged_tags',
-                'permissions_tags' : 'core.templatetags.permissions_tags', 
+                'permissions_tags': 'core.templatetags.permissions_tags',
             },
-            # =====================================================
-            
         },
     },
 ]
 
-
 # ============================================================
-# VALIDATION MOTS DE PASSE
+# MOTS DE PASSE (identique)
 # ============================================================
-
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {
@@ -170,81 +162,108 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
 # ============================================================
-# INTERNATIONALISATION
+# INTERNATIONALISATION (identique)
 # ============================================================
-
 LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Europe/Paris'
 USE_L10N = True
 USE_I18N = True
 USE_TZ = True
 
-
 # ============================================================
-# STATIC / MEDIA
+# STATIC / MEDIA (identique)
 # ============================================================
-
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
+STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================================================
-# CONFIG SPÉCIFIQUE SI DITAS
+# SEAWEEDFS - VERSION ADAPTÉE POUR RENDER
 # ============================================================
+# Si on est sur Render ET que seaweedfs-bin échoue, on mocke
+if 'RENDER' in os.environ:
+    try:
+        # Tentative d'import normal
+        import seaweedfs_bin
+        SEAWEEDFS_MASTER_URL = get_env('SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
+        SEAWEEDFS_VOLUME_URL = get_env('SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
+        SEAWEEDFS_FILER_URL = get_env('SEAWEEDFS_FILER_URL', 'http://localhost:8888')
+        print("✅ SeaweedFS-bin importé avec succès")
+    except ImportError:
+        # Fallback: mode mock pour vendredi
+        print("⚠️  SeaweedFS-bin non disponible, mode MOCK activé")
+        SEAWEEDFS_MASTER_URL = 'http://localhost:9333'
+        SEAWEEDFS_VOLUME_URL = 'http://localhost:8080'
+        SEAWEEDFS_FILER_URL = 'http://localhost:8888'
+        # Définir un mock pour éviter les erreurs dans ged
+        sys.path.insert(0, str(BASE_DIR))
+        from ged.seaweedfs_mock import SeaweedFSMock
+        SEAWEEDFS_CLIENT = SeaweedFSMock()
+else:
+    # Local: configuration normale
+    SEAWEEDFS_MASTER_URL = get_env('SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
+    SEAWEEDFS_VOLUME_URL = get_env('SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
+    SEAWEEDFS_FILER_URL = get_env('SEAWEEDFS_FILER_URL', 'http://localhost:8888')
 
-# SeaweedFS
-# Utiliser config() pour lire directement le .env ou la valeur par défaut
-SEAWEEDFS_MASTER_URL = config('SEAWEEDFS_MASTER_URL', default='http://localhost:9333')
-SEAWEEDFS_VOLUME_URL = config('SEAWEEDFS_VOLUME_URL', default='http://localhost:8080')
-SEAWEEDFS_FILER_URL = config('SEAWEEDFS_FILER_URL', default='http://localhost:8888')
-
-# Upload max (10 Mo)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
-
 # ============================================================
-# OPTIONS DEV / LOGS
+# LOGGING POUR DEBUG (Vendredi uniquement)
 # ============================================================
-
-# Afficher SQL en debug si souhaité
-if DEBUG and os.environ.get("SHOW_SQL") == "1":
+if DEBUG:
+    print("=" * 60)
+    print("🔍 MODE DEBUG ACTIVÉ - CONFIGURATION RENDER:")
+    print(f"   Django {sys.modules['django'].__version__}")
+    print(f"   Python {sys.version}")
+    print(f"   Database: {DATABASES['default'].get('ENGINE', 'N/A')}")
+    print(f"   Host: {DATABASES['default'].get('HOST', 'N/A')}")
+    print(f"   User Model: {AUTH_USER_MODEL}")
+    print("=" * 60)
+    
     LOGGING = {
         'version': 1,
+        'disable_existing_loggers': False,
         'handlers': {
-            'console': {'class': 'logging.StreamHandler'},
+            'console': {
+                'class': 'logging.StreamHandler',
+                'level': 'DEBUG',
+            },
         },
         'loggers': {
-            'django.db.backends': {
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': True,
+            },
+            'django.request': {
                 'handlers': ['console'],
                 'level': 'DEBUG',
+                'propagate': False,
+            },
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'WARNING',  # DEBUG pour voir les requêtes SQL
+                'propagate': False,
             },
         },
     }
 
 # ============================================================
-# Ajouté pour supprimer le warning W042 et utiliser un type de clé primaire moderne
+# CONFIGURATIONS DIVERSES (identique)
+# ============================================================
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# ============================================================
-
-
-# ============================================================
-# SÉCURITÉ AUTOMATIQUE
-# ============================================================
 
 if not DEBUG:
-    # On force la sécurité des cookies car on suppose que la prod est en HTTPS
+    # Sécurité en production
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = 'DENY'
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
-    # Si vous passez derrière un reverse-proxy (Nginx) pour le HTTPS
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+else:
+    # En debug, désactiver certaines sécurités pour le développement
+    print("⚠️  MODE DEBUG: certaines sécurités sont désactivées")
