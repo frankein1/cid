@@ -181,34 +181,32 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================================================
-# SEAWEEDFS - VERSION ADAPTÉE POUR RENDER
+# SEAWEEDFS - ADAPTÉ POUR LA DÉMO / RENDER
 # ============================================================
-# Si on est sur Render ET que seaweedfs-bin échoue, on mocke
+
+# URLs (peu importe pour le mock)
+SEAWEEDFS_MASTER_URL = get_env('SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
+SEAWEEDFS_VOLUME_URL = get_env('SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
+SEAWEEDFS_FILER_URL = get_env('SEAWEEDFS_FILER_URL', 'http://localhost:8888')
+
+# Client intelligent
 if 'RENDER' in os.environ:
     try:
-        # Tentative d'import normal
+        # Essayer le vrai seaweedfs-bin
         import seaweedfs_bin
-        SEAWEEDFS_MASTER_URL = get_env('SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
-        SEAWEEDFS_VOLUME_URL = get_env('SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
-        SEAWEEDFS_FILER_URL = get_env('SEAWEEDFS_FILER_URL', 'http://localhost:8888')
-        print("✅ SeaweedFS-bin importé avec succès")
+        from seaweedfs_bin import SeaweedFS
+        SEAWEEDFS_CLIENT = SeaweedFS(SEAWEEDFS_MASTER_URL)
+        print("✅ SeaweedFS réel chargé")
     except ImportError:
-        # Fallback: mode mock pour vendredi
-        print("⚠️  SeaweedFS-bin non disponible, mode MOCK activé")
-        SEAWEEDFS_MASTER_URL = 'http://localhost:9333'
-        SEAWEEDFS_VOLUME_URL = 'http://localhost:8080'
-        SEAWEEDFS_FILER_URL = 'http://localhost:8888'
-        # Définir un mock pour éviter les erreurs dans ged
-        sys.path.insert(0, str(BASE_DIR))
-        from ged.seaweedfs_mock import SeaweedFSMock
-        SEAWEEDFS_CLIENT = SeaweedFSMock()
+        # Fallback au mock intelligent
+        print("⚠️  SeaweedFS-bin non disponible, activation du MOCK INTELLIGENT")
+        from ged.seaweedfs_mock import seaweedfs_client
+        SEAWEEDFS_CLIENT = seaweedfs_client
 else:
-    # Local: configuration normale
-    SEAWEEDFS_MASTER_URL = get_env('SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
-    SEAWEEDFS_VOLUME_URL = get_env('SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
-    SEAWEEDFS_FILER_URL = get_env('SEAWEEDFS_FILER_URL', 'http://localhost:8888')
-
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+    # En local, utiliser le vrai ou le mock selon préférence
+    from ged.seaweedfs_mock import seaweedfs_client
+    SEAWEEDFS_CLIENT = seaweedfs_client
+    print("✅ GED Mock activé (développement local)")
 
 # ============================================================
 # LOGGING POUR DEBUG (Vendredi uniquement)
