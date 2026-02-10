@@ -1,55 +1,81 @@
 #!/bin/bash
-# FICHIER: sync_render.sh
+# FICHIER: sync_render.sh - VERSION AVEC GESTION CONFLITS
 # USAGE: ./sync_render.sh "message du commit"
-# PLACEZ-LE à côté de manage.py
 
-set -e  # Stoppe au premier erreur
+set -e
 
 echo "🔄 SYNCHRONISATION main → render"
 echo "================================="
 
-# Vérification argument
 if [ -z "$1" ]; then
     echo "❌ Usage: ./sync_render.sh \"Message du commit\""
     exit 1
 fi
 
+# === VÉRIFICATION VENV ===
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "❌ ERREUR: Environnement virtuel non activé!"
+    echo ""
+    echo "📋 PROCÉDURE:"
+    echo "   1. cd /srv/django/si-ditas"
+    echo "   2. source venv/bin/activate  # Ou le chemin de votre venv"
+    echo "   3. ./sync_render.sh \"Votre message\""
+    echo ""
+    exit 1
+else
+    echo "✅ Venv activé: $(basename $VIRTUAL_ENV)"
+fi
+
 # 1. S'assurer qu'on est sur main
+echo ""
 echo "📌 Étape 1: Vérification branche..."
-CURRENT_BRANCH=$(git branch --show-current)
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "none")
 if [ "$CURRENT_BRANCH" != "main" ]; then
-    echo "⚠️  Vous n'êtes pas sur 'main'. Passage à main..."
-    git checkout main
+    echo "⚠️  Passage à main..."
+    git checkout main 2>/dev/null || { echo "❌ Branche main introuvable"; exit 1; }
 fi
 
 # 2. Pull des dernières modifications
 echo "📥 Étape 2: Mise à jour depuis GitHub..."
 git pull origin main
 
-# 3. Vérifier les modifications de modèles
-echo "🔍 Étape 3: Analyse des changements..."
+# 3. Supprimer .env et commandes du suivi Git si présents
+echo "🧹 Étape 3: Nettoyage des fichiers sensibles..."
+if git ls-files .env --error-unmatch 2>/dev/null; then
+    echo "   🗑️  Suppression de .env du suivi Git..."
+    git rm --cached .env 2>/dev/null || true
+fi
+if git ls-files commandes --error-unmatch 2>/dev/null; then
+    echo "   🗑️  Suppression de commandes du suivi Git..."
+    git rm --cached commandes 2>/dev/null || true
+fi
+
+# 4. Vérifier les modifications de modèles
+echo ""
+echo "🔍 Étape 4: Analyse des changements..."
 if git diff --name-only HEAD | grep -E "(models/.*\.py$|migrations/.*\.py$)" > /dev/null; then
     echo "📝 Modèles détectés: génération des migrations..."
     python manage.py makemigrations
     
-    # Afficher les migrations générées
-    echo "📄 Fichiers migrations créés:"
-    find . -name "00*.py" -newer /tmp/timestamp 2>/dev/null || find . -path "*/migrations/*.py" -mmin -5 | head -5
+    NEW_MIGRATIONS=$(find . -path "*/migrations/*.py" -mmin -5 2>/dev/null | head -5)
+    if [ -n "$NEW_MIGRATIONS" ]; then
+        echo "📄 Fichiers migrations créés:"
+        echo "$NEW_MIGRATIONS"
+    fi
     
-    # Tester les migrations
     echo "🧪 Test des migrations..."
     python manage.py migrate --check
     
-    # Ajouter les fichiers migrations
-    git add */migrations/0*.py
+    git add */migrations/0*.py 2>/dev/null || true
     MIGRATION_MSG=" (avec migrations)"
 else
     echo "✅ Pas de modification de modèles détectée."
     MIGRATION_MSG=""
 fi
 
-# 4. Tests Django
-echo "🧪 Étape 4: Tests Django..."
+# 5. Tests Django
+echo ""
+echo "🧪 Étape 5: Tests Django..."
 if python manage.py test --failfast 2>&1 | tail -20; then
     echo "✅ Tests passés"
 else
@@ -57,38 +83,64 @@ else
     exit 1
 fi
 
-# 5. Commit sur main
-echo "💾 Étape 5: Commit sur main..."
+# 6. Commit sur main
+echo ""
+echo "💾 Étape 6: Commit sur main..."
 git add -A
 git commit -m "$1$MIGRATION_MSG" || echo "ℹ️  Pas de changement à commiter"
 
-# 6. Push sur main
-echo "⬆️  Étape 6: Push sur main..."
+# 7. Push sur main
+echo "⬆️  Étape 7: Push sur main..."
 git push origin main
 
-# 7. Mise à jour de render
-echo "🔄 Étape 7: Mise à jour branche render..."
-git checkout render 2>/dev/null || git checkout -b render
-git merge main --no-ff -m "Merge main → render: $1"
+# 8. Préparation branche render
+echo ""
+echo "🔄 Étape 8: Préparation branche render..."
+if git show-ref --verify --quiet refs/heads/render; then
+    echo "📌 Branche render locale trouvée"
+    git checkout render
+else
+    echo "📌 Création branche render depuis distant..."
+    git fetch origin
+    git checkout -b render origin/render 2>/dev/null || git checkout -b render
+fi
+
+# 9. Stratégie de fusion pour éviter conflits .env/commandes
+echo "🔧 Configuration fusion sans conflit..."
+echo ".env merge=ours" > .gitattributes
+echo "commandes merge=ours" >> .gitattributes
+git add .gitattributes
+
+# 10. Fusion et push
+echo "🔄 Fusion de main dans render..."
+git merge main --no-ff -m "Merge main → render: $1" || {
+    echo "⚠️  Conflits détectés, résolution automatique..."
+    # Pour .env et commandes, on garde la version render
+    git checkout --ours .env 2>/dev/null || true
+    git checkout --ours commandes 2>/dev/null || true
+    git add .env commandes 2>/dev/null || true
+    git commit -m "Merge résolu: $1"
+}
+
+echo "⬆️  Push sur origin render..."
 git push origin render
 
-# 8. Retour sur main
-echo "↩️  Étape 8: Retour sur main..."
+# 11. Retour sur main et nettoyage
+echo "↩️  Étape 11: Retour sur main..."
 git checkout main
+rm -f .gitattributes
 
 echo ""
 echo "✅ SYNCHRONISATION TERMINÉE !"
 echo "=============================="
-echo "📊 Résumé:"
-echo "   • Main: mis à jour"
-echo "   • Render: fusionné"
-echo "   • GitHub: synchronisé"
+echo "⏱️  Render va déployer automatiquement..."
 echo ""
-echo "🌐 Render va maintenant:"
-echo "   1. Détecter le push sur 'render'"
-echo "   2. Déployer automatiquement"
-echo "   3. Exécuter render_init.py (migrations auto)"
+echo "📊 Pour suivre le déploiement:"
+echo "   1. https://render.com/dashboard"
+echo "   2. Cliquez sur votre service 'cid'"
+echo "   3. Vérifiez les logs du déploiement"
 echo ""
-echo "⏱️  Vérifiez le déploiement dans 2-3 min sur:"
-echo "   → https://render.com/dashboard"
-echo "   → https://cid-6yav.onrender.com"
+echo "🌐 Votre site: https://cid-6yav.onrender.com"
+echo ""
+echo "🔄 Prochaine mise à jour:"
+echo "   ./sync_render.sh \"Description des modifications\""
