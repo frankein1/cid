@@ -9,3 +9,6 @@ media/
 *.log
 commandes
 venv/
+commandes
+*.token
+*.secret
