@@ -366,19 +366,46 @@ class DemiJourneeReception(TimestampedMixin):
 
 @receiver(post_save, sender=UserMDSProfile)
 def sync_user_mds_principale(sender, instance, **kwargs):
+    """Synchronise le champ mds_principale_id de l'utilisateur"""
+    
+    # 1. Un seul profil principal par utilisateur
     if instance.principale and instance.est_actif:
         UserMDSProfile.objects.filter(
             user=instance.user, principale=True
         ).exclude(pk=instance.pk).update(principale=False)
+    
+    # 2. Synchronisation du champ mds_principale_id
+    if instance.principale and instance.actif and instance.est_actif:
+        # Si ce profil est principal ET actif → on affecte cette MDS
+        instance.user.mds_principale_id = instance.mds_id
+        instance.user.save(update_fields=['mds_principale_id'])
+    else:
+        # Si ce profil n'est plus principal ou inactif
+        # On retire la MDS principale SEULEMENT si c'était celle-ci
+        if instance.user.mds_principale_id == instance.mds_id:
+            # Cherche si l'utilisateur a un AUTRE profil principal actif
+            autre_profil_principal = UserMDSProfile.objects.filter(
+                user=instance.user,
+                principale=True,
+                actif=True
+            ).exclude(pk=instance.pk).first()
+            
+            if autre_profil_principal:
+                # Si oui, on bascule vers cet autre profil
+                instance.user.mds_principale_id = autre_profil_principal.mds_id
+            else:
+                # Sinon, on met à NULL
+                instance.user.mds_principale_id = None
+            
+            instance.user.save(update_fields=['mds_principale_id'])
 
 @receiver(pre_delete, sender=UserMDSProfile)
 def clean_user_mds_on_delete(sender, instance, **kwargs):
-    if instance.principale:
-        pass  # Logique via UserMDSProfile.principale uniquement
-        
-
-# ==================
-# Dans mds/models.py, ajoutez à la fin :
+    """Nettoyage lors de la suppression d'un profil MDS"""
+    if instance.user.mds_principale_id == instance.mds_id:
+        # On retire la MDS principale
+        instance.user.mds_principale_id = None
+        instance.user.save(update_fields=['mds_principale_id'])
 
 @receiver(post_save, sender=MDS)
 def sync_responsable_mds(sender, instance, **kwargs):
@@ -393,5 +420,3 @@ def sync_responsable_mds(sender, instance, **kwargs):
                 'principale': False  # ou True si vous voulez
             }
         )
-
-
