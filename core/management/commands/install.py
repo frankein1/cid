@@ -84,19 +84,16 @@ class Command(BaseCommand):
         # ETAPE C : MDS
         # ============================================================
         if etape in ("", "mds"):
-            self.stdout.write("\n📌 Étape : INITIALISATION MDS")
+    self.stdout.write("\n📌 Étape : INITIALISATION MDS")
 
-            try:
-                from mds.init_mds import init_mds_structures, init_mds_agents
-
-                init_mds_structures()
-                init_mds_agents()
-
-                self.stdout.write(self.style.SUCCESS("   ✅ MDS OK"))
-
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur MDS: {e}"))
-                return
+    try:
+        from mds.init_mds import init_mds
+        log = init_mds()
+        self.stdout.write(log)
+        self.stdout.write(self.style.SUCCESS("   ✅ MDS OK"))
+    except Exception as e:
+        self.stdout.write(self.style.ERROR(f"   ❌ Erreur MDS: {e}"))
+        return
 
         # ============================================================
         # ETAPE D : PLANNING
