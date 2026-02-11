@@ -203,7 +203,8 @@ def ajouter_jour_bloque(request):
 @login_required
 def generer_creneaux(request):
     """Génération en masse de créneaux selon les règles métier"""
-    if not (request.user.a_la_capacite('peut_administrer') or request.user.is_superuser):
+    if not (request.user.is_superuser or 
+        request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Seuls les gestionnaires peuvent générer des créneaux.")
         return redirect('planning:calendrier_rdv')
 
