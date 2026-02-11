@@ -420,3 +420,30 @@ def sync_responsable_mds(sender, instance, **kwargs):
                 'principale': False  # ou True si vous voulez
             }
         )
+# ==========================================================================
+# 6. SIGNAL AUTO-CADRE : peut_gerer_utilisateurs automatique pour les cadres
+# ==========================================================================
+
+@receiver(post_save, sender=UserMDSProfile)
+def auto_cadre_peut_gerer(sender, instance, **kwargs):
+    """
+    Auto-attribution : si l'agent est cadre, il peut automatiquement 
+    gérer les utilisateurs et voir les statistiques.
+    S'exécute à la création ET à chaque modification du profil MDS.
+    """
+    # Vérifier si l'utilisateur a le profil cadre (id=3)
+    est_cadre = instance.user.profils.filter(id=3).exists()
+    
+    if est_cadre:
+        # Mise à jour directe en base pour éviter les boucles infinies
+        UserMDSProfile.objects.filter(pk=instance.pk).update(
+            peut_gerer_utilisateurs=True,
+            peut_voir_statistiques=True
+        )
+    # Optionnel : retirer les droits si l'utilisateur n'est plus cadre
+    # (décommente si besoin)
+    # else:
+    #     UserMDSProfile.objects.filter(pk=instance.pk).update(
+    #         peut_gerer_utilisateurs=False,
+    #         peut_voir_statistiques=False
+    #     )
