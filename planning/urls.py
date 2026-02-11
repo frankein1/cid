@@ -21,7 +21,6 @@ urlpatterns = [
     # ==========================
     path('reserver/<int:creneau_id>/', views.reserver_rdv, name='reserver_rdv'),
     path('annuler/<int:creneau_id>/', views.annuler_rdv, name='annuler_rdv'),
-    path('creer/hors-permanence/', views.creer_creneau_hors_permanence, name='creer_hors_permanence'),
     path('generer/', views.generer_creneaux, name='generer_creneaux'),
     
     # ==========================
