@@ -12,7 +12,7 @@ User = get_user_model()
 class RdvForm(forms.ModelForm):
     class Meta:
         model = CreneauRdv
-        fields = ['beneficiaire', 'type_rdv', 'description', 'priorite']
+        fields = ['beneficiaire', 'type_rdv', 'description', 'priorite', 'duree_minutes']
 
         widgets = {
             'beneficiaire': forms.Select(attrs={
@@ -29,6 +29,13 @@ class RdvForm(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Objet du rendez-vous, motif, informations importantes...'
             }),
+            'duree_minutes': forms.NumberInput(attrs={
+                'class': 'w-32 px-3 py-2 border border-gray-300 rounded-md',
+                'min': 15,
+                'step': 15,
+                'placeholder': 'Durée (min)'
+            }),
+        
         }
 
     def __init__(self, *args, **kwargs):
