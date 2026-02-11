@@ -47,13 +47,12 @@ ALLOWED_HOSTS = get_env('ALLOWED_HOSTS', '.onrender.com,localhost,127.0.0.1').sp
 # ============================================================
 # Sur Render, on utilise DATABASE_URL, en local le .env
 if 'RENDER' in os.environ or 'DATABASE_URL' in os.environ:
-    # IMPORTANT: dj-database-url doit être dans requirements.txt
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
             default=get_env('DATABASE_URL'),
             conn_max_age=600,
-            ssl_require=True
+            ssl_require=False  # ← LE SSL EST DÉJÀ DANS L'URL
         )
     }
     print(f"✅ Base de données Render configurée: {DATABASES['default']['ENGINE']}")
