@@ -166,6 +166,14 @@ def reserver_rdv(request, creneau_id):
     if not creneau.is_disponible():
         messages.error(request, "Ce créneau n'est pas disponible.")
         return redirect('planning:calendrier_rdv')
+        
+    if creneau.type_rdv == 'HORS_PERMANENCE':  # ou toute autre condition
+        form = RdvForm(request.POST or None, instance=creneau, creneau=creneau, request=request)
+    else:
+        # Pour les permanences, durée figée
+        form = RdvForm(request.POST or None, instance=creneau, creneau=creneau, request=request)
+        if 'duree_minutes' in form.fields:
+            form.fields['duree_minutes'].disabled = True
 
     if request.method == 'POST':
         form = RdvForm(request.POST, instance=creneau, creneau=creneau, request=request)
