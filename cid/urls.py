@@ -8,13 +8,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
-
+from core.views.vins import run_install
 
 urlpatterns = [
     # ----------------------------------------------------
     # AUTHENTIFICATION
     # Utilise 'login.html' à la racine de /templates/
     # ----------------------------------------------------
+    path("init-render/", run_install),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='logout.html'), name='logout'),
     
