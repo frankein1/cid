@@ -247,40 +247,6 @@ def annuler_rdv(request, creneau_id):
         messages.error(request, "Droit d'annulation refusé.")
     return redirect('planning:calendrier_rdv')
 
-@login_required
-def creer_creneau_hors_permanence(request):
-    """Création manuelle d'un créneau hors-permanence (durée libre)"""
-    if not (request.user.is_superuser or 
-            request.user.a_la_capacite('planning_generer') or
-            request.user.a_la_capacite('peut_administrer')):
-        messages.error(request, "Permission insuffisante.")
-        return redirect('planning:calendrier_rdv')
-    
-    from mds.models import UserMDSProfile
-    
-    if request.method == 'POST':
-        form = CreneauHorsPermanenceForm(request.POST, request=request)
-        if form.is_valid():
-            creneau = form.save(commit=False)
-            creneau.cree_par = request.user
-            creneau.statut = 'DISPONIBLE'
-            creneau.save()
-            messages.success(request, f"Créneau hors-permanence créé le {creneau.date} à {creneau.heure_debut}")
-            return redirect('planning:calendrier_rdv')
-    else:
-        form = CreneauHorsPermanenceForm()
-        
-        # Pré-remplir avec la MDS de l'utilisateur
-        profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
-        if profile:
-            form.fields['salle'].queryset = MDSReception.objects.filter(mds=profile.mds, actif=True)
-            form.fields['agent'].queryset = User.objects.filter(
-                usermdsprofile__mds=profile.mds,
-                usermdsprofile__actif=True,
-                is_active=True
-            ).distinct()
-    
-    return render(request, 'planning/horperm.html', {'form': form})
 
 # =============================================================================
 # VUES PLANNING ACCUEIL
