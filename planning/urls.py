@@ -15,6 +15,7 @@ urlpatterns = [
     # ==========================
     path('calendrier/<int:beneficiaire_id>/', views.calendrier_rdv, name='calendrier_rdv'),    
     path('api/creneaux/', views.api_creneaux, name='api_creneaux'),
+    path('calendrier/', views.calendrier_rdv_general, name='calendrier_rdv'),
     
     # ==========================
     # GESTION DES CRÉNEAUX
