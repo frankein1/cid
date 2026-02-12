@@ -1,244 +1,272 @@
-	<!-- /templates/beneficiaire/detail_beneficiaire.html -->
-	{% extends 'base.html' %}
-	{% load static %}
-    {% load ged_tags %} {# IMPORTANT : Chargement des tags pour le badge #}
-	
-	{% block title %}{{ beneficiaire.nom }} {{ beneficiaire.prenom }} - SI-DITAS{% endblock %}
-	
-	{% block content %}
-	<div class="max-w-7xl mx-auto px-4 py-8">
-    	<div class="mb-8 flex justify-between items-start">
-        	<div>
-            	<h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                	{{ beneficiaire.civilite }} {{ beneficiaire.nom|upper }} {{ beneficiaire.prenom }}
-                	{# AJOUT 1 : Badge d'alerte à côté du nom principal #}
-                	{% alerte_documents beneficiaire %}
-            	</h1>
-            	{% if beneficiaire.nom_naissance %}
-            	<p class="text-sm text-gray-500 italic">Nom de naissance : {{ beneficiaire.nom_naissance }}</p>
-            	{% endif %}
-            	<div class="flex items-center gap-4 mt-2 text-gray-600">
-                	<span class="font-mono bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-bold">
-                    	{{ beneficiaire.code_interne }}
-                	</span>
-                	<span>|</span>
-                	<span class="text-sm font-medium">{{ beneficiaire.get_type_beneficiaire_display }}</span>
-            	</div>
-        	</div>
-        	
-    <div class="bg-white rounded-xl shadow-sm border border-gray-700 p-4 mb-6 flex flex-wrap gap-3">
-        	{% if peut_modifier %}
-            	<a href="{% url 'beneficiaire:ajouter_ayant_droit' beneficiaire.code_interne %}" 
-               	class="flex-1 text-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-900 transition">
-                	<i class="fas fa-user-plus mr-2"></i>Ajouter membre
-            	</a>
-            	<a href="{% url 'beneficiaire:modifier_beneficiaire' beneficiaire.code_interne %}" 
-               	class="flex-1 text-center px-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-900 transition">
-                	<i class="fas fa-edit mr-2"></i>Modifier
-            	</a>
-            	{# Mise à jour du lien d'upload #}
-            	<a href="{% url 'ged:document_upload' code_interne=beneficiaire.code_interne %}" 
-               	class="flex-1 text-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-900 transition">
-                	<i class="fas fa-file-upload mr-2"></i>Document
-            	</a> 
-            	{% endif %}
-            	{% if beneficiaire.statut == 'ACTIF' %}
-        	<a href="{% url 'beneficiaire:sortir_beneficiaire' code_interne=beneficiaire.code_interne %}" 
-           	class="inline-flex items-center px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-orange-600 transition">
-            	<i class="fas fa-sign-out-alt mr-2"></i>Déclarer une sortie
-        	</a>
-        	{% endif %}
-              <!-- Envoyer Messages -->
-        <a href="{% url 'messagerie:nouveau_message_beneficiaire' beneficiaire.id %}" 
-           class="block w-full bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded-md text-center">
-            <i class="fas fa-envelope mr-2"></i>Envoyer message  
-        </a>
-		<!-- Prise de rendez-vous -->
-<a href="{% url 'planning:calendrier_rdv' %}?beneficiaire={{ beneficiaire.id }}" 
-   class="inline-flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-    <i class="fas fa-calendar-plus mr-2"></i>Prendre RDV
-</a>
+<!-- /templates/beneficiaire/detail_beneficiaire.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load ged_tags %} {# IMPORTANT : Chargement des tags pour le badge #}
+
+{% block title %}{{ beneficiaire.nom }} {{ beneficiaire.prenom }} - SI-DITAS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- EN-TÊTE PROFIL -->
+    <div class="mb-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                {{ beneficiaire.civilite }} {{ beneficiaire.nom|upper }} {{ beneficiaire.prenom }}
+                {# Badge d'alerte à côté du nom principal #}
+                {% alerte_documents beneficiaire %}
+            </h1>
+            {% if beneficiaire.nom_naissance %}
+            <p class="text-sm text-gray-500 italic">Nom de naissance : {{ beneficiaire.nom_naissance }}</p>
+            {% endif %}
+            <div class="flex items-center gap-4 mt-2 text-gray-600">
+                <span class="font-mono bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-bold">
+                    {{ beneficiaire.code_interne }}
+                </span>
+                <span>|</span>
+                <span class="text-sm font-medium">{{ beneficiaire.get_type_beneficiaire_display }}</span>
+            </div>
+        </div>
+        
+        <div class="flex flex-col items-end gap-2">
+            <span class="px-4 py-1.5 rounded-full text-sm font-bold shadow-sm
+                {% if beneficiaire.statut == 'ACTIF' %}bg-green-100 text-green-800 border border-green-200
+                {% elif beneficiaire.statut == 'SORTI' %}bg-gray-100 text-gray-800 border border-gray-200
+                {% elif beneficiaire.statut == 'DECEDE' %}bg-red-100 text-red-800 border border-red-200
+                {% else %}bg-yellow-100 text-yellow-800 border border-yellow-200{% endif %}">
+                {{ beneficiaire.get_statut_display|upper }}
+            </span>
+            {% if beneficiaire.date_entree %}
+            <span class="text-xs text-gray-500">Entré le {{ beneficiaire.date_entree|date:"d/m/Y" }}</span>
+            {% endif %}
+        </div>
     </div>
-        	<div class="flex flex-col items-end gap-2">
-            	<span class="px-4 py-1.5 rounded-full text-sm font-bold shadow-sm
-                	{% if beneficiaire.statut == 'ACTIF' %}bg-green-100 text-green-800 border border-green-200
-                	{% elif beneficiaire.statut == 'SORTI' %}bg-gray-100 text-gray-800 border border-gray-200
-                	{% elif beneficiaire.statut == 'DECEDE' %}bg-red-100 text-red-800 border border-red-200
-                	{% else %}bg-yellow-100 text-yellow-800 border border-yellow-200{% endif %}">
-                	{{ beneficiaire.get_statut_display|upper }}
-            	</span>
-            	{% if beneficiaire.date_entree %}
-            	<span class="text-xs text-gray-500">Entré le {{ beneficiaire.date_entree|date:"d/m/Y" }}</span>
-            	{% endif %}
-        	</div>
-    	</div>
-	
-       <div class="bg-white rounded-xl shadow-sm border border-gray-700 p-4 mb-6 flex flex-wrap gap-3">
-        	<a href="{% url 'AidFi:dashboard_beneficiaire' beneficiaire_id=beneficiaire.id %}" 
-   class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
-            	<i class="fas fa-euro-sign mr-2"></i>Aides financières
-        	</a>
-        	<a href="" 
-           	class="inline-flex items-center px-4 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-400 transition">
-            	<i class="fas fa-file-contract mr-2"></i>CER	
-        	</a>
-    	</div>
-	
-    	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        	<div class="lg:col-span-2 space-y-6">
-            	<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                	<div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                    	<h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">État Civil & Identification</h2>
-                	</div>
-                	<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    	<div>
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">Né(e) le</label>
-                        	<p class="text-gray-900 font-medium">{{ beneficiaire.date_naissance|date:"d F Y" }}</p>
-                    	</div>
-                    	<div>
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">Lieu de naissance</label>
-                        	<p class="text-gray-900 font-medium">{{ beneficiaire.lieu_naissance|default:"-" }}</p>
-                    	</div>
-                    	<div>
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">NIR</label>
-                        	<p class="text-gray-900 font-mono">{{ beneficiaire.nir|default:"Non renseigné" }}</p>
-                    	</div>
-                    	<div>
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">Numéro CAF</label>
-                        	<p class="text-gray-900 font-mono">{{ beneficiaire.numero_caf|default:"Non renseigné" }}</p>
-                    	</div>
-                    	<div class="md:col-span-2">
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">Situation Familiale (Générale)</label>
-                        	<p class="text-gray-900 font-medium">{{ beneficiaire.get_marital_status_display|default:"-" }}</p>
-                    	</div>
-                	</div>
-            	</div>
-	
-            	<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                	<div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                    	<h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">Coordonnées</h2>
-                	</div>
-                	<div class="p-6">
-                    	<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        	<div>
-                            	<label class="block text-xs font-semibold text-gray-400 uppercase">Téléphone Mobile</label>
-                            	<p class="text-gray-900 font-medium">{{ beneficiaire.telephone_mobile|default:"-" }}</p>
-                        	</div>
-                        	<div>
-                            	<label class="block text-xs font-semibold text-gray-400 uppercase">Email</label>
-                            	<p class="text-gray-900 font-medium">{{ beneficiaire.email|default:"-" }}</p>
-                        	</div>
-                    	</div>
-                    	<div class="pt-4 border-t border-gray-100">
-                        	<label class="block text-xs font-semibold text-gray-400 uppercase">Adresse</label>
-                        	<p class="text-gray-900 font-medium mt-1">
-                            	{{ beneficiaire.adresse|linebreaksbr }}<br>
-                            	<span class="text-lg">{{ beneficiaire.code_postal }} {{ beneficiaire.ville|upper }}</span>
-                        	</p>
-                    	</div>
-                	</div>
-            	</div>
-        	</div>
-	
-        	<div class="space-y-6">
-            	<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                	<h2 class="font-bold text-gray-800 mb-4 flex items-center">
-                    	<i class="fas fa-map-marker-alt mr-2 text-red-500"></i> Territoire
-                	</h2>
-                	<div class="space-y-4">
-                    	<div>
-                        	<label class="block text-xs text-gray-400 uppercase font-bold">MDS</label>
-                        	<p class="font-semibold text-blue-800">{{ beneficiaire.mds.nom|default:"Non affecté" }}</p>
-                    	</div>
-                    	<div>
-                        	<label class="block text-xs text-gray-400 uppercase font-bold">Référent Social</label>
-                        	<p class="font-medium text-gray-900">{{ beneficiaire.referent_mds.get_full_name|default:"Aucun" }}</p>
-                    	</div>
-                	</div>
-            	</div>
-	
-            	<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                	<div class="flex justify-between items-center mb-4">
-                    	<h2 class="font-bold text-gray-800 text-lg">
-                        	<i class="fas fa-users text-blue-500 mr-2"></i>Réseau Familial
-                    	</h2>
-                    	{% if peut_modifier %}
-                    	<a href="{% url 'beneficiaire:ajouter_ayant_droit' code_interne=beneficiaire.code_interne %}" 
-                       	class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100 transition">
-                        	<i class="fas fa-plus mr-1"></i>Ajouter
-                    	</a>
-                    	{% endif %}
-                	</div>
-	
-                	<div class="space-y-4">
-                    	{% for lien in liens_familiaux %}
-                        	{% with autre=lien.personne_a %}{% if autre == beneficiaire %}{% with autre=lien.personne_b %}{% endwith %}{% endif %}
-                        	
-                        	<div class="p-3 bg-gray-50 rounded-lg border border-gray-100 group">
-                            	<div class="flex items-center justify-between">
-                                	<div class="flex items-center min-w-0">
-                                    	<div class="w-8 h-8 rounded-full {% if lien.type_lien == 'CONJOINT' %}bg-blue-100 text-blue-600{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center mr-3">
-                                        	<i class="fas fa-user text-xs"></i>
-                                    	</div>
-                                    	<div class="truncate">
-                                        	<p class="text-sm font-bold text-gray-800 truncate">
-                                            	{{ autre.prenom }} {{ autre.nom|upper }}
-                                        	</p>
-                                        	<p class="text-[10px] text-gray-500 uppercase font-bold">
-                                            	{{ lien.get_type_lien_display }} 
-                                            	{% if lien.vit_au_foyer %}<span class="text-green-600 ml-1"><i class="fas fa-home"></i> Foyer</span>{% endif %}
-                                        	</p>
-                                    	</div>
-                                	</div>
-                                	<div class="flex gap-1 ml-2">
-                                    	{% if lien.est_responsable_legal %}
-                                        	<i class="fas fa-gavel text-xs text-blue-500" title="Responsable légal"></i>
-                                    	{% endif %}
-                                    	<a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=autre.code_interne %}" 
-                                       	class="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-white transition">
-                                        	<i class="fas fa-arrow-right text-sm"></i>
-                                    	</a>
-                                	</div>
-                            	</div>
-                        	</div>
-                        	{% endwith %}
-                    	{% empty %}
-                        	<p class="text-sm text-gray-400 text-center py-4 italic border-2 border-dashed border-gray-100 rounded-lg">Aucun lien enregistré</p>
-                    	{% endfor %}
-                	</div>
-            	</div>
-	
-            	<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                	<div class="flex justify-between items-center mb-4">
-                    	<h2 class="font-bold text-gray-800">
-                        	Documents 
-                        	{# AJOUT 2 : Badge d'alerte sur le titre du bloc documents #}
-                        	{% alerte_documents beneficiaire %}
-                    	</h2>
-                    	<a href="{% url 'ged:beneficiary_documents' code_interne=beneficiaire.code_interne %}" class="text-xs text-blue-600 hover:underline"> Voir tout ({{ beneficiaire.documents.count }})</a>
-                	</div>
-                	<div class="space-y-2">
-                    	{# On affiche les 5 derniers documents pour ne pas surcharger #}
-                    	{% for doc in beneficiaire.documents.all|dictsortreversed:"date_creation"|slice:":5" %}
-                    	<a href="{% url 'ged:document_detail' pk=doc.pk %}" class="flex items-center p-2 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition group">
-                        	<i class="fas {% if doc.statut == 'VALIDE' %}fa-file-check text-green-500{% else %}fa-file-alt text-blue-500{% endif %} mr-3"></i>
-                        	<div class="flex-1 min-w-0">
-                            	<p class="text-sm font-medium text-gray-800 truncate">{{ doc.titre }}</p>
-                            	<p class="text-[10px] text-gray-400 italic">
-                                	{{ doc.type_document.nom }} - {{ doc.date_creation|date:"d/m/Y" }}
-                                	{% if doc.date_expiration and doc.est_expire %}
-                                    	<span class="text-red-500 font-bold ml-1">Expiré</span>
-                                	{% endif %}
-                            	</p>
-                        	</div>
-                    	</a>
-                    	{% empty %}
-                    	<p class="text-sm text-gray-400 text-center py-4 italic">Aucun document numérisé</p>
-                    	{% endfor %}
-                	</div>
-            	</div>
-        	</div>
-    	</div>
-	</div>
-	{% endblock %}
-	
+
+    <!-- ======================================================= -->
+    <!-- BANDEAU D'ACTIONS PRINCIPALES (GESTION DOSSIER)        -->
+    <!-- ======================================================= -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap items-center gap-3">
+        
+        <!-- Bloc de gauche : actions de gestion du dossier -->
+        <div class="flex flex-wrap gap-2 flex-1">
+            {% if peut_modifier %}
+            <a href="{% url 'beneficiaire:ajouter_ayant_droit' beneficiaire.code_interne %}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm">
+                <i class="fas fa-user-plus mr-2"></i>Membre
+            </a>
+            <a href="{% url 'beneficiaire:modifier_beneficiaire' beneficiaire.code_interne %}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                <i class="fas fa-edit mr-2"></i>Modifier
+            </a>
+            <a href="{% url 'ged:document_upload' code_interne=beneficiaire.code_interne %}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">
+                <i class="fas fa-file-upload mr-2"></i>Document
+            </a>
+            {% endif %}
+            
+            {% if beneficiaire.statut == 'ACTIF' %}
+            <a href="{% url 'beneficiaire:sortir_beneficiaire' code_interne=beneficiaire.code_interne %}" 
+               class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
+                <i class="fas fa-sign-out-alt mr-2"></i>Sortie
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Bloc de droite : communication et rendez-vous -->
+        <div class="flex flex-wrap gap-2">
+            <!-- Message (raccourci) -->
+            <a href="{% url 'messagerie:nouveau_message_beneficiaire' beneficiaire.id %}" 
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                <i class="fas fa-envelope mr-2"></i>Message
+            </a>
+            <!-- Prise de rendez-vous -->
+            <a href="{% url 'planning:calendrier_rdv' %}?beneficiaire={{ beneficiaire.id }}" 
+               class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm">
+                <i class="fas fa-calendar-plus mr-2"></i>RDV
+            </a>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- BANDEAU ACTIONS SPÉCIFIQUES (AIDES, CER)              -->
+    <!-- ======================================================= -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-3">
+        <a href="{% url 'AidFi:dashboard_beneficiaire' beneficiaire_id=beneficiaire.id %}" 
+           class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
+            <i class="fas fa-euro-sign mr-2"></i>Aides financières
+        </a>
+        <a href="#" 
+           class="inline-flex items-center px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
+            <i class="fas fa-file-contract mr-2"></i>CER
+        </a>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- CONTENU PRINCIPAL (INFORMATIONS + DOCUMENTS)          -->
+    <!-- ======================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- COLONNE DE GAUCHE (2/3) - ÉTAT CIVIL & COORDONNÉES -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- État Civil & Identification -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">État Civil & Identification</h2>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Né(e) le</label>
+                        <p class="text-gray-900 font-medium">{{ beneficiaire.date_naissance|date:"d F Y" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Lieu de naissance</label>
+                        <p class="text-gray-900 font-medium">{{ beneficiaire.lieu_naissance|default:"-" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">NIR</label>
+                        <p class="text-gray-900 font-mono">{{ beneficiaire.nir|default:"Non renseigné" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Numéro CAF</label>
+                        <p class="text-gray-900 font-mono">{{ beneficiaire.numero_caf|default:"Non renseigné" }}</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Situation Familiale (Générale)</label>
+                        <p class="text-gray-900 font-medium">{{ beneficiaire.get_marital_status_display|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Coordonnées -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                    <h2 class="font-bold text-gray-700 uppercase text-sm tracking-wider">Coordonnées</h2>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase">Téléphone Mobile</label>
+                            <p class="text-gray-900 font-medium">{{ beneficiaire.telephone_mobile|default:"-" }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase">Email</label>
+                            <p class="text-gray-900 font-medium">{{ beneficiaire.email|default:"-" }}</p>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-gray-100">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Adresse</label>
+                        <p class="text-gray-900 font-medium mt-1">
+                            {{ beneficiaire.adresse|linebreaksbr }}<br>
+                            <span class="text-lg">{{ beneficiaire.code_postal }} {{ beneficiaire.ville|upper }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DE DROITE (1/3) - TERRITOIRE, RÉSEAU, DOCUMENTS -->
+        <div class="space-y-6">
+            
+            <!-- Territoire -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-map-marker-alt mr-2 text-red-500"></i> Territoire
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase font-bold">MDS</label>
+                        <p class="font-semibold text-blue-800">{{ beneficiaire.mds.nom|default:"Non affecté" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase font-bold">Référent Social</label>
+                        <p class="font-medium text-gray-900">{{ beneficiaire.referent_mds.get_full_name|default:"Aucun" }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Réseau Familial -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-gray-800 text-lg">
+                        <i class="fas fa-users text-blue-500 mr-2"></i>Réseau Familial
+                    </h2>
+                    {% if peut_modifier %}
+                    <a href="{% url 'beneficiaire:ajouter_ayant_droit' code_interne=beneficiaire.code_interne %}" 
+                       class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100 transition">
+                        <i class="fas fa-plus mr-1"></i>Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-4">
+                    {% for lien in liens_familiaux %}
+                        {% with autre=lien.personne_a %}{% if autre == beneficiaire %}{% with autre=lien.personne_b %}{% endwith %}{% endif %}
+                        
+                        <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 group">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center min-w-0">
+                                    <div class="w-8 h-8 rounded-full {% if lien.type_lien == 'CONJOINT' %}bg-blue-100 text-blue-600{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center mr-3">
+                                        <i class="fas fa-user text-xs"></i>
+                                    </div>
+                                    <div class="truncate">
+                                        <p class="text-sm font-bold text-gray-800 truncate">
+                                            {{ autre.prenom }} {{ autre.nom|upper }}
+                                        </p>
+                                        <p class="text-[10px] text-gray-500 uppercase font-bold">
+                                            {{ lien.get_type_lien_display }} 
+                                            {% if lien.vit_au_foyer %}<span class="text-green-600 ml-1"><i class="fas fa-home"></i> Foyer</span>{% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-1 ml-2">
+                                    {% if lien.est_responsable_legal %}
+                                        <i class="fas fa-gavel text-xs text-blue-500" title="Responsable légal"></i>
+                                    {% endif %}
+                                    <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=autre.code_interne %}" 
+                                       class="p-1.5 text-gray-400 hover:text-blue-600 rounded-full hover:bg-white transition">
+                                        <i class="fas fa-arrow-right text-sm"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% empty %}
+                        <p class="text-sm text-gray-400 text-center py-4 italic border-2 border-dashed border-gray-100 rounded-lg">Aucun lien enregistré</p>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Documents -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-gray-800">
+                        Documents 
+                        {# Badge d'alerte sur le titre du bloc documents #}
+                        {% alerte_documents beneficiaire %}
+                    </h2>
+                    <a href="{% url 'ged:beneficiary_documents' code_interne=beneficiaire.code_interne %}" class="text-xs text-blue-600 hover:underline">Voir tout ({{ beneficiaire.documents.count }})</a>
+                </div>
+                <div class="space-y-2">
+                    {# On affiche les 5 derniers documents #}
+                    {% for doc in beneficiaire.documents.all|dictsortreversed:"date_creation"|slice:":5" %}
+                    <a href="{% url 'ged:document_detail' pk=doc.pk %}" class="flex items-center p-2 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition group">
+                        <i class="fas {% if doc.statut == 'VALIDE' %}fa-file-check text-green-500{% else %}fa-file-alt text-blue-500{% endif %} mr-3"></i>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">{{ doc.titre }}</p>
+                            <p class="text-[10px] text-gray-400 italic">
+                                {{ doc.type_document.nom }} - {{ doc.date_creation|date:"d/m/Y" }}
+                                {% if doc.date_expiration and doc.est_expire %}
+                                    <span class="text-red-500 font-bold ml-1">Expiré</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <p class="text-sm text-gray-400 text-center py-4 italic">Aucun document numérisé</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
