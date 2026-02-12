@@ -1,11 +1,13 @@
 """
 planning/views.py
 VERSION FINALE CORRIGÉE - 12/02/2026
-Corrections :
-- Bug UserMDSProfile.get() → .first() avec vérification
-- Ajout paramètre beneficiaire dans calendrier_rdv
-- Permission planning_generer pour les cadres
-- Champ duree_minutes désactivé pour PERMANENCE
+Corrections appliquées :
+- ✅ Accès planning pour agents sociaux (peut_creer)
+- ✅ Vérification robuste des capacités (sans a_la_capacite)
+- ✅ Bug UserMDSProfile.get() → .filter().first()
+- ✅ Permission planning_generer pour les cadres
+- ✅ Champ duree_minutes désactivé pour PERMANENCE
+- ✅ Paramètre beneficiaire dans calendrier_rdv
 """
 
 from datetime import date, timedelta, datetime, time
@@ -54,20 +56,36 @@ HEURE_FIN_APRES_MIDI = time(16, 30)
 
 @login_required
 def calendrier_rdv(request):
-    """Vue principale du calendrier"""
+    """Vue principale du calendrier - Accès agents sociaux et cadres"""
     today = date.today()
     
-    # ✅ AJOUT : Récupérer le bénéficiaire depuis l'URL si présent
+    # ✅ VÉRIFICATION ROBUSTE - Utilisation du système de capacités
+    from core.models import Capacite
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    # Récupérer l'utilisateur avec ses profils pré-chargés
+    user = User.objects.prefetch_related('profils__capacites').get(pk=request.user.pk)
+    
+    # Collecter TOUTES les capacités de l'utilisateur via ses profils
+    capacites_user = set()
+    for profil in user.profils.all():
+        for capacite in profil.capacites.all():
+            capacites_user.add(capacite.code)
+    
+    # Vérifier l'accès
+    if not (user.is_superuser or 
+            'peut_creer' in capacites_user or 
+            'peut_voir_stats' in capacites_user):
+        messages.error(request, "Accès refusé au planning.")
+        return redirect('core:dashboard')
+    
+    # ✅ Récupérer le bénéficiaire depuis l'URL si présent
     beneficiaire_id = request.GET.get('beneficiaire')
     beneficiaire = None
     if beneficiaire_id:
         from beneficiaire.models import Beneficiaire
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
-    
-    # Vérification sécurité via les capacités (ou superuser)
-    if not (request.user.a_la_capacite('peut_creer') or request.user.a_la_capacite('peut_voir_stats') or request.user.is_superuser):
-        messages.error(request, "Accès refusé au planning.")
-        return redirect('core:dashboard')
 
     vue = request.GET.get('vue', 'mois')
     
@@ -88,7 +106,7 @@ def calendrier_rdv(request):
             'debut_apres_midi': HEURE_DEBUT_APRES_MIDI.strftime('%H:%M'),
             'fin_apres_midi': HEURE_FIN_APRES_MIDI.strftime('%H:%M')
         },
-        'beneficiaire': beneficiaire,  # ✅ AJOUTÉ DANS LE CONTEXT
+        'beneficiaire': beneficiaire,
     }
     return render(request, 'planning/calendrier.html', context)
 
@@ -447,10 +465,12 @@ def imprimer_planning_jour_pdf(request, date_str):
     buffer.seek(0)
     return FileResponse(buffer, content_type='application/pdf', filename=f"planning_{date_str}.pdf")
 
+
 @login_required
 def exporter_planning_agent_outlook(request, agent_id):
     """Redirection vers l'export standard avec filtre agent"""
     return redirect(f"{reverse('planning:export_ical')}?agent={agent_id}")
+
 
 def preparer_sync_outlook_graph(request):
     """Placeholder futur"""
