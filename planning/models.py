@@ -296,6 +296,9 @@ class HistoriqueCreneau(models.Model):
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
     date_action = models.DateTimeField(auto_now_add=True)
     commentaire = models.TextField(blank=True)
+    anciennes_valeurs = models.JSONField(default=dict, blank=True)
+    nouvelles_valeurs = models.JSONField(default=dict, blank=True)
+
 
     class Meta:
         ordering = ['-date_action']
