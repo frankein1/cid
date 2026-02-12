@@ -1,4 +1,8 @@
-# planning/forms.py
+"""
+planning/forms.py
+VERSION FINALE CORRIGÉE - 12/02/2026
+Ajout du champ duree_minutes dans RdvForm
+"""
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -35,7 +39,6 @@ class RdvForm(forms.ModelForm):
                 'step': 15,
                 'placeholder': 'Durée (min)'
             }),
-        
         }
 
     def __init__(self, *args, **kwargs):
@@ -140,4 +143,3 @@ class JourBloqueForm(forms.ModelForm):
                 )
 
         return cleaned_data
-
