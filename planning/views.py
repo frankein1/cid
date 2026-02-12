@@ -189,33 +189,65 @@ def api_creneaux(request):
 
 
 @login_required
-def reserver_rdv(request, creneau_id):
-    """Procédure de réservation d'un créneau"""
+def reserver_rdv(request, creneau_id, beneficiaire_id=None):
+    """
+    Procédure de réservation d'un créneau.
+    Le beneficiaire_id est maintenant passé dans l'URL pour plus de robustesse.
+    """
     creneau = get_object_or_404(CreneauRdv, pk=creneau_id)
     
+    # 1. Récupération du bénéficiaire (si présent dans l'URL)
+    beneficiaire = None
+    if beneficiaire_id:
+        from beneficiaire.models import Beneficiaire
+        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
+    
+    # 2. Vérification de disponibilité
     if not creneau.is_disponible():
         messages.error(request, "Ce créneau n'est pas disponible.")
         return redirect('planning:calendrier_rdv')
     
-    # Gestion de la durée selon le type de RDV
+    # 3. Initialisation du formulaire
     if request.method == 'POST':
+        # En POST, on traite les données envoyées
         form = RdvForm(request.POST, instance=creneau, creneau=creneau, request=request)
     else:
-        form = RdvForm(instance=creneau, creneau=creneau, request=request)
+        # En GET, on pré-remplit le bénéficiaire s'il est connu
+        initial_data = {}
+        if beneficiaire:
+            initial_data['beneficiaire'] = beneficiaire
+            
+        form = RdvForm(instance=creneau, creneau=creneau, request=request, initial=initial_data)
     
-    # Désactiver le champ durée pour les permanences
+    # 4. Logique spécifique aux permanences (champ durée désactivé)
     if creneau.type_rdv == 'PERMANENCE' and 'duree_minutes' in form.fields:
         form.fields['duree_minutes'].disabled = True
         form.fields['duree_minutes'].help_text = "Durée fixe de 30 minutes pour les permanences"
     
+    # 5. Traitement de la validation
     if request.method == 'POST':
         if form.is_valid():
             rdv = form.save(commit=False)
-            rdv.reserver(request.user, rdv.beneficiaire, rdv.description)
-            messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
-            return redirect('planning:calendrier_rdv')
+            
+            # On utilise le bénéficiaire du formulaire (ou celui de l'URL par sécurité)
+            target_beneficiaire = rdv.beneficiaire or beneficiaire
+            
+            if not target_beneficiaire:
+                messages.error(request, "Aucun bénéficiaire sélectionné.")
+            else:
+                rdv.reserver(request.user, target_beneficiaire, rdv.description)
+                messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
+                
+                # Redirection vers le tableau de bord du bénéficiaire (logique AidFi)
+                return redirect('planning:calendrier_rdv')
+        else:
+            messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
     
-    return render(request, 'planning/reserver.html', {'form': form, 'creneau': creneau})
+    return render(request, 'planning/reserver.html', {
+        'form': form, 
+        'creneau': creneau,
+        'beneficiaire': beneficiaire
+    })
 
 
 @login_required
