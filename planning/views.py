@@ -1,7 +1,11 @@
 """
 planning/views.py
-VERSION COMPLÈTE ET CORRIGÉE
-Consolidation du 07/01/2026
+VERSION FINALE CORRIGÉE - 12/02/2026
+Corrections :
+- Bug UserMDSProfile.get() → .first() avec vérification
+- Ajout paramètre beneficiaire dans calendrier_rdv
+- Permission planning_generer pour les cadres
+- Champ duree_minutes désactivé pour PERMANENCE
 """
 
 from datetime import date, timedelta, datetime, time
@@ -53,6 +57,13 @@ def calendrier_rdv(request):
     """Vue principale du calendrier"""
     today = date.today()
     
+    # ✅ AJOUT : Récupérer le bénéficiaire depuis l'URL si présent
+    beneficiaire_id = request.GET.get('beneficiaire')
+    beneficiaire = None
+    if beneficiaire_id:
+        from beneficiaire.models import Beneficiaire
+        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
+    
     # Vérification sécurité via les capacités (ou superuser)
     if not (request.user.a_la_capacite('peut_creer') or request.user.a_la_capacite('peut_voir_stats') or request.user.is_superuser):
         messages.error(request, "Accès refusé au planning.")
@@ -76,7 +87,8 @@ def calendrier_rdv(request):
             'fin_matin': HEURE_FIN_MATIN.strftime('%H:%M'),
             'debut_apres_midi': HEURE_DEBUT_APRES_MIDI.strftime('%H:%M'),
             'fin_apres_midi': HEURE_FIN_APRES_MIDI.strftime('%H:%M')
-        }
+        },
+        'beneficiaire': beneficiaire,  # ✅ AJOUTÉ DANS LE CONTEXT
     }
     return render(request, 'planning/calendrier.html', context)
 
@@ -166,24 +178,24 @@ def reserver_rdv(request, creneau_id):
     if not creneau.is_disponible():
         messages.error(request, "Ce créneau n'est pas disponible.")
         return redirect('planning:calendrier_rdv')
-        
-    if creneau.type_rdv == 'HORS_PERMANENCE':  # ou toute autre condition
-        form = RdvForm(request.POST or None, instance=creneau, creneau=creneau, request=request)
-    else:
-        # Pour les permanences, durée figée
-        form = RdvForm(request.POST or None, instance=creneau, creneau=creneau, request=request)
-        if 'duree_minutes' in form.fields:
-            form.fields['duree_minutes'].disabled = True
-
+    
+    # Gestion de la durée selon le type de RDV
     if request.method == 'POST':
         form = RdvForm(request.POST, instance=creneau, creneau=creneau, request=request)
+    else:
+        form = RdvForm(instance=creneau, creneau=creneau, request=request)
+    
+    # Désactiver le champ durée pour les permanences
+    if creneau.type_rdv == 'PERMANENCE' and 'duree_minutes' in form.fields:
+        form.fields['duree_minutes'].disabled = True
+        form.fields['duree_minutes'].help_text = "Durée fixe de 30 minutes pour les permanences"
+    
+    if request.method == 'POST':
         if form.is_valid():
             rdv = form.save(commit=False)
             rdv.reserver(request.user, rdv.beneficiaire, rdv.description)
             messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
             return redirect('planning:calendrier_rdv')
-    else:
-        form = RdvForm(instance=creneau, creneau=creneau, request=request)
     
     return render(request, 'planning/reserver.html', {'form': form, 'creneau': creneau})
 
@@ -211,8 +223,9 @@ def ajouter_jour_bloque(request):
 @login_required
 def generer_creneaux(request):
     """Génération en masse de créneaux selon les règles métier"""
+    # ✅ CORRIGÉ : Permission avec planning_generer pour les cadres
     if not (request.user.is_superuser or 
-        request.user.a_la_capacite('planning_generer')):
+            request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Seuls les gestionnaires peuvent générer des créneaux.")
         return redirect('planning:calendrier_rdv')
 
@@ -221,7 +234,11 @@ def generer_creneaux(request):
         if form.is_valid():
             try:
                 from mds.models import UserMDSProfile
-                profile = UserMDSProfile.objects.get(user=request.user, actif=True)
+                # ✅ CORRIGÉ : .get() → .filter().first() avec vérification
+                profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
+                if not profile:
+                    messages.error(request, "Vous n'êtes pas rattaché à une MDS active.")
+                    return redirect('planning:calendrier_rdv')
                 
                 choix = form.cleaned_data['date_debut']
                 date_debut = date.today()
