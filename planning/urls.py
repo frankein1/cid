@@ -13,13 +13,13 @@ urlpatterns = [
     # ==========================
     # CALENDRIER PRINCIPAL
     # ==========================
-    path('', views.calendrier_rdv, name='calendrier_rdv'),
+    path('calendrier/<int:beneficiaire_id>/', views.calendrier_rdv, name='calendrier_rdv'),    
     path('api/creneaux/', views.api_creneaux, name='api_creneaux'),
     
     # ==========================
     # GESTION DES CRÉNEAUX
     # ==========================
-    path('reserver/<int:creneau_id>/', views.reserver_rdv, name='reserver_rdv'),
+    path('reserver/<int:creneau_id>/<int:beneficiaire_id>/', views.reserver_rdv, name='reserver_rdv'),
     path('annuler/<int:creneau_id>/', views.annuler_rdv, name='annuler_rdv'),
     path('generer/', views.generer_creneaux, name='generer_creneaux'),
     
