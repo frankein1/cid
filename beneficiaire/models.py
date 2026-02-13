@@ -230,6 +230,15 @@ class DocumentBeneficiaireLink(models.Model):
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     valide = models.BooleanField(default=False)
 
+@property
+def enfants(self):
+    from beneficiaire.models import LienFamilial
+    return LienFamilial.objects.filter(
+        type_lien="ENFANT"
+    ).filter(
+        models.Q(personne_b=self) | models.Q(personne_a=self)
+    )
+
 @receiver(pre_save, sender=Beneficiaire)
 def generate_code_interne(sender, instance, **kwargs):
     if not instance.code_interne:
