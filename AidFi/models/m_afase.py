@@ -1,11 +1,19 @@
 # AidFi/models/m_afase.py
+
 from django.db import models
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .m_generique import DemandeAide
-from core.mixins import AuditedMixin
 
-# --- CODES INSTRUCTION (Agent Social) ---
+from AidFi.models.m_generique import DemandeAide
+from core.mixins import AuditedMixin
+from beneficiaire.models import LienFamilial
+
+
+# ==========================================================
+# CODES MÉTIER
+# ==========================================================
+
 CODES_INSTRUCTION_AFASE = {
     "1": "Droits en attente",
     "2": "Droits suspendus",
@@ -16,7 +24,6 @@ CODES_INSTRUCTION_AFASE = {
     "7": "Aucun droit en attente et sans revenus connus",
 }
 
-# --- CODES DÉCISION ---
 ACCORD_AFASE_CHOICES = {
     "1": "Soutien alimentaire",
     "2": "Modes de garde",
@@ -43,14 +50,14 @@ REFUS_AFASE_CHOICES = {
     "8": "Récurrence",
 }
 
-# ============================================================================
+
+# ==========================================================
 # DEMANDE AFASE
-# ============================================================================
+# ==========================================================
 
 class DemandeAFASE(DemandeAide):
     """
-    Demande AFASE
-    Alignée sur le cycle de vie générique DemandeAide
+    Demande AFASE – extension métier de DemandeAide
     """
 
     numero_genesis = models.CharField(max_length=50, blank=True)
@@ -68,112 +75,147 @@ class DemandeAFASE(DemandeAide):
         verbose_name_plural = "Demandes AFASE"
         db_table = "AidFi_demandeafase"
 
-    # --- MÉTHODES MÉTIER ---
+    def __str__(self):
+        return f"AFASE-{self.id} – {self.beneficiaire.nom}"
 
-    def deposer(self):
-        if self.statut != "BROUILLON":
-            raise ValidationError("Seule une demande en brouillon peut être déposée.")
-        self.statut = "DEPOSEE"
-        self.save(update_fields=["statut"])
+    # ------------------------------
+    # ACCÈS MÉTIER SIMPLIFIÉS
+    # ------------------------------
 
-    def passer_en_instruction(self):
-        if self.statut != "DEPOSEE":
-            raise ValidationError("Instruction impossible.")
-        self.statut = "EN_INSTRUCTION"
-        self.save(update_fields=["statut"])
-    
-    def verrouiller(self):
-        self.statut = "VALIDEE"
-        self.est_verrouillee = True
-        self.save(update_fields=["statut", "est_verrouillee"])
-        
-    def ajourner(self):
-        self.statut = "BROUILLON"
-        self.save(update_fields=["statut"])
+    @property
+    def code_demande(self):
+        """
+        Code de contexte renseigné par le travailleur social
+        """
+        if hasattr(self, "evaluation_afase"):
+            return self.evaluation_afase.code_instruction
+        return None
 
-    def accorder(self):
-        self.statut = "ACCORDEE"
-        self.save(update_fields=["statut"])
-
-    def refuser(self):
-        self.statut = "REFUSEE"
-        self.save(update_fields=["statut"])
+    @property
+    def libelle_demande(self):
+        if self.code_demande:
+            return CODES_INSTRUCTION_AFASE.get(self.code_demande, "Code inconnu")
+        return "Non renseigné"
 
 
-# ============================================================================
+# ==========================================================
 # ÉVALUATION SOCIALE
-# ============================================================================
+# ==========================================================
 
 class EvaluationSocialeAFASE(AuditedMixin):
     demande = models.OneToOneField(
         DemandeAFASE,
         on_delete=models.CASCADE,
-        related_name="evaluation_afase"
+        related_name="evaluation_afase",
     )
+
     code_instruction = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],
-        blank=True
+        blank=True,
+        verbose_name="Code de demande AFASE",
     )
-    situation_sociale = models.TextField()
-    analyse_problematique = models.TextField()
+
+    situation_sociale = models.TextField(blank=True)
+    analyse_problematique = models.TextField(blank=True)
     justification_demande = models.TextField()
     commentaire_familial = models.TextField(blank=True)
 
-    @property
-    def libelle_instruction(self):
-        return CODES_INSTRUCTION_AFASE.get(self.code_instruction, "Non renseigné")
+    class Meta:
+        verbose_name = "Évaluation sociale AFASE"
+        verbose_name_plural = "Évaluations sociales AFASE"
+
+    def __str__(self):
+        return f"Évaluation AFASE – demande {self.demande.id}"
 
 
-# ============================================================================
+# ==========================================================
 # BUDGET
-# ============================================================================
+# ==========================================================
 
 class BudgetAFASE(AuditedMixin):
     demande = models.OneToOneField(
         DemandeAFASE,
         on_delete=models.CASCADE,
-        related_name="budget"
+        related_name="budget",
     )
 
     ressources = models.JSONField(default=dict)
     charges = models.JSONField(default=dict)
 
-    nb_personnes_foyer = models.PositiveSmallIntegerField(editable=False)
-    reste_a_vivre = models.DecimalField(max_digits=8, decimal_places=2, editable=False)
+    nb_personnes_foyer = models.PositiveSmallIntegerField(default=1, editable=False)
+    reste_a_vivre = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
+
+    class Meta:
+        verbose_name = "Budget AFASE"
+        verbose_name_plural = "Budgets AFASE"
+
+    def __str__(self):
+        return f"Budget AFASE – demande {self.demande.id}"
 
     def save(self, *args, **kwargs):
         beneficiaire = self.demande.beneficiaire
-        self.nb_personnes_foyer = 1 + beneficiaire.enfants.count()
-        total_ressources = sum(self.ressources.values())
-        total_charges = sum(self.charges.values())
-        self.reste_a_vivre = (
-            (total_ressources - total_charges) / self.nb_personnes_foyer
-            if self.nb_personnes_foyer else 0
-        )
+
+        # Calcul du foyer
+        nb = 1
+        liens = LienFamilial.objects.filter(
+            personne_a=beneficiaire
+        ) | LienFamilial.objects.filter(personne_b=beneficiaire)
+
+        for lien in liens:
+            if lien.vit_au_foyer:
+                nb += 1
+
+        self.nb_personnes_foyer = max(nb, 1)
+
+        # Calcul du reste à vivre
+        total_ressources = sum(float(v) for v in (self.ressources or {}).values() if v)
+        total_charges = sum(float(v) for v in (self.charges or {}).values() if v)
+
+        solde_mensuel = total_ressources - total_charges
+        self.reste_a_vivre = round(max(solde_mensuel / self.nb_personnes_foyer / 30, 0), 2)
+
         super().save(*args, **kwargs)
 
 
-# ============================================================================
+# ==========================================================
 # DÉCISION
-# ============================================================================
+# ==========================================================
 
 class DecisionAFASE(AuditedMixin):
     TYPE_DECISION_CHOICES = [
         ("ACCORD", "Accord"),
         ("REFUS", "Refus"),
+        ("AJO", "Ajournement"),
     ]
 
     demande = models.OneToOneField(
         DemandeAFASE,
         on_delete=models.CASCADE,
-        related_name="decision"
+        related_name="decision",
     )
+
     type_decision = models.CharField(max_length=10, choices=TYPE_DECISION_CHOICES)
-    code_decision = models.CharField(max_length=2)
-    montant_accorde = models.DecimalField(max_digits=8, decimal_places=2)
-    duree_accordee = models.PositiveSmallIntegerField()
+    code_decision = models.CharField(max_length=2, blank=True)
+
+    montant_accorde = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    duree_accordee = models.PositiveSmallIntegerField(default=1)
     motivation = models.TextField(blank=True)
+
+    date_decision = models.DateTimeField(default=timezone.now)
+    decide_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="decisions_afase",
+    )
+
+    class Meta:
+        verbose_name = "Décision AFASE"
+        verbose_name_plural = "Décisions AFASE"
+
+    def __str__(self):
+        return f"Décision AFASE – demande {self.demande.id}"
 
     def clean(self):
         if self.type_decision == "REFUS" and not self.motivation:
@@ -182,5 +224,8 @@ class DecisionAFASE(AuditedMixin):
     @property
     def libelle_decision(self):
         if self.type_decision == "ACCORD":
-            return ACCORD_AFASE_CHOICES.get(self.code_decision, "Accord inconnu")
-        return REFUS_AFASE_CHOICES.get(self.code_decision, "Refus inconnu")
+            return ACCORD_AFASE_CHOICES.get(self.code_decision, "Accord non précisé")
+        if self.type_decision == "REFUS":
+            return REFUS_AFASE_CHOICES.get(self.code_decision, "Refus non précisé")
+        return "Ajournement"
+``
