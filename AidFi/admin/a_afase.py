@@ -50,13 +50,14 @@ class DecisionAFASEInline(admin.StackedInline):
 @admin.register(DemandeAFASE)
 class DemandeAFASEAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
-        "beneficiaire",
-        "statut",
-        "montant_demande",
-        "duree_demande",
-        "created_at",
-    )
+    "id",
+    "beneficiaire",
+    "statut",
+    "montant_sollicite",
+    "duree_demande",
+    "date_creation",
+)
+
     list_filter = ("statut",)
     search_fields = (
         "beneficiaire__nom",
@@ -66,17 +67,16 @@ class DemandeAFASEAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
 
     fieldsets = (
-        ("Bénéficiaire", {
-            "fields": ("beneficiaire", "numero_genesis", "premiere_demande")
-        }),
-        ("Proposition AFASE", {
-            "fields": ("avis_ts", "montant_demande", "duree_demande")
-        }),
-        ("Statut", {
-            "fields": ("statut", "date_depot", "date_decision")
-        }),
-    )
-
+    ("Bénéficiaire", {
+        "fields": ("beneficiaire", "numero_genesis", "premiere_demande")
+    }),
+    ("Proposition AFASE", {
+        "fields": ("avis_ts", "montant_sollicite", "duree_demande")
+    }),
+    ("Statut", {
+        "fields": ("statut",)
+    }),
+)
     readonly_fields = ("date_depot", "date_decision")
 
     inlines = [
