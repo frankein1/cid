@@ -85,29 +85,32 @@
           </td>
           
 <td class="px-6 py-4 text-right space-x-3">
-  {% url aide.urls.detail aide.urls.detail_args.0 %}
-    Ouvrir
+
+  <!-- Ouvrir : toujours présent -->
+  <a href="{% url aide.urls.detail aide.urls.detail_args.0 %}"
+     class="text-blue-600 hover:underline">
+     Ouvrir
   </a>
-
-  {% if aide.can.modifier %}
-    {% url aide.urls.modifier aide.id %}
-      Modifier
+  {% if aide.can.modifier and aide.urls.modifier %}
+    <a href="{% url aide.urls.modifier aide.id %}"
+       class="text-gray-600 hover:underline">
+       Modifier
+    </a>
+  {% endif %}
+  {% if aide.can.decider and aide.urls.decision %}
+    <a href="{% url aide.urls.decision aide.id %}"
+       class="text-purple-600 hover:underline font-semibold">
+       Décider
+    </a>
+  {% endif %}
+  {% if aide.can.pdf and aide.urls.pdf %}
+    <a href="{% url aide.urls.pdf aide.id %}"
+       class="text-emerald-600 hover:underline">
+       PDF
     </a>
   {% endif %}
 
-  {% if aide.can.decider %}
-    {% url aide.urls.decision aide.id %}
-      Décider
-    </a>
-  {% endif %}
-
-  {% if aide.can.pdf %}
-    {% url aide.urls.pdf aide.id %}
-      PDF
-    </a>
-  {% endif %}
 </td>
-
         </tr>
         {% empty %}
         <tr>
