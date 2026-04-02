@@ -139,6 +139,26 @@ class Beneficiaire(models.Model):
         return LienFamilial.objects.filter(
             Q(personne_a=self) | Q(personne_b=self)
         ).select_related('personne_a', 'personne_b')
+        
+    @property
+    def enfants(self):
+        """Retourne les bénéficiaires liés comme 'ENFANT' via les liens familiaux."""
+        from beneficiaire.models import LienFamilial, Beneficiaire
+        liens = LienFamilial.objects.filter(
+            type_lien="ENFANT"
+        ).filter(
+            models.Q(personne_a=self) | models.Q(personne_b=self)
+        )
+
+        ids = []
+        for lien in liens:
+            if lien.personne_a_id != self.id:
+                ids.append(lien.personne_a_id)
+            if lien.personne_b_id != self.id:
+                ids.append(lien.personne_b_id)
+
+        return Beneficiaire.objects.filter(id__in=ids)
+
 
     def peut_etre_vu_par(self, user):
         """✅ CORRIGÉ CORE : Utilise UserMDSProfile + a_la_capacite"""
