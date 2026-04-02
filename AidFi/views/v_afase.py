@@ -94,7 +94,7 @@ def afase_detail(request, demande_id):
     # Récupération de la décision si elle existe
     decision = None
     try:
-        decision = demande.decisionafase
+        decision = demande.decision
     except DecisionAFASE.DoesNotExist:
         pass
     
