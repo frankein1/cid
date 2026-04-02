@@ -228,4 +228,3 @@ class DecisionAFASE(AuditedMixin):
         if self.type_decision == "REFUS":
             return REFUS_AFASE_CHOICES.get(self.code_decision, "Refus non précisé")
         return "Ajournement"
-``
