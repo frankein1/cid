@@ -77,7 +77,7 @@ class DemandeAFASEAdmin(admin.ModelAdmin):
         "fields": ("statut",)
     }),
 )
-    readonly_fields = ("date_depot", "date_decision")
+    readonly_fields = ("date_creation",)
 
     inlines = [
         EvaluationSocialeInline,
