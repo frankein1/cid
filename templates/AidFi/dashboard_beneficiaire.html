@@ -64,7 +64,16 @@
       <tbody class="divide-y">
         {% for aide in aides %}
         <tr class="hover:bg-gray-50">
-          <td class="px-6 py-4 font-semibold">{{ aide.type_label }}</td>
+          <td class="px-6 py-4 font-semibold flex items-center gap-2">
+            {% if aide.type == "AFASE" %}
+            <span class="text-blue-600">🧒</span>
+            {% elif aide.type == "CAP" %}
+            <span class="text-emerald-600">🎟️</span>
+            {% elif aide.type == "REGIE" %}
+            <span class="text-red-600">⚡</span>
+            {% endif %}
+            {{ aide.type_label }}
+          </td>
           <td class="px-6 py-4">{{ aide.date|date:"d/m/Y" }}</td>
           <td class="px-6 py-4">
             {% if aide.montant %}{{ aide.montant }} €{% else %}-{% endif %}
@@ -74,33 +83,31 @@
               {{ aide.statut }}
             </span>
           </td>
-          <td class="px-6 py-4 text-right space-x-3">
-            <a href="{% url aide.urls.detail aide.urls.detail_args.0 %}"
-               class="text-blue-600 hover:underline">
-              Ouvrir
-            </a>
+          
+<td class="px-6 py-4 text-right space-x-3">
+  {% url aide.urls.detail aide.urls.detail_args.0 %}
+    Ouvrir
+  </a>
 
-            {% if aide.can.modifier %}
-              <a href="{% url aide.urls.modifier aide.id %}"
-                 class="text-gray-600 hover:underline">
-                Modifier
-              </a>
-            {% endif %}
+  {% if aide.can.modifier %}
+    {% url aide.urls.modifier aide.id %}
+      Modifier
+    </a>
+  {% endif %}
 
-            {% if aide.can.decider %}
-              <a href="{% url aide.urls.decision aide.id %}"
-                 class="text-purple-600 hover:underline">
-                Décider
-              </a>
-            {% endif %}
+  {% if aide.can.decider %}
+    {% url aide.urls.decision aide.id %}
+      Décider
+    </a>
+  {% endif %}
 
-            {% if aide.can.pdf %}
-              <a href="{% url aide.urls.pdf aide.id %}"
-                 class="text-emerald-600 hover:underline">
-                PDF
-              </a>
-            {% endif %}
-          </td>
+  {% if aide.can.pdf %}
+    {% url aide.urls.pdf aide.id %}
+      PDF
+    </a>
+  {% endif %}
+</td>
+
         </tr>
         {% empty %}
         <tr>
