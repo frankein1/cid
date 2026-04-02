@@ -64,8 +64,8 @@ class DemandeAFASEAdmin(admin.ModelAdmin):
         "beneficiaire__prenom",
         "numero_genesis",
     )
-    ordering = ("-created_at",)
-
+    ordering = ("-date_creation",)
+    
     fieldsets = (
     ("Bénéficiaire", {
         "fields": ("beneficiaire", "numero_genesis", "premiere_demande")
