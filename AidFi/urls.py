@@ -23,41 +23,55 @@ urlpatterns = [
     # ==========================================================
     # AFASE (Aide Financière ASE)
     # ==========================================================
-    # CRÉATION (depuis le dashboard)
+    # CRÉATION
     path(
         "beneficiaire/<int:beneficiaire_id>/afase/nouvelle/",
         v_afase.afase_creer_ou_modifier,
         name="afase_creer",
     ),
-    
+
     # MODIFICATION
     path(
         "afase/<int:demande_id>/modifier/",
         v_afase.afase_creer_ou_modifier,
         name="afase_modifier",
     ),
-    
-    # DÉTAIL (utilisé depuis le dashboard)
+
+    # DÉTAIL (DASHBOARD TS / CADRE)
     path(
         "afase/<int:demande_id>/",
         v_afase.afase_detail,
         name="afase_detail",
     ),
-    
-    # ÉVALUATION
+
+    # INSTRUCTION TS
+    path(
+        "afase/<int:demande_id>/instruire/",
+        v_afase.afase_instruire,
+        name="afase_instruire",
+    ),
+
+    # ENVOI AU CADRE
+    path(
+        "afase/<int:demande_id>/envoyer-cadre/",
+        v_afase.afase_envoyer_cadre,
+        name="afase_envoyer_cadre",
+    ),
+
+    # ÉVALUATION (legacy / complément)
     path(
         "afase/<int:demande_id>/evaluation/",
         v_afase.afase_evaluation,
         name="afase_evaluation",
     ),
-    
-    # DÉCISION
+
+    # DÉCISION (CADRE)
     path(
         "afase/<int:demande_id>/decision/",
         v_afase.afase_decision,
         name="afase_decision",
     ),
-    
+
     # PDF
     path(
         "afase/<int:demande_id>/pdf/",
@@ -68,14 +82,12 @@ urlpatterns = [
     # ==========================================================
     # RÉGIE D'URGENCE
     # ==========================================================
-    # CRÉATION (depuis le dashboard)
     path(
         "beneficiaire/<int:beneficiaire_id>/regie/nouvelle/",
         v_regie.regie_urgence_create,
         name="regie_urgence_create",
     ),
-    
-    # DÉTAIL (à créer dans v_regie.py)
+
     path(
         "regie/<int:demande_id>/",
         v_regie.regie_detail,
@@ -83,16 +95,14 @@ urlpatterns = [
     ),
 
     # ==========================================================
-    # CAP (Chèque d'Accompagnement Personnalisé)
+    # CAP
     # ==========================================================
-    # CRÉATION (depuis le dashboard)
     path(
         "beneficiaire/<int:beneficiaire_id>/cap/nouvelle/",
         v_cap.cap_attribution,
         name="cap_attribution",
     ),
-    
-    # DÉTAIL (à créer dans v_cap.py)
+
     path(
         "cap/<int:demande_id>/",
         v_cap.cap_detail,
