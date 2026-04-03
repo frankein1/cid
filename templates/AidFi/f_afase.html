@@ -584,17 +584,17 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 </div>
 {% endblock %}
 
+{% block extra_js %}
 
 {{ context_budget|json_script:"budget-initial" }}
 
 <script>
 const BUDGET_INITIAL = JSON.parse(
-    document.getElementById("budget-initial").textContent
+    document.getElementById('budget-initial').textContent
 );
 </script>
 
 
-{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== DÉBUT INITIALISATION FORMULAIRE AFASE ===');
@@ -852,12 +852,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // 4. RÉHYDRATATION DU BUDGET EXISTANT (MODE MODIFICATION)
 // =====================================================================
 
-if (BUDGET_INITIAL.ressources || BUDGET_INITIAL.charges) {
+if (typeof BUDGET_INITIAL !== "undefined" &&
+    (BUDGET_INITIAL.ressources || BUDGET_INITIAL.charges)) {
+
     document.getElementById('ressourcesContainer').innerHTML = '';
     document.getElementById('chargesContainer').innerHTML = '';
 }
-
-if (typeof BUDGET_INITIAL !== "undefined") {
 
     // --- Ressources ---
     if (BUDGET_INITIAL.ressources && Object.keys(BUDGET_INITIAL.ressources).length > 0) {
@@ -886,7 +886,6 @@ if (typeof BUDGET_INITIAL !== "undefined") {
             if (amountInput) amountInput.value = amount;
         });
     }
-}
     
     updateBudgetCalculs();
     
