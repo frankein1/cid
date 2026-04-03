@@ -584,10 +584,16 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 </div>
 {% endblock %}
 
-<pre id="debug-budget">{{ context_budget }}</pre>
+
+{{ context_budget|json_script:"budget-initial" }}
+
 <script>
-const BUDGET_INITIAL = {{ context_budget|default_if_none:"{}"|safe }};
+const BUDGET_INITIAL = JSON.parse(
+    document.getElementById("budget-initial").textContent
+);
 </script>
+
+
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
