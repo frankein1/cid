@@ -58,6 +58,7 @@ REFUS_AFASE_CHOICES = {
 class DemandeAFASE(DemandeAide):
     """
     Demande AFASE – extension métier de DemandeAide
+    La décision devient définitive après verrouillage.
     """
 
     numero_genesis = models.CharField(max_length=50, blank=True)
@@ -77,6 +78,30 @@ class DemandeAFASE(DemandeAide):
 
     def __str__(self):
         return f"AFASE-{self.id} – {self.beneficiaire.nom}"
+
+    # ------------------------------
+    # VERROU MÉTIER (CLÉ DU SYSTÈME)
+    # ------------------------------
+
+    def verrouiller(self):
+        """
+        Verrouille définitivement la demande après décision cadre.
+        Toute modification ultérieure est interdite.
+        """
+        self.statut = "VERROUILLEE"
+        self.save(update_fields=["statut"])
+
+    @property
+    def est_verrouillee(self):
+        return self.statut == "VERROUILLEE"
+
+    @property
+    def est_modifiable(self):
+        """
+        Une demande verrouillée ne peut plus être modifiée
+        par aucun acteur (TS ou cadre).
+        """
+        return not self.est_verrouillee
 
     # ------------------------------
     # ACCÈS MÉTIER SIMPLIFIÉS
@@ -99,7 +124,7 @@ class DemandeAFASE(DemandeAide):
 
 
 # ==========================================================
-# ÉVALUATION SOCIALE
+# ÉVALUATION SOCIALE (AUDITÉE - NON VERROUILLÉE SEULE)
 # ==========================================================
 
 class EvaluationSocialeAFASE(AuditedMixin):
@@ -143,8 +168,12 @@ class BudgetAFASE(AuditedMixin):
     ressources = models.JSONField(default=dict)
     charges = models.JSONField(default=dict)
 
-    nb_personnes_foyer = models.PositiveSmallIntegerField(default=1, editable=False)
-    reste_a_vivre = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
+    nb_personnes_foyer = models.PositiveSmallIntegerField(
+        default=1, editable=False
+    )
+    reste_a_vivre = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, editable=False
+    )
 
     class Meta:
         verbose_name = "Budget AFASE"
@@ -156,11 +185,12 @@ class BudgetAFASE(AuditedMixin):
     def save(self, *args, **kwargs):
         beneficiaire = self.demande.beneficiaire
 
-        # Calcul du foyer
+        # Calcul du nombre de personnes au foyer
         nb = 1
-        liens = LienFamilial.objects.filter(
-            personne_a=beneficiaire
-        ) | LienFamilial.objects.filter(personne_b=beneficiaire)
+        liens = (
+            LienFamilial.objects.filter(personne_a=beneficiaire)
+            | LienFamilial.objects.filter(personne_b=beneficiaire)
+        )
 
         for lien in liens:
             if lien.vit_au_foyer:
@@ -169,17 +199,23 @@ class BudgetAFASE(AuditedMixin):
         self.nb_personnes_foyer = max(nb, 1)
 
         # Calcul du reste à vivre
-        total_ressources = sum(float(v) for v in (self.ressources or {}).values() if v)
-        total_charges = sum(float(v) for v in (self.charges or {}).values() if v)
+        total_ressources = sum(
+            float(v) for v in (self.ressources or {}).values() if v
+        )
+        total_charges = sum(
+            float(v) for v in (self.charges or {}).values() if v
+        )
 
         solde_mensuel = total_ressources - total_charges
-        self.reste_a_vivre = round(max(solde_mensuel / self.nb_personnes_foyer / 30, 0), 2)
+        self.reste_a_vivre = round(
+            max(solde_mensuel / self.nb_personnes_foyer / 30, 0), 2
+        )
 
         super().save(*args, **kwargs)
 
 
 # ==========================================================
-# DÉCISION
+# DÉCISION (AUDITÉE + BLOQUÉE PAR LA DEMANDE)
 # ==========================================================
 
 class DecisionAFASE(AuditedMixin):
@@ -195,10 +231,14 @@ class DecisionAFASE(AuditedMixin):
         related_name="decision",
     )
 
-    type_decision = models.CharField(max_length=10, choices=TYPE_DECISION_CHOICES)
+    type_decision = models.CharField(
+        max_length=10, choices=TYPE_DECISION_CHOICES
+    )
     code_decision = models.CharField(max_length=2, blank=True)
 
-    montant_accorde = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant_accorde = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0
+    )
     duree_accordee = models.PositiveSmallIntegerField(default=1)
     motivation = models.TextField(blank=True)
 
@@ -219,12 +259,18 @@ class DecisionAFASE(AuditedMixin):
 
     def clean(self):
         if self.type_decision == "REFUS" and not self.motivation:
-            raise ValidationError("Motivation obligatoire en cas de refus.")
+            raise ValidationError(
+                "Motivation obligatoire en cas de refus."
+            )
 
     @property
     def libelle_decision(self):
         if self.type_decision == "ACCORD":
-            return ACCORD_AFASE_CHOICES.get(self.code_decision, "Accord non précisé")
+            return ACCORD_AFASE_CHOICES.get(
+                self.code_decision, "Accord non précisé"
+            )
         if self.type_decision == "REFUS":
-            return REFUS_AFASE_CHOICES.get(self.code_decision, "Refus non précisé")
+            return REFUS_AFASE_CHOICES.get(
+                self.code_decision, "Refus non précisé"
+            )
         return "Ajournement"
