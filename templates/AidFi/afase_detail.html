@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load capacites ged_tags %}
+
+{% block title %}AFASE #{{ demande.id }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12">
+
+    <!-- HEADER -->
+    <div class="mb-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl shadow-2xl p-8">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-4xl font-black">AFASE #{{ demande.id }}</h1>
+                <p class="text-xl opacity-90">
+                    {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
+                </p>
+            </div>
+            <span class="px-6 py-3 bg-white/20 rounded-2xl font-bold">
+                {{ demande.get_statut_metier_display }}
+            </span>
+        </div>
+    </div>
+
+{% if not user|a_la_capacite:"peut_voir" %}
+    <div class="bg-red-100 p-8 rounded-xl text-center">
+        Accès refusé
+    </div>
+{% else %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- COLONNE GAUCHE : TS -->
+    <div class="space-y-6">
+
+        <!-- RÉSUMÉ -->
+        <div class="bg-white rounded-3xl shadow-xl p-8">
+            <h3 class="text-xl font-bold mb-4">Résumé de la demande</h3>
+            <p><strong>Montant :</strong> {{ demande.montant_solicite }} €</p>
+            <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
+            <p><strong>Créée le :</strong> {{ demande.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+
+        {% if user|a_la_capacite:"peut_instruire" and demande.statut_metier != "VERROUILLEE" %}
+
+        <!-- INSTRUCTION TS -->
+        <div class="bg-white rounded-3xl shadow-xl p-8">
+            <h3 class="text-xl font-bold mb-6">Instruction AFASE (TS)</h3>
+
+            <form method="post" action="{% url 'AidFi:afase_instruire' demande.id %}">
+                {% csrf_token %}
+
+                <label class="block font-semibold mb-2">
+                    Code de la demande AFASE
+                </label>
+                {{ form_instruction.code_instruction }}
+
+                <hr class="my-6">
+
+                <h4 class="font-semibold mb-4">Pièces justificatives GED</h4>
+
+                {% for doc in demande.documents.all %}
+                <div class="flex items-center gap-3 mb-2">
+                    <input type="checkbox"
+                           name="documents_valides"
+                           value="{{ doc.id }}"
+                           {% if doc.obligatoire %}checked{% endif %}>
+                    <span>{{ doc.document.nom }}</span>
+                </div>
+                {% empty %}
+                <p class="text-sm text-gray-500">Aucun document GED.</p>
+                {% endfor %}
+
+                <button type="submit"
+                        class="mt-6 w-full bg-blue-600 text-white p-4 rounded-xl font-bold">
+                    💾 Enregistrer l’instruction
+                </button>
+            </form>
+        </div>
+
+        <!-- ENVOI AU CADRE -->
+        <div class="bg-emerald-600 text-white rounded-3xl shadow-xl p-8 text-center">
+            <form method="post" action="{% url 'AidFi:afase_envoyer_cadre' demande.id %}">
+                {% csrf_token %}
+                <button class="w-full font-bold text-xl">
+                    🚀 Finaliser et envoyer au cadre
+                </button>
+            </form>
+        </div>
+
+        {% endif %}
+    </div>
+
+    <!-- COLONNE DROITE : CADRE / LECTURE -->
+    <div class="space-y-6">
+
+        <!-- GED -->
+        <div class="bg-white rounded-3xl shadow-xl p-8">
+            <h3 class="text-xl font-bold mb-4">Documents GED</h3>
+            <a href="{% url 'ged:document_list' %}?demande_afase={{ demande.id }}"
+               class="inline-block bg-orange-500 text-white px-6 py-3 rounded-xl">
+                📁 Accéder au GED
+            </a>
+        </div>
+
+        {% if demande.decision %}
+        <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
+            <a href="{% url 'AidFi:afase_pdf' demande.id %}"
+               class="block font-bold text-xl">
+                📄 Télécharger le PDF
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endif %}
+</div>
+{% endblock %}
