@@ -5,6 +5,7 @@ from AidFi.views import (
     v_afase,
     v_regie,
     v_cap,
+    v_cadre,
     v_generique,
 )
 
@@ -107,5 +108,13 @@ urlpatterns = [
         "cap/<int:demande_id>/",
         v_cap.cap_detail,
         name="cap_detail",
+    ),
+# ==========================================================
+# DASHBOARD CADRE
+# ==========================================================
+    path(
+        "cadre/dashboard/",
+        v_cadre.dashboard_cadre,
+        name="dashboard_cadre",
     ),
 ]
