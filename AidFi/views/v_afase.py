@@ -75,6 +75,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             demande=demande,
         )
 
+    budget = getattr(demande, "budget", None)
     return render(
         request,
         "AidFi/f_afase.html",
@@ -83,6 +84,10 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "beneficiaire": beneficiaire,
             "demande": demande,
             "action": action,
+            "context_budget": {
+                "ressources": budget.ressources if budget else {},
+                "charges": budget.charges if budget else {},
+            },
         },
     )
 
