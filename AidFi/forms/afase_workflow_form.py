@@ -3,7 +3,7 @@
 from django import forms
 from django.db import transaction
 from django.core.exceptions import ValidationError
-
+from decimal import Decimal
 from AidFi.models.m_afase import (
     DemandeAFASE,
     EvaluationSocialeAFASE,
@@ -54,15 +54,9 @@ class AFASEWorkflowForm(forms.Form):
     ressources = forms.JSONField(required=False)
     charges = forms.JSONField(required=False)
 
-    total_ressources = forms.DecimalField(
-        required=False, disabled=True, label="Total ressources"
-    )
-    total_charges = forms.DecimalField(
-        required=False, disabled=True, label="Total charges"
-    )
-    reste_a_vivre = forms.DecimalField(
-        required=False, disabled=True, label="Reste à vivre (journalier)"
-    )
+    total_ressources = forms.DecimalField(required=False, widget=forms.HiddenInput)
+    total_charges = forms.DecimalField(required=False, widget=forms.HiddenInput)
+    reste_a_vivre = forms.DecimalField(required=False, widget=forms.HiddenInput)
 
     # ==========================================================
     # INIT
@@ -133,8 +127,8 @@ class AFASEWorkflowForm(forms.Form):
         if not isinstance(ressources, dict) or not isinstance(charges, dict):
             raise ValidationError("Ressources et charges doivent être des dictionnaires.")
 
-        total_ressources = sum(ressources.values())
-        total_charges = sum(charges.values())
+        total_ressources = sum(Decimal(v or 0) for v in ressources.values())
+        total_charges = sum(Decimal(v or 0) for v in charges.values())
 
         cleaned["total_ressources"] = total_ressources
         cleaned["total_charges"] = total_charges
@@ -143,7 +137,7 @@ class AFASEWorkflowForm(forms.Form):
         nb_personnes = 1  # Le bénéficiaire lui-même
     
     # Compter les membres de la famille vivant au foyer
-        liens = self.beneficiaire.liens_familiaux
+        liens = self.beneficiaire.liens_familiaux.all()
         for lien in liens:
             if lien.vit_au_foyer:
                 nb_personnes += 1
@@ -151,7 +145,7 @@ class AFASEWorkflowForm(forms.Form):
         if nb_personnes <= 0:
             nb_personnes = 1
 
-        reste_a_vivre = (total_ressources - total_charges) / nb_personnes / 30
+        reste_a_vivre = (total_ressources - total_charges) / Decimal(nb_personnes) / Decimal("30")
         cleaned["reste_a_vivre"] = round(reste_a_vivre, 2)
 
         return cleaned
