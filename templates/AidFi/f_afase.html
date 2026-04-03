@@ -691,16 +691,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!montantInput || !dureeInput) return;
         
-        const montant = parseFloat(montantInput.value) || 0;
+        const montantMensuel = parseFloat(montantInput.value) || 0;
         const duree = parseInt(dureeInput.value) || 1;
-        const mensuel = montant / duree;
+        const total = montantMensuel * duree;
         
         const montantMensuelEl = document.getElementById('montantMensuel');
         const montantTotalEl = document.getElementById('montantTotal');
         const dureeAffichageEl = document.getElementById('dureeAffichage');
-        
-        if (montantMensuelEl) montantMensuelEl.textContent = mensuel.toFixed(2).replace('.', ',') + ' €';
-        if (montantTotalEl) montantTotalEl.textContent = montant.toFixed(2).replace('.', ',') + ' €';
+        if (montantMensuelEl) montantMensuelEl.textContent = montantMensuel.toFixed(2).replace('.', ',') + ' €';
+        if (montantTotalEl) montantTotalEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
         if (dureeAffichageEl) dureeAffichageEl.textContent = duree + ' mois';
     }
     
