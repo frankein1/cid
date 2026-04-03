@@ -585,7 +585,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 {% endblock %}
 
 <script>
-const BUDGET_INITIAL = {{ context_budget|default:{}|safe }};
+const BUDGET_INITIAL = {{ context_budget|default_if_none:"{}"|safe }};
 </script>
 {% block extra_js %}
 <script>
