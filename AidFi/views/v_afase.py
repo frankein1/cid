@@ -38,6 +38,8 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         demande = get_object_or_404(DemandeAFASE, pk=demande_id)
         beneficiaire = demande.beneficiaire
         action = "modification"
+        budget = getattr(demande, "budget", None)
+        print("DEBUG budget lié :", budget)
     elif beneficiaire_id:
         # CRÉATION : on a l'ID du bénéficiaire
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
