@@ -32,7 +32,8 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         demande = get_object_or_404(DemandeAFASE, pk=demande_id)
         beneficiaire = demande.beneficiaire
         action = "modification"
-        budget = getattr(demande, "budget", None)
+        budget = DemandeAFASE.objects.select_related("budget") \
+         .get(pk=demande.id).budget if demande else None
 
     elif beneficiaire_id:
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
@@ -78,9 +79,9 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
     # CONTEXTE BUDGET (CLÉ DU BUG)
     # ------------------------------
     context_budget = {
-        "ressources": budget.ressources if budget else {},
-        "charges": budget.charges if budget else {},
-    }
+        "ressources": budget.ressources,
+        "charges": budget.charges,
+    } if budget else {"ressources": {}, "charges": {}}
 
     # ------------------------------
     # RENDER
