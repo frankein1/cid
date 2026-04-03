@@ -586,6 +586,9 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 
 {% block extra_js %}
 <script>
+const BUDGET_INITIAL = {{ context_budget|default:{}|safe }};
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== DÉBUT INITIALISATION FORMULAIRE AFASE ===');
     
@@ -834,6 +837,40 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.resource-amount, .charge-amount, .resource-label, .charge-label').forEach(input => {
         input.addEventListener('input', updateBudgetCalculs);
     });
+// =====================================================================
+// 4. RÉHYDRATATION DU BUDGET EXISTANT (MODE MODIFICATION)
+// =====================================================================
+
+if (typeof BUDGET_INITIAL !== "undefined") {
+
+    // --- Ressources ---
+    if (BUDGET_INITIAL.ressources && Object.keys(BUDGET_INITIAL.ressources).length > 0) {
+        Object.entries(BUDGET_INITIAL.ressources).forEach(([label, amount]) => {
+            const line = createBudgetLine('resource');
+            if (!line) return;
+
+            const labelInput = line.querySelector('.resource-label');
+            const amountInput = line.querySelector('.resource-amount');
+
+            if (labelInput) labelInput.value = label;
+            if (amountInput) amountInput.value = amount;
+        });
+    }
+
+    // --- Charges ---
+    if (BUDGET_INITIAL.charges && Object.keys(BUDGET_INITIAL.charges).length > 0) {
+        Object.entries(BUDGET_INITIAL.charges).forEach(([label, amount]) => {
+            const line = createBudgetLine('charge');
+            if (!line) return;
+
+            const labelInput = line.querySelector('.charge-label');
+            const amountInput = line.querySelector('.charge-amount');
+
+            if (labelInput) labelInput.value = label;
+            if (amountInput) amountInput.value = amount;
+        });
+    }
+}
     
     updateBudgetCalculs();
     
