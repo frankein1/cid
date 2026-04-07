@@ -135,15 +135,28 @@ def afase_evaluation(request, demande_id):
     if not request.user.a_la_capacite("peut_instruire"):
         return HttpResponseForbidden("Accès refusé")
 
+    if demande.statut not in ["EN_INSTRUCTION", "BROUILLON"]:
+        messages.error(request, "Cette demande n’est pas modifiable.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+
     if request.method == "POST":
         form = EvaluationSocialeAFASEForm(request.POST, instance=demande.evaluation_afase)
         if form.is_valid():
             form.save()
-            demande.passer_en_instruction()
-            messages.success(request, "Évaluation enregistrée.")
+
+            # ✅ RELAI TS → CADRE
+            demande.statut = "DEPOSEE"
+            demande.save(update_fields=["statut"])
+
+            messages.success(
+                request,
+                "Instruction finalisée et demande transmise au cadre."
+            )
             return redirect("AidFi:afase_detail", demande_id=demande.id)
     else:
-        form = EvaluationSocialeAFASEForm(instance=getattr(demande, "evaluation_afase", None))
+        form = EvaluationSocialeAFASEForm(
+            instance=getattr(demande, "evaluation_afase", None)
+        )
 
     return render(
         request,
