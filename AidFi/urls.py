@@ -1,5 +1,3 @@
-# AidFi/urls.py
-
 from django.urls import path
 from AidFi.views import (
     v_afase,
@@ -24,56 +22,39 @@ urlpatterns = [
     # ==========================================================
     # AFASE (Aide Financière ASE)
     # ==========================================================
-    # CRÉATION
     path(
         "beneficiaire/<int:beneficiaire_id>/afase/nouvelle/",
         v_afase.afase_creer_ou_modifier,
         name="afase_creer",
     ),
 
-    # MODIFICATION
     path(
         "afase/<int:demande_id>/modifier/",
         v_afase.afase_creer_ou_modifier,
         name="afase_modifier",
     ),
 
-    # DÉTAIL (DASHBOARD TS / CADRE)
     path(
         "afase/<int:demande_id>/",
         v_afase.afase_detail,
         name="afase_detail",
     ),
 
-    # INSTRUCTION TS
-    path(
-        "afase/<int:demande_id>/instruire/",
-        v_afase.afase_instruire,
-        name="afase_instruire",
-    ),
-
-    # ENVOI AU CADRE
-    path(
-        "afase/<int:demande_id>/envoyer-cadre/",
-        v_afase.afase_envoyer_cadre,
-        name="afase_envoyer_cadre",
-    ),
-
-    # ÉVALUATION (legacy / complément)
+    # ✅ ÉVALUATION TS 
     path(
         "afase/<int:demande_id>/evaluation/",
         v_afase.afase_evaluation,
         name="afase_evaluation",
     ),
 
-    # DÉCISION (CADRE)
+    # ✅ DÉCISION CADRE
     path(
         "afase/<int:demande_id>/decision/",
         v_afase.afase_decision,
         name="afase_decision",
     ),
 
-    # PDF
+    # ✅ PDF OFFICIEL
     path(
         "afase/<int:demande_id>/pdf/",
         v_afase.afase_pdf,
@@ -109,9 +90,10 @@ urlpatterns = [
         v_cap.cap_detail,
         name="cap_detail",
     ),
-# ==========================================================
-# DASHBOARD CADRE
-# ==========================================================
+
+    # ==========================================================
+    # DASHBOARD CADRE
+    # ==========================================================
     path(
         "cadre/dashboard/",
         v_cadre.dashboard_cadre,
