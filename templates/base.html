@@ -85,6 +85,38 @@
                                 <span id="msg-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold"></span>
                             </a>
                         </div>
+                    {% if user|a_la_capacite:'peut_decider' %}
+<div class="relative">
+    <button id="cadre-button"
+            class="text-yellow-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+        <i class="fas fa-scale-balanced mr-2"></i>Cadre
+        <i class="fas fa-chevron-down ml-1 text-xs"></i>
+    </button>
+
+    <div id="cadre-menu"
+         class="hidden absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+
+        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">
+            Décisions
+        </div>
+
+        <a href="{% url 'AidFi:dashboard_cadre' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            ⚖️ AFASE à valider
+        </a>
+
+        {# Placeholder futur #}
+        <a href="#"
+           class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
+            🏦 Régie (à venir)
+        </a>
+        <a href="#"
+           class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
+            🎫 CAP (à venir)
+        </a>
+    </div>
+</div>
+{% endif %}
                     </div>
                     {% endif %}
                 </div>
@@ -161,6 +193,7 @@
 
             setupDropdown('ben-button', 'ben-menu');
             setupDropdown('planning-button', 'planning-menu');
+            setupDropdown('cadre-button', 'cadre-menu');
 
             document.addEventListener('click', () => {
                 document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
