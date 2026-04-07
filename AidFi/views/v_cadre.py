@@ -19,7 +19,7 @@ def dashboard_cadre(request):
         DemandeAFASE.objects
         .filter(statut="EVALUATION")
         .select_related("beneficiaire")
-        .order_by("created_at")
+        .order_by("date_creation")
     )
 
     return render(
