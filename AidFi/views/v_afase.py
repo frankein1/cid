@@ -159,6 +159,7 @@ def afase_evaluation(request, demande_id):
 # DÉCISION
 # ==========================================================
 
+
 @login_required
 def afase_decision(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
@@ -166,9 +167,24 @@ def afase_decision(request, demande_id):
     if not request.user.a_la_capacite("peut_decider"):
         return HttpResponseForbidden("Accès refusé")
 
-    decision = getattr(demande, "decisionafase", None)
+    # ✅ Le cadre ne décide QUE si la demande est déposée
+    if demande.statut != "DEPOSEE":
+        messages.error(request, "Cette demande n’est pas en attente de décision.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+    decision = getattr(demande, "decision", None)
 
     if request.method == "POST":
+        action = request.POST.get("action")
+
+        # 🔁 RETOUR EN INSTRUCTION
+        if action == "RETOUR_INSTRUCTION":
+            demande.statut = "EN_INSTRUCTION"
+            demande.save(update_fields=["statut"])
+            messages.success(request, "La demande a été retournée en instruction.")
+            return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+        # ✅ DÉCISION FINALE
         form = DecisionAFASEForm(request.POST, instance=decision)
         if form.is_valid():
             with transaction.atomic():
@@ -177,13 +193,19 @@ def afase_decision(request, demande_id):
                 decision.decide_par = request.user
                 decision.save()
 
-                demande.verrouiller()
+                if decision.type_decision == "ACCORD":
+                    demande.statut = "ACCORDEE"
+                else:
+                    demande.statut = "REFUSEE"
+
+                demande.save(update_fields=["statut"])
 
                 buffer = generer_pdf_afase(demande)
                 stocker_pdf_afase(demande, buffer, request.user)
 
                 messages.success(request, "Décision enregistrée.")
                 return redirect("AidFi:afase_detail", demande_id=demande.id)
+
     else:
         form = DecisionAFASEForm(instance=decision)
 
@@ -196,6 +218,7 @@ def afase_decision(request, demande_id):
             "form": form,
         },
     )
+
 
 # ==========================================================
 # PDF
