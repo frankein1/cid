@@ -21,7 +21,7 @@
                     {{ d.beneficiaire.nom }} {{ d.beneficiaire.prenom }}
                 </p>
                 <p class="text-sm text-gray-500">
-                    AFASE #{{ d.id }} — créée le {{ d.created_at|date:"d/m/Y" }}
+                    AFASE #{{ d.id }} — créée le {{ d.date_creation|date:"d/m/Y" }}
                 </p>
                 <p class="mt-2">
                     <strong>Montant :</strong> {{ d.montant_solicite }} €
