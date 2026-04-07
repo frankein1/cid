@@ -17,10 +17,11 @@ def dashboard_cadre(request):
 
     demandes = (
         DemandeAFASE.objects
-        .filter(statut="EVALUATION")
+        .filter(statut="DEPOSEE")
         .select_related("beneficiaire")
         .order_by("date_creation")
     )
+
 
     return render(
         request,
