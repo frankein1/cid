@@ -230,3 +230,39 @@ def afase_pdf(request, demande_id):
         as_attachment=True,
         filename=f"afase_{demande.id}.pdf",
     )
+
+# ==========================================================
+# ÉVALUATION SOCIALE (LEGACY / COMPATIBILITÉ)
+# ==========================================================
+
+@login_required
+def afase_evaluation(request, demande_id):
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+
+    if not request.user.a_la_capacite("peut_instruire"):
+        return HttpResponseForbidden("Accès refusé")
+
+    if demande.est_verrouillee:
+        messages.error(request, "Demande verrouillée. Évaluation impossible.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+    evaluation = getattr(demande, "evaluation_afase", None)
+
+    if request.method == "POST":
+        form = EvaluationSocialeAFASEForm(request.POST, instance=evaluation)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Évaluation sociale enregistrée.")
+            return redirect("AidFi:afase_detail", demande_id=demande.id)
+    else:
+        form = EvaluationSocialeAFASEForm(instance=evaluation)
+
+    return render(
+        request,
+        "AidFi/afase_evaluation.html",
+        {
+            "demande": demande,
+            "beneficiaire": demande.beneficiaire,
+            "form": form,
+        },
+    )
