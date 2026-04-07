@@ -18,14 +18,32 @@
     {% csrf_token %}
     {{ form.as_p }}
 
-    {% if user|a_la_capacite:"peut_decider" %}
-    <button type="submit" class="btn btn-danger">
-        Valider la décision
-    </button>
-    {% else %}
-    <div class="alert alert-warning">Vous n'avez pas les droits pour valider cette décision.</div>
-    {% endif %}
+    <div class="flex gap-4 mt-6">
+        <button type="submit"
+                name="action"
+                value="ACCORD"
+                class="bg-green-600 text-white px-6 py-3 rounded font-bold">
+            ✅ Accorder
+        </button>
 
-    <a href="{% url 'AidFi:afase_detail' demande.id %}">Annuler</a>
+        <button type="submit"
+                name="action"
+                value="REFUS"
+                class="bg-red-600 text-white px-6 py-3 rounded font-bold">
+            ❌ Refuser
+        </button>
+
+        <button type="submit"
+                name="action"
+                value="RETOUR_INSTRUCTION"
+                class="bg-yellow-500 text-white px-6 py-3 rounded font-bold">
+            🔁 Retour en instruction
+        </button>
+    </div>
+
+    <a href="{% url 'AidFi:afase_detail' demande.id %}"
+       class="inline-block mt-4 text-gray-600 underline">
+        Annuler
+    </a>
 </form>
 {% endblock %}
