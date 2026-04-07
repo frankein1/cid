@@ -30,65 +30,28 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
     <!-- COLONNE GAUCHE : TS -->
-    <div class="space-y-6">
 
-        <!-- RÉSUMÉ -->
-        <div class="bg-white rounded-3xl shadow-xl p-8">
-            <h3 class="text-xl font-bold mb-4">Résumé de la demande</h3>
-            <p><strong>Montant :</strong> {{ demande.montant_solicite }} €</p>
-            <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
-            <p><strong>Créée le :</strong> {{ demande.created_at|date:"d/m/Y H:i" }}</p>
-        </div>
+<div class="space-y-6">
 
-        {% if user|a_la_capacite:"peut_instruire" and demande.statut_metier != "VERROUILLEE" %}
-
-        <!-- INSTRUCTION TS -->
-        <div class="bg-white rounded-3xl shadow-xl p-8">
-            <h3 class="text-xl font-bold mb-6">Instruction AFASE (TS)</h3>
-
-            <form method="post" action="{% url 'AidFi:afase_instruire' demande.id %}">
-                {% csrf_token %}
-
-                <label class="block font-semibold mb-2">
-                    Code de la demande AFASE
-                </label>
-                {{ form_instruction.code_instruction }}
-
-                <hr class="my-6">
-
-                <h4 class="font-semibold mb-4">Pièces justificatives GED</h4>
-
-                {% for doc in demande.documents.all %}
-                <div class="flex items-center gap-3 mb-2">
-                    <input type="checkbox"
-                           name="documents_valides"
-                           value="{{ doc.id }}"
-                           {% if doc.obligatoire %}checked{% endif %}>
-                    <span>{{ doc.document.nom }}</span>
-                </div>
-                {% empty %}
-                <p class="text-sm text-gray-500">Aucun document GED.</p>
-                {% endfor %}
-
-                <button type="submit"
-                        class="mt-6 w-full bg-blue-600 text-white p-4 rounded-xl font-bold">
-                    💾 Enregistrer l’instruction
-                </button>
-            </form>
-        </div>
-
-        <!-- ENVOI AU CADRE -->
-        <div class="bg-emerald-600 text-white rounded-3xl shadow-xl p-8 text-center">
-            <form method="post" action="{% url 'AidFi:afase_envoyer_cadre' demande.id %}">
-                {% csrf_token %}
-                <button class="w-full font-bold text-xl">
-                    🚀 Finaliser et envoyer au cadre
-                </button>
-            </form>
-        </div>
-
-        {% endif %}
+    <!-- RÉSUMÉ -->
+    <div class="bg-white rounded-3xl shadow-xl p-8">
+        <h3 class="text-xl font-bold mb-4">Résumé de la demande</h3>
+        <p><strong>Montant :</strong> {{ demande.montant_solicite }} €</p>
+        <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
+        <p><strong>Créée le :</strong> {{ demande.date_creation|date:"d/m/Y H:i" }}</p>
     </div>
+
+    {% if user|a_la_capacite:"peut_instruire" and 
+          (demande.statut == "BROUILLON" or demande.statut == "EN_INSTRUCTION") %}
+    <div class="bg-blue-600 text-white rounded-3xl shadow-xl p-8 text-center">
+        <a href="{% url 'AidFi:afase_evaluation' demande.id %}"
+           class="block font-bold text-xl">
+            ✍️ Instruire / Finaliser la demande AFASE
+        </a>
+    </div>
+    {% endif %}
+
+</div>
 
     <!-- COLONNE DROITE : CADRE / LECTURE -->
     <div class="space-y-6">
