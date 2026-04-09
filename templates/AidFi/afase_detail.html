@@ -41,8 +41,8 @@
         <p><strong>Créée le :</strong> {{ demande.date_creation|date:"d/m/Y H:i" }}</p>
     </div>
 
-    {% if user|a_la_capacite:"peut_instruire" and 
-          (demande.statut == "BROUILLON" or demande.statut == "EN_INSTRUCTION") %}
+    {% if user|a_la_capacite:"peut_instruire" %}
+    {% if demande.statut == "BROUILLON" or demande.statut == "EN_INSTRUCTION" %}
     <div class="bg-blue-600 text-white rounded-3xl shadow-xl p-8 text-center">
         <a href="{% url 'AidFi:afase_evaluation' demande.id %}"
            class="block font-bold text-xl">
@@ -50,6 +50,7 @@
         </a>
     </div>
     {% endif %}
+{% endif %}
 
 </div>
 
