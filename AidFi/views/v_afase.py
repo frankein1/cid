@@ -83,6 +83,8 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         "charges": budget.charges,
     } if budget else {"ressources": {}, "charges": {}}
 
+
+    print("=== FIELDS DU FORMULAIRE ===", list(form.fields.keys()))                        
     # ------------------------------
     # RENDER
     # ------------------------------
