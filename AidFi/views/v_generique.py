@@ -93,6 +93,7 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
             aide["urls"]["detail"] = "AidFi:regie_detail"
             aide["urls"]["detail_args"] = [demande.id]
 
+        print(f"=== APRES CONSTRUCTION: demande #{demande.id} - aide.montant = {aide['montant']} | type = {type(aide['montant'])} ===")
         aides.append(aide)
 
     context = {
