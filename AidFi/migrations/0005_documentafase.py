@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('ged', '0001_initial'),  # Vérifie la dernière migration de ged
-        ('AidFi', '0004_add_decide_par.py'),  # Remplace par ta dernière migration AidFi
+        ('AidFi', '0004_add_decide_par'),  # Remplace par ta dernière migration AidFi
     ]
 
     operations = [
