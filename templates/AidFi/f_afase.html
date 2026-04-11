@@ -115,16 +115,6 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
 {% endblock %}
 
 {% block content %}
-<!-- ========== DEBUG : Afficher tous les champs du formulaire ========== -->
-<div style="background:yellow; border:2px solid red; padding:15px; margin:10px 0; font-family:monospace;">
-    <strong>🔍 DEBUG - Champs disponibles dans le formulaire :</strong>
-    <ul>
-    {% for field in form %}
-        <li><strong>{{ field.name }}</strong> : {{ field.field.__class__.__name__ }} - value: {{ field.value|default:"(vide)" }}</li>
-    {% endfor %}
-    </ul>
-</div>
-<!-- ========== FIN DEBUG ========== -->
 
 <div class="max-w-6xl mx-auto px-4 py-8">
     <!-- En-tête -->
