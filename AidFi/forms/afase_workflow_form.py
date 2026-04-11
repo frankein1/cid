@@ -8,6 +8,7 @@ from AidFi.models.m_afase import (
     DemandeAFASE,
     EvaluationSocialeAFASE,
     BudgetAFASE,
+    CODES_INSTRUCTION_AFASE,
 )
 from AidFi.models.m_generique import DemandeAide
 from beneficiaire.models import Beneficiaire, LienFamilial
@@ -42,6 +43,7 @@ class AFASEWorkflowForm(forms.Form):
     # BLOC 2 — ÉVALUATION SOCIALE
     # ==========================================================
 
+    code_instruction = forms.ChoiceField(choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],label="Code de la demande AFASE",required=True,)
     situation_sociale = forms.CharField(widget=forms.Textarea, required=False)
     analyse_problematique = forms.CharField(widget=forms.Textarea, required=False)
     justification_demande = forms.CharField(widget=forms.Textarea)
@@ -98,6 +100,7 @@ class AFASEWorkflowForm(forms.Form):
             if hasattr(demande, "evaluation_afase"):
                 eval = demande.evaluation_afase
                 self.initial.update({
+                    "code_instruction": eval.code_instruction,
                     "situation_sociale": eval.situation_sociale,
                     "analyse_problematique": eval.analyse_problematique,
                     "justification_demande": eval.justification_demande,
@@ -197,6 +200,7 @@ class AFASEWorkflowForm(forms.Form):
         EvaluationSocialeAFASE.objects.update_or_create(
             demande=demande,
             defaults={
+                "code_instruction": self.cleaned_data["code_instruction"],
                 "situation_sociale": self.cleaned_data["situation_sociale"],
                 "analyse_problematique": self.cleaned_data["analyse_problematique"],
                 "justification_demande": self.cleaned_data["justification_demande"],
