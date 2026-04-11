@@ -22,61 +22,64 @@
         </div>
     </div>
 
-{% if not user|a_la_capacite:"peut_voir" %}
-    <div class="bg-red-100 p-8 rounded-xl text-center">
-        Accès refusé
-    </div>
-{% else %}
+    {% if not user|a_la_capacite:"peut_voir" %}
+        <div class="bg-red-100 p-8 rounded-xl text-center">
+            Accès refusé
+        </div>
+    {% else %}
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-    <!-- COLONNE GAUCHE : TS -->
+            <!-- COLONNE GAUCHE : TS -->
+            <div class="space-y-6">
 
-<div class="space-y-6">
+                <!-- RÉSUMÉ -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-xl font-bold mb-4">Résumé de la demande</h3>
+                    <p><strong>Montant :</strong> {{ demande.montant_solicite }} €</p>
+                    <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
+                    <p><strong>Créée le :</strong> {{ demande.date_creation|date:"d/m/Y H:i" }}</p>
+                </div>
 
-    <!-- RÉSUMÉ -->
-    <div class="bg-white rounded-3xl shadow-xl p-8">
-        <h3 class="text-xl font-bold mb-4">Résumé de la demande</h3>
-        <p><strong>Montant :</strong> {{ demande.montant_solicite }} €</p>
-        <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
-        <p><strong>Créée le :</strong> {{ demande.date_creation|date:"d/m/Y H:i" }}</p>
-    </div>
+                {% if user|a_la_capacite:"peut_instruire" %}
+                    {% if demande.statut == "BROUILLON" or demande.statut == "EN_INSTRUCTION" %}
+                        <div class="bg-blue-600 text-white rounded-3xl shadow-xl p-8 text-center">
+                            <a href="{% url 'AidFi:afase_evaluation' demande.id %}"
+                               class="block font-bold text-xl">
+                                ✍️ Instruire / Finaliser la demande AFASE
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endif %}
 
-    {% if user|a_la_capacite:"peut_instruire" %}
-    {% if demande.statut == "BROUILLON" or demande.statut == "EN_INSTRUCTION" %}
-    <div class="bg-blue-600 text-white rounded-3xl shadow-xl p-8 text-center">
-        <a href="{% url 'AidFi:afase_evaluation' demande.id %}"
-           class="block font-bold text-xl">
-            ✍️ Instruire / Finaliser la demande AFASE
-        </a>
-    </div>
-    {% endif %}
-{% endif %}
+            </div>
 
-</div>
+            <!-- COLONNE DROITE : CADRE / LECTURE -->
+            <div class="space-y-6">
 
-    <!-- COLONNE DROITE : CADRE / LECTURE -->
-    <div class="space-y-6">
+                <!-- GED -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-xl font-bold mb-4">Documents GED</h3>
+                    <a href="{% url 'ged:document_list' %}?demande_afase={{ demande.id }}"
+                       class="inline-block bg-orange-500 text-white px-6 py-3 rounded-xl">
+                        📁 Accéder au GED
+                    </a>
+                </div>
 
-        <!-- GED -->
-        <div class="bg-white rounded-3xl shadow-xl p-8">
-            <h3 class="text-xl font-bold mb-4">Documents GED</h3>
-            <a href="{% url 'ged:document_list' %}?demande_afase={{ demande.id }}"
-               class="inline-block bg-orange-500 text-white px-6 py-3 rounded-xl">
-                📁 Accéder au GED
-            </a>
+                {% if demande.decision %}
+                    <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
+                        <a href="{% url 'AidFi:afase_pdf' demande.id %}"
+                           class="block font-bold text-xl">
+                            📄 Télécharger le PDF
+                        </a>
+                    </div>
+                {% endif %}
+
+            </div>
+
         </div>
 
-        {% if demande.decision %}
-        <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
-            <a href="{% url 'AidFi:afase_pdf' demande.id %}"
-               class="block font-bold text-xl">
-                📄 Télécharger le PDF
-            </a>
-        </div>
-        {% endif %}
-    </div>
-
+    {% endif %}  <!-- ← Ceci ferme le else de la capacité "peut_voir" -->
 
 </div>
 {% endblock %}
