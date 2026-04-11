@@ -84,7 +84,16 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
     } if budget else {"ressources": {}, "charges": {}}
 
 
-    print("=== FIELDS DU FORMULAIRE ===", list(form.fields.keys()))                        
+    print("=== FIELDS DU FORMULAIRE ===", list(form.fields.keys()))
+    
+    # ------------------------------
+    # CALCUL DU NOMBRE DE PERSONNES AU FOYER
+    # ------------------------------
+    nb_personnes_foyer = 1  # Le bénéficiaire lui-même
+    for lien in beneficiaire.liens_familiaux.all():
+        if lien.vit_au_foyer:
+            nb_personnes_foyer += 1
+    
     # ------------------------------
     # RENDER
     # ------------------------------
@@ -97,6 +106,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "demande": demande,
             "action": action,
             "context_budget": context_budget,
+            "nb_personnes_foyer": nb_personnes_foyer,  # ← AJOUT
         },
     )
 
