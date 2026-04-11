@@ -61,6 +61,7 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
         # ==========================
         if type_code == "AFASE":
             afase = DemandeAFASE.objects.get(pk=demande.pk)
+            print(f"=== DASHBOARD DEBUG: demande #{demande.id} - montant_sollicite = {demande.montant_sollicite} ===")
 
             aide["urls"]["detail"] = "AidFi:afase_detail"
             aide["urls"]["detail_args"] = [afase.id]
