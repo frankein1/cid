@@ -560,9 +560,8 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                     </div>
                     
                     <div class="text-sm text-gray-500 mt-2">
-    {% with nb_personnes_foyer=beneficiaire.liens_familiaux|length|add:1 %}
         Pour {{ nb_personnes_foyer }} personne{{ nb_personnes_foyer|pluralize:"s" }} dans le foyer
-    {% endwith %}
+    
 </div>
                     </div>
                     
