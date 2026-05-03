@@ -1,33 +1,41 @@
+#!/usr/bin/env python
+"""
+Script de démarrage pour Render - VERSION CORRIGÉE PORT
+"""
 import os
-import subprocess
+import sys
 import django
 
-print("🔧 [Render] Applying migrations...")
+print("🔧 [Render] Démarrage...")
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "cid.settings")
-django.setup()
 
-# --- Étape 1 : migrations rapides ---
 try:
-    subprocess.run(
-        ["python", "manage.py", "migrate", "--noinput"],
-        check=True
-    )
-    print("✅ Migrations OK.")
+    django.setup()
+    print("✅ Django setup OK")
 except Exception as e:
-    print("❌ Migration error:", e)
+    print(f"❌ Django setup FAILED: {e}")
+    sys.exit(1)
 
-# --- Étape 2 : créer superuser léger ---
-from django.contrib.auth import get_user_model
-User = get_user_model()
-
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin1234!")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
-
-print(f"👤 Vérification superuser '{ADMIN_USERNAME}'...")
-
+# --- Étape 1 : Migrations (non bloquant) ---
+print("📦 Étape 1: Migrations...")
 try:
+    from django.core.management import call_command
+    call_command('migrate', '--noinput', verbosity=0)
+    print("✅ Migrations OK")
+except Exception as e:
+    print(f"⚠️  Migrations warning (continuing): {e}")
+
+# --- Étape 2 : Superuser (non bloquant) ---
+print("👤 Étape 2: Superuser...")
+try:
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Admin1234!")
+    ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@example.com")
+    
     if not User.objects.filter(username=ADMIN_USERNAME).exists():
         User.objects.create_superuser(
             username=ADMIN_USERNAME,
@@ -35,30 +43,49 @@ try:
             email=ADMIN_EMAIL,
             matricule="ADMIN_RENDER"
         )
-        print("✅ Superuser créé.")
+        print(f"✅ Superuser '{ADMIN_USERNAME}' créé")
     else:
-        print("ℹ️ Superuser existant.")
+        print(f"ℹ️ Superuser '{ADMIN_USERNAME}' existe déjà")
 except Exception as e:
-    print("⚠️ Impossible de créer le superuser :", e)
+    print(f"⚠️  Superuser warning (continuing): {e}")
 
-# --- ÉTAPE 2.5 : INITIALISATION DES PERMISSIONS (AJOUT CRITIQUE) ---
-print("🔐 Vérification des profils et permissions...")
+# --- Étape 3 : Permissions (non bloquant) ---
+print("🔐 Étape 3: Permissions...")
 try:
     from core.models import Profil
     from django.core.management import call_command
     
-    # Si aucun profil n'existe, on lance l'initialisation
     if Profil.objects.count() == 0:
-        print("⚠️  Aucun profil détecté. Lancement de l'initialisation...")
-        call_command('init_permissions_complet', verbosity=1)
-        print("✅ Profils et permissions initialisés.")
+        print("⚠️  Aucun profil détecté. Initialisation...")
+        call_command('init_permissions_complet', verbosity=0)
+        print("✅ Permissions initialisées")
     else:
-        print(f"✅ {Profil.objects.count()} profils déjà présents.")
-        
+        print(f"✅ {Profil.objects.count()} profils déjà présents")
 except Exception as e:
-    print(f"⚠️  Problème d'initialisation des permissions (non bloquant): {e}")
+    print(f"⚠️  Permissions warning (continuing): {e}")
 
-# --- Étape 3 : démarrer gunicorn ---
-print("🚀 Lancement gunicorn...")
-# On utilise exec pour remplacer le processus Python par Gunicorn (meilleure gestion des signaux)
-os.execvp("gunicorn", ["gunicorn", "cid.wsgi:application", "--bind", "0.0.0.0:$PORT"])
+# --- Étape 4 : Démarrer Gunicorn (CORRIGÉ PORT) ---
+print("🚀 Étape 4: Lancement Gunicorn...")
+
+# ✅ LIRE LA VARIABLE PORT DEPUIS L'ENVIRONNEMENT
+render_port = os.environ.get('PORT', '8000')  # 8000 en fallback local
+
+try:
+    from gunicorn.app.wsgiapp import run
+    
+    # Construire les arguments avec la VRAIE valeur du port
+    bind_address = f"0.0.0.0:{render_port}"
+    print(f"   → Binding sur {bind_address}")
+    
+    os.environ['GUNICORN_CMD_ARGS'] = f'--bind {bind_address} --timeout 120'
+    run()
+except ImportError:
+    print("⚠️  Gunicorn non installé, installation...")
+    os.system('pip install gunicorn')
+    from gunicorn.app.wsgiapp import run
+    bind_address = f"0.0.0.0:{render_port}"
+    os.environ['GUNICORN_CMD_ARGS'] = f'--bind {bind_address} --timeout 120'
+    run()
+except Exception as e:
+    print(f"❌ Gunicorn failed: {e}")
+    sys.exit(1)
