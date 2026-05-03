@@ -83,6 +83,7 @@ class Beneficiaire(models.Model):
     numero_caf = models.CharField(max_length=10, blank=True)
     numero_france_travail = models.CharField(max_length=20, blank=True, null=True)
     numero_fiscal = models.CharField(max_length=20, blank=True, null=True)
+    numero_genesis = models.CharField(max_length=50, blank=True, null=True, verbose_name="Numéro GENESIS", help_text="Numéro d'identification externe (GENESIS)")
 
     # Contact
     adresse = models.TextField()
