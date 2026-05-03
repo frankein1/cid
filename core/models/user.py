@@ -58,7 +58,7 @@ class User(TimestampedMixin, AbstractUser):
     objects = CustomUserManager()
     
     # Identifiants
-    matricule = models.CharField(max_length=20, unique=True, null=False, blank=False)
+    matricule = models.CharField(max_length=15, unique=True, null=False, blank=False)
     
     # Coordonnées
     telephone_professionnel = models.CharField(max_length=20, blank=True, default='')
