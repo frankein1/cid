@@ -24,12 +24,16 @@ class AFASEWorkflowForm(forms.Form):
     # BLOC 1 — CONTEXTE / DEMANDEUR
     # ==========================================================
 
-    demandeur = forms.ModelChoiceField(
-        queryset=Beneficiaire.objects.none(),
-        label="Personne ayant formulé la demande",
-    )
+    demandeur = forms.ModelChoiceField(queryset=Beneficiaire.objects.none(), label="Personne ayant formulé la demande",)
 
-    numero_genesis = forms.CharField(required=False, label="N° GENESIS")
+    numero_genesis = self.cleaned_data.get("numero_genesis")
+    if numero_genesis:
+            # Si un numéro est saisi dans le formulaire AFASE
+            # On le met à jour dans la fiche Bénéficiaire
+            if self.beneficiaire.numero_genesis != numero_genesis:
+                self.beneficiaire.numero_genesis = numero_genesis
+                self.beneficiaire.save(update_fields=['numero_genesis'])
+                
     premiere_demande = forms.BooleanField(required=False)
     avis_ts = forms.ChoiceField(
         choices=DemandeAFASE.AVIS_TS_CHOICES,
