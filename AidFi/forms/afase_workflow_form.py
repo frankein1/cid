@@ -1,4 +1,4 @@
-# AidFi/forms/afase_workflow_form.py
+# AidFi/forms/afase_workflow_form.py - VERSION CORRIGÉE
 
 from django import forms
 from django.db import transaction
@@ -24,16 +24,18 @@ class AFASEWorkflowForm(forms.Form):
     # BLOC 1 — CONTEXTE / DEMANDEUR
     # ==========================================================
 
-    demandeur = forms.ModelChoiceField(queryset=Beneficiaire.objects.none(), label="Personne ayant formulé la demande",)
+    demandeur = forms.ModelChoiceField(
+        queryset=Beneficiaire.objects.none(),
+        label="Personne ayant formulé la demande",
+    )
 
-    numero_genesis = self.cleaned_data.get("numero_genesis")
-    if numero_genesis:
-            # Si un numéro est saisi dans le formulaire AFASE
-            # On le met à jour dans la fiche Bénéficiaire
-            if self.beneficiaire.numero_genesis != numero_genesis:
-                self.beneficiaire.numero_genesis = numero_genesis
-                self.beneficiaire.save(update_fields=['numero_genesis'])
-                
+    numero_genesis = forms.CharField(
+        max_length=50, 
+        required=False, 
+        label="Numéro GENESIS",
+        help_text="Si inconnu, laissez vide. Sera mis à jour dans la fiche bénéficiaire."
+    )
+
     premiere_demande = forms.BooleanField(required=False)
     avis_ts = forms.ChoiceField(
         choices=DemandeAFASE.AVIS_TS_CHOICES,
@@ -47,7 +49,11 @@ class AFASEWorkflowForm(forms.Form):
     # BLOC 2 — ÉVALUATION SOCIALE
     # ==========================================================
 
-    code_instruction = forms.ChoiceField(choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],label="Code de la demande AFASE",required=True,)
+    code_instruction = forms.ChoiceField(
+        choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],
+        label="Code de la demande AFASE",
+        required=True,
+    )
     situation_sociale = forms.CharField(widget=forms.Textarea, required=False)
     analyse_problematique = forms.CharField(widget=forms.Textarea, required=False)
     justification_demande = forms.CharField(widget=forms.Textarea)
@@ -116,10 +122,14 @@ class AFASEWorkflowForm(forms.Form):
                 self.initial.update({
                     "ressources": budget.ressources,
                     "charges": budget.charges,
-                    "total_ressources": sum(budget.ressources.values()),
-                    "total_charges": sum(budget.charges.values()),
+                    "total_ressources": sum(budget.ressources.values()) if budget.ressources else 0,
+                    "total_charges": sum(budget.charges.values()) if budget.charges else 0,
                     "reste_a_vivre": budget.reste_a_vivre,
                 })
+        else:
+            # ✅ PRÉ-REMPLISSAGE AUTOMATIQUE POUR NOUVELLE DEMANDE
+            if beneficiaire.numero_genesis:
+                self.initial['numero_genesis'] = beneficiaire.numero_genesis
 
     # ==========================================================
     # VALIDATION MÉTIER
@@ -134,16 +144,16 @@ class AFASEWorkflowForm(forms.Form):
         if not isinstance(ressources, dict) or not isinstance(charges, dict):
             raise ValidationError("Ressources et charges doivent être des dictionnaires.")
 
-        total_ressources = sum(Decimal(v or 0) for v in ressources.values())
-        total_charges = sum(Decimal(v or 0) for v in charges.values())
+        total_ressources = sum(Decimal(str(v) or 0) for v in ressources.values())
+        total_charges = sum(Decimal(str(v) or 0) for v in charges.values())
 
         cleaned["total_ressources"] = total_ressources
         cleaned["total_charges"] = total_charges
 
-    # ✅ CALCUL DU NOMBRE DE PERSONNES AU FOYER
+        # ✅ CALCUL DU NOMBRE DE PERSONNES AU FOYER
         nb_personnes = 1  # Le bénéficiaire lui-même
     
-    # Compter les membres de la famille vivant au foyer
+        # Compter les membres de la famille vivant au foyer
         liens = self.beneficiaire.liens_familiaux.all()
         for lien in liens:
             if lien.vit_au_foyer:
@@ -162,13 +172,23 @@ class AFASEWorkflowForm(forms.Form):
     # ==========================================================
 
     @transaction.atomic
-    def save(self):  # ✅ MAINTENANT CORRECTEMENT INDENTÉ (4 espaces)
+    def save(self):
         """
         Crée ou met à jour l'ensemble du dossier AFASE.
+        Synchronise le numéro GENESIS avec le bénéficiaire.
         """
         # Import ici pour éviter les imports circulaires
         from AidFi.models.m_generique import TypeAide
         
+        # 1. Synchronisation GENESIS (Avant de créer la demande)
+        numero_genesis = self.cleaned_data.get("numero_genesis")
+        if numero_genesis:
+            # Si un numéro est saisi dans le formulaire AFASE
+            # On le met à jour dans la fiche Bénéficiaire
+            if self.beneficiaire.numero_genesis != numero_genesis:
+                self.beneficiaire.numero_genesis = numero_genesis
+                self.beneficiaire.save(update_fields=['numero_genesis'])
+
         if self.demande:
             demande = self.demande
         else:
