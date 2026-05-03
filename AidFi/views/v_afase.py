@@ -32,8 +32,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         demande = get_object_or_404(DemandeAFASE, pk=demande_id)
         beneficiaire = demande.beneficiaire
         action = "modification"
-        budget = DemandeAFASE.objects.select_related("budget") \
-         .get(pk=demande.id).budget if demande else None
+        budget = demande.budget if hasattr(demande, 'budget') else None
 
     elif beneficiaire_id:
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
@@ -69,23 +68,25 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         else:
             messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
+        # Initialisation du formulaire (GET)
         form = AFASEWorkflowForm(
             beneficiaire=beneficiaire,
             user=request.user,
             demande=demande,
         )
+        # ✅ PRÉ-REMPLISSAGE AUTOMATIQUE (Déplacé ici, hors du POST)
+        if not demande: # Si c'est une nouvelle demande
+            if beneficiaire.numero_genesis:
+                form.fields['numero_genesis'].initial = beneficiaire.numero_genesis
 
     # ------------------------------
-    # CONTEXTE BUDGET (CLÉ DU BUG)
+    # CONTEXTE BUDGET
     # ------------------------------
     context_budget = {
         "ressources": budget.ressources,
         "charges": budget.charges,
     } if budget else {"ressources": {}, "charges": {}}
 
-
-    print("=== FIELDS DU FORMULAIRE ===", list(form.fields.keys()))
-    
     # ------------------------------
     # CALCUL DU NOMBRE DE PERSONNES AU FOYER
     # ------------------------------
@@ -106,7 +107,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "demande": demande,
             "action": action,
             "context_budget": context_budget,
-            "nb_personnes_foyer": nb_personnes_foyer,  # ← AJOUT
+            "nb_personnes_foyer": nb_personnes_foyer,
         },
     )
 
@@ -121,7 +122,7 @@ def afase_detail(request, demande_id):
     if not request.user.a_la_capacite("peut_voir"):
         return HttpResponseForbidden("Accès refusé")
 
-    decision = getattr(demande, "decisionafase", None)
+    decision = getattr(demande, "decision", None)
 
     return render(
         request,
@@ -184,7 +185,6 @@ def afase_evaluation(request, demande_id):
 # DÉCISION
 # ==========================================================
 
-
 @login_required
 def afase_decision(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
@@ -243,7 +243,6 @@ def afase_decision(request, demande_id):
             "form": form,
         },
     )
-
 
 # ==========================================================
 # PDF
