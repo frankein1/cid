@@ -13,6 +13,15 @@ from ged.models import DocumentGED
 from mds.models import MDS
 from planning.models import CreneauRdv
 
+# Modèles supplémentaires AidFi
+try:
+    from AidFi.models import (
+        TypeAide, PieceJustificative, CAPCheque, RegieUrgence, PieceObligatoire
+    )
+    AIDFI_INSTALLED = True
+except ImportError:
+    AIDFI_INSTALLED = False
+
 
 class Command(BaseCommand):
     help = "Initialise la matrice globale : Capacités CORE + Permissions Django"
@@ -41,7 +50,6 @@ class Command(BaseCommand):
         # ========================================
         self.stdout.write("\n[2/3] 👥 Configuration des profils...")
 
-        
         # MATRICE DE CONFIGURATION
         # Structure : {CODE_PROFIL: {capacites_codes, permissions_django, description}}
         profils_config = {
@@ -59,6 +67,13 @@ class Command(BaseCommand):
                     MDS: ["view"],
                     CreneauRdv: ["view", "add", "change", "delete"],
                     DocumentGED: ["view", "add"],
+                },
+                "additional_models": {
+                    TypeAide: ["view"] if AIDFI_INSTALLED else None,
+                    PieceJustificative: ["view"] if AIDFI_INSTALLED else None,
+                    CAPCheque: ["view"] if AIDFI_INSTALLED else None,
+                    RegieUrgence: ["view"] if AIDFI_INSTALLED else None,
+                    PieceObligatoire: ["view"] if AIDFI_INSTALLED else None,
                 },
             },
 
@@ -79,6 +94,13 @@ class Command(BaseCommand):
                     CreneauRdv: ["view", "add", "change", "delete"],
                     DocumentGED: ["view", "add", "change"],
                     DemandeAFASE: ["view", "add", "change"],
+                },
+                "additional_models": {
+                    TypeAide: ["view", "add", "change"] if AIDFI_INSTALLED else None,
+                    PieceJustificative: ["view", "add", "change"] if AIDFI_INSTALLED else None,
+                    CAPCheque: ["view", "add", "change"] if AIDFI_INSTALLED else None,
+                    RegieUrgence: ["view", "add", "change"] if AIDFI_INSTALLED else None,
+                    PieceObligatoire: ["view", "add", "change"] if AIDFI_INSTALLED else None,
                 },
             },
 
@@ -109,6 +131,13 @@ class Command(BaseCommand):
                     DemandeAFASE: ["view", "add", "change", "delete"],
                     DecisionAFASE: ["add", "change", "delete"],
                 },
+                "additional_models": {
+                    TypeAide: ["view", "add", "change", "delete"] if AIDFI_INSTALLED else None,
+                    PieceJustificative: ["view", "add", "change", "delete"] if AIDFI_INSTALLED else None,
+                    CAPCheque: ["view", "add", "change", "delete"] if AIDFI_INSTALLED else None,
+                    RegieUrgence: ["view", "add", "change", "delete"] if AIDFI_INSTALLED else None,
+                    PieceObligatoire: ["view", "add", "change", "delete"] if AIDFI_INSTALLED else None,
+                },
             },
 
             "SUPER_ADMIN": {
@@ -135,6 +164,7 @@ class Command(BaseCommand):
                     'planning_exporter',
                 ],
                 "all_perms": True,
+                "additional_models": {},
             }
         }
 
@@ -188,11 +218,20 @@ class Command(BaseCommand):
                     perms = self.get_perms(model, actions)
                     groupe.permissions.add(*perms)
                     total_perms += perms.count()
+                
+                # Permissions sur modèles supplémentaires (AidFi)
+                for model_class, actions in config.get("additional_models", {}).items():
+                    if model_class and actions:  # Skip None values
+                        perms = self.get_perms(model_class, actions)
+                        groupe.permissions.add(*perms)
+                        total_perms += perms.count()
+                
                 self.stdout.write(f"     → {total_perms} permissions Django")
 
-            # 5. Lier le profil au groupe modif à confirmer 19/01/26 22h55
-            #profil.groupes.clear()
-            #profil.groupes.add(groupe)
+            # 5. Lier le profil au groupe (CORRIGÉ - décommenté)
+            profil.groupes.clear()
+            profil.groupes.add(groupe)
+            self.stdout.write(f"     → Profil lié au groupe Django")
 
         # ========================================
         # ÉTAPE 3 : Initialisation AFASE
@@ -220,9 +259,7 @@ class Command(BaseCommand):
         self.stdout.write("\n📋 DÉTAIL PAR PROFIL :")
         for profil in Profil.objects.filter(actif=True).order_by('code'):
             nb_caps = profil.capacites.count()
-            # modif 19/01/26 22h55 
-            #nb_perms = profil.groupes.first().permissions.count() if profil.groupes.exists() else 0
+            nb_perms = profil.groupes.first().permissions.count() if profil.groupes.exists() else 0
             self.stdout.write(f"  • {profil.nom}")
             self.stdout.write(f"    - {nb_caps} capacités métier")
-            # modif 19/01/26 22h55 
-            #self.stdout.write(f"    - {nb_perms} permissions Django")
+            self.stdout.write(f"    - {nb_perms} permissions Django")
