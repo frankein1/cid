@@ -1,8 +1,10 @@
 """
 SeaweedFS Mock intelligent - Simule une vraie GED pour les démos
+CORRIGÉ : Utilisation de MEDIA_ROOT pour la persistance
 """
 import uuid
 import os
+from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.files.base import ContentFile
 
@@ -10,9 +12,11 @@ class SeaweedFSMock:
     """Mock intelligent qui stocke réellement les fichiers temporairement"""
     
     def __init__(self):
-        self.storage = FileSystemStorage(location='/tmp/ged_mock')
+        # Utilisation de MEDIA_ROOT au lieu de /tmp pour persistance
+        storage_path = getattr(settings, 'MEDIA_ROOT', '/tmp/ged_mock')
+        self.storage = FileSystemStorage(location=os.path.join(storage_path, 'ged_mock'))
         self.files = {}
-        print("✅ GED Mock activé (stockage temporaire /tmp/)")
+        print(f"✅ GED Mock activé (stockage persistant : {storage_path}/ged_mock)")
     
     def upload_file(self, file_content, name=None, **kwargs):
         """Upload un fichier et retourne un ID réaliste"""
