@@ -29,5 +29,4 @@ class Migration(migrations.Migration):
         migrations.AddIndex(model_name='beneficiaire', index=models.Index(fields=['code_interne'], name='beneficiair_code_in_ba36dc_idx'),),
         migrations.AddIndex(model_name='lienfamilial', index=models.Index(fields=['personne_a', 'personne_b'], name='beneficiair_personn_b6350a_idx'),),
         migrations.AlterUniqueTogether(name='lienfamilial', unique_together={('personne_a', 'personne_b', 'type_lien')},),
-        migrations.AddField(model_name='beneficiaire', name='numero_genesis', field=models.CharField(blank=True, max_length=50, null=True, verbose_name="Numéro GENESIS", help_text="Numéro d'identification externe (GENESIS)"),),
     ]
