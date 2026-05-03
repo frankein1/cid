@@ -136,6 +136,20 @@ class User(TimestampedMixin, AbstractUser):
     # SYSTÈME DE DROITS UNIFIÉ (MÉTIER + MDS)
     # ----------------------------------------------------------------------
 
+    def get_capacites_codes(self):
+        """
+        Retourne un ensemble (set) des codes de capacités de l'utilisateur.
+        Méthode unique source de vérité pour les capacités.
+        """
+        if self.is_superuser:
+            return set() # Superuser géré séparément
+        
+        return set(
+            self.profils
+            .filter(actif=True)
+            .values_list("capacites__code", flat=True)
+        )
+
     @property
     def capacites(self):
         """
@@ -151,13 +165,8 @@ class User(TimestampedMixin, AbstractUser):
                     return True
             return AllRights()
         
-        # Récupération des codes de capacités
-        codes = set(
-            self.profils
-            .filter(actif=True)
-            .prefetch_related('capacites')
-            .values_list('capacites__code', flat=True)
-        )
+        # Récupération des codes de capacités via la méthode unique
+        codes = self.get_capacites_codes()
         
         # Création d'une classe avec __getattr__
         class UserCapacites:
@@ -225,6 +234,10 @@ class User(TimestampedMixin, AbstractUser):
     def save(self, *args, **kwargs):
         if self.email:
             self.email = self.email.lower()
+        # Vérification de unicité du matricule avant sauvegarde
+        if not self.pk and self.matricule:
+            if User.objects.filter(matricule=self.matricule).exists():
+                raise ValueError(f"Le matricule '{self.matricule}' existe déjà.")
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -235,21 +248,11 @@ class User(TimestampedMixin, AbstractUser):
     # CAPACITÉS — API UNIQUE
     # ------------------------------------------------------------------
 
-    def get_capacites(self):
-        """Retourne l'ensemble des codes de capacités de l'utilisateur"""
-        if self.is_superuser:
-            return set()
-        return set(
-            self.profils
-            .filter(actif=True)
-            .values_list("capacites__code", flat=True)
-        )
-
     def a_la_capacite(self, code):
         """Vérifie si l'utilisateur possède une capacité donnée"""
         if self.is_superuser:
             return True
-        return code in self.get_capacites()
+        return code in self.get_capacites_codes()
 
     # ------------------------------------------------------------------
     # COMPATIBILITÉ (TEMPORAIRE - À supprimer après migration)
