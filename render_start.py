@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 """
-Script de démarrage pour Render - VERSION CORRIGÉE PORT
+Script de démarrage pour Render - VERSION FINALE STABLE
+Lance Gunicorn via subprocess pour éviter les problèmes de chargement de module.
 """
 import os
 import sys
+import subprocess
 import django
 
 print("🔧 [Render] Démarrage...")
@@ -17,7 +19,7 @@ except Exception as e:
     print(f"❌ Django setup FAILED: {e}")
     sys.exit(1)
 
-# --- Étape 1 : Migrations (non bloquant) ---
+# --- Étape 1 : Migrations ---
 print("📦 Étape 1: Migrations...")
 try:
     from django.core.management import call_command
@@ -26,7 +28,7 @@ try:
 except Exception as e:
     print(f"⚠️  Migrations warning (continuing): {e}")
 
-# --- Étape 2 : Superuser (non bloquant) ---
+# --- Étape 2 : Superuser ---
 print("👤 Étape 2: Superuser...")
 try:
     from django.contrib.auth import get_user_model
@@ -49,7 +51,7 @@ try:
 except Exception as e:
     print(f"⚠️  Superuser warning (continuing): {e}")
 
-# --- Étape 3 : Permissions (non bloquant) ---
+# --- Étape 3 : Permissions ---
 print("🔐 Étape 3: Permissions...")
 try:
     from core.models import Profil
@@ -64,28 +66,28 @@ try:
 except Exception as e:
     print(f"⚠️  Permissions warning (continuing): {e}")
 
-# --- Étape 4 : Démarrer Gunicorn (CORRIGÉ PORT) ---
+# --- Étape 4 : Démarrer Gunicorn (Via subprocess pour stabilité) ---
 print("🚀 Étape 4: Lancement Gunicorn...")
 
-# ✅ LIRE LA VARIABLE PORT DEPUIS L'ENVIRONNEMENT
-render_port = os.environ.get('PORT', '8000')  # 8000 en fallback local
+render_port = os.environ.get('PORT', '8000')
+bind_address = f"0.0.0.0:{render_port}"
+
+print(f"   → Binding sur {bind_address}")
+
+# On lance Gunicorn comme un processus externe pour éviter les conflits d'import
+cmd = [
+    "gunicorn",
+    "cid.wsgi:application",
+    "--bind", bind_address,
+    "--timeout", "120",
+    "--workers", "2", # 2 workers pour la version gratuite
+    "--access-logfile", "-", # Logs sur stdout
+    "--error-logfile", "-"    # Erreurs sur stderr
+]
 
 try:
-    from gunicorn.app.wsgiapp import run
-    
-    # Construire les arguments avec la VRAIE valeur du port
-    bind_address = f"0.0.0.0:{render_port}"
-    print(f"   → Binding sur {bind_address}")
-    
-    os.environ['GUNICORN_CMD_ARGS'] = f'--bind {bind_address} --timeout 120'
-    run()
-except ImportError:
-    print("⚠️  Gunicorn non installé, installation...")
-    os.system('pip install gunicorn')
-    from gunicorn.app.wsgiapp import run
-    bind_address = f"0.0.0.0:{render_port}"
-    os.environ['GUNICORN_CMD_ARGS'] = f'--bind {bind_address} --timeout 120'
-    run()
+    # On remplace le processus Python actuel par Gunicorn
+    os.execvp(cmd[0], cmd)
 except Exception as e:
-    print(f"❌ Gunicorn failed: {e}")
+    print(f"❌ Erreur critique lors du lancement de Gunicorn: {e}")
     sys.exit(1)
