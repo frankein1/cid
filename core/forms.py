@@ -61,14 +61,24 @@ class CustomUserCreationForm(UserCreationForm):
         help_text="Email professionnel"
     )
     
+    # AJOUT DU CHAMP MATRICULE EXPLICITE
+    matricule = forms.CharField(
+        max_length=20,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Matricule unique'
+        }),
+        help_text="Matricule obligatoire pour l'identification"
+    )
+    
     class Meta:
         model = User
-        # La liste est explicite et ne contient pas 'service_principal'
+        # La liste est explicite et contient maintenant 'matricule'
         fields = (
             'username', 'email', 'first_name', 'last_name',
             'matricule', 'telephone_professionnel', 'telephone_mobile',
             'mds_principale', 'is_active'
-            # Note: service_principal retiré temporairement
         )
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
