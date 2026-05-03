@@ -41,6 +41,24 @@ try:
 except Exception as e:
     print("⚠️ Impossible de créer le superuser :", e)
 
+# --- ÉTAPE 2.5 : INITIALISATION DES PERMISSIONS (AJOUT CRITIQUE) ---
+print("🔐 Vérification des profils et permissions...")
+try:
+    from core.models import Profil
+    from django.core.management import call_command
+    
+    # Si aucun profil n'existe, on lance l'initialisation
+    if Profil.objects.count() == 0:
+        print("⚠️  Aucun profil détecté. Lancement de l'initialisation...")
+        call_command('init_permissions_complet', verbosity=1)
+        print("✅ Profils et permissions initialisés.")
+    else:
+        print(f"✅ {Profil.objects.count()} profils déjà présents.")
+        
+except Exception as e:
+    print(f"⚠️  Problème d'initialisation des permissions (non bloquant): {e}")
+
 # --- Étape 3 : démarrer gunicorn ---
 print("🚀 Lancement gunicorn...")
-subprocess.run(["gunicorn", "cid.wsgi:application"])
+# On utilise exec pour remplacer le processus Python par Gunicorn (meilleure gestion des signaux)
+os.execvp("gunicorn", ["gunicorn", "cid.wsgi:application", "--bind", "0.0.0.0:$PORT"])
