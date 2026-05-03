@@ -1,6 +1,5 @@
 """
-# beneficiaire/forms.py
-
+# beneficiaire/forms.py - VERSION CORRIGÉE
 """
 
 from django import forms
@@ -17,16 +16,43 @@ from .fields import (
 User = get_user_model()
 
 class BeneficiaireForm(forms.ModelForm):
-    telephone_mobile = TelephoneField(label="Téléphone mobile", widget=TelephoneWidget(), required=False,)
-    telephone_fixe = TelephoneField(label="Téléphone fixe", widget=TelephoneWidget(), required=False,)
-    date_naissance = DateSimplifieeField(label="Date de naissance", widget=DateSimplifieeWidget(),)
-    date_entree = DateSimplifieeField(label="Date d'entrée", widget=DateSimplifieeWidget(), required=False,)
+    telephone_mobile = TelephoneField(
+        label="Téléphone mobile",
+        widget=TelephoneWidget(),
+        required=False,
+    )
+    telephone_fixe = TelephoneField(
+        label="Téléphone fixe",
+        widget=TelephoneWidget(),
+        required=False,
+    )
+    date_naissance = DateSimplifieeField(
+        label="Date de naissance",
+        widget=DateSimplifieeWidget(),
+    )
+    date_entree = DateSimplifieeField(
+        label="Date d'entrée",
+        widget=DateSimplifieeWidget(),
+        required=False,
+    )
 
     class Meta:
         model = Beneficiaire
-        exclude = ["code_interne", "date_creation", "date_modification", "cree_par", "statut", "est_decede", "date_deces", "date_sortie", "motif_sortie", "detail_sortie",]
-        widgets = {"adresse": forms.Textarea(attrs={"rows": 2}), "mds": forms.Select(), 'numero_genesis': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: G123456'}),
-        , "referent_mds": forms.Select(),}
+        exclude = [
+            "code_interne", "date_creation", "date_modification", 
+            "cree_par", "statut", "est_decede", "date_deces", 
+            "date_sortie", "motif_sortie", "detail_sortie",
+        ]
+        widgets = {
+            "adresse": forms.Textarea(attrs={"rows": 2}),
+            "mds": forms.Select(),
+            "referent_mds": forms.Select(),
+            # ✅ CORRECTION : Virgule unique et placement correct
+            'numero_genesis': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ex: G123456'
+            }),
+        }
 
     def __init__(self, *args, **kwargs):
         est_ayant_droit = kwargs.pop('est_ayant_droit', False)
