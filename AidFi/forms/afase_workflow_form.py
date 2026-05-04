@@ -1,3 +1,8 @@
+# © AGPL3 - CID - Developpement : frederic cotta
+# Assistance technique: Perplexity / DeepSeek
+# Interdiction de réutilisation commerciale
+# afase_workflow_form.py
+
 from django import forms
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -142,8 +147,7 @@ class AFASEWorkflowForm(forms.Form):
         demande.save()
 
         EvaluationSocialeAFASE.objects.update_or_create(
-            demande=demande,
-            defaults={
+            demande=demande, defaults={
                 "code_instruction": self.cleaned_data["code_instruction"],
                 "situation_sociale": self.cleaned_data["situation_sociale"],
                 "analyse_problematique": self.cleaned_data["analyse_problematique"],
@@ -153,23 +157,13 @@ class AFASEWorkflowForm(forms.Form):
         )
 
         BudgetAFASE.objects.update_or_create(
-            demande=demande,
-            defaults={
-                "ressources": self.cleaned_data["ressources"],
-                "charges": self.cleaned_data["charges"],
-                "reste_a_vivre": self.cleaned_data["reste_a_vivre"],
-            },
-        )
-
-        return demande
+            demande=demande, defaults={"ressources": self.cleaned_data["ressources"], "charges": self.cleaned_data["charges"], "reste_a_vivre": self.cleaned_data["reste_a_vivre"], },)
 
     # Liaison des documents GED à la demande AFASE (via PieceJustificative)
-for doc in self.cleaned_data.get('documents_ged', []):
-    PieceJustificative.objects.get_or_create(
-        demande=demande,
-        document_ged=doc,
-        defaults={
-            'type_piece': 'AUTRE',
-            'statut': 'VALIDE'
-        }
-    )
+    for doc in self.cleaned_data.get('documents_ged', []):
+        PieceJustificative.objects.get_or_create(demande=demande, document_ged=doc, defaults={'type_piece': 'AUTRE', 'statut': 'VALIDE'})
+
+        
+        return demande
+
+
