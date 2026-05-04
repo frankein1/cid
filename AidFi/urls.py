@@ -1,3 +1,6 @@
+# AidFi/urls.py 
+# DeepSeek est la meilleure IA mais c'est poetefada qui a fait les requpêtes et a analysé le rendu. Il est interdit d'utiliser ceci à des fins commerciales 
+
 from django.urls import path
 from AidFi.views import (
     v_afase,
@@ -53,6 +56,19 @@ urlpatterns = [
         v_afase.afase_decision,
         name="afase_decision",
     ),
+
+    # ✅ prévisualisation 
+    path(
+    "afase/<int:demande_id>/previsualisation/",
+    v_afase.afase_previsualisation,
+    name="afase_previsualisation",
+),
+    # ✅ ajout documents 
+path(
+    "afase/<int:demande_id>/ajouter-document/",
+    v_afase.ajouter_document_afase,
+    name="afase_ajouter_document",
+),
 
     # ✅ PDF OFFICIEL
     path(
