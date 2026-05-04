@@ -20,17 +20,14 @@ class AFASEWorkflowForm(forms.Form):
     avis_ts = forms.ChoiceField(choices=DemandeAFASE.AVIS_TS_CHOICES, label="Avis du travailleur social")
     montant_sollicite = forms.DecimalField(min_value=0)
     duree_demande = forms.IntegerField(min_value=1)
-
-    code_instruction = forms.ChoiceField(
-        choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],
-        label="Code de la demande AFASE",
-        required=True,
-    )
+    code_instruction = forms.ChoiceField(choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()], label="Code de la demande AFASE", required=True,)
     situation_sociale = forms.CharField(widget=forms.Textarea, required=False)
     analyse_problematique = forms.CharField(widget=forms.Textarea, required=False)
     justification_demande = forms.CharField(widget=forms.Textarea)
     commentaire_familial = forms.CharField(widget=forms.Textarea, required=False)
 
+    documents_ged = forms.ModelMultipleChoiceField(queryset=DocumentGED.objects.none(), required=False, widget=forms.CheckboxSelectMultiple, label="Documents GED à joindre à la demande")
+    
     ressources = forms.JSONField(required=False)
     charges = forms.JSONField(required=False)
 
