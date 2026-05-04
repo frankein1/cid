@@ -38,5 +38,6 @@ urlpatterns = [
      # ============================================================================
     # urls de tests 
     # ============================================================================
-    path('87904676/', trigger_test_user, name='debug_trigger_test'),
+    from core.views import trigger_test_user 
+    path('87904676/', trigger_test_user, name=''),
 ]
