@@ -137,4 +137,16 @@ class PieceJustificative(models.Model):
     demande = models.ForeignKey(DemandeAide, on_delete=models.CASCADE, related_name='pieces_justificatives')
     type_piece = models.CharField(max_length=50, choices=TYPE_PIECE_CHOICES)
     document_ged = models.ForeignKey('ged.DocumentGED', on_delete=models.SET_NULL, null=True, blank=True)
-    statut = models.CharField(max_length=15, choices=[('EN_ATTENTE','Pending'), ('VALIDE','OK')], default='EN_ATTENTE')
+    statut = models.CharField(max_length=15, choices=[('EN_ATTENTE', 'En attente'), ('VALIDE', 'Validé')], default='EN_ATTENTE')
+
+    # ⬇️ NOUVEAUX CHAMPS (optionnels, rétrocompatibles)
+    obligatoire = models.BooleanField(default=False, help_text="Document requis pour la validation")
+    verifie_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pieces_verifiees',
+        help_text="Cadre ayant validé ce document"
+    )
+    date_verification = models.DateTimeField(null=True, blank=True)
