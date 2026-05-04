@@ -6,10 +6,14 @@ on:
 jobs:
   add-header:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write  # Donne explicitement le droit de pousser le code
+
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          ref: render  # On se place explicitement sur ta branche render
+
       - name: Ajouter l'en-tête aux fichiers Python
         run: |
           HEADER='# =============================================================================
@@ -17,20 +21,32 @@ jobs:
           # Assistance technique: les IA et particulièrement DeepSeek 
           # Interdiction de réutilisation commerciale
           # =============================================================================
-          
+
           '
+          
+          # On compte le nombre de fichiers modifiés
+          modified=0
           
           for file in $(find . -name "*.py" -not -path "./.git/*" -not -path "*/migrations/*" -not -path "*/__pycache__/*"); do
             if ! grep -q "© AGPL3" "$file"; then
-              echo "$HEADER$(cat "$file")" > "$file"
-              echo "✅ $file"
+              # On utilise un fichier temporaire pour éviter les problèmes de redirection
+              temp_file=$(mktemp)
+              echo "$HEADER" > "$temp_file"
+              cat "$file" >> "$temp_file"
+              mv "$temp_file" "$file"
+              echo "✅ Modifié: $file"
+              ((modified++))
             fi
           done
-      
+          
+          echo "modified=$modified" >> $GITHUB_ENV
+          echo "Nombre de fichiers modifiés: $modified"
+
       - name: Commit et push des modifications
+        if: env.modified != '0'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git diff --staged --quiet || git commit -m "Ajout en-tête licence AGPL3"
-          git push
+          git commit -m "🤖 Ajout automatique de l'en-tête de licence AGPL3"
+          git push origin render  # Push explicite sur la branche render
