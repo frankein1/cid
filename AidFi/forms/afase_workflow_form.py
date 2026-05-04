@@ -40,7 +40,8 @@ class AFASEWorkflowForm(forms.Form):
         self.beneficiaire = beneficiaire
         self.user = user
         self.demande = demande
-
+        
+        
         famille_ids = {beneficiaire.id}
         liens = LienFamilial.objects.filter(personne_a=beneficiaire) | LienFamilial.objects.filter(personne_b=beneficiaire)
         for lien in liens:
@@ -48,6 +49,7 @@ class AFASEWorkflowForm(forms.Form):
             famille_ids.add(lien.personne_b_id)
 
         self.fields["demandeur"].queryset = Beneficiaire.objects.filter(id__in=famille_ids)
+        if beneficiaire: self.fields['documents_ged'].queryset = DocumentGED.objects.filter(content_type=ContentType.objects.get_for_model(beneficiaire), object_id=beneficiaire.id)
 
         if demande:
             self.initial.update({
@@ -160,3 +162,14 @@ class AFASEWorkflowForm(forms.Form):
         )
 
         return demande
+
+    # Liaison des documents GED à la demande AFASE (via PieceJustificative)
+for doc in self.cleaned_data.get('documents_ged', []):
+    PieceJustificative.objects.get_or_create(
+        demande=demande,
+        document_ged=doc,
+        defaults={
+            'type_piece': 'AUTRE',
+            'statut': 'VALIDE'
+        }
+    )
