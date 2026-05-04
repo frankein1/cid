@@ -1,53 +1,25 @@
-# AidFi/forms/afase_workflow_form.py - VERSION CORRIGÉE
-
 from django import forms
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+
 from AidFi.models.m_afase import (
     DemandeAFASE,
     EvaluationSocialeAFASE,
     BudgetAFASE,
     CODES_INSTRUCTION_AFASE,
 )
-from AidFi.models.m_generique import DemandeAide
+from AidFi.models.m_generique import TypeAide
 from beneficiaire.models import Beneficiaire, LienFamilial
 
 
 class AFASEWorkflowForm(forms.Form):
-    """
-    Formulaire métier AFASE.
-    Centralise la saisie, les calculs et la validation.
-    """
-
-    # ==========================================================
-    # BLOC 1 — CONTEXTE / DEMANDEUR
-    # ==========================================================
-
-    demandeur = forms.ModelChoiceField(
-        queryset=Beneficiaire.objects.none(),
-        label="Personne ayant formulé la demande",
-    )
-
-    numero_genesis = forms.CharField(
-        max_length=50, 
-        required=False, 
-        label="Numéro GENESIS",
-        help_text="Si inconnu, laissez vide. Sera mis à jour dans la fiche bénéficiaire."
-    )
-
+    demandeur = forms.ModelChoiceField(queryset=Beneficiaire.objects.none(), label="Personne ayant formulé la demande")
+    numero_genesis = forms.CharField(max_length=50, required=False, label="Numéro GENESIS")
     premiere_demande = forms.BooleanField(required=False)
-    avis_ts = forms.ChoiceField(
-        choices=DemandeAFASE.AVIS_TS_CHOICES,
-        label="Avis du travailleur social",
-    )
-
+    avis_ts = forms.ChoiceField(choices=DemandeAFASE.AVIS_TS_CHOICES, label="Avis du travailleur social")
     montant_sollicite = forms.DecimalField(min_value=0)
     duree_demande = forms.IntegerField(min_value=1)
-
-    # ==========================================================
-    # BLOC 2 — ÉVALUATION SOCIALE
-    # ==========================================================
 
     code_instruction = forms.ChoiceField(
         choices=[(k, v) for k, v in CODES_INSTRUCTION_AFASE.items()],
@@ -59,10 +31,6 @@ class AFASEWorkflowForm(forms.Form):
     justification_demande = forms.CharField(widget=forms.Textarea)
     commentaire_familial = forms.CharField(widget=forms.Textarea, required=False)
 
-    # ==========================================================
-    # BLOC 3 — BUDGET
-    # ==========================================================
-
     ressources = forms.JSONField(required=False)
     charges = forms.JSONField(required=False)
 
@@ -70,53 +38,38 @@ class AFASEWorkflowForm(forms.Form):
     total_charges = forms.DecimalField(required=False, widget=forms.HiddenInput)
     reste_a_vivre = forms.DecimalField(required=False, widget=forms.HiddenInput)
 
-    # ==========================================================
-    # INIT
-    # ==========================================================
-
     def __init__(self, *, beneficiaire, user, demande=None, **kwargs):
         super().__init__(**kwargs)
-
         self.beneficiaire = beneficiaire
         self.user = user
         self.demande = demande
 
-        # --- Construction de la liste des demandeurs possibles
         famille_ids = {beneficiaire.id}
-
-        liens = LienFamilial.objects.filter(
-            personne_a=beneficiaire
-        ) | LienFamilial.objects.filter(personne_b=beneficiaire)
-
+        liens = LienFamilial.objects.filter(personne_a=beneficiaire) | LienFamilial.objects.filter(personne_b=beneficiaire)
         for lien in liens:
             famille_ids.add(lien.personne_a_id)
             famille_ids.add(lien.personne_b_id)
 
-        self.fields["demandeur"].queryset = Beneficiaire.objects.filter(
-            id__in=famille_ids
-        )
+        self.fields["demandeur"].queryset = Beneficiaire.objects.filter(id__in=famille_ids)
 
-        # --- Pré-remplissage si édition
         if demande:
             self.initial.update({
-                "demandeur": demande.demandeur,
+                "demandeur": getattr(demande, "demandeur", None),
                 "numero_genesis": demande.numero_genesis,
                 "premiere_demande": demande.premiere_demande,
                 "avis_ts": demande.avis_ts,
                 "montant_sollicite": demande.montant_sollicite,
                 "duree_demande": demande.duree_demande,
             })
-
             if hasattr(demande, "evaluation_afase"):
-                eval = demande.evaluation_afase
+                eval_obj = demande.evaluation_afase
                 self.initial.update({
-                    "code_instruction": eval.code_instruction,
-                    "situation_sociale": eval.situation_sociale,
-                    "analyse_problematique": eval.analyse_problematique,
-                    "justification_demande": eval.justification_demande,
-                    "commentaire_familial": eval.commentaire_familial,
+                    "code_instruction": eval_obj.code_instruction,
+                    "situation_sociale": eval_obj.situation_sociale,
+                    "analyse_problematique": eval_obj.analyse_problematique,
+                    "justification_demande": eval_obj.justification_demande,
+                    "commentaire_familial": eval_obj.commentaire_familial,
                 })
-
             if hasattr(demande, "budget"):
                 budget = demande.budget
                 self.initial.update({
@@ -127,13 +80,8 @@ class AFASEWorkflowForm(forms.Form):
                     "reste_a_vivre": budget.reste_a_vivre,
                 })
         else:
-            # ✅ PRÉ-REMPLISSAGE AUTOMATIQUE POUR NOUVELLE DEMANDE
             if beneficiaire.numero_genesis:
-                self.initial['numero_genesis'] = beneficiaire.numero_genesis
-
-    # ==========================================================
-    # VALIDATION MÉTIER
-    # ==========================================================
+                self.initial["numero_genesis"] = beneficiaire.numero_genesis
 
     def clean(self):
         cleaned = super().clean()
@@ -150,59 +98,34 @@ class AFASEWorkflowForm(forms.Form):
         cleaned["total_ressources"] = total_ressources
         cleaned["total_charges"] = total_charges
 
-        # ✅ CALCUL DU NOMBRE DE PERSONNES AU FOYER
-        nb_personnes = 1  # Le bénéficiaire lui-même
-    
-        # Compter les membres de la famille vivant au foyer
-        liens = self.beneficiaire.liens_familiaux.all()
-        for lien in liens:
+        nb_personnes = 1
+        for lien in self.beneficiaire.liens_familiaux.all():
             if lien.vit_au_foyer:
                 nb_personnes += 1
 
-        if nb_personnes <= 0:
-            nb_personnes = 1
-
         reste_a_vivre = (total_ressources - total_charges) / Decimal(nb_personnes) / Decimal("30")
         cleaned["reste_a_vivre"] = round(reste_a_vivre, 2)
-
         return cleaned
-
-    # ==========================================================
-    # SAVE TRANSACTIONNEL
-    # ==========================================================
 
     @transaction.atomic
     def save(self):
-        """
-        Crée ou met à jour l'ensemble du dossier AFASE.
-        Synchronise le numéro GENESIS avec le bénéficiaire.
-        """
-        # Import ici pour éviter les imports circulaires
-        from AidFi.models.m_generique import TypeAide
-        
-        # 1. Synchronisation GENESIS (Avant de créer la demande)
         numero_genesis = self.cleaned_data.get("numero_genesis")
-        if numero_genesis:
-            # Si un numéro est saisi dans le formulaire AFASE
-            # On le met à jour dans la fiche Bénéficiaire
-            if self.beneficiaire.numero_genesis != numero_genesis:
-                self.beneficiaire.numero_genesis = numero_genesis
-                self.beneficiaire.save(update_fields=['numero_genesis'])
+        if numero_genesis and self.beneficiaire.numero_genesis != numero_genesis:
+            self.beneficiaire.numero_genesis = numero_genesis
+            self.beneficiaire.save(update_fields=["numero_genesis"])
 
         if self.demande:
             demande = self.demande
         else:
-            # S'assurer que le TypeAide AFASE existe
             type_aide_afase, _ = TypeAide.objects.get_or_create(
-                code='AFASE',
+                code="AFASE",
                 defaults={
-                    'nom': 'Aide Financière ASE',
-                    'description': 'Aide financière pour les enfants relevant de l\'ASE',
-                    'actif': True,
-                    'cree_par': self.user,
-                }
+                    "nom": "Aide Financière ASE",
+                    "description": "Aide financière pour les enfants relevant de l'ASE",
+                    "actif": True,
+                    "cree_par": self.user,
+                },
             )
-            
             demande = DemandeAFASE.objects.create(
                 beneficiaire=self.beneficiaire,
                 type_aide=type_aide_afase,
@@ -211,7 +134,6 @@ class AFASEWorkflowForm(forms.Form):
                 statut="BROUILLON",
             )
 
-        # --- DemandeAFASE
         demande.demandeur = self.cleaned_data["demandeur"]
         demande.numero_genesis = self.cleaned_data["numero_genesis"]
         demande.premiere_demande = self.cleaned_data["premiere_demande"]
@@ -220,7 +142,6 @@ class AFASEWorkflowForm(forms.Form):
         demande.duree_demande = self.cleaned_data["duree_demande"]
         demande.save()
 
-        # --- Évaluation sociale
         EvaluationSocialeAFASE.objects.update_or_create(
             demande=demande,
             defaults={
@@ -229,17 +150,16 @@ class AFASEWorkflowForm(forms.Form):
                 "analyse_problematique": self.cleaned_data["analyse_problematique"],
                 "justification_demande": self.cleaned_data["justification_demande"],
                 "commentaire_familial": self.cleaned_data["commentaire_familial"],
-            }
+            },
         )
 
-        # --- Budget
         BudgetAFASE.objects.update_or_create(
             demande=demande,
             defaults={
                 "ressources": self.cleaned_data["ressources"],
                 "charges": self.cleaned_data["charges"],
                 "reste_a_vivre": self.cleaned_data["reste_a_vivre"],
-            }
+            },
         )
 
         return demande
