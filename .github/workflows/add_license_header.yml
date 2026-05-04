@@ -7,46 +7,59 @@ jobs:
   add-header:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Donne explicitement le droit de pousser le code
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: render  # On se place explicitement sur ta branche render
+          ref: render
 
-      - name: Ajouter l'en-tête aux fichiers Python
+      - name: Ajouter l'en-tête avec Python (plus fiable)
         run: |
-          HEADER='# =============================================================================
+          python3 << 'EOF'
+          import os
+          
+          HEADER = '''# =============================================================================
           # © AGPL3 - CID - Developpeur : Frederic COTTA
           # Assistance technique: les IA et particulièrement DeepSeek 
           # Interdiction de réutilisation commerciale
           # =============================================================================
+          
+          '''
+          
+          modified = 0
+          
+          for root, dirs, files in os.walk('.'):
+              if '.git' in dirs:
+                  dirs.remove('.git')
+              if '__pycache__' in dirs:
+                  dirs.remove('__pycache__')
+              if 'migrations' in dirs:
+                  dirs.remove('migrations')
+              
+              for file in files:
+                  if file.endswith('.py'):
+                      filepath = os.path.join(root, file)
+                      with open(filepath, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                      
+                      if '© AGPL3' not in content[:500]:
+                          new_content = HEADER + content
+                          with open(filepath, 'w', encoding='utf-8') as f:
+                              f.write(new_content)
+                          print(f'✅ {filepath}')
+                          modified += 1
+          
+          print(f'Nombre de fichiers modifiés: {modified}')
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'modified={modified}\n')
+          EOF
 
-          '
-          
-          # On compte le nombre de fichiers modifiés
-          modified=0
-          
-          for file in $(find . -name "*.py" -not -path "./.git/*" -not -path "*/migrations/*" -not -path "*/__pycache__/*"); do
-            if ! grep -q "© AGPL3" "$file"; then
-              # On utilise un fichier temporaire pour éviter les problèmes de redirection
-              temp_file=$(mktemp)
-              echo "$HEADER" > "$temp_file"
-              cat "$file" >> "$temp_file"
-              mv "$temp_file" "$file"
-              echo "✅ Modifié: $file"
-              ((modified++))
-            fi
-          done
-          
-          echo "modified=$modified" >> $GITHUB_ENV
-          echo "Nombre de fichiers modifiés: $modified"
-
-      - name: Commit et push des modifications
+      - name: Commit et push
         if: env.modified != '0'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "🤖 Ajout automatique de l'en-tête de licence AGPL3"
-          git push origin render  # Push explicite sur la branche render
+          git push origin render
