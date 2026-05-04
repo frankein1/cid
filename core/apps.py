@@ -7,4 +7,5 @@ class CoreConfig(AppConfig):
     verbose_name = 'Core - Fondation du système'
 
     def ready(self):
-         from . import signals  # Import relatif
+        # On réactive l'importation des signaux
+        import core.signals
