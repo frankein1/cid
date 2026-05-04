@@ -1,4 +1,4 @@
-# core/management/commands/install.py - VERSION RENDER SAFE
+# core/management/commands/install.py - VERSION CORRIGÉE ET NETTOYÉE
 
 import os
 import sys
@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.apps import apps
 
 class Command(BaseCommand):
-    help = "Installation SI-DITAS - Version Render SÉCURISÉE"
+    help = "Installation SI-DITAS - Version Render SÉCURISÉE (Nettoyée)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -20,11 +20,12 @@ class Command(BaseCommand):
     def get_env(self, key, default=None):
         """Récupère les variables depuis l'environnement Render (pas de .env)"""
         value = os.environ.get(key, default)
-        self.stdout.write(f"      🔧 {key} = {'***' if 'PASSWORD' in key else value}")
+        # Masquer les mots de passe dans les logs
+        display_value = '***' if 'PASSWORD' in key else value
+        self.stdout.write(f"      🔧 {key} = {display_value}")
         return value
 
     def handle(self, *args, **options):
-
         etape = options.get("etape")
 
         self.stdout.write("\n🚀 INSTALLATION SI-DITAS / MODE RENDER SAFE")
@@ -51,30 +52,20 @@ class Command(BaseCommand):
                 return
 
         # ============================================================
-        # ETAPE B : CORE (permissions, capacités, profils…)
+        # ETAPE B : CORE (Permissions, Capacités, Profils)
         # ============================================================
         if etape in ("", "core"):
             self.stdout.write("\n📌 Étape : INITIALISATION CORE")
+            self.stdout.write("   (Appel unique à init_permissions_complet)")
 
             try:
-                # Import tardif = évite les charges trop lourdes
+                # Appel unique : ce script gère lui-même :
+                # 1. L'appel à init_capacites (qui contient maintenant AidFi)
+                # 2. La création des profils
+                # 3. L'appel à init_afase
                 call_command("init_permissions_complet")
-
-                try:
-                    from AidFi.init_capacites import init_capacites
-                    init_capacites()
-                    self.stdout.write("   - Capacités OK")
-                except:
-                    pass
-
-                try:
-                    from core.init_profils import init_profils
-                    init_profils()
-                    self.stdout.write("   - Profils OK")
-                except:
-                    pass
-
-                self.stdout.write(self.style.SUCCESS("   ✅ Initialisation CORE OK"))
+                
+                self.stdout.write(self.style.SUCCESS("   ✅ Initialisation CORE terminée"))
 
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"   ❌ Erreur CORE: {e}"))
