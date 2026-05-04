@@ -11,7 +11,7 @@ from AidFi.services.afase_pdf import generer_pdf_afase
 from ged.services import stocker_pdf_afase
 from ged import DocumentGEDForm
 from beneficiaire.models import Beneficiaire
-import b64_pdf
+import base64
 
 
 @login_required
