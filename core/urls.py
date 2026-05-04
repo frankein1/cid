@@ -7,6 +7,7 @@ Version organisée avec vues scindées et support AJAX
 from django.urls import path
 from core import views  # Django chargera automatiquement via core/views/__init__.py
 from core.views.ajax import ajax_ville_par_cp
+from core.views import trigger_test_user 
 
 
 app_name = 'core'
