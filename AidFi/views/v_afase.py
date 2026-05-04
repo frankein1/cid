@@ -1,7 +1,7 @@
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: Perplexity / DeepSeek
-# Interdiction de réutilisation commerciale sans accord explicite
+# Assistance technique: Perplexity / DeepSeek 
+# Interdiction de réutilisation commerciale
 # =============================================================================
 # AidFi/views/v_afase.py - Version complète et corrigée
 # Gestion complète du workflow AFASE : création, instruction, décision,
