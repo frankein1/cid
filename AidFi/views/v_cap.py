@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # AidFi/views/v_cap.py
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required

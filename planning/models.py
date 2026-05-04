@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # planning/models.py
 """
 PLANNING MODELS – VERSION UNIFIÉE (V2 + RÉCUPÉRATION V1)

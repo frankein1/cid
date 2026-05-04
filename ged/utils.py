@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 ged/utils.py - VERSION CONVERTIE CORE-DITAS 2026
 Moteur de filtrage et de validation des droits GED

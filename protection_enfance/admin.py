@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # protection_enfance/admin.py - CORRIGÉ ET PROPRE
 from django.contrib import admin
 from .models.informations_preoccupantes import InformationPreoccupante, HistoriqueAction, NumeroCounter

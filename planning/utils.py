@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 planning/utils.py
 Utilitaires pour la gestion des créneaux de rendez-vous

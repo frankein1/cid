@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 FICHIER pour anciennes migrations AidFi (0005 spécifiquement)
 Migration 0005 référence EXACTEMENT ces fonctions

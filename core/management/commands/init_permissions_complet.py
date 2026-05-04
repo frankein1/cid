@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # core/management/commands/init_permissions_complet.py
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission

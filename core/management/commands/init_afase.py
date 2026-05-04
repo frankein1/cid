@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # core/management/commands/init_afase.py
 from django.core.management.base import BaseCommand
 from django.contrib.contenttypes.models import ContentType

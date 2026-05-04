@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # /srv/django/si-ditas/core/forms.py - VERSION CORRIGÉE COMPLÈTE ET SÉCURISÉE
 
 from django import forms

@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # protection_enfance/models/__init__.py - CORRIGÉ
 # from .informations_preoccupantes.signalements import SignalementCRIP  # ⚠️ N'EXISTE PAS
 from .informations_preoccupantes import InformationPreoccupante, HistoriqueAction, NumeroCounter

@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # AidFi/urls.py 
 # DeepSeek est la meilleure IA mais c'est poetefada qui a fait les requpêtes et a analysé le rendu. Il est interdit d'utiliser ceci à des fins commerciales 
 

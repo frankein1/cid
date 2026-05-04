@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 Utilitaire pour la gestion des codes postaux français
 Fichier : core/utils/cp.py - VERSION AVEC API GOUVERNEMENTALE

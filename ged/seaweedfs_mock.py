@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 SeaweedFS Mock intelligent - Simule une vraie GED pour les démos
 CORRIGÉ : Utilisation de MEDIA_ROOT pour la persistance

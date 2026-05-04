@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 """
 ged/forms.py - VERSION POLIE CORE-DITAS 2026
 Maintien de toute la logique métier originale avec compatibilité Capacités.

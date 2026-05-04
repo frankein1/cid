@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # planning/apps.py - VERSION CORRIGÉE SANS RUNTIMEWARNING
 
 from django.apps import AppConfig

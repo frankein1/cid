@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # messagerie/views.py - VERSION CORRIGÉE 100% (tous tes commentaires préservés)
 # Corrections : BytesIO + sécurité MDS + syntaxe parfaite
 

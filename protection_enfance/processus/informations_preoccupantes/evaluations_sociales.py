@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # protection_enfance/processus/informations_preoccupantes/evaluations_sociales.py
 
 class EnqueteSociale(models.Model):

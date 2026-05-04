@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # core/management/commands/seed_document_types.py
 from django.core.management.base import BaseCommand
 from ged.models import DocumentType, DocumentCategorie

@@ -1,3 +1,9 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: les IA et particulièrement DeepSeek 
+# Interdiction de réutilisation commerciale
+# =============================================================================
+
 # AidFi/forms/f_cap.py ← FIX import
 from django import forms
 from AidFi.models.m_cap import CAPCheque  # ✅ Import DIRECT depuis models
