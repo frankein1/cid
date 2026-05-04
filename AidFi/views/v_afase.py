@@ -1,5 +1,3 @@
-# AidFi/views/v_afase.py — VERSION STABLE NETTOYÉE
-
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, FileResponse
@@ -8,42 +6,30 @@ from django.contrib import messages
 
 from AidFi.forms.afase_workflow_form import AFASEWorkflowForm
 from AidFi.forms.f_afase import EvaluationSocialeAFASEForm, DecisionAFASEForm
-from AidFi.models.m_afase import DemandeAFASE, DecisionAFASE
+from AidFi.models.m_afase import DemandeAFASE
 from AidFi.services.afase_pdf import generer_pdf_afase
 from ged.services import stocker_pdf_afase
 
 from beneficiaire.models import Beneficiaire
 
-# ==========================================================
-# CRÉATION / MODIFICATION AFASE
-# ==========================================================
 
 @login_required
 def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
-
     demande = None
     beneficiaire = None
     budget = None
 
-    # ------------------------------
-    # CONTEXTE
-    # ------------------------------
     if demande_id:
         demande = get_object_or_404(DemandeAFASE, pk=demande_id)
         beneficiaire = demande.beneficiaire
         action = "modification"
-        budget = demande.budget if hasattr(demande, 'budget') else None
-
+        budget = getattr(demande, "budget", None)
     elif beneficiaire_id:
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
         action = "création"
-
     else:
         return HttpResponseForbidden("Paramètres manquants")
 
-    # ------------------------------
-    # SÉCURITÉ
-    # ------------------------------
     if action == "création":
         if not request.user.peut_agir_sur_objet(beneficiaire, "peut_creer"):
             return HttpResponseForbidden("Accès refusé")
@@ -51,9 +37,6 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         if not request.user.peut_agir_sur_objet(demande, "peut_modifier"):
             return HttpResponseForbidden("Accès refusé")
 
-    # ------------------------------
-    # FORMULAIRE
-    # ------------------------------
     if request.method == "POST":
         form = AFASEWorkflowForm(
             data=request.POST,
@@ -65,39 +48,26 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             demande = form.save()
             messages.success(request, "Demande AFASE enregistrée avec succès.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
-        else:
-            messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
+        messages.error(request, "Veuillez corriger les erreurs ci-dessous.")
     else:
-        # Initialisation du formulaire (GET)
         form = AFASEWorkflowForm(
             beneficiaire=beneficiaire,
             user=request.user,
             demande=demande,
         )
-        # ✅ PRÉ-REMPLISSAGE AUTOMATIQUE (Déplacé ici, hors du POST)
-        if not demande: # Si c'est une nouvelle demande
-            if beneficiaire.numero_genesis:
-                form.fields['numero_genesis'].initial = beneficiaire.numero_genesis
+        if not demande and beneficiaire.numero_genesis:
+            form.fields["numero_genesis"].initial = beneficiaire.numero_genesis
 
-    # ------------------------------
-    # CONTEXTE BUDGET
-    # ------------------------------
     context_budget = {
         "ressources": budget.ressources,
         "charges": budget.charges,
     } if budget else {"ressources": {}, "charges": {}}
 
-    # ------------------------------
-    # CALCUL DU NOMBRE DE PERSONNES AU FOYER
-    # ------------------------------
-    nb_personnes_foyer = 1  # Le bénéficiaire lui-même
+    nb_personnes_foyer = 1
     for lien in beneficiaire.liens_familiaux.all():
         if lien.vit_au_foyer:
             nb_personnes_foyer += 1
-    
-    # ------------------------------
-    # RENDER
-    # ------------------------------
+
     return render(
         request,
         "AidFi/f_afase.html",
@@ -111,9 +81,6 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         },
     )
 
-# ==========================================================
-# DÉTAIL AFASE
-# ==========================================================
 
 @login_required
 def afase_detail(request, demande_id):
@@ -137,9 +104,6 @@ def afase_detail(request, demande_id):
         },
     )
 
-# ==========================================================
-# ÉVALUATION
-# ==========================================================
 
 @login_required
 def afase_evaluation(request, demande_id):
@@ -153,37 +117,18 @@ def afase_evaluation(request, demande_id):
         return redirect("AidFi:afase_detail", demande_id=demande.id)
 
     if request.method == "POST":
-        form = EvaluationSocialeAFASEForm(request.POST, instance=demande.evaluation_afase)
+        form = EvaluationSocialeAFASEForm(request.POST, instance=getattr(demande, "evaluation_afase", None))
         if form.is_valid():
             form.save()
-
-            # ✅ RELAI TS → CADRE
             demande.statut = "DEPOSEE"
             demande.save(update_fields=["statut"])
-
-            messages.success(
-                request,
-                "Instruction finalisée et demande transmise au cadre."
-            )
+            messages.success(request, "Instruction finalisée et demande transmise au cadre.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
     else:
-        form = EvaluationSocialeAFASEForm(
-            instance=getattr(demande, "evaluation_afase", None)
-        )
+        form = EvaluationSocialeAFASEForm(instance=getattr(demande, "evaluation_afase", None))
 
-    return render(
-        request,
-        "AidFi/afase_evaluation.html",
-        {
-            "demande": demande,
-            "form": form,
-            "beneficiaire": demande.beneficiaire,
-        },
-    )
+    return render(request, "AidFi/afase_evaluation.html", {"demande": demande, "form": form, "beneficiaire": demande.beneficiaire})
 
-# ==========================================================
-# DÉCISION
-# ==========================================================
 
 @login_required
 def afase_decision(request, demande_id):
@@ -192,7 +137,6 @@ def afase_decision(request, demande_id):
     if not request.user.a_la_capacite("peut_decider"):
         return HttpResponseForbidden("Accès refusé")
 
-    # ✅ Le cadre ne décide QUE si la demande est déposée
     if demande.statut != "DEPOSEE":
         messages.error(request, "Cette demande n’est pas en attente de décision.")
         return redirect("AidFi:afase_detail", demande_id=demande.id)
@@ -202,14 +146,12 @@ def afase_decision(request, demande_id):
     if request.method == "POST":
         action = request.POST.get("action")
 
-        # 🔁 RETOUR EN INSTRUCTION
         if action == "RETOUR_INSTRUCTION":
             demande.statut = "EN_INSTRUCTION"
             demande.save(update_fields=["statut"])
             messages.success(request, "La demande a été retournée en instruction.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
 
-        # ✅ DÉCISION FINALE
         form = DecisionAFASEForm(request.POST, instance=decision)
         if form.is_valid():
             with transaction.atomic():
@@ -218,11 +160,7 @@ def afase_decision(request, demande_id):
                 decision.decide_par = request.user
                 decision.save()
 
-                if decision.type_decision == "ACCORD":
-                    demande.statut = "ACCORDEE"
-                else:
-                    demande.statut = "REFUSEE"
-
+                demande.statut = "ACCORDEE" if decision.type_decision == "ACCORD" else "REFUSEE"
                 demande.save(update_fields=["statut"])
 
                 buffer = generer_pdf_afase(demande)
@@ -230,7 +168,6 @@ def afase_decision(request, demande_id):
 
                 messages.success(request, "Décision enregistrée.")
                 return redirect("AidFi:afase_detail", demande_id=demande.id)
-
     else:
         form = DecisionAFASEForm(instance=decision)
 
@@ -244,9 +181,6 @@ def afase_decision(request, demande_id):
         },
     )
 
-# ==========================================================
-# PDF
-# ==========================================================
 
 @login_required
 def afase_pdf(request, demande_id):
@@ -256,11 +190,4 @@ def afase_pdf(request, demande_id):
         return HttpResponseForbidden("Accès refusé")
 
     buffer = generer_pdf_afase(demande)
-    return FileResponse(
-        buffer,
-        as_attachment=True,
-        filename=f"afase_{demande.id}.pdf",
-    )
-
-# Alias compatibilité
-afase_creer = afase_creer_ou_modifier
+    return FileResponse(buffer, as_attachment=True, filename=f"afase_{demande.id}.pdf")
