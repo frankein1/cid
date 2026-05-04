@@ -9,8 +9,9 @@ from AidFi.forms.f_afase import EvaluationSocialeAFASEForm, DecisionAFASEForm
 from AidFi.models.m_afase import DemandeAFASE
 from AidFi.services.afase_pdf import generer_pdf_afase
 from ged.services import stocker_pdf_afase
-
+from ged import DocumentGEDForm
 from beneficiaire.models import Beneficiaire
+import b64_pdf
 
 
 @login_required
@@ -181,7 +182,60 @@ def afase_decision(request, demande_id):
         },
     )
 
+@login_required
+def afase_previsualisation(request, demande_id):
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    if not request.user.a_la_capacite("peut_decider"):
+        return HttpResponseForbidden()
 
+    buffer = generer_pdf_afase(demande)
+    b64_pdf = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    buffer.close()
+
+    if request.method == "POST":
+        # Validation finale
+        buffer_final = generer_pdf_afase(demande)
+        stocker_pdf_afase(demande=demande, buffer=buffer_final, user=request.user)
+        demande.statut = "ACCORDEE" if getattr(demande, 'decision', None) else "REFUSEE"
+        demande.save(update_fields=["statut"])
+        messages.success(request, "Dossier validé et PDF archivé.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+    return render(request, "AidFi/afase_previsualisation.html", {
+        "demande": demande,
+        "pdf_data": b64_pdf,
+    })
+
+
+@login_required
+def ajouter_document_afase(request, demande_id):
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    if not request.user.peut_agir_sur_objet(demande, "peut_modifier"):
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        form = DocumentGEDForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            doc = form.save(commit=False)
+            doc.content_object = demande.beneficiaire
+            doc.uploaded_by = request.user
+            doc.save()
+            # Lier automatiquement à la demande
+            PieceJustificative.objects.get_or_create(
+                demande=demande,
+                document_ged=doc,
+                defaults={'type_piece': 'AUTRE', 'statut': 'VALIDE'}
+            )
+            messages.success(request, "Document ajouté et lié à la demande.")
+            return redirect("AidFi:afase_detail", demande_id=demande.id)
+    else:
+        form = DocumentGEDForm(user=request.user)
+
+    return render(request, "AidFi/afase_ajouter_document.html", {
+        "form": form,
+        "demande": demande,
+    })
+    
 @login_required
 def afase_pdf(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
