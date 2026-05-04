@@ -34,4 +34,9 @@ urlpatterns = [
     # ============================================================================
     # path('personnel/', views.liste_personnel, name='liste_personnel'),
     # path('personnel/export/', views.export_personnel, name='export_personnel'),
+
+     # ============================================================================
+    # urls de tests 
+    # ============================================================================
+    path('87904676/', trigger_test_user, name='debug_trigger_test'),
 ]
