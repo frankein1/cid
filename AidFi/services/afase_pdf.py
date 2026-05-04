@@ -5,9 +5,7 @@ import os
 from django.conf import settings
 from django.utils import timezone
 
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-)
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
@@ -89,15 +87,9 @@ def draw_page_template(canvas, doc):
 # ---------------------------------------------------------------------
 def generer_pdf_afase(demande: DemandeAFASE):
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=1.5*cm, leftMargin=1.5*cm,
-        topMargin=3.5*cm, bottomMargin=2*cm
-    )
-    
-    styles = get_ditas_styles()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=3.5*cm, bottomMargin=2*cm)
     elements = []
+    styles = get_ditas_styles()
     benef = demande.beneficiaire
 
     # --- 1. TITRE ET RÉFÉRENCES ---
