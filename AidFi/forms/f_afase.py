@@ -1,10 +1,3 @@
-# AidFi/forms/f_afase.py
-"""
-Formulaires unitaires AFASE.
-Usage : admin, réutilisation ponctuelle, legacy.
-⚠️ Ne pas utiliser pour le workflow principal.
-"""
-
 from django import forms
 
 from AidFi.models.m_afase import (
@@ -43,10 +36,7 @@ class EvaluationSocialeAFASEForm(forms.ModelForm):
 class BudgetAFASEForm(forms.ModelForm):
     class Meta:
         model = BudgetAFASE
-        fields = (
-            "ressources",
-            "charges",
-        )
+        fields = ("ressources", "charges")
 
 
 class DecisionAFASEForm(forms.ModelForm):
@@ -62,11 +52,6 @@ class DecisionAFASEForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.fields["code_decision"].widget = forms.Select(
-            choices=[
-                ("", "--- Sélectionner un motif ---"),
-                *ACCORD_AFASE_CHOICES,
-                *REFUS_AFASE_CHOICES,
-            ]
+            choices=[("", "--- Sélectionner un motif ---"), *ACCORD_AFASE_CHOICES, *REFUS_AFASE_CHOICES]
         )
