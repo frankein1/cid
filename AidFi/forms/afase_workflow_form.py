@@ -3,10 +3,11 @@
 # Interdiction de réutilisation commerciale
 # afase_workflow_form.py
 
-from django import forms
-from django.db import transaction
-from django.core.exceptions import ValidationError
 from decimal import Decimal
+from django import forms
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from AidFi.models.m_afase import (
     DemandeAFASE,
@@ -14,8 +15,9 @@ from AidFi.models.m_afase import (
     BudgetAFASE,
     CODES_INSTRUCTION_AFASE,
 )
-from AidFi.models.m_generique import TypeAide
+from AidFi.models.m_generique import TypeAide, PieceJustificative
 from beneficiaire.models import Beneficiaire, LienFamilial
+from ged.models import DocumentGED
 
 
 class AFASEWorkflowForm(forms.Form):
