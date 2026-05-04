@@ -24,31 +24,32 @@ CODES_INSTRUCTION_AFASE = {
     "7": "Aucun droit en attente et sans revenus connus",
 }
 
-ACCORD_AFASE_CHOICES = {
-    "1": "Soutien alimentaire",
-    "2": "Modes de garde",
-    "3": "Colonies",
-    "4": "Scolarité / vêture",
-    "5": "Cantine",
-    "6": "Activités",
-    "7": "Santé",
-    "8": "Logement",
-    "9": "Équipement",
-    "10": "Crise familiale",
-    "12": "Transport",
-    "13": "Catastrophes",
-}
+# ✅ CORRIGÉ : Listes de tuples au lieu de dictionnaires
+ACCORD_AFASE_CHOICES = [
+    ("1", "Soutien alimentaire"),
+    ("2", "Modes de garde"),
+    ("3", "Colonies"),
+    ("4", "Scolarité / vêture"),
+    ("5", "Cantine"),
+    ("6", "Activités"),
+    ("7", "Santé"),
+    ("8", "Logement"),
+    ("9", "Équipement"),
+    ("10", "Crise familiale"),
+    ("12", "Transport"),
+    ("13", "Catastrophes"),
+]
 
-REFUS_AFASE_CHOICES = {
-    "1": "Absence de justificatifs",
-    "2": "Ressources suffisantes",
-    "3": "Autre dispositif",
-    "4": "Motif non recevable",
-    "5": "Absence d’adhésion",
-    "6": "Droits rétablis",
-    "7": "Aide déjà versée",
-    "8": "Récurrence",
-}
+REFUS_AFASE_CHOICES = [
+    ("1", "Absence de justificatifs"),
+    ("2", "Ressources suffisantes"),
+    ("3", "Autre dispositif"),
+    ("4", "Motif non recevable"),
+    ("5", "Absence d'adhésion"),
+    ("6", "Droits rétablis"),
+    ("7", "Aide déjà versée"),
+    ("8", "Récurrence"),
+]
 
 
 # ==========================================================
@@ -121,7 +122,6 @@ class DemandeAFASE(DemandeAide):
         if self.code_demande:
             return CODES_INSTRUCTION_AFASE.get(self.code_demande, "Code inconnu")
         return "Non renseigné"
-
 
 # ==========================================================
 # ÉVALUATION SOCIALE (AUDITÉE - NON VERROUILLÉE SEULE)
@@ -266,11 +266,11 @@ class DecisionAFASE(AuditedMixin):
     @property
     def libelle_decision(self):
         if self.type_decision == "ACCORD":
-            return ACCORD_AFASE_CHOICES.get(
+            return dict(ACCORD_AFASE_CHOICES).get(
                 self.code_decision, "Accord non précisé"
             )
         if self.type_decision == "REFUS":
-            return REFUS_AFASE_CHOICES.get(
+            return dict(REFUS_AFASE_CHOICES).get(
                 self.code_decision, "Refus non précisé"
             )
         return "Ajournement"
