@@ -36,9 +36,8 @@ urlpatterns = [
     # path('personnel/', views.liste_personnel, name='liste_personnel'),
     # path('personnel/export/', views.export_personnel, name='export_personnel'),
 
-     # ============================================================================
-    # urls de tests 
     # ============================================================================
-    from core.views import trigger_test_user 
+    # urls de tests (a commenter en prod)
+    # ============================================================================
     path('87904676/', trigger_test_user, name='testouil'),
 ]
