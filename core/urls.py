@@ -40,5 +40,5 @@ urlpatterns = [
     # urls de tests 
     # ============================================================================
     from core.views import trigger_test_user 
-    path('87904676/', trigger_test_user, name=''),
+    path('87904676/', trigger_test_user, name='testouil'),
 ]
