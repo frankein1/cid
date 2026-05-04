@@ -193,10 +193,15 @@ def afase_previsualisation(request, demande_id):
     buffer.close()
 
     if request.method == "POST":
-        # Validation finale
+        # ⬇️ TOUT CE BLOC EST MAINTENANT BIEN INDENTÉ
         buffer_final = generer_pdf_afase(demande)
         stocker_pdf_afase(demande=demande, buffer=buffer_final, user=request.user)
-        demande.statut = "ACCORDEE" if getattr(demande, 'decision', None) else "REFUSEE"
+
+        if demande.decision.type_decision == "ACCORD":
+            demande.statut = "ACCORDEE"
+        else:
+            demande.statut = "REFUSEE"
+
         demande.save(update_fields=["statut"])
         messages.success(request, "Dossier validé et PDF archivé.")
         return redirect("AidFi:afase_detail", demande_id=demande.id)
