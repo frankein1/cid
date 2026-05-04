@@ -57,15 +57,48 @@
             <!-- COLONNE DROITE : CADRE / LECTURE -->
             <div class="space-y-6">
 
-                <!-- GED -->
-                <div class="bg-white rounded-3xl shadow-xl p-8">
-                    <h3 class="text-xl font-bold mb-4">Documents GED</h3>
-                    <a href="{% url 'ged:document_list' %}?demande_afase={{ demande.id }}"
-                       class="inline-block bg-orange-500 text-white px-6 py-3 rounded-xl">
-                        📁 Accéder au GED
-                    </a>
-                </div>
+               <!-- DOCUMENTS GED LIÉS -->
+<div class="bg-white rounded-3xl shadow-xl p-8">
+    <h3 class="text-xl font-bold mb-4">📎 Documents GED liés</h3>
+    {% with pieces=demande.pieces_justificatives.all %}
+        {% if pieces %}
+            <ul class="space-y-2">
+            {% for piece in pieces %}
+                <li class="flex items-center justify-between border-b pb-2">
+                    <div>
+                        <span class="font-medium">{{ piece.document_ged.titre }}</span>
+                        <span class="text-xs text-gray-500 ml-2">{{ piece.get_type_piece_display }}</span>
+                        {% if piece.obligatoire %}
+                            <span class="text-red-500 text-xs ml-2">(obligatoire)</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if piece.verifie_par %}
+                            <span class="text-green-600 text-sm">✓ validé</span>
+                        {% else %}
+                            <span class="text-orange-500 text-sm">⏳ en attente</span>
+                        {% endif %}
+                        <a href="{% url 'ged:download_document' piece.document_ged.id %}" class="ml-3 text-blue-500">📥</a>
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-gray-500 italic">Aucun document lié.</p>
+        {% endif %}
+    {% endwith %}
 
+    <div class="mt-4 flex gap-2">
+        <a href="{% url 'AidFi:afase_ajouter_document' demande.id %}"
+           class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm">
+            ➕ Ajouter un document
+        </a>
+        <a href="{% url 'AidFi:afase_previsualisation' demande.id %}"
+           class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+            👁️ Prévisualiser le dossier
+        </a>
+    </div>
+</div>
                 {% if demande.decision %}
                     <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
                         <a href="{% url 'AidFi:afase_pdf' demande.id %}"
