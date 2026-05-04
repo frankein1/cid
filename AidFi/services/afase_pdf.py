@@ -81,6 +81,22 @@ def _money(value):
     except Exception:
         return "0.00 €"
 
+def generer_section_documents(demande, styles):
+    pieces = demande.pieces_justificatives.select_related('document_ged').all()
+    if not pieces:
+        return [Paragraph("Aucune pièce jointe.", styles['Normal'])]
+
+    elements = []
+    elements.append(Paragraph("VI. PIÈCES JOINTES", styles['SectionHeader']))
+    for piece in pieces:
+        doc = piece.document_ged
+        if doc:
+            ligne = f"• {doc.titre} ({doc.get_confidentialite_display()})"
+            if piece.obligatoire:
+                ligne += " [OBLIGATOIRE]"
+            elements.append(Paragraph(ligne, styles['Normal']))
+    return elements
+
 
 def generer_pdf_afase(demande: DemandeAFASE):
     buffer = BytesIO()
@@ -101,7 +117,7 @@ def generer_pdf_afase(demande: DemandeAFASE):
     decision = getattr(demande, "decision", None)
 
     elements.append(Paragraph("DEMANDE D'AIDE FINANCIÈRE AFASE", styles["TitreOfficiel"]))
-
+   
     info_dossier = [
         [
             Paragraph(f"<b>Dossier ID :</b> {demande.id}", styles["Normal"]),
@@ -201,6 +217,8 @@ def generer_pdf_afase(demande: DemandeAFASE):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
         ]))
         elements.append(t_dec)
+ # Pièces jointes
+elements.extend(generer_section_documents(demande, styles))
 
     doc.build(elements, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     buffer.seek(0)
