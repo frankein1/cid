@@ -40,9 +40,10 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 70))
 
         # ========================================
-        # ÉTAPE 1 : Créer les capacités CORE
+        # ÉTAPE 1 : Créer les capacités CORE (incluant AidFi maintenant)
         # ========================================
         self.stdout.write("\n[1/3] 📋 Création des capacités métier...")
+        # C'est ici que la fusion se fait : init_capacites.py contient maintenant tout
         call_command('init_capacites')
 
         # ========================================
@@ -51,7 +52,6 @@ class Command(BaseCommand):
         self.stdout.write("\n[2/3] 👥 Configuration des profils...")
 
         # MATRICE DE CONFIGURATION
-        # Structure : {CODE_PROFIL: {capacites_codes, permissions_django, description}}
         profils_config = {
             "MDS_ADMINISTRATIFS": {
                 "nom": "MDS Administratifs",
@@ -87,6 +87,8 @@ class Command(BaseCommand):
                     'peut_modifier',
                     'peut_instruire',
                     'ged_televerser',
+                    # Ajout possible de capacités AidFi spécifiques si besoin
+                    'peut_gestion_aides_aidfi', 
                 ],
                 "perms": {
                     Beneficiaire: ["view", "add", "change"],
@@ -122,6 +124,8 @@ class Command(BaseCommand):
                     'planning_generer',
                     'planning_bloquer',
                     'planning_exporter',
+                    'peut_gestion_aides_aidfi',
+                    'peut_valider_cheque_aidfi',
                 ],
                 "perms": {
                     Beneficiaire: ["view", "add", "change", "delete"],
@@ -162,6 +166,8 @@ class Command(BaseCommand):
                     'planning_generer',
                     'planning_bloquer',
                     'planning_exporter',
+                    'peut_gestion_aides_aidfi',
+                    'peut_valider_cheque_aidfi',
                 ],
                 "all_perms": True,
                 "additional_models": {},
@@ -228,7 +234,7 @@ class Command(BaseCommand):
                 
                 self.stdout.write(f"     → {total_perms} permissions Django")
 
-            # 5. Lier le profil au groupe (CORRIGÉ - décommenté)
+            # 5. Lier le profil au groupe
             profil.groupes.clear()
             profil.groupes.add(groupe)
             self.stdout.write(f"     → Profil lié au groupe Django")
