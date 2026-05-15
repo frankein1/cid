@@ -6,12 +6,10 @@
 
 #!/usr/bin/env python
 """
-Script de démarrage pour Render - VERSION FINALE STABLE
-Lance Gunicorn via subprocess pour éviter les problèmes de chargement de module.
+Script de démarrage pour Render - VERSION AVEC MIGRATIONS GLOBALES
 """
 import os
 import sys
-import subprocess
 import django
 
 print("🔧 [Render] Démarrage...")
@@ -25,16 +23,15 @@ except Exception as e:
     print(f"❌ Django setup FAILED: {e}")
     sys.exit(1)
 
-# --- Étape 1 : Migrations forcées ---
+# --- Étape 1 : Migrations automatiques (TOUTES les apps) ---
 print("📦 Étape 1: Création et application des migrations...")
 try:
     from django.core.management import call_command
     
-    # 🔧 CRUCIAL : créer les fichiers de migration pour les nouveaux champs
-    call_command('makemigrations', 'AidFi', '--noinput', verbosity=1)
+    # Détecte les changements dans TOUTES les applications
     call_command('makemigrations', '--noinput', verbosity=1)
     
-    # Appliquer les migrations
+    # Applique toutes les migrations (si nouvelles)
     call_command('migrate', '--noinput', verbosity=1)
     
     print("✅ Migrations OK")
@@ -79,7 +76,7 @@ try:
 except Exception as e:
     print(f"⚠️  Permissions warning (continuing): {e}")
 
-# --- Étape 4 : Démarrer Gunicorn (Via subprocess pour stabilité) ---
+# --- Étape 4 : Démarrer Gunicorn ---
 print("🚀 Étape 4: Lancement Gunicorn...")
 
 render_port = os.environ.get('PORT', '8000')
@@ -87,19 +84,17 @@ bind_address = f"0.0.0.0:{render_port}"
 
 print(f"   → Binding sur {bind_address}")
 
-# On lance Gunicorn comme un processus externe pour éviter les conflits d'import
 cmd = [
     "gunicorn",
     "cid.wsgi:application",
     "--bind", bind_address,
     "--timeout", "120",
-    "--workers", "2", # 2 workers pour la version gratuite
-    "--access-logfile", "-", # Logs sur stdout
-    "--error-logfile", "-"    # Erreurs sur stderr
+    "--workers", "2",
+    "--access-logfile", "-",
+    "--error-logfile", "-"
 ]
 
 try:
-    # On remplace le processus Python actuel par Gunicorn
     os.execvp(cmd[0], cmd)
 except Exception as e:
     print(f"❌ Erreur critique lors du lancement de Gunicorn: {e}")
