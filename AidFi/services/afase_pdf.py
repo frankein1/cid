@@ -224,8 +224,8 @@ def generer_pdf_afase(demande: DemandeAFASE):
         ]))
         elements.append(t_dec)
  # Pièces jointes
-elements.extend(generer_section_documents(demande, styles))
-
+    elements.extend(generer_section_documents(demande, styles))
+ # Construction du PDF 
     doc.build(elements, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     buffer.seek(0)
     return buffer
