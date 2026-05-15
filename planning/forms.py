@@ -152,6 +152,8 @@ class JourBloqueForm(forms.ModelForm):
 
 class PermanenceExterneForm(forms.ModelForm):
     class Meta:
+        # 🔧 Import différé pour éviter le circular import
+        from .models import PermanenceExterne
         model = PermanenceExterne
         fields = ['agent', 'salle', 'jour_semaine', 'heure_debut', 'heure_fin', 
                   'recurrence', 'actif', 'date_debut', 'date_fin']
@@ -173,17 +175,17 @@ class PermanenceExterneForm(forms.ModelForm):
         
         if self.user and hasattr(self.user, 'mds_principale'):
             mds = self.user.mds_principale
-            # Filtrer les agents de la MDS
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
             self.fields['agent'].queryset = User.objects.filter(
                 profils_mds__mds=mds,
                 profils_mds__actif=True
             ).distinct().order_by('last_name')
-            # Filtrer les salles de la MDS (y compris externes)
+            from mds.models import MDSReception
             self.fields['salle'].queryset = MDSReception.objects.filter(
                 mds=mds
             ).order_by('nom')
         
-        # Labels plus clairs
         self.fields['jour_semaine'].label = "Jour de la semaine"
         self.fields['heure_debut'].label = "Heure de début"
         self.fields['heure_fin'].label = "Heure de fin"
