@@ -271,6 +271,12 @@ class MDSReception(AuditedMixin):
     actif = models.BooleanField(default=True)
     horaire_debut = models.TimeField(default='09:00')
     horaire_fin = models.TimeField(default='17:00')
+# salle externe
+    est_externe = models.BooleanField(default=False)
+    mds_origine = models.ForeignKey(
+        'MDS', on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="MDS qui a créé cette salle externe (filtrage territorial)"
+    )
 
 # ✅ NOUVEAUX CHAMPS - Disponibilité par jour de la semaine
     disponible_lundi = models.BooleanField(
