@@ -113,6 +113,7 @@ class CreneauRdv(models.Model):
     salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE, related_name='creneaux')
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='creneaux')
     beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='rdvs')
+    
 
     # MÉTIER
     type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')
@@ -308,3 +309,23 @@ class HistoriqueCreneau(models.Model):
 
     class Meta:
         ordering = ['-date_action']
+
+class PermanenceExterne(models.Model):
+    agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE)
+    jour_semaine = models.IntegerField(choices=HoraireMDS.JOURS_SEMAINE)
+    heure_debut = models.TimeField()
+    heure_fin = models.TimeField()
+    
+    recurrence = models.CharField(
+        max_length=20,
+        choices=[('HEBDO', 'Hebdomadaire'), ('MENSUEL', 'Mensuel (même semaine)')],
+        default='HEBDO'
+    )
+    actif = models.BooleanField(default=True)
+    date_debut = models.DateField(default=timezone.now)
+    date_fin = models.DateField(null=True, blank=True)
+    
+    # Audit
+    cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
