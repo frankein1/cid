@@ -12,7 +12,7 @@ from AidFi.views import (
     v_afase,
     v_regie,
     v_cap,
-   # v_cadre,
+    v_cadre,
     v_generique,
 )
 
@@ -37,7 +37,7 @@ urlpatterns = [
     path("afase/<int:demande_id>/evaluation/", v_afase.afase_evaluation, name="afase_evaluation",),
 
     # ✅ DÉCISION CADRE
-    # path("afase/<int:demande_id>/decision/", v_afase.afase_decision, name="afase_decision",),
+     path("afase/<int:demande_id>/decision/", v_afase.afase_decision, name="afase_decision",),
 
     # ✅ prévisualisation 
     path("afase/<int:demande_id>/previsualisation/", v_afase.afase_previsualisation, name="afase_previsualisation",),
