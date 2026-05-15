@@ -164,6 +164,8 @@ def generer_pdf_afase(demande: DemandeAFASE):
     elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Justification de la demande :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "justification_demande", "") or "Néant.", styles["Normal"]))
+    elements.append(Paragraph("<b>Commentaire familial :</b>", styles["DataLabel"]))
+    elements.append(Paragraph(getattr(evaluation, "commentaire_familial", "") or "Aucun commentaire.", styles["Normal"]))
 
     elements.append(Paragraph("III. ÉLÉMENTS BUDGÉTAIRES (MENSUELS)", styles["SectionHeader"]))
 
