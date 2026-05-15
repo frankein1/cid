@@ -44,6 +44,8 @@ urlpatterns = [
     path('accueil/semaine/<str:date_str>/', views.planning_accueil_semaine, name='planning_accueil_semaine_date'),
     path('mes-permanences/', views.mes_permanences_semaine, name='mes_permanences'),
     path('mes-permanences/<str:date_str>/', views.mes_permanences_semaine, name='mes_permanences_date'),
+    path('permanences/externes/', views.gerer_permanences_externes, name='gerer_permanences_externes'),
+    path('permanences/externes/supprimer/<int:pk>/', views.supprimer_permanence_externe, name='supprimer_permanence_externe'),
 
     
     # ==========================
