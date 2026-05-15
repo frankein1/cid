@@ -16,8 +16,10 @@ Règle métier figée :
 
 from datetime import datetime, timedelta, time, date
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from .models import CreneauRdv, JourBloque
 from mds.models import DemiJourneeReception, MDSReception
+
 
 User = get_user_model()
 
