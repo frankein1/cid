@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Ajouter une salle externe{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-4">Ajouter une salle externe (hors MDS)</h1>
+    <form method="post" class="bg-white shadow rounded-lg p-6">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Créer</button>
+        <a href="{% url 'mds:liste_salles' %}" class="ml-2 text-gray-600">Annuler</a>
+    </form>
+</div>
+{% endblock %}
