@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Gestion des permanences externes - {{ mds.code_mds }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- En-tête -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-calendar-alt text-blue-500 mr-2"></i>
+                Permanences externes
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">
+                {{ mds.nom }} ({{ mds.code_mds }}) - Gestion des lieux extérieurs (CCAS, écoles, centres sociaux...)
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'planning:generer_creneaux' %}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-sync-alt"></i> Générer les créneaux
+            </a>
+            <a href="{% url 'planning:calendrier_rdv' %}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+                <i class="fas fa-calendar-week"></i> Voir le calendrier
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Formulaire d'ajout -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden sticky top-4">
+                <div class="bg-blue-600 px-6 py-4">
+                    <h2 class="text-white font-bold text-lg">
+                        <i class="fas fa-plus-circle mr-2"></i>Nouvelle permanence externe
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="bg-red-50 border-l-4 border-red-400 p-3 rounded">
+                            <p class="text-red-700 text-sm font-medium">Corrigez les erreurs ci-dessous :</p>
+                            <ul class="text-xs text-red-600 mt-1 list-disc list-inside">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }} : {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Agent *</label>
+                            {{ form.agent }}
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Salle externe *</label>
+                            {{ form.salle }}
+                            <p class="text-xs text-gray-500 mt-1">
+                                <a href="{% url 'mds:creer_salle_mds' mds.id %}" class="text-blue-600 hover:underline">
+                                    <i class="fas fa-plus-circle"></i> Créer une nouvelle salle externe
+                                </a>
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Jour de la semaine *</label>
+                            {{ form.jour_semaine }}
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Heure début *</label>
+                                {{ form.heure_debut }}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Heure fin *</label>
+                                {{ form.heure_fin }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Récurrence</label>
+                            {{ form.recurrence }}
+                            <p class="text-xs text-gray-500 mt-1">
+                                Hebdomadaire = toutes les semaines, Mensuel = même semaine du mois
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Date début</label>
+                                {{ form.date_debut }}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Date fin</label>
+                                {{ form.date_fin }}
+                                <p class="text-xs text-gray-500">(laisser vide pour illimité)</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            {{ form.actif }}
+                            <label class="ml-2 text-sm text-gray-700">Active (coché = générée automatiquement)</label>
+                        </div>
+
+                        <button type="submit" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                            <i class="fas fa-save mr-2"></i> Ajouter cette permanence
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des permanences existantes -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b">
+                    <h2 class="text-lg font-bold text-gray-700">
+                        <i class="fas fa-list mr-2 text-blue-500"></i>Permanences externes actives
+                    </h2>
+                </div>
+                
+                {% if permanences %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agent</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lieu</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jour</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horaires</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Récurrence</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for perm in permanences %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ perm.agent.get_full_name|default:perm.agent.username }}
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ perm.agent.email|default:"" }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ perm.salle.nom }}</div>
+                                    {% if perm.salle.est_externe %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        <i class="fas fa-building mr-1"></i> Externe
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900">{{ perm.get_jour_semaine_display }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-900">{{ perm.heure_debut|time:"H:i" }} - {{ perm.heure_fin|time:"H:i" }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if perm.recurrence == 'HEBDO' %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                        Hebdomadaire
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                        Mensuel
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <form method="post" action="{% url 'planning:supprimer_permanence_externe' perm.id %}" 
+                                          onsubmit="return confirm('Supprimer cette permanence ?')" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-red-600 hover:text-red-800 transition" title="Supprimer">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-calendar-times text-gray-300 text-5xl mb-3"></i>
+                    <p class="text-gray-500">Aucune permanence externe définie</p>
+                    <p class="text-gray-400 text-sm mt-1">Utilisez le formulaire pour en ajouter une</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Rappel : étape suivante -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-500 text-xl mt-0.5"></i>
+                    <div>
+                        <h3 class="font-semibold text-blue-800">Procédure complète</h3>
+                        <p class="text-sm text-blue-700 mt-1">
+                            1. Ajoutez vos permanences externes ci-dessus<br>
+                            2. Allez dans <strong>"Générer les créneaux"</strong> pour créer les créneaux sur plusieurs semaines<br>
+                            3. Les agents verront leurs permanences dans <strong>"Mes permanences"</strong><br>
+                            4. Les créneaux seront réservables dans le calendrier principal
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
