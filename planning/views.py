@@ -305,7 +305,14 @@ def generer_creneaux(request):
 
                 nb_semaines = form.cleaned_data['nombre_semaines']
                 type_rdv = form.cleaned_data['type_rdv']
-                
+                inclure_externes = form.cleaned_data.get('inclure_externes', True)
+                if inclure_externes:
+                    from .utils import generer_creneaux_depuis_permanences_externes
+                    creneaux_externes = generer_creneaux_depuis_permanences_externes(
+                        date_debut, date_debut + timedelta(weeks=nb_semaines), profile.mds)
+                    creneaux += creneaux_externes
+
+messages.success(request, f"Succès : {len(creneaux)} créneaux créés.")
                 creneaux = generer_creneaux_permanences(date_debut, nb_semaines, profile.mds, type_rdv)
                 messages.success(request, f"Succès : {len(creneaux)} créneaux créés.")
             except Exception as e:
