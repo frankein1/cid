@@ -279,9 +279,7 @@ def ajouter_jour_bloque(request):
 @login_required
 def generer_creneaux(request):
     """Génération en masse de créneaux selon les règles métier"""
-    # ✅ CORRIGÉ : Permission avec planning_generer pour les cadres
-    if not (request.user.is_superuser or 
-            request.user.a_la_capacite('planning_generer')):
+    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Seuls les gestionnaires peuvent générer des créneaux.")
         return redirect('planning:calendrier_rdv')
 
@@ -290,7 +288,6 @@ def generer_creneaux(request):
         if form.is_valid():
             try:
                 from mds.models import UserMDSProfile
-                # ✅ CORRIGÉ : .get() → .filter().first() avec vérification
                 profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
                 if not profile:
                     messages.error(request, "Vous n'êtes pas rattaché à une MDS active.")
@@ -305,19 +302,26 @@ def generer_creneaux(request):
 
                 nb_semaines = form.cleaned_data['nombre_semaines']
                 type_rdv = form.cleaned_data['type_rdv']
+                date_fin = date_debut + timedelta(weeks=nb_semaines)
+                
+                # 1. Génération des créneaux MDS classiques
+                creneaux = generer_creneaux_permanences(date_debut, nb_semaines, profile.mds, type_rdv)
+                
+                # 2. Génération des créneaux pour salles externes (si demandé)
                 inclure_externes = form.cleaned_data.get('inclure_externes', True)
                 if inclure_externes:
                     from .utils import generer_creneaux_depuis_permanences_externes
                     creneaux_externes = generer_creneaux_depuis_permanences_externes(
-                        date_debut, date_debut + timedelta(weeks=nb_semaines), profile.mds)
+                        date_debut, date_fin, profile.mds
+                    )
                     creneaux += creneaux_externes
 
-messages.success(request, f"Succès : {len(creneaux)} créneaux créés.")
-                creneaux = generer_creneaux_permanences(date_debut, nb_semaines, profile.mds, type_rdv)
                 messages.success(request, f"Succès : {len(creneaux)} créneaux créés.")
+                return redirect('planning:calendrier_rdv')
+                
             except Exception as e:
                 messages.error(request, f"Erreur de génération : {str(e)}")
-            return redirect('planning:calendrier_rdv')
+                return redirect('planning:calendrier_rdv')
     else:
         form = GenererCreneauxForm()
     
