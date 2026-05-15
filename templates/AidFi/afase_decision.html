@@ -7,15 +7,13 @@
 {% block content %}
 <h1>Décision AFASE</h1>
 
-<a href="{% url 'AidFi:afase_previsualisation' demande.id %}" target="_blank" class="...">
+<a href="{% url 'AidFi:afase_previsualisation' demande.id %}" target="_blank">
     👁️ Prévisualiser le dossier avant validation
 </a>
 
 <h2>Dossier (lecture seule)</h2>
 <p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
-<p><strong>Montant sollicité :</strong></p>
-<p><td>{{ demande.montant_sollicite }} € / mois</td>
-<td>{{ demande.montant_sollicite|floatformat:2 }} € × {{ demande.duree_demande }} mois = <strong>{{ demande.montant_total|floatformat:2 }} €</strong></td></p>
+<p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} € X {{ demande.duree_demande }} mois</p>
 <hr>
 
 <h2>Décision</h2>
