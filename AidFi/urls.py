@@ -12,7 +12,7 @@ from AidFi.views import (
     v_afase,
     v_regie,
     v_cap,
-    v_cadre,
+   # v_cadre,
     v_generique,
 )
 
