@@ -32,7 +32,7 @@
             <div class="flex gap-4">
                 <label class="inline-flex items-center">
                     <input type="radio" name="type_decision" value="ACCORD" class="form-radio text-green-600" 
-                           {% if form.type_decision.value == "ACCORD" %}checked{% endif %}>
+                           {% if form.type_decision.value == "ACCORD" %}checked{% endif %} required>
                     <span class="ml-2 text-green-700 font-bold">✅ ACCORD</span>
                 </label>
                 <label class="inline-flex items-center">
@@ -55,7 +55,7 @@
         </div>
 
         <!-- Montant accordé et durée (pour accord) -->
-        <div id="accord-fields" class="mb-4 hidden">
+        <div id="accord-fields" class="mb-4" style="display: none;">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block font-bold mb-2">{{ form.montant_accorde.label }} :</label>
@@ -82,22 +82,19 @@
             {% endif %}
         </div>
 
-        <!-- Champs cachés pour compatibilité -->
-        <input type="hidden" name="action" id="action-hidden">
-        
-        <!-- Boutons de validation -->
+        <!-- Boutons de validation SIMPLES (sans JavaScript) -->
         <div class="flex gap-4 mt-6">
-            <button type="submit" id="submit-accord"
+            <button type="submit" name="action" value="ACCORD"
                     class="bg-green-600 text-white px-6 py-3 rounded font-bold hover:bg-green-700">
                 ✅ Valider l'accord
             </button>
 
-            <button type="submit" id="submit-refus"
+            <button type="submit" name="action" value="REFUS"
                     class="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700">
                 ❌ Valider le refus
             </button>
 
-            <button type="submit" id="submit-ajo"
+            <button type="submit" name="action" value="RETOUR_INSTRUCTION"
                     class="bg-yellow-500 text-white px-6 py-3 rounded font-bold hover:bg-yellow-600">
                 🔁 Ajourner (retour instruction)
             </button>
@@ -113,61 +110,37 @@
 </div>
 
 <script>
-    // Gestion de l'affichage selon le type de décision
+    // Simple JavaScript pour afficher/masquer les champs selon le type
     const typeAccord = document.querySelector('input[value="ACCORD"]');
     const typeRefus = document.querySelector('input[value="REFUS"]');
     const typeAjo = document.querySelector('input[value="AJO"]');
     const motifContainer = document.getElementById('motif-container');
     const motifLabel = document.getElementById('motif-label');
     const accordFields = document.getElementById('accord-fields');
-    const submitAccord = document.getElementById('submit-accord');
-    const submitRefus = document.getElementById('submit-refus');
-    const submitAjo = document.getElementById('submit-ajo');
-    const actionHidden = document.getElementById('action-hidden');
     const motifSelect = document.querySelector('[name="code_decision"]');
     
     function updateVisibility() {
         if (typeAccord.checked) {
             motifLabel.innerHTML = '🎯 Motif d\'accord :';
-            motifContainer.classList.remove('hidden');
-            accordFields.classList.remove('hidden');
+            motifContainer.style.display = 'block';
+            accordFields.style.display = 'grid';
             motifSelect.style.borderColor = '#22c55e';
             motifSelect.style.backgroundColor = '#f0fdf4';
         } else if (typeRefus.checked) {
             motifLabel.innerHTML = '❌ Motif de refus :';
-            motifContainer.classList.remove('hidden');
-            accordFields.classList.add('hidden');
+            motifContainer.style.display = 'block';
+            accordFields.style.display = 'none';
             motifSelect.style.borderColor = '#ef4444';
             motifSelect.style.backgroundColor = '#fef2f2';
         } else if (typeAjo.checked) {
-            motifContainer.classList.add('hidden');
-            accordFields.classList.add('hidden');
+            motifContainer.style.display = 'none';
+            accordFields.style.display = 'none';
         }
     }
     
     typeAccord.addEventListener('change', updateVisibility);
     typeRefus.addEventListener('change', updateVisibility);
     typeAjo.addEventListener('change', updateVisibility);
-    
-    submitAccord.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (!typeAccord.checked) typeAccord.checked = true;
-        actionHidden.value = 'ACCORD';
-        document.querySelector('form').submit();
-    });
-    
-    submitRefus.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (!typeRefus.checked) typeRefus.checked = true;
-        actionHidden.value = 'REFUS';
-        document.querySelector('form').submit();
-    });
-    
-    submitAjo.addEventListener('click', function(e) {
-        e.preventDefault();
-        actionHidden.value = 'RETOUR_INSTRUCTION';
-        document.querySelector('form').submit();
-    });
     
     // Initialisation
     updateVisibility();
