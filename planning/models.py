@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 # Import spécifique pour les capacités
-from mds.models import UserMDSProfile
+from mds.models import UserMDSProfile, HoraireMDS
 
 # =============================================================================
 # MODÈLE CONFIGURATION (Restauration V1)
