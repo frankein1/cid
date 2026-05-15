@@ -7,6 +7,10 @@
 {% block content %}
 <h1>Décision AFASE</h1>
 
+<a href="{% url 'AidFi:afase_previsualisation' demande.id %}" target="_blank" class="...">
+    👁️ Prévisualiser le dossier avant validation
+</a>
+
 <h2>Dossier (lecture seule)</h2>
 <p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
 <p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} €</p>
