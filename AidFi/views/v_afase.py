@@ -254,44 +254,20 @@ def afase_decision(request, demande_id):
 
 @login_required
 def afase_previsualisation(request, demande_id):
-    """
-    Permet au cadre de prévisualiser le PDF avant validation définitive.
-    Une fois validé, le PDF est archivé définitivement dans la GED.
-    """
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_decider"):
+    # ✅ N'importe quel agent MDS peut prévisualiser (pas besoin de "peut_decider")
+    if not request.user.a_la_capacite("peut_voir"):
         return HttpResponseForbidden()
 
-    # Génération du PDF pour prévisualisation
     buffer = generer_pdf_afase(demande)
     b64_pdf = base64.b64encode(buffer.getvalue()).decode('utf-8')
     buffer.close()
 
-    # Validation finale
-    if request.method == "POST":
-        buffer_final = generer_pdf_afase(demande)
-        stocker_pdf_afase(demande=demande, buffer=buffer_final, user=request.user)
-
-        # Mise à jour du statut selon la décision
-        if demande.decision.type_decision == "ACCORD":
-            demande.statut = "ACCORDEE"
-        else:
-            demande.statut = "REFUSEE"
-        demande.save(update_fields=["statut"])
-
-        messages.success(request, "Dossier validé et PDF archivé.")
-        return redirect("AidFi:afase_detail", demande_id=demande.id)
-
-    # Affichage de la prévisualisation
-    return render(
-        request, 
-        "AidFi/afase_previsualisation.html", 
-        {
-            "demande": demande,
-            "pdf_data": b64_pdf,
-        }
-    )
+    return render(request, "AidFi/afase_previsualisation.html", {
+        "demande": demande,
+        "pdf_data": b64_pdf,
+    })
 
 
 # =============================================================================
