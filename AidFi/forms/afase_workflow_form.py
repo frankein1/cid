@@ -161,11 +161,8 @@ class AFASEWorkflowForm(forms.Form):
         BudgetAFASE.objects.update_or_create(
             demande=demande, defaults={"ressources": self.cleaned_data["ressources"], "charges": self.cleaned_data["charges"], "reste_a_vivre": self.cleaned_data["reste_a_vivre"], },)
 
-    # Liaison des documents GED à la demande AFASE (via PieceJustificative)
-    for doc in self.cleaned_data.get('documents_ged', []):
-        PieceJustificative.objects.get_or_create(demande=demande, document_ged=doc, defaults={'type_piece': 'AUTRE', 'statut': 'VALIDE'})
+        # Liaison des documents GED à la demande AFASE (via PieceJustificative)
+        for doc in self.cleaned_data.get('documents_ged', []):
+            PieceJustificative.objects.get_or_create(demande=demande, document_ged=doc, defaults={'type_piece': 'AUTRE', 'statut': 'VALIDE'})
 
-        
         return demande
-
-
