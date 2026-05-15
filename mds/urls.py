@@ -29,12 +29,11 @@ urlpatterns = [
     path('gestion-demi-journees/', reception_views.mes_demi_journees, name='gestion_demi_journees'),
     path('toggle-demi-journee/', reception_views.toggle_demi_journee, name='toggle_demi_journee'),
     
-    # SALLES (Pointent désormais vers salle_views)
+    # SALLES
     path('<int:mds_id>/salles/', salle_views.gestion_salles_mds, name='gestion_salles_mds'),
     path('<int:mds_id>/salles/creer/', salle_views.creer_salle_mds, name='creer_salle_mds'),
     path('<int:mds_id>/salles/<int:salle_id>/modifier/', salle_views.modifier_salle_mds, name='modifier_salle_mds'),
     path('<int:mds_id>/salles/<int:salle_id>/supprimer/', salle_views.supprimer_salle_mds, name='supprimer_salle_mds'),
-    path('salles/externe/ajouter/', views.ajouter_salle_externe, name='ajouter_salle_externe'),
     
     # API JSON
     path('ajax/ville-par-cp/', api_views.ajax_get_ville_from_cp, name='get_ville_by_cp'),
