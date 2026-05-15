@@ -5,48 +5,149 @@
 {% block title %}Décision AFASE{% endblock %}
 
 {% block content %}
-<h1>Décision AFASE</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-4">Décision AFASE</h1>
 
-<a href="{% url 'AidFi:afase_previsualisation' demande.id %}" target="_blank">
-    👁️ Prévisualiser le dossier avant validation
-</a>
+    <a href="{% url 'AidFi:afase_previsualisation' demande.id %}" target="_blank" 
+       class="inline-block bg-blue-600 text-white px-4 py-2 rounded mb-6">
+        👁️ Prévisualiser le dossier avant validation
+    </a>
 
-<h2>Dossier (lecture seule)</h2>
-<p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
-<p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} € X {{ demande.duree_demande }} mois</p>
-<hr>
-
-<h2>Décision</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-
-    <div class="flex gap-4 mt-6">
-        <button type="submit"
-                name="action"
-                value="ACCORD"
-                class="bg-green-600 text-white px-6 py-3 rounded font-bold">
-            ✅ Accorder
-        </button>
-
-        <button type="submit"
-                name="action"
-                value="REFUS"
-                class="bg-red-600 text-white px-6 py-3 rounded font-bold">
-            ❌ Refuser
-        </button>
-
-        <button type="submit"
-                name="action"
-                value="RETOUR_INSTRUCTION"
-                class="bg-yellow-500 text-white px-6 py-3 rounded font-bold">
-            🔁 Retour en instruction
-        </button>
+    <div class="bg-gray-50 p-4 rounded-lg mb-6">
+        <h2 class="text-xl font-semibold mb-2">Dossier (lecture seule)</h2>
+        <p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
+        <p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} € × {{ demande.duree_demande }} mois</p>
     </div>
 
-    <a href="{% url 'AidFi:afase_detail' demande.id %}"
-       class="inline-block mt-4 text-gray-600 underline">
-        Annuler
-    </a>
-</form>
+    <h2 class="text-xl font-semibold mb-4">Décision</h2>
+    
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Type de décision (caché, mais gardé pour la logique) -->
+        {{ form.type_decision }}
+        
+        <!-- Motifs séparés avec couleurs -->
+        <div id="motif-accord" class="hidden p-4 rounded-lg border-2 border-green-300 bg-green-50">
+            <label class="block font-bold mb-2 text-green-800">🎯 Motif d'accord :</label>
+            {{ form.code_decision_accord }}
+            {% if form.code_decision_accord.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.code_decision_accord.errors }}</p>
+            {% endif %}
+        </div>
+
+        <div id="motif-refus" class="hidden p-4 rounded-lg border-2 border-red-300 bg-red-50">
+            <label class="block font-bold mb-2 text-red-800">❌ Motif de refus :</label>
+            {{ form.code_decision_refus }}
+            {% if form.code_decision_refus.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.code_decision_refus.errors }}</p>
+            {% endif %}
+            
+            <div class="mt-4">
+                <label class="block font-bold mb-2 text-red-800">📝 Motivation (obligatoire) :</label>
+                {{ form.motivation }}
+                {% if form.motivation.errors %}
+                    <p class="text-red-500 text-sm mt-1">{{ form.motivation.errors }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Montant et durée (pour accord uniquement) -->
+        <div id="champs-accord" class="hidden">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold mb-2">{{ form.montant_accorde.label }} :</label>
+                    {{ form.montant_accorde }}
+                </div>
+                <div>
+                    <label class="block font-bold mb-2">{{ form.duree_accordee.label }} :</label>
+                    {{ form.duree_accordee }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex gap-4 mt-6">
+            <button type="button"
+                    id="btn-accord"
+                    class="bg-green-600 text-white px-6 py-3 rounded font-bold hover:bg-green-700">
+                ✅ Accorder
+            </button>
+
+            <button type="button"
+                    id="btn-refus"
+                    class="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700">
+                ❌ Refuser
+            </button>
+
+            <button type="submit"
+                    name="action"
+                    value="RETOUR_INSTRUCTION"
+                    class="bg-yellow-500 text-white px-6 py-3 rounded font-bold hover:bg-yellow-600">
+                🔁 Retour en instruction
+            </button>
+        </div>
+
+        <div>
+            <a href="{% url 'AidFi:afase_detail' demande.id %}"
+               class="inline-block mt-4 text-gray-600 underline">
+                Annuler
+            </a>
+        </div>
+        
+        <!-- Champ caché pour envoyer l'action -->
+        <input type="hidden" name="action" id="action-hidden" value="">
+    </form>
+</div>
+
+<script>
+    // Gestion de l'affichage des motifs selon le choix
+    const motifAccord = document.getElementById('motif-accord');
+    const motifRefus = document.getElementById('motif-refus');
+    const champsAccord = document.getElementById('champs-accord');
+    const btnAccord = document.getElementById('btn-accord');
+    const btnRefus = document.getElementById('btn-refus');
+    const actionHidden = document.getElementById('action-hidden');
+    const form = document.querySelector('form');
+    const typeDecisionField = document.querySelector('[name="type_decision"]');
+    const codeDecisionAccord = document.querySelector('[name="code_decision_accord"]');
+    const codeDecisionRefus = document.querySelector('[name="code_decision_refus"]');
+    const codeDecisionOriginal = document.querySelector('[name="code_decision"]');
+
+    // Cacher le champ original code_decision
+    if (codeDecisionOriginal) {
+        codeDecisionOriginal.style.display = 'none';
+    }
+
+    function resetAffichage() {
+        motifAccord.classList.add('hidden');
+        motifRefus.classList.add('hidden');
+        champsAccord.classList.add('hidden');
+    }
+
+    btnAccord.addEventListener('click', function() {
+        resetAffichage();
+        motifAccord.classList.remove('hidden');
+        champsAccord.classList.remove('hidden');
+        actionHidden.value = 'ACCORD';
+        if (typeDecisionField) typeDecisionField.value = 'ACCORD';
+        // On force le code_decision à la valeur du champ accord
+        if (codeDecisionOriginal && codeDecisionAccord) {
+            codeDecisionOriginal.value = codeDecisionAccord.value;
+        }
+        form.submit();
+    });
+
+    btnRefus.addEventListener('click', function() {
+        resetAffichage();
+        motifRefus.classList.remove('hidden');
+        actionHidden.value = 'REFUS';
+        if (typeDecisionField) typeDecisionField.value = 'REFUS';
+        // On force le code_decision à la valeur du champ refus
+        if (codeDecisionOriginal && codeDecisionRefus) {
+            codeDecisionOriginal.value = codeDecisionRefus.value;
+        }
+        form.submit();
+    });
+</script>
 {% endblock %}
