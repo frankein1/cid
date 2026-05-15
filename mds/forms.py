@@ -4,7 +4,8 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
-# mds/forms.py
+# mds/forms.py - Version avec salles externes pour cadres MDS
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -27,9 +28,8 @@ class MDSForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
-    # Filtrage responsable : utilisateurs ayant un profil avec la capacité "peut_administrer"
         self.fields['responsable'].queryset = User.objects.filter(
-            profils__capacites__code='peut_valider',  # ✅ Correct
+            profils__capacites__code='peut_valider',
             is_active=True
         ).distinct().order_by('last_name')
     
@@ -54,7 +54,6 @@ class UserMDSProfileForm(forms.ModelForm):
         label="Agent existant"
     )
     
-    # Champs spécifiques pour la création d'un compte
     nouveau_matricule = forms.CharField(required=False, max_length=20)
     nouveau_prenom = forms.CharField(required=False, max_length=30)
     nouveau_nom = forms.CharField(required=False, max_length=30)
@@ -62,7 +61,6 @@ class UserMDSProfileForm(forms.ModelForm):
     nouveau_mdp1 = forms.CharField(required=False, widget=forms.PasswordInput)
     nouveau_mdp2 = forms.CharField(required=False, widget=forms.PasswordInput)
     
-    # Profil métier CORE obligatoire pour les nouveaux et existants
     profil_core = forms.ModelChoiceField(
         queryset=Profil.objects.filter(code__startswith='MDS_').order_by('nom'),
         required=True,
@@ -83,20 +81,14 @@ class UserMDSProfileForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
         
-        # Date du jour par défaut pour les remplacements/arrivées
         if not self.instance.pk:
             self.initial['date_debut'] = timezone.now().date()
             self.initial['actif'] = True
 
-        # Liste des agents non encore rattachés à cette MDS spécifique
         if self.mds:
-    # Inclure les utilisateurs qui ont un profil INACTIF pour cette MDS
-    # Ils pourront ainsi être réactivés plutôt que de créer un doublon
             deja_presents_actifs = UserMDSProfile.objects.filter(mds=self.mds, actif=True).values_list('user_id', flat=True)
-    
             self.fields['user_existant'].queryset = User.objects.exclude(id__in=deja_presents_actifs).order_by('last_name')
 
-        # Application du style Tailwind
         common_class = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
         for name, field in self.fields.items():
             if name != 'mode' and not isinstance(field.widget, (forms.CheckboxInput, forms.RadioSelect)):
@@ -106,7 +98,6 @@ class UserMDSProfileForm(forms.ModelForm):
         cleaned_data = super().clean()
         mode = cleaned_data.get('mode')
         if mode == 'nouveau':
-            # Validation minimale pour le nouveau compte
             if not cleaned_data.get('nouveau_matricule'):
                 self.add_error('nouveau_matricule', "Le matricule est obligatoire pour un nouveau compte.")
             if cleaned_data.get('nouveau_mdp1') != cleaned_data.get('nouveau_mdp2'):
@@ -119,10 +110,9 @@ class UserMDSProfileForm(forms.ModelForm):
 # 3. FORMULAIRE MISE À JOUR AGENT
 # ================================================================
 class UserMDSProfileUpdateForm(forms.ModelForm):
-    # ✅ AJOUT du champ profil_core
     profil_core = forms.ModelChoiceField(
         queryset=Profil.objects.filter(code__startswith='MDS_').order_by('nom'),
-        required=False,  # Optionnel en modification
+        required=False,
         label="Profil métier (CORE)"
     )
     
@@ -143,7 +133,7 @@ class UserMDSProfileUpdateForm(forms.ModelForm):
                 field.widget.attrs.update({'class': common_class})
 
 # ================================================================
-# 4. FORMULAIRES RÉCEPTION
+# 4. FORMULAIRE RÉCEPTION (SALLES) - VERSION AVEC SALLES EXTERNES
 # ================================================================
 class MDSReceptionForm(forms.ModelForm):
     class Meta:
@@ -151,19 +141,31 @@ class MDSReceptionForm(forms.ModelForm):
         fields = [
             'nom', 'type_salle', 'capacite', 'actif', 
             'horaire_debut', 'horaire_fin',
-            # ✅ AJOUT des champs de disponibilité hebdomadaire
             'disponible_lundi', 'disponible_mardi', 'disponible_mercredi',
             'disponible_jeudi', 'disponible_vendredi', 'disponible_samedi',
-            'disponible_dimanche'
+            'disponible_dimanche',
+            'est_externe',
         ]
         widgets = {
             'horaire_debut': forms.TimeInput(attrs={'type': 'time'}),
             'horaire_fin': forms.TimeInput(attrs={'type': 'time'}),
+            'est_externe': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
-    
+
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         common_class = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
         for name, field in self.fields.items():
             if not isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({'class': common_class})
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.user and hasattr(self.user, 'mds_principale'):
+            instance.mds = self.user.mds_principale
+            if instance.est_externe:
+                instance.mds_origine = self.user.mds_principale
+        if commit:
+            instance.save()
+        return instance
