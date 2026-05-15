@@ -109,6 +109,12 @@ class GenererCreneauxForm(forms.Form):
         label="Type de RDV",
         widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-md'})
     )
+    inclure_externes = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="🏢 Inclure les salles externes (CCAS, écoles, etc.)",
+        help_text="Génère aussi les créneaux des permanences externes actives"
+    )
 
 
 class JourBloqueForm(forms.ModelForm):
