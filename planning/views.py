@@ -41,8 +41,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
-from .models import CreneauRdv, JourBloque
-from .forms import RdvForm, GenererCreneauxForm, JourBloqueForm 
+from .models import CreneauRdv, JourBloque, PermanenceExterne
+from .forms import RdvForm, GenererCreneauxForm, JourBloqueForm, PermanenceExterneForm 
 from .utils import generer_creneaux_permanences, est_jour_ferie
 
 User = get_user_model()
