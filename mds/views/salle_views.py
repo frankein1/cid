@@ -16,7 +16,6 @@ from ..forms import MDSReceptionForm
 def gestion_salles_mds(request, mds_id):
     mds = get_object_or_404(MDS, id=mds_id)
     
-    # Correction : Utilisation du nouveau système de capacités unifié
     if not (request.user.is_superuser or 
             mds.responsable == request.user or 
             request.user.a_la_capacite('peut_administrer')):
@@ -25,9 +24,6 @@ def gestion_salles_mds(request, mds_id):
     
     salles = MDSReception.objects.filter(mds=mds).order_by('nom')
     
-    # OPTIMISATION pour éviter l'erreur 'split' dans le template :
-    # Si tes salles ont des jours stockés en chaîne (ex: "Lundi,Mardi"), 
-    # on les transforme en liste ici même.
     for salle in salles:
         if hasattr(salle, 'jours_ouverture') and isinstance(salle.jours_ouverture, str):
             salle.jours_list = [j.strip() for j in salle.jours_ouverture.split(',') if j]
@@ -46,7 +42,7 @@ def creer_salle_mds(request, mds_id):
         return redirect("mds:gestion_salles_mds", mds_id=mds.id)
     
     if request.method == 'POST':
-        form = MDSReceptionForm(request.POST)
+        form = MDSReceptionForm(request.POST, user=request.user)
         if form.is_valid():
             salle = form.save(commit=False)
             salle.mds = mds
@@ -54,7 +50,8 @@ def creer_salle_mds(request, mds_id):
             messages.success(request, f"Salle {salle.nom} créée avec succès.")
             return redirect("mds:gestion_salles_mds", mds_id=mds.id)
     else:
-        form = MDSReceptionForm()
+        form = MDSReceptionForm(user=request.user)
+    
     return render(request, "mds/creer_salle_mds.html", {"form": form, "mds": mds})
 
 @login_required
@@ -67,13 +64,14 @@ def modifier_salle_mds(request, mds_id, salle_id):
         return redirect("mds:gestion_salles_mds", mds_id=mds.id)
     
     if request.method == 'POST':
-        form = MDSReceptionForm(request.POST, instance=salle)
+        form = MDSReceptionForm(request.POST, instance=salle, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, f"Salle {salle.nom} modifiée.")
             return redirect("mds:gestion_salles_mds", mds_id=mds.id)
     else:
-        form = MDSReceptionForm(instance=salle)
+        form = MDSReceptionForm(instance=salle, user=request.user)
+    
     return render(request, "mds/creer_salle_mds.html", {"form": form, "mds": mds, "salle": salle})
 
 @login_required
@@ -90,4 +88,5 @@ def supprimer_salle_mds(request, mds_id, salle_id):
         salle.delete()
         messages.success(request, f"Salle {nom} supprimée.")
         return redirect("mds:gestion_salles_mds", mds_id=mds.id)
+    
     return render(request, "mds/supprimer_salle_mds.html", {"mds": mds, "salle": salle})
