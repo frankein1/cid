@@ -5,6 +5,7 @@
 # =============================================================================
 
 from django import forms
+from django.core.exceptions import ValidationError
 
 from AidFi.models.m_afase import (
     DemandeAFASE,
@@ -59,11 +60,30 @@ class DecisionAFASEForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Configuration du champ code_decision avec toutes les options
+        # Ajout d'émoticônes + code numérique pour distinguer accord et refus
+        accord_choices = [(code, f"🟢 {code} - {label}") for code, label in ACCORD_AFASE_CHOICES]
+        refus_choices = [(code, f"🔴 {code} - {label}") for code, label in REFUS_AFASE_CHOICES]
+        
+        # Construction de la liste déroulante avec les deux groupes
         self.fields["code_decision"].widget = forms.Select(
-            choices=[("", "--- Sélectionner un motif ---")] + ACCORD_AFASE_CHOICES + REFUS_AFASE_CHOICES
+            choices=[("", "--- Sélectionner un motif ---")] + accord_choices + refus_choices
         )
         
         # Rendre la motivation obligatoire
         self.fields["motivation"].required = True
         self.fields["motivation"].label = "Motif (obligatoire en cas de refus)"
+        self.fields["motivation"].widget.attrs.update({"class": "w-full p-2 border border-red-300 rounded"})
+        
+        # Ajout de classes CSS pour le champ code_decision
+        self.fields["code_decision"].widget.attrs.update({"class": "w-full p-2 rounded"})
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        type_decision = cleaned_data.get("type_decision")
+        motivation = cleaned_data.get("motivation")
+        
+        # Validation : le motif de refus nécessite une explication
+        if type_decision == "REFUS" and not motivation:
+            self.add_error("motivation", "Le motif de refus est obligatoire.")
+        
+        return cleaned_data
