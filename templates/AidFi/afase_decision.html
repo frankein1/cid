@@ -10,7 +10,8 @@
 <h2>Dossier (lecture seule)</h2>
 <p><strong>Bénéficiaire :</strong> {{ beneficiaire.nom }} {{ beneficiaire.prenom }}</p>
 <p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} €</p>
-
+<td>{{ demande.montant_sollicite }} € / mois</td>
+<td>{{ demande.montant_total }} € ({{ demande.duree_demande }} mois)</td>
 <hr>
 
 <h2>Décision</h2>
