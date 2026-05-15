@@ -12,8 +12,7 @@ Ajout du champ duree_minutes dans RdvForm
 
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import CreneauRdv, JourBloque
-
+from .models import CreneauRdv, JourBloque, PermanenceExterne
 from mds.models import MDSReception, UserMDSProfile
 from django.contrib.auth import get_user_model
 User = get_user_model()
