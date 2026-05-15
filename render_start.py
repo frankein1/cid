@@ -25,14 +25,21 @@ except Exception as e:
     print(f"❌ Django setup FAILED: {e}")
     sys.exit(1)
 
-# --- Étape 1 : Migrations ---
-print("📦 Étape 1: Migrations...")
+# --- Étape 1 : Migrations forcées ---
+print("📦 Étape 1: Création et application des migrations...")
 try:
     from django.core.management import call_command
-    call_command('migrate', '--noinput', verbosity=0)
+    
+    # 🔧 CRUCIAL : créer les fichiers de migration pour les nouveaux champs
+    call_command('makemigrations', 'AidFi', '--noinput', verbosity=1)
+    call_command('makemigrations', '--noinput', verbosity=1)
+    
+    # Appliquer les migrations
+    call_command('migrate', '--noinput', verbosity=1)
+    
     print("✅ Migrations OK")
 except Exception as e:
-    print(f"⚠️  Migrations warning (continuing): {e}")
+    print(f"⚠️  Erreur migrations (on continue): {e}")
 
 # --- Étape 2 : Superuser ---
 print("👤 Étape 2: Superuser...")
