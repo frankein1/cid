@@ -76,14 +76,11 @@ class DecisionAFASEForm(forms.ModelForm):
         
         # Ajout de classes CSS pour le champ code_decision
         self.fields["code_decision"].widget.attrs.update({"class": "w-full p-2 rounded"})
-    
     def clean(self):
         cleaned_data = super().clean()
         type_decision = cleaned_data.get("type_decision")
         motivation = cleaned_data.get("motivation")
-        
-        # Validation : le motif de refus nécessite une explication
+    # Validation : la motivation est OBLIGATOIRE uniquement pour le refus
         if type_decision == "REFUS" and not motivation:
-            self.add_error("motivation", "Le motif de refus est obligatoire.")
-        
+            self.add_error("motivation", "La motivation est obligatoire pour un refus.")
         return cleaned_data
