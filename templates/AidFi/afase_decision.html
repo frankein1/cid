@@ -26,7 +26,7 @@
     <form method="post" class="space-y-6">
         {% csrf_token %}
         
-        <!-- Type de décision avec des boutons stylés -->
+        <!-- Type de décision -->
         <div class="mb-4">
             <label class="block font-bold mb-2">Type de décision :</label>
             <div class="flex gap-4">
@@ -48,7 +48,7 @@
             </div>
         </div>
 
-        <!-- Motif (style conditionnel) -->
+        <!-- Motif (liste déroulante) -->
         <div class="mb-4" id="motif-container">
             <label class="block font-bold mb-2" id="motif-label">Motif :</label>
             {{ form.code_decision }}
@@ -68,11 +68,18 @@
             </div>
         </div>
 
-        <!-- Motivation (pour refus) -->
-        <div id="refus-fields" class="mb-4 hidden">
-            <label class="block font-bold mb-2 text-red-700">📝 {{ form.motivation.label }} :</label>
+        <!-- Motivation (toujours visible) -->
+        <div class="mb-4">
+            <label class="block font-bold mb-2 text-gray-700">
+                📝 {{ form.motivation.label }} :
+            </label>
             {{ form.motivation }}
-            <p class="text-sm text-gray-500 mt-1">Obligatoire en cas de refus</p>
+            <p class="text-sm text-gray-500 mt-1">
+                <span class="text-red-600">⚠️ Obligatoire uniquement en cas de refus.</span>
+            </p>
+            {% if form.motivation.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ form.motivation.errors }}</p>
+            {% endif %}
         </div>
 
         <!-- Champs cachés pour compatibilité -->
@@ -113,7 +120,6 @@
     const motifContainer = document.getElementById('motif-container');
     const motifLabel = document.getElementById('motif-label');
     const accordFields = document.getElementById('accord-fields');
-    const refusFields = document.getElementById('refus-fields');
     const submitAccord = document.getElementById('submit-accord');
     const submitRefus = document.getElementById('submit-refus');
     const submitAjo = document.getElementById('submit-ajo');
@@ -125,20 +131,17 @@
             motifLabel.innerHTML = '🎯 Motif d\'accord :';
             motifContainer.classList.remove('hidden');
             accordFields.classList.remove('hidden');
-            refusFields.classList.add('hidden');
             motifSelect.style.borderColor = '#22c55e';
             motifSelect.style.backgroundColor = '#f0fdf4';
         } else if (typeRefus.checked) {
             motifLabel.innerHTML = '❌ Motif de refus :';
             motifContainer.classList.remove('hidden');
             accordFields.classList.add('hidden');
-            refusFields.classList.remove('hidden');
             motifSelect.style.borderColor = '#ef4444';
             motifSelect.style.backgroundColor = '#fef2f2';
         } else if (typeAjo.checked) {
             motifContainer.classList.add('hidden');
             accordFields.classList.add('hidden');
-            refusFields.classList.add('hidden');
         }
     }
     
