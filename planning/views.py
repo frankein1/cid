@@ -580,3 +580,67 @@ def exporter_mes_permanences_ics(request):
     response = HttpResponse(cal.to_ical(), content_type='text/calendar')
     response['Content-Disposition'] = 'attachment; filename="mes_permanences.ics"'
     return response
+
+# =============================================================================
+# GESTION DES PERMANENCES EXTERNES (CADRE) (Deepseek voulait que ce soit l'admin mais je ne suis pas d'accord)
+# =============================================================================
+
+@login_required
+def gerer_permanences_externes(request):
+    """Vue cadre : lister, créer, modifier, supprimer les permanences externes"""
+    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
+        messages.error(request, "Accès réservé aux cadres gestionnaires.")
+        return redirect('planning:calendrier_rdv')
+    
+    mds = request.user.mds_principale
+    if not mds:
+        messages.error(request, "Vous n'êtes pas rattaché à une MDS.")
+        return redirect('planning:calendrier_rdv')
+    
+    permanences = PermanenceExterne.objects.filter(
+        salle__mds=mds
+    ).select_related('agent', 'salle').order_by('jour_semaine', 'heure_debut')
+    
+    if request.method == 'POST':
+        form = PermanenceExterneForm(request.POST, user=request.user)
+        if form.is_valid():
+            perm = form.save(commit=False)
+            perm.cree_par = request.user
+            perm.save()
+            messages.success(request, f"Permanence externe ajoutée : {perm.salle.nom} - {perm.get_jour_semaine_display()}")
+            return redirect('planning:gerer_permanences_externes')
+    else:
+        form = PermanenceExterneForm(user=request.user)
+    
+    # Jours semaine pour l'affichage
+    jours = dict(PermanenceExterne._meta.get_field('jour_semaine').choices)
+    
+    return render(request, 'planning/gerer_permanences_externes.html', {
+        'permanences': permanences,
+        'form': form,
+        'mds': mds,
+        'jours': jours,
+    })
+
+
+@login_required
+def supprimer_permanence_externe(request, pk):
+    """Supprimer une permanence externe"""
+    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
+        messages.error(request, "Accès refusé.")
+        return redirect('planning:calendrier_rdv')
+    
+    perm = get_object_or_404(PermanenceExterne, pk=pk)
+    mds = request.user.mds_principale
+    
+    if perm.salle.mds != mds and not request.user.is_superuser:
+        messages.error(request, "Cette permanence n'appartient pas à votre MDS.")
+        return redirect('planning:gerer_permanences_externes')
+    
+    if request.method == 'POST':
+        nom = perm.salle.nom
+        perm.delete()
+        messages.success(request, f"Permanence pour {nom} supprimée.")
+        return redirect('planning:gerer_permanences_externes')
+    
+    return render(request, 'planning/supprimer_permanence_externe.html', {'perm': perm})
