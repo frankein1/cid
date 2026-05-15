@@ -123,6 +123,53 @@ def generer_creneaux_agent_demi_journee(
     return creneaux_crees
 
 
+def generer_creneaux_depuis_permanences_externes(date_debut, date_fin, mds):
+    """Génère les créneaux pour les permanences externes actives de la MDS"""
+    from .models import PermanenceExterne
+    creneaux_crees = []
+    
+    perms = PermanenceExterne.objects.filter(
+        actif=True,
+        salle__mds_origine=mds,
+        date_debut__lte=date_fin
+    ).filter(
+        Q(date_fin__isnull=True) | Q(date_fin__gte=date_debut)
+    )
+    
+    for perm in perms:
+        current_date = date_debut
+        while current_date <= date_fin:
+            # Vérifier si la date correspond au jour + récurrence
+            if perm.recurrence == 'HEBDO' and current_date.weekday() == perm.jour_semaine:
+                pass
+            elif perm.recurrence == 'MENSUEL':
+                # Semaine du mois (1re, 2e, 3e, 4e)
+                semaine_num = (current_date.day - 1) // 7 + 1
+                if semaine_num != 1:  # TODO: stocker semaine_num dans PermanenceExterne
+                    continue
+                if current_date.weekday() != perm.jour_semaine:
+                    continue
+            else:
+                current_date += timedelta(days=1)
+                continue
+            
+            # Création du créneau
+            creneau = CreneauRdv.objects.create(
+                date=current_date,
+                heure_debut=perm.heure_debut,
+                heure_fin=perm.heure_fin,
+                salle=perm.salle,
+                agent=perm.agent,
+                type_rdv='PERMANENCE',
+                statut='DISPONIBLE',
+                description=f"Permanence externe : {perm.salle.nom}"
+            )
+            creneaux_crees.append(creneau)
+            
+            current_date += timedelta(days=1)
+    
+    return creneaux_crees
+    
 def generer_creneaux_permanences(
     date_debut, nombre_semaines, mds, type_rdv='PERMANENCE'
 ):
