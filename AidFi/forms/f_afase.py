@@ -50,7 +50,8 @@ class DecisionAFASEForm(forms.ModelForm):
         model = DecisionAFASE
         fields = (
             "type_decision",
-            "code_decision",
+            "code_decision_accord",  # ← nouveau champ virtuel
+            "code_decision_refus",   # ← nouveau champ virtuel
             "montant_accorde",
             "duree_accordee",
             "motivation",
@@ -58,6 +59,25 @@ class DecisionAFASEForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["code_decision"].widget = forms.Select(
-            choices=[("", "--- Sélectionner un motif ---"), *ACCORD_AFASE_CHOICES, *REFUS_AFASE_CHOICES]
+        
+        # Champ virtuel pour les motifs d'accord
+        self.fields["code_decision_accord"] = forms.ChoiceField(
+            choices=[("", "--- Sélectionner un motif d'accord ---")] + ACCORD_AFASE_CHOICES,
+            required=False,
+            label="Motif d'accord"
         )
+        
+        # Champ virtuel pour les motifs de refus
+        self.fields["code_decision_refus"] = forms.ChoiceField(
+            choices=[("", "--- Sélectionner un motif de refus ---")] + REFUS_AFASE_CHOICES,
+            required=False,
+            label="Motif de refus"
+        )
+        
+        self.fields["code_decision_accord"].widget.attrs["class"] = "border-green-500"
+        self.fields["code_decision_refus"].widget.attrs["class"] = "border-red-500"
+        
+        # Rendre la motivation obligatoire
+        self.fields["motivation"].required = True
+        self.fields["motivation"].label = "Motif (obligatoire en cas de refus)"
+
