@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Mes permanences{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-4">Mes permanences (à venir)</h1>
+    
+    <div class="flex justify-between mb-6">
+        <a href="{% url 'planning:mes_permanences_date' semaine_precedente|date:'Y-m-d' %}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded">← Semaine précédente</a>
+        <a href="{% url 'planning:mes_permanences' %}" 
+           class="bg-blue-500 text-white px-4 py-2 rounded">Semaine en cours</a>
+        <a href="{% url 'planning:mes_permanences_date' semaine_suivante|date:'Y-m-d' %}" 
+           class="bg-gray-500 text-white px-4 py-2 rounded">Semaine suivante →</a>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-2 text-left">Date</th>
+                    <th class="px-4 py-2 text-left">Horaire</th>
+                    <th class="px-4 py-2 text-left">Lieu</th>
+                    <th class="px-4 py-2 text-left">Bénéficiaire</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for jour, creneaux in creneaux_par_jour.items %}
+                    {% for c in creneaux %}
+                    <tr class="border-t">
+                        <td class="px-4 py-2">{{ jour|date:"d/m/Y" }}</td>
+                        <td class="px-4 py-2">{{ c.heure_debut|time:"H:i" }} - {{ c.heure_fin|time:"H:i" }}</td>
+                        <td class="px-4 py-2">{{ c.salle.nom }}</td>
+                        <td class="px-4 py-2">
+                            {% if c.beneficiaire %}
+                                {{ c.beneficiaire.prenom }} {{ c.beneficiaire.nom }}
+                            {% else %}
+                                <span class="text-green-600">Disponible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="border-t">
+                        <td colspan="4" class="px-4 py-4 text-center text-gray-500">
+                            Aucune permanence ce jour
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-6">
+        <a href="{% url 'planning:export_mes_permanences_ics' %}" 
+           class="bg-green-600 text-white px-4 py-2 rounded">
+            📅 Exporter vers Outlook (.ics)
+        </a>
+    </div>
+</div>
+{% endblock %}
