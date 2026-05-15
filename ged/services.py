@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from ged.models import DocumentGED, DocumentType
 
 
-def stocker_pdf_afase(*, demande, buffer, user):
+def stocker_pdf_afase(demande, buffer, user):
     """
     Stockage FINAL du PDF AFASE dans la GED.
     Appelé UNE SEULE FOIS à la validation de la décision.
@@ -65,11 +65,12 @@ def stocker_pdf_afase(*, demande, buffer, user):
     doc.save()
 
     # ------------------------------------------------------------------
-    # Liaison directe sur la demande :
-    # utile pour accéder rapidement au document final depuis AFASE
+    # ⚠️ LIAISON DIRECTE COMMENTÉE
+    # Le champ 'document_final' n'existe pas dans le modèle DemandeAFASE
+    # Si tu veux l'ajouter plus tard, crée une migration dédiée.
     # ------------------------------------------------------------------
-    demande.document_final = doc
-    demande.save(update_fields=["document_final"])
+    # demande.document_final = doc
+    # demande.save(update_fields=["document_final"])
 
     # On replace le curseur au début pour un éventuel réemploi du buffer
     buffer.seek(0)
