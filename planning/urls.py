@@ -42,12 +42,16 @@ urlpatterns = [
     path('accueil/<str:date_str>/', views.planning_accueil_jour, name='planning_accueil_jour_date'),
     path('accueil/semaine/', views.planning_accueil_semaine, name='planning_accueil_semaine'),
     path('accueil/semaine/<str:date_str>/', views.planning_accueil_semaine, name='planning_accueil_semaine_date'),
+    path('mes-permanences/', views.mes_permanences_semaine, name='mes_permanences'),
+    path('mes-permanences/<str:date_str>/', views.mes_permanences_semaine, name='mes_permanences_date'),
+
     
     # ==========================
     # EXPORTS OUTLOOK (NOUVEAU)
     # ==========================
     path('export/ical/', views.export_planning_ical, name='export_ical'),
     path('export/agent/<int:agent_id>/outlook/', views.exporter_planning_agent_outlook, name='export_agent_outlook'),
+    path('export/mes-permanences/ics/', views.exporter_mes_permanences_ics, name='export_mes_permanences_ics'),
     
     # ==========================
     # IMPRESSION PDF (NOUVEAU)
