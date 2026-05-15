@@ -11,7 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
@@ -56,28 +56,35 @@ def get_ditas_styles():
 
 
 def draw_page_template(canvas, doc):
+    """
+    Template d'en-tête et pied de page.
+    Logo et ligne de séparation : UNIQUEMENT sur la première page.
+    Pied de page : UNIQUEMENT sur la première page (sortie recto-verso).
+    """
     canvas.saveState()
-
-    if os.path.exists(LOGO_PATH):
-        try:
-            canvas.drawImage(
-                LOGO_PATH,
-                x=1.5 * cm,
-                y=A4[1] - 3 * cm,
-                width=5 * cm,
-                preserveAspectRatio=True,
-                mask="auto",
-            )
-        except Exception:
-            pass
-
-    canvas.setLineWidth(0.5)
-    canvas.line(1.5 * cm, A4[1] - 3.2 * cm, A4[0] - 1.5 * cm, A4[1] - 3.2 * cm)
-
-    canvas.setFont("Helvetica", 8)
-    date_gen = timezone.now().strftime("%d/%m/%Y à %H:%M")
-    canvas.drawString(1.5 * cm, 1 * cm, f"SI DITAS - Document Officiel - Généré le {date_gen}")
-    canvas.drawRightString(A4[0] - 1.5 * cm, 1 * cm, f"Page {doc.page}")
+    
+    if doc.page == 1:
+        if os.path.exists(LOGO_PATH):
+            try:
+                canvas.drawImage(
+                    LOGO_PATH,
+                    x=1.5 * cm,
+                    y=A4[1] - 3 * cm,
+                    width=5 * cm,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
+            except Exception:
+                pass
+        
+        canvas.setLineWidth(0.5)
+        canvas.line(1.5 * cm, A4[1] - 3.2 * cm, A4[0] - 1.5 * cm, A4[1] - 3.2 * cm)
+        
+        canvas.setFont("Helvetica", 8)
+        date_gen = timezone.now().strftime("%d/%m/%Y à %H:%M")
+        canvas.drawString(1.5 * cm, 1 * cm, f"SI DITAS - Document Officiel - Généré le {date_gen}")
+        canvas.drawRightString(A4[0] - 1.5 * cm, 1 * cm, f"Page {doc.page}")
+    
     canvas.restoreState()
 
 
@@ -86,6 +93,7 @@ def _money(value):
         return f"{float(value):.2f} €"
     except Exception:
         return "0.00 €"
+
 
 def generer_section_documents(demande, styles):
     pieces = demande.pieces_justificatives.select_related('document_ged').all()
@@ -164,6 +172,7 @@ def generer_pdf_afase(demande: DemandeAFASE):
     elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Justification de la demande :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "justification_demande", "") or "Néant.", styles["Normal"]))
+    elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Commentaire familial :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "commentaire_familial", "") or "Aucun commentaire.", styles["Normal"]))
 
@@ -205,9 +214,12 @@ def generer_pdf_afase(demande: DemandeAFASE):
     elements.append(Paragraph(f"Montant sollicité : <b>{_money(demande.montant_sollicite)}</b>", styles["Normal"]))
     elements.append(Paragraph(f"Durée demandée : {demande.duree_demande or 0} mois", styles["Normal"]))
 
+    # Saut de page avant la décision
+    elements.append(PageBreak())
+
     if decision:
-        elements.append(Spacer(1, 20))
         elements.append(Paragraph("V. DÉCISION ADMINISTRATIVE", styles["SectionHeader"]))
+        
         data_dec = [
             ["Type de décision :", decision.get_type_decision_display()],
             ["Code de décision :", decision.code_decision or "-"],
@@ -225,9 +237,49 @@ def generer_pdf_afase(demande: DemandeAFASE):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
         ]))
         elements.append(t_dec)
- # Pièces jointes
+        elements.append(Spacer(1, 20))
+
+        # Signatures en deux colonnes
+        elements.append(Paragraph("VI. SIGNATURES", styles["SectionHeader"]))
+
+        ts = demande.cree_par
+        ts_nom = f"{ts.first_name} {ts.last_name}".strip() or ts.username or "Non renseigné"
+        date_depot = demande.date_creation.strftime("%d/%m/%Y à %H:%M") if demande.date_creation else "Date inconnue"
+
+        decideur = decision.decide_par
+        if decideur:
+            prenom_initial = decideur.first_name[0].upper() + "." if decideur.first_name else ""
+            nom_complet = f"{prenom_initial} {decideur.last_name}".strip() if decideur.last_name else decideur.username
+            date_decision = decision.date_decision.strftime("%d/%m/%Y à %H:%M") if decision.date_decision else "Date inconnue"
+        else:
+            nom_complet = "Non renseigné"
+            date_decision = "Date inconnue"
+
+        data_signatures = [
+            [Paragraph("<b>Travailleur social</b>", styles["DataLabel"]),
+             Paragraph("<b>Pour la Présidence du Département</b>", styles["DataLabel"])],
+            [Paragraph(ts_nom, styles["Normal"]),
+             Paragraph("<i>Par délégation,</i>", styles["Normal"])],
+            [Paragraph(f"<i>Demande déposée le :<br/>{date_depot}</i>", styles["Normal"]),
+             Paragraph(nom_complet, styles["Normal"])],
+            ["", Paragraph(f"<i>Décision prise le :<br/>{date_decision}</i>", styles["Normal"])],
+        ]
+
+        t_signatures = Table(data_signatures, colWidths=[7.5*cm, 7.5*cm])
+        t_signatures.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, 0), 'Helvetica-Bold'),
+            ('LINEBELOW', (0, 0), (1, 0), 0.5, colors.grey),
+        ]))
+        elements.append(t_signatures)
+        elements.append(Spacer(1, 20))
+
     elements.extend(generer_section_documents(demande, styles))
- # Construction du PDF 
+
     doc.build(elements, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     buffer.seek(0)
     return buffer
