@@ -193,21 +193,23 @@ def api_creneaux(request):
 
     return JsonResponse(events, safe=False)
 
-
 @login_required
 def reserver_rdv(request, creneau_id, beneficiaire_id=None):
-    """
-    Procédure de réservation d'un créneau.
-    Le beneficiaire_id est maintenant passé dans l'URL pour plus de robustesse.
-    """
     creneau = get_object_or_404(CreneauRdv, pk=creneau_id)
     
-    # 1. Récupération du bénéficiaire (si présent dans l'URL)
+    # Récupération du bénéficiaire (priorité : URL > GET > formulaire)
+    if not beneficiaire_id:
+        beneficiaire_id = request.GET.get('beneficiaire_id')
+    
     beneficiaire = None
     if beneficiaire_id:
-        from beneficiaire.models import Beneficiaire
         beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
-    
+        # Vérifier que l'agent a le droit sur ce bénéficiaire
+        if not beneficiaire.peut_etre_vu_par(request.user):
+            messages.error(request, "Accès non autorisé à ce bénéficiaire.")
+            return redirect('planning:calendrier_rdv')
+   
+   
     # 2. Vérification de disponibilité
     if not creneau.is_disponible():
         messages.error(request, "Ce créneau n'est pas disponible.")
