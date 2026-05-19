@@ -112,7 +112,7 @@ class RdvForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.creneau and not self.creneau.est_disponible():
+        if self.creneau and not self.creneau.is_disponible():
             raise ValidationError("Ce créneau n'est plus disponible.")
         return cleaned_data
 
