@@ -21,12 +21,27 @@ User = get_user_model()
 class RdvForm(forms.ModelForm):
     class Meta:
         model = CreneauRdv
-        fields = ['beneficiaire', 'type_rdv', 'description', 'priorite', 'duree_minutes']
+        fields = [
+            'beneficiaire',
+            'accompagnant',          # 🆕
+            'co_intervenants',       # 🆕
+            'modalite',              # 🆕
+            'lieu_precis',           # 🆕
+            'type_rdv',
+            'description',
+            'priorite',
+            'duree_minutes'
+        ]
 
-        widgets = {
+        
+            widgets = {
             'beneficiaire': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
+            'accompagnant': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
+            'co_intervenants': forms.SelectMultiple(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
+            'modalite': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
+            'lieu_precis': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md'}), 
             'type_rdv': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
@@ -47,6 +62,17 @@ class RdvForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        if self.request and hasattr(self.request.user, 'mds_principale'):
+    mds = self.request.user.mds_principale
+    from mds.models import UserMDSProfile
+    ids_agents = UserMDSProfile.objects.filter(mds=mds, actif=True).values_list('user_id', flat=True)
+    self.fields['co_intervenants'].queryset = User.objects.filter(id__in=ids_agents).order_by('last_name')
+
+
+
+
+
+        
         self.creneau = kwargs.pop('creneau', None)
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
