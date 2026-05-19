@@ -125,20 +125,20 @@ class CreneauRdv(models.Model):
     )
 
 # 🆕 Co-intervenants (plusieurs agents sociaux sur un même RDV)
-co_intervenants = models.ManyToManyField(
-    settings.AUTH_USER_MODEL,
-    blank=True,
-    related_name='rdvs_partages',
-    help_text="Autres travailleurs sociaux impliqués"
-)
+    co_intervenants = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='rdvs_partages',
+        help_text="Autres travailleurs sociaux impliqués"
+    )
 
 # 🆕 Modalité du RDV (lieu / type d'intervention)
-    MODALITES_RDV = [
-        ('MDS', 'En MDS'),
-        ('VAD', 'Visite à domicile'),
-        ('ECOLE', 'En milieu scolaire'),
-        ('AUTRE', 'Autre lieu'),
-    ]
+MODALITES_RDV = [
+    ('MDS', 'En MDS'),
+    ('VAD', 'Visite à domicile'),
+    ('ECOLE', 'En milieu scolaire'),
+    ('AUTRE', 'Autre lieu'),
+]
     modalite = models.CharField(max_length=10, choices=MODALITES_RDV, default='MDS')
     lieu_precis = models.CharField(max_length=200, blank=True, help_text="Adresse ou précision si autre lieu")
 
