@@ -61,7 +61,7 @@ HEURE_FIN_APRES_MIDI = time(16, 30)
 # =============================================================================
 
 @login_required
-def calendrier_rdv(request):
+def calendrier_rdv(request, beneficiaire_id=None):
     """Vue principale du calendrier - Accès agents sociaux et cadres"""
     today = date.today()
     
@@ -90,8 +90,8 @@ def calendrier_rdv(request):
     beneficiaire_id = request.GET.get('beneficiaire')
     beneficiaire = None
     if beneficiaire_id:
-        from beneficiaire.models import Beneficiaire
-        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
+    from beneficiaire.models import Beneficiaire
+    beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)    
 
     vue = request.GET.get('vue', 'mois')
     
