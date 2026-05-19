@@ -63,23 +63,23 @@
             {% endif %}
 
             <div class="space-y-6">
-                <!-- Bénéficiaire -->
-                <div>
-                    <label for="{{ form.beneficiaire.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        {{ form.beneficiaire.label }} *
-                    </label>
-                    {{ form.beneficiaire }}
-                    {% if form.beneficiaire.help_text %}
-                    <p class="mt-1 text-sm text-gray-500">{{ form.beneficiaire.help_text }}</p>
-                    {% endif %}
-                </div>
+            <!-- Bénéficiaire avec autocomplétion -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.beneficiaire_recherche.label }} *</label>
+    {{ form.beneficiaire_recherche }}
+    {{ form.beneficiaire_id }}
+    {% if form.beneficiaire_recherche.help_text %}
+        <p class="text-xs text-gray-500 mt-1">{{ form.beneficiaire_recherche.help_text }}</p>
+    {% endif %}
+    {% if form.beneficiaire_recherche.errors %}
+        <p class="text-red-500 text-sm mt-1">{{ form.beneficiaire_recherche.errors }}</p>
+    {% endif %}
+</div>
+
 <!-- Accompagnant -->
 <div class="mb-4">
     <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.accompagnant.label }}</label>
     {{ form.accompagnant }}
-    {% if form.accompagnant.help_text %}
-        <p class="text-xs text-gray-500 mt-1">{{ form.accompagnant.help_text }}</p>
-    {% endif %}
 </div>
 
 <!-- Co-intervenants -->
@@ -89,43 +89,23 @@
     <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs agents</p>
 </div>
 
-<!-- Modalité -->
-<div class="grid grid-cols-2 gap-4">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.modalite.label }}</label>
-        {{ form.modalite }}
-    </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.lieu_precis.label }}</label>
-        {{ form.lieu_precis }}
-    </div>
+<!-- Type de RDV -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.type_rdv.label }} *</label>
+    {{ form.type_rdv }}
 </div>
-                <!-- Type de RDV -->
-                <div>
-                    <label for="{{ form.type_rdv.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        {{ form.type_rdv.label }} *
-                    </label>
-                    {{ form.type_rdv }}
-                </div>
 
-                <!-- Priorité -->
-                <div>
-                    <label for="{{ form.priorite.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        {{ form.priorite.label }}
-                    </label>
-                    {{ form.priorite }}
-                </div>
+<!-- Description -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }} *</label>
+    {{ form.description }}
+</div>
 
-                <!-- Description -->
-                <div>
-                    <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        {{ form.description.label }} *
-                    </label>
-                    {{ form.description }}
-                    {% if form.description.help_text %}
-                    <p class="mt-1 text-sm text-gray-500">{{ form.description.help_text }}</p>
-                    {% endif %}
-                </div>
+<!-- Durée -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.duree_minutes.label }}</label>
+    {{ form.duree_minutes }}
+</div>             
             </div>
 
             <!-- Boutons -->
@@ -142,4 +122,46 @@
         </form>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+<script>
+$(document).ready(function() {
+    $('#id_beneficiaire_recherche').select2({
+        ajax: {
+            url: "{% url 'planning:api_recherche_beneficiaire' %}",
+            dataType: 'json',
+            delay: 300,
+            data: function(params) {
+                return { q: params.term };
+            },
+            processResults: function(data) {
+                return { results: data.results };
+            },
+            cache: true
+        },
+        minimumInputLength: 3,
+        placeholder: 'Rechercher un bénéficiaire...',
+        allowClear: true,
+        language: {
+            inputTooShort: function() { return 'Tapez au moins 3 caractères'; },
+            noResults: function() { return 'Aucun bénéficiaire trouvé'; }
+        }
+    });
+    
+    $('#id_beneficiaire_recherche').on('select2:select', function(e) {
+        $('#id_beneficiaire_id').val(e.params.data.id);
+    });
+    
+    $('#id_beneficiaire_recherche').on('select2:clear', function() {
+        $('#id_beneficiaire_id').val('');
+    });
+});
+</script>
 {% endblock %}
+
+
+
+
+
