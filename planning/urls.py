@@ -60,6 +60,13 @@ urlpatterns = [
     # IMPRESSION PDF (NOUVEAU)
     # ==========================
     path('imprimer/<str:date_str>/pdf/', views.imprimer_planning_jour_pdf, name='imprimer_planning_pdf'),
+
+
+    # ==========================
+    # recherche beneficiaire
+    # ==========================
+    path('api/recherche-beneficiaire/', views.api_recherche_beneficiaire, name='api_recherche_beneficiaire'),
+
     
     # ==========================
     # FUTURE: SYNC MICROSOFT GRAPH
