@@ -7,19 +7,14 @@
 """
 planning/utils.py
 Utilitaires pour la gestion des créneaux de rendez-vous
-VERSION COMPLÈTE ET CORRIGÉE
-Règle métier figée :
-- Fermeture MDS : 17h00
-- Durée RDV : 30 min
-- Dernier RDV commence à 16h30
+VERSION CORRIGÉE - Plus d'erreur usermdsprofile
 """
 
 from datetime import datetime, timedelta, time, date
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from .models import CreneauRdv, JourBloque
-from mds.models import DemiJourneeReception, MDSReception
-
+from mds.models import DemiJourneeReception, MDSReception, UserMDSProfile
 
 User = get_user_model()
 
@@ -29,10 +24,9 @@ User = get_user_model()
 HEURE_DEBUT_MATIN = time(9, 0)
 HEURE_FIN_MATIN = time(12, 0)
 HEURE_DEBUT_APRES_MIDI = time(13, 30)
-HEURE_FIN_APRES_MIDI = time(17, 0)  # heure de fermeture
+HEURE_FIN_APRES_MIDI = time(17, 0)
 DUREE_CRENEAU_MINUTES = 30
 
-# 🔒 VERROU MÉTIER : dernier créneau autorisé = 16h30
 DERNIER_DEBUT_AUTORISE = (
     HEURE_FIN_APRES_MIDI.hour * 60 + HEURE_FIN_APRES_MIDI.minute
 ) - DUREE_CRENEAU_MINUTES
@@ -72,7 +66,6 @@ def generer_creneaux_agent_demi_journee(
 ):
     creneaux_crees = []
 
-    # Forcer les horaires dans les plages autorisées
     if heure_debut < HEURE_DEBUT_MATIN:
         heure_debut = HEURE_DEBUT_MATIN
 
@@ -93,7 +86,6 @@ def generer_creneaux_agent_demi_journee(
 
     for minute_depart in range(debut_minutes, fin_minutes, DUREE_CRENEAU_MINUTES):
 
-        # 🔒 VERROU ABSOLU : aucun créneau ne commence après 16h30
         if minute_depart > DERNIER_DEBUT_AUTORISE:
             continue
 
@@ -141,21 +133,20 @@ def generer_creneaux_depuis_permanences_externes(date_debut, date_fin, mds):
     for perm in perms:
         current_date = date_debut
         while current_date <= date_fin:
-            # Vérifier si la date correspond au jour + récurrence
             if perm.recurrence == 'HEBDO' and current_date.weekday() == perm.jour_semaine:
                 pass
             elif perm.recurrence == 'MENSUEL':
-                # Semaine du mois (1re, 2e, 3e, 4e)
                 semaine_num = (current_date.day - 1) // 7 + 1
-                if semaine_num != 1:  # TODO: stocker semaine_num dans PermanenceExterne
+                if semaine_num != 1:
+                    current_date += timedelta(days=1)
                     continue
                 if current_date.weekday() != perm.jour_semaine:
+                    current_date += timedelta(days=1)
                     continue
             else:
                 current_date += timedelta(days=1)
                 continue
             
-            # Création du créneau
             creneau = CreneauRdv.objects.create(
                 date=current_date,
                 heure_debut=perm.heure_debut,
@@ -167,16 +158,21 @@ def generer_creneaux_depuis_permanences_externes(date_debut, date_fin, mds):
                 description=f"Permanence externe : {perm.salle.nom}"
             )
             creneaux_crees.append(creneau)
-            
             current_date += timedelta(days=1)
     
     return creneaux_crees
-    
+
+
 def generer_creneaux_permanences(
     date_debut, nombre_semaines, mds, type_rdv='PERMANENCE'
 ):
     creneaux_crees = []
     salles = MDSReception.objects.filter(mds=mds, actif=True)
+
+    # ✅ Récupération des IDs des agents de la MDS (une seule fois)
+    ids_agents_mds = UserMDSProfile.objects.filter(
+        mds=mds, actif=True
+    ).values_list('user_id', flat=True)
 
     for i in range(nombre_semaines * 7):
         current_date = date_debut + timedelta(days=i)
@@ -226,16 +222,15 @@ def generer_creneaux_permanences(
                 continue
 
             for dj in demi_journees:
-                agents = (
-                    [dj['agent']]
-                    if dj.get('agent')
-                    else User.objects.filter(
-                        profils__capacites__code='peut_creer',
+                if dj.get('agent'):
+                    agents = [dj['agent']]
+                else:
+                    # ✅ FILTRAGE CORRECT : on utilise les IDs des agents de la MDS
+                    agents = User.objects.filter(
+                        id__in=ids_agents_mds,
                         is_active=True,
-                        usermdsprofile__mds=mds,
-                        usermdsprofile__actif=True
+                        profils__capacites__code='peut_creer'
                     ).distinct()
-                )
 
                 for agent in agents:
                     if agent_est_disponible(
