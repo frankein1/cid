@@ -10,38 +10,36 @@ VERSION FINALE CORRIGÉE - 12/02/2026
 Ajout du champ duree_minutes dans RdvForm
 """
 
-from django import forms
 from django.core.exceptions import ValidationError
 from .models import CreneauRdv, JourBloque
 from mds.models import MDSReception, UserMDSProfile
 from django.contrib.auth import get_user_model
-User = get_user_model()
+from beneficiaire.models import Beneficiaire   # ← ajouté
 
+User = get_user_model()
 
 class RdvForm(forms.ModelForm):
     class Meta:
         model = CreneauRdv
         fields = [
             'beneficiaire',
-            'accompagnant',          # 🆕
-            'co_intervenants',       # 🆕
-            'modalite',              # 🆕
-            'lieu_precis',           # 🆕
+            'accompagnant',
+            'co_intervenants',
+            'modalite',
+            'lieu_precis',
             'type_rdv',
             'description',
             'priorite',
             'duree_minutes'
         ]
-
-        
-            widgets = {
+        widgets = {
             'beneficiaire': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
             'accompagnant': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'co_intervenants': forms.SelectMultiple(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'modalite': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
-            'lieu_precis': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md'}), 
+            'lieu_precis': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'type_rdv': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
@@ -62,21 +60,11 @@ class RdvForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        if self.request and hasattr(self.request.user, 'mds_principale'):
-    mds = self.request.user.mds_principale
-    from mds.models import UserMDSProfile
-    ids_agents = UserMDSProfile.objects.filter(mds=mds, actif=True).values_list('user_id', flat=True)
-    self.fields['co_intervenants'].queryset = User.objects.filter(id__in=ids_agents).order_by('last_name')
-
-
-
-
-
-        
         self.creneau = kwargs.pop('creneau', None)
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
+        # Filtrage du bénéficiaire (existant)
         if 'beneficiaire' in self.fields:
             from beneficiaire.models import Beneficiaire
 
@@ -100,6 +88,30 @@ class RdvForm(forms.ModelForm):
         self.fields['beneficiaire'].required = True
         self.fields['type_rdv'].required = True
         self.fields['description'].required = True
+
+        # 🆕 Filtrage des co-intervenants sur les agents de la MDS
+        if self.request and hasattr(self.request.user, 'mds_principale'):
+            mds = self.request.user.mds_principale
+            from mds.models import UserMDSProfile
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            ids_agents = UserMDSProfile.objects.filter(
+                mds=mds, actif=True
+            ).values_list('user_id', flat=True)
+            self.fields['co_intervenants'].queryset = User.objects.filter(
+                id__in=ids_agents
+            ).order_by('last_name')
+
+        # 🆕 Filtrage de l'accompagnant (optionnel)
+        if 'accompagnant' in self.fields and self.request:
+            # On peut filtrer sur les bénéficiaires de la même MDS
+            profile = UserMDSProfile.objects.filter(
+                user=self.request.user, actif=True
+            ).first()
+            if profile and profile.mds:
+                self.fields['accompagnant'].queryset = Beneficiaire.objects.filter(
+                    mds=profile.mds, actif=True
+                ).order_by('nom', 'prenom')
 
     def clean(self):
         cleaned_data = super().clean()
