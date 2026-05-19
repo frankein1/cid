@@ -79,17 +79,18 @@
                     </label>
                     {{ form.type_rdv }}
                 </div>
-
-                <!-- Inclure les salles externes -->
-                <div class="mb-4">
-                    <label class="flex items-center cursor-pointer">
-                        {{ form.inclure_externes }}
-                        <span class="ml-2 text-sm text-gray-700">{{ form.inclure_externes.label }}</span>
-                    </label>
-                    {% if form.inclure_externes.help_text %}
-                        <p class="mt-1 text-xs text-gray-500">{{ form.inclure_externes.help_text }}</p>
-                    {% endif %}
-                </div>
+<!-- Inclure les salles externes -->
+<div class="mb-4">
+    <label class="flex items-center cursor-pointer">
+        {{ form.inclure_externes }}
+        <span class="ml-2 text-sm text-gray-700">{{ form.inclure_externes.label }}</span>
+    </label>
+    {% if form.inclure_externes.help_text %}
+        <p class="mt-1 text-xs text-gray-500">{{ form.inclure_externes.help_text }}</p>
+    {% endif %}
+</div>
+                
+                
                 
                 <!-- Information -->
                 <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
