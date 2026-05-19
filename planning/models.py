@@ -113,7 +113,34 @@ class CreneauRdv(models.Model):
     salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE, related_name='creneaux')
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='creneaux')
     beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='rdvs')
-    
+
+# 🆕 Accompagnant (pour mineurs, personne qui vient avec le bénéficiaire)
+    accompagnant = models.ForeignKey(
+        'beneficiaire.Beneficiaire',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rdvs_accompagnes',
+        help_text="Personne accompagnant le bénéficiaire (ex: parent pour un mineur)"
+    )
+
+# 🆕 Co-intervenants (plusieurs agents sociaux sur un même RDV)
+co_intervenants = models.ManyToManyField(
+    settings.AUTH_USER_MODEL,
+    blank=True,
+    related_name='rdvs_partages',
+    help_text="Autres travailleurs sociaux impliqués"
+)
+
+# 🆕 Modalité du RDV (lieu / type d'intervention)
+    MODALITES_RDV = [
+        ('MDS', 'En MDS'),
+        ('VAD', 'Visite à domicile'),
+        ('ECOLE', 'En milieu scolaire'),
+        ('AUTRE', 'Autre lieu'),
+    ]
+    modalite = models.CharField(max_length=10, choices=MODALITES_RDV, default='MDS')
+    lieu_precis = models.CharField(max_length=200, blank=True, help_text="Adresse ou précision si autre lieu")
 
     # MÉTIER
     type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')
