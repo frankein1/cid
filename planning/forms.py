@@ -6,9 +6,7 @@
 
 """
 planning/forms.py
-VERSION FINALE CORRIGÉE - 19/05/2026
-Ajout des champs : accompagnant, co_intervenants, modalite, lieu_precis
-Correction : actif → statut='ACTIF' pour Beneficiaire
+VERSION FINALE AVEC RECHERCHE BÉNÉFICIAIRE
 """
 
 from django import forms
@@ -23,31 +21,33 @@ User = get_user_model()
 
 
 class RdvForm(forms.ModelForm):
+    # Champ de recherche pour le bénéficiaire
+    beneficiaire_recherche = forms.CharField(
+        label="Bénéficiaire",
+        required=True,
+        help_text="Tapez au moins 3 lettres (nom, prénom ou code interne)",
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border rounded-md',
+            'autocomplete': 'off',
+            'placeholder': 'Rechercher un bénéficiaire...'
+        })
+    )
+    beneficiaire_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+
     class Meta:
         model = CreneauRdv
         fields = [
-            'beneficiaire',
+            'beneficiaire_id',
             'accompagnant',
             'co_intervenants',
-            'modalite',
-            'lieu_precis',
             'type_rdv',
             'description',
-            'priorite',
             'duree_minutes'
         ]
         widgets = {
-            'beneficiaire': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-            }),
             'accompagnant': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'co_intervenants': forms.SelectMultiple(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
-            'modalite': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
-            'lieu_precis': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'type_rdv': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-            }),
-            'priorite': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
             'description': forms.Textarea(attrs={
@@ -68,29 +68,18 @@ class RdvForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        # Bénéficiaire (uniquement ceux avec statut='ACTIF')
-        if self.request:
-            profile = UserMDSProfile.objects.filter(
-                user=self.request.user, actif=True
-            ).first()
-            if profile and profile.mds:
-                self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                    mds=profile.mds, statut='ACTIF'
-                ).order_by('nom', 'prenom')
-            else:
-                self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                    statut='ACTIF'
-                ).order_by('nom', 'prenom')
-        else:
-            self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                statut='ACTIF'
-            ).order_by('nom', 'prenom')
+        # Si on a déjà un bénéficiaire (édition), on pré-remplit le champ recherche
+        if self.instance and self.instance.beneficiaire:
+            b = self.instance.beneficiaire
+            self.initial['beneficiaire_recherche'] = f"{b.nom} {b.prenom} ({b.code_interne})"
+            self.initial['beneficiaire_id'] = b.id
 
-        self.fields['beneficiaire'].required = True
+        # Rendre les champs requis
+        self.fields['beneficiaire_recherche'].required = True
         self.fields['type_rdv'].required = True
         self.fields['description'].required = True
 
-        # Co-intervenants (agents de la MDS)
+        # Co-intervenants : agents de la MDS
         if self.request and hasattr(self.request.user, 'mds_principale'):
             mds = self.request.user.mds_principale
             ids_agents = UserMDSProfile.objects.filter(
@@ -100,20 +89,25 @@ class RdvForm(forms.ModelForm):
                 id__in=ids_agents
             ).order_by('last_name')
 
-        # Accompagnant (bénéficiaires actifs de la MDS)
-        if self.request:
-            profile = UserMDSProfile.objects.filter(
-                user=self.request.user, actif=True
-            ).first()
-            if profile and profile.mds:
-                self.fields['accompagnant'].queryset = Beneficiaire.objects.filter(
-                    mds=profile.mds, statut='ACTIF'
-                ).order_by('nom', 'prenom')
-
     def clean(self):
         cleaned_data = super().clean()
+        
+        # Vérification que le créneau est toujours disponible
         if self.creneau and not self.creneau.is_disponible():
             raise ValidationError("Ce créneau n'est plus disponible.")
+        
+        # Récupération du bénéficiaire depuis l'ID caché
+        beneficiaire_id = cleaned_data.get('beneficiaire_id')
+        if not beneficiaire_id:
+            raise ValidationError("Veuillez sélectionner un bénéficiaire valide.")
+        
+        try:
+            beneficiaire = Beneficiaire.objects.get(id=beneficiaire_id)
+        except Beneficiaire.DoesNotExist:
+            raise ValidationError("Bénéficiaire introuvable.")
+        
+        cleaned_data['beneficiaire'] = beneficiaire
+        
         return cleaned_data
 
 
