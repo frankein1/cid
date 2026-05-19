@@ -47,6 +47,7 @@ urlpatterns = [
     path('mes-permanences/<str:date_str>/', views.mes_permanences_semaine, name='mes_permanences_date'),
     path('permanences/externes/', views.gerer_permanences_externes, name='gerer_permanences_externes'),
     path('permanences/externes/supprimer/<int:pk>/', views.supprimer_permanence_externe, name='supprimer_permanence_externe'),
+    path('creer-rdv/<int:beneficiaire_id>/', views.creer_rdv_depuis_beneficiaire, name='creer_rdv_depuis_beneficiaire'),
 
     
     # ==========================
