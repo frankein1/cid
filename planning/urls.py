@@ -27,6 +27,7 @@ urlpatterns = [
     # GESTION DES CRÉNEAUX
     # ==========================
     path('reserver/<int:creneau_id>/<int:beneficiaire_id>/', views.reserver_rdv, name='reserver_rdv'),
+    path('reserver/<int:creneau_id>/', views.reserver_rdv, name='reserver_rdv_simple'),
     path('annuler/<int:creneau_id>/', views.annuler_rdv, name='annuler_rdv'),
     path('generer/', views.generer_creneaux, name='generer_creneaux'),
     
