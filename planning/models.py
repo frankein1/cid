@@ -5,14 +5,6 @@
 # =============================================================================
 
 # planning/models.py
-"""
-PLANNING MODELS – VERSION UNIFIÉE (V2 + RÉCUPÉRATION V1)
-Fusion effectuée :
-- Sécurité V2 : Verrous SQL (select_for_update), transactions atomiques.
-- Règles V2 : Horaires stricts (09h00 - 17h00).
-- Restauration V1 : Modèles JourBloque et ConfigurationPlanning.
-- Restauration V1 : Méthodes de confort (est_passe, get_duree_affichage).
-"""
 
 from datetime import time, datetime
 from django.db import models, transaction
@@ -21,15 +13,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Q
 
-# Import spécifique pour les capacités
 from mds.models import UserMDSProfile, HoraireMDS
 
-# =============================================================================
-# MODÈLE CONFIGURATION (Restauration V1)
-# =============================================================================
 
 class ConfigurationPlanning(models.Model):
-    """Configuration globale du planning"""
     cle = models.CharField(max_length=100, unique=True)
     valeur = models.TextField()
     type_valeur = models.CharField(
@@ -45,16 +32,15 @@ class ConfigurationPlanning(models.Model):
     description = models.TextField(blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['cle']
-    
+
     def __str__(self):
         return f"{self.cle} = {self.valeur}"
-    
+
     @classmethod
     def get_valeur(cls, cle, default=None):
-        """Récupère une valeur avec conversion de type"""
         try:
             config = cls.objects.get(cle=cle)
             if config.type_valeur == 'INTEGER':
@@ -73,10 +59,6 @@ class ConfigurationPlanning(models.Model):
         except cls.DoesNotExist:
             return default
 
-
-# =============================================================================
-# MODÈLE CRÉNEAU (Version V2 sécurisée)
-# =============================================================================
 
 class CreneauRdv(models.Model):
     TYPE_RDV_CHOICES = [
@@ -103,18 +85,16 @@ class CreneauRdv(models.Model):
         ('ABSENT', 'Absent'),
     ]
 
-    # TEMPS
     date = models.DateField()
     heure_debut = models.TimeField()
     heure_fin = models.TimeField()
     duree_minutes = models.PositiveIntegerField(default=30)
 
-    # RESSOURCES
     salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE, related_name='creneaux')
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='creneaux')
     beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='rdvs')
 
-# 🆕 Accompagnant (pour mineurs, personne qui vient avec le bénéficiaire)
+    # 🆕 Accompagnant (personne accompagnant le bénéficiaire)
     accompagnant = models.ForeignKey(
         'beneficiaire.Beneficiaire',
         on_delete=models.SET_NULL,
@@ -124,7 +104,7 @@ class CreneauRdv(models.Model):
         help_text="Personne accompagnant le bénéficiaire (ex: parent pour un mineur)"
     )
 
-# 🆕 Co-intervenants (plusieurs agents sociaux sur un même RDV)
+    # 🆕 Co-intervenants (plusieurs agents sociaux sur un même RDV)
     co_intervenants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
@@ -132,24 +112,25 @@ class CreneauRdv(models.Model):
         help_text="Autres travailleurs sociaux impliqués"
     )
 
-# 🆕 Modalité du RDV (lieu / type d'intervention)
-MODALITES_RDV = [
-    ('MDS', 'En MDS'),
-    ('VAD', 'Visite à domicile'),
-    ('ECOLE', 'En milieu scolaire'),
-    ('AUTRE', 'Autre lieu'),
-]
+    MODALITES_RDV = [
+        ('MDS', 'En MDS'),
+        ('VAD', 'Visite à domicile'),
+        ('ECOLE', 'En milieu scolaire'),
+        ('AUTRE', 'Autre lieu'),
+    ]
     modalite = models.CharField(max_length=10, choices=MODALITES_RDV, default='MDS')
     lieu_precis = models.CharField(max_length=200, blank=True, help_text="Adresse ou précision si autre lieu")
 
-    # MÉTIER
     type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')
     statut = models.CharField(max_length=20, choices=STATUT_RDV_CHOICES, default='DISPONIBLE')
     description = models.TextField(blank=True)
     notes_internes = models.TextField(blank=True)
-    priorite = models.CharField(max_length=20, choices=[('NORMAL', 'Normal'), ('URGENT', 'Urgent'), ('TRES_URGENT', 'Très urgent')], default='NORMAL')
+    priorite = models.CharField(
+        max_length=20,
+        choices=[('NORMAL', 'Normal'), ('URGENT', 'Urgent'), ('TRES_URGENT', 'Très urgent')],
+        default='NORMAL'
+    )
 
-    # AUDIT
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='creneaux_crees')
@@ -168,30 +149,37 @@ MODALITES_RDV = [
     def __str__(self):
         return f"{self.date} {self.heure_debut}-{self.heure_fin}"
 
-    # --- DROITS ---
     def peut_etre_vu_par(self, user):
-        if not user.is_authenticated: return False
-        if user.is_superuser or user.a_la_capacite('peut_administrer'): return True
-        if user == self.agent or user == self.cree_par: return True
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser or user.a_la_capacite('peut_administrer'):
+            return True
+        if user == self.agent or user == self.cree_par:
+            return True
         if self.salle and self.salle.mds:
             return UserMDSProfile.objects.filter(user=user, mds=self.salle.mds, actif=True).exists()
         return False
 
     def peut_etre_modifie_par(self, user):
-        if not user.is_authenticated: return False
-        if user.is_superuser or user.a_la_capacite('peut_administrer') or user.a_la_capacite('peut_valider'): return True
-        if self.agent == user and self.statut not in {'VENU_RECU', 'VENU_NON_RECU', 'ABSENT'}: return True
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser or user.a_la_capacite('peut_administrer') or user.a_la_capacite('peut_valider'):
+            return True
+        if self.agent == user and self.statut not in {'VENU_RECU', 'VENU_NON_RECU', 'ABSENT'}:
+            return True
         return False
 
     def peut_etre_reserve_par(self, user):
-        if not user.is_authenticated or self.statut != 'DISPONIBLE': return False
-        if user.is_superuser: return True
-        if not user.a_la_capacite('peut_creer'): return False
+        if not user.is_authenticated or self.statut != 'DISPONIBLE':
+            return False
+        if user.is_superuser:
+            return True
+        if not user.a_la_capacite('peut_creer'):
+            return False
         if self.salle and self.salle.mds:
             return UserMDSProfile.objects.filter(user=user, mds=self.salle.mds, actif=True).exists()
         return False
 
-    # --- VALIDATION (Règles V2 strictes) ---
     def clean(self):
         errors = {}
         if self.heure_debut and self.heure_fin:
@@ -203,7 +191,6 @@ MODALITES_RDV = [
                 errors['heure_fin'] = "La MDS ferme à 17h00."
             if self.heure_debut > time(16, 30):
                 errors['heure_debut'] = "Le dernier rendez-vous débute à 16h30."
-        
         if self.date and self.date < timezone.now().date():
             errors['date'] = "La date ne peut pas être dans le passé."
         if errors:
@@ -216,49 +203,43 @@ MODALITES_RDV = [
             self.duree_minutes = max(0, fin - debut)
         super().save(*args, **kwargs)
 
-    # --- MÉTIERS (Logique V2 sécurisée + V1) ---
     def is_disponible(self):
-        """Vérifie la disponibilité (inclut Jours Bloqués V1)"""
-        from planning.utils import est_jour_ferie # V1
+        from planning.utils import est_jour_ferie
         if est_jour_ferie(self.date):
             return False
-        
-        # Vérification des blocages (Restauration V1)
         if JourBloque.objects.filter(
             Q(date=self.date),
             Q(salle=self.salle) | Q(agent=self.agent) | Q(salle__isnull=True, agent__isnull=True)
         ).exists():
             return False
-
         return self.statut == 'DISPONIBLE'
 
-    def est_passe(self): # Restauration V1
+    def est_passe(self):
         maintenant = timezone.now()
-        if self.date < maintenant.date(): return True
-        if self.date == maintenant.date() and self.heure_fin < maintenant.time(): return True
+        if self.date < maintenant.date():
+            return True
+        if self.date == maintenant.date() and self.heure_fin < maintenant.time():
+            return True
         return False
 
-    def get_duree_affichage(self): # Restauration V1
+    def get_duree_affichage(self):
         heures = self.duree_minutes // 60
         minutes = self.duree_minutes % 60
         return f"{heures}h{minutes:02d}" if heures > 0 else f"{minutes}min"
 
     @transaction.atomic
     def reserver(self, user, beneficiaire, description=""):
-        """Verrou SQL anti-double réservation (V2)"""
         creneau = CreneauRdv.objects.select_for_update().get(pk=self.pk)
         if not creneau.peut_etre_reserve_par(user):
             raise PermissionError("Réservation interdite.")
         if creneau.statut != 'DISPONIBLE':
             raise ValidationError("Créneau déjà réservé.")
-
         creneau.statut = 'RESERVE'
         creneau.beneficiaire = beneficiaire
         creneau.description = description
         creneau.reserve_par = user
         creneau.date_reservation = timezone.now()
         creneau.save()
-
         HistoriqueCreneau.objects.create(
             creneau=creneau, action='RESERVATION',
             utilisateur=user, commentaire="Réservation sécurisée"
@@ -269,23 +250,17 @@ MODALITES_RDV = [
     def annuler(self, user, motif="", par_mds=False):
         if not self.peut_etre_modifie_par(user):
             raise PermissionError("Annulation interdite.")
-
         ancien_statut = self.statut
         self.statut = 'ANNULE_MDS' if par_mds else 'DISPONIBLE'
         self.beneficiaire = None
         self.reserve_par = None
         self.date_reservation = None
         self.save()
-
         HistoriqueCreneau.objects.create(
             creneau=self, action='ANNULATION',
             utilisateur=user, commentaire=f"{ancien_statut} → {self.statut} | {motif}"
         )
 
-
-# =============================================================================
-# MODÈLE JOUR BLOQUÉ (Restauration V1 complète)
-# =============================================================================
 
 class JourBloque(models.Model):
     RAISON_CHOICES = [
@@ -296,7 +271,7 @@ class JourBloque(models.Model):
         ('CONGE', 'Congé'),
         ('AUTRE', 'Autre'),
     ]
-    
+
     date = models.DateField()
     raison = models.CharField(max_length=20, choices=RAISON_CHOICES)
     raison_detail = models.TextField(blank=True)
@@ -304,7 +279,7 @@ class JourBloque(models.Model):
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     heure_debut = models.TimeField(default=time(0, 0))
     heure_fin = models.TimeField(default=time(23, 59))
-    
+
     class Meta:
         ordering = ['date']
         unique_together = ['date', 'salle', 'agent']
@@ -312,10 +287,6 @@ class JourBloque(models.Model):
     def __str__(self):
         return f"{self.date} - {self.get_raison_display()}"
 
-
-# =============================================================================
-# MODÈLE HISTORIQUE (Version V2)
-# =============================================================================
 
 class HistoriqueCreneau(models.Model):
     ACTIONS = [
@@ -333,9 +304,9 @@ class HistoriqueCreneau(models.Model):
     anciennes_valeurs = models.JSONField(default=dict, blank=True)
     nouvelles_valeurs = models.JSONField(default=dict, blank=True)
 
-
     class Meta:
         ordering = ['-date_action']
+
 
 class PermanenceExterne(models.Model):
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -343,7 +314,7 @@ class PermanenceExterne(models.Model):
     jour_semaine = models.IntegerField(choices=HoraireMDS.JOURS_SEMAINE)
     heure_debut = models.TimeField()
     heure_fin = models.TimeField()
-    
+
     recurrence = models.CharField(
         max_length=20,
         choices=[('HEBDO', 'Hebdomadaire'), ('MENSUEL', 'Mensuel (même semaine)')],
@@ -352,7 +323,6 @@ class PermanenceExterne(models.Model):
     actif = models.BooleanField(default=True)
     date_debut = models.DateField(default=timezone.now)
     date_fin = models.DateField(null=True, blank=True)
-    
-    # Audit
+
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     date_creation = models.DateTimeField(auto_now_add=True)
