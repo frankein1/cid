@@ -8,6 +8,7 @@
 planning/forms.py
 VERSION FINALE CORRIGÉE - 19/05/2026
 Ajout des champs : accompagnant, co_intervenants, modalite, lieu_precis
+Correction : actif → statut='ACTIF' pour Beneficiaire
 """
 
 from django import forms
@@ -67,22 +68,22 @@ class RdvForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        # Bénéficiaire
+        # Bénéficiaire (uniquement ceux avec statut='ACTIF')
         if self.request:
             profile = UserMDSProfile.objects.filter(
                 user=self.request.user, actif=True
             ).first()
             if profile and profile.mds:
                 self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                    mds=profile.mds, actif=True
+                    mds=profile.mds, statut='ACTIF'
                 ).order_by('nom', 'prenom')
             else:
                 self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                    actif=True
+                    statut='ACTIF'
                 ).order_by('nom', 'prenom')
         else:
             self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                actif=True
+                statut='ACTIF'
             ).order_by('nom', 'prenom')
 
         self.fields['beneficiaire'].required = True
@@ -99,14 +100,14 @@ class RdvForm(forms.ModelForm):
                 id__in=ids_agents
             ).order_by('last_name')
 
-        # Accompagnant (bénéficiaires de la MDS)
+        # Accompagnant (bénéficiaires actifs de la MDS)
         if self.request:
             profile = UserMDSProfile.objects.filter(
                 user=self.request.user, actif=True
             ).first()
             if profile and profile.mds:
                 self.fields['accompagnant'].queryset = Beneficiaire.objects.filter(
-                    mds=profile.mds, actif=True
+                    mds=profile.mds, statut='ACTIF'
                 ).order_by('nom', 'prenom')
 
     def clean(self):
