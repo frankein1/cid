@@ -158,7 +158,6 @@ class JourBloqueForm(forms.ModelForm):
 
 class PermanenceExterneForm(forms.ModelForm):
     class Meta:
-        # 🔧 Import différé pour éviter le circular import
         from .models import PermanenceExterne
         model = PermanenceExterne
         fields = ['agent', 'salle', 'jour_semaine', 'heure_debut', 'heure_fin', 
@@ -181,12 +180,19 @@ class PermanenceExterneForm(forms.ModelForm):
         
         if self.user and hasattr(self.user, 'mds_principale'):
             mds = self.user.mds_principale
+            from mds.models import UserMDSProfile
             from django.contrib.auth import get_user_model
             User = get_user_model()
+            
+            # ✅ Récupération directe des agents de la MDS (sans related_name)
+            ids_agents = UserMDSProfile.objects.filter(
+                mds=mds, actif=True
+            ).values_list('user_id', flat=True)
+            
             self.fields['agent'].queryset = User.objects.filter(
-                profils_mds__mds=mds,
-                profils_mds__actif=True
-            ).distinct().order_by('last_name')
+                id__in=ids_agents
+            ).order_by('last_name')
+            
             from mds.models import MDSReception
             self.fields['salle'].queryset = MDSReception.objects.filter(
                 mds=mds
