@@ -6,18 +6,20 @@
 
 """
 planning/forms.py
-VERSION FINALE CORRIGÉE - 12/02/2026
-Ajout du champ duree_minutes dans RdvForm
+VERSION FINALE CORRIGÉE - 19/05/2026
+Ajout des champs : accompagnant, co_intervenants, modalite, lieu_precis
 """
 
 from django import forms
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+
 from .models import CreneauRdv, JourBloque
 from mds.models import MDSReception, UserMDSProfile
-from beneficiaire.models import Beneficiaire   # si pas déjà
+from beneficiaire.models import Beneficiaire
 
 User = get_user_model()
+
 
 class RdvForm(forms.ModelForm):
     class Meta:
@@ -65,37 +67,31 @@ class RdvForm(forms.ModelForm):
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
-        # Filtrage du bénéficiaire (existant)
-        if 'beneficiaire' in self.fields:
-            from beneficiaire.models import Beneficiaire
-
-            if self.request:
-                profile = UserMDSProfile.objects.filter(
-                    user=self.request.user, actif=True
-                ).first()
-                if profile and profile.mds:
-                    self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                        mds=profile.mds, actif=True
-                    ).order_by('nom', 'prenom')
-                else:
-                    self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
-                        actif=True
-                    ).order_by('nom', 'prenom')
+        # Bénéficiaire
+        if self.request:
+            profile = UserMDSProfile.objects.filter(
+                user=self.request.user, actif=True
+            ).first()
+            if profile and profile.mds:
+                self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
+                    mds=profile.mds, actif=True
+                ).order_by('nom', 'prenom')
             else:
                 self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
                     actif=True
                 ).order_by('nom', 'prenom')
+        else:
+            self.fields['beneficiaire'].queryset = Beneficiaire.objects.filter(
+                actif=True
+            ).order_by('nom', 'prenom')
 
         self.fields['beneficiaire'].required = True
         self.fields['type_rdv'].required = True
         self.fields['description'].required = True
 
-        # 🆕 Filtrage des co-intervenants sur les agents de la MDS
+        # Co-intervenants (agents de la MDS)
         if self.request and hasattr(self.request.user, 'mds_principale'):
             mds = self.request.user.mds_principale
-            from mds.models import UserMDSProfile
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
             ids_agents = UserMDSProfile.objects.filter(
                 mds=mds, actif=True
             ).values_list('user_id', flat=True)
@@ -103,9 +99,8 @@ class RdvForm(forms.ModelForm):
                 id__in=ids_agents
             ).order_by('last_name')
 
-        # 🆕 Filtrage de l'accompagnant (optionnel)
-        if 'accompagnant' in self.fields and self.request:
-            # On peut filtrer sur les bénéficiaires de la même MDS
+        # Accompagnant (bénéficiaires de la MDS)
+        if self.request:
             profile = UserMDSProfile.objects.filter(
                 user=self.request.user, actif=True
             ).first()
@@ -193,7 +188,7 @@ class JourBloqueForm(forms.ModelForm):
                 )
 
         return cleaned_data
-# À AJOUTER dans planning/forms.py après les autres classes parce que DeepSeek n'a pas écouté quand je lui ai dit que c'est au CADRE de faire ça et pas à l'Admin
+
 
 class PermanenceExterneForm(forms.ModelForm):
     class Meta:
@@ -219,20 +214,13 @@ class PermanenceExterneForm(forms.ModelForm):
         
         if self.user and hasattr(self.user, 'mds_principale'):
             mds = self.user.mds_principale
-            from mds.models import UserMDSProfile
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            
-            # ✅ Récupération directe des agents de la MDS (sans related_name)
             ids_agents = UserMDSProfile.objects.filter(
                 mds=mds, actif=True
             ).values_list('user_id', flat=True)
-            
             self.fields['agent'].queryset = User.objects.filter(
                 id__in=ids_agents
             ).order_by('last_name')
             
-            from mds.models import MDSReception
             self.fields['salle'].queryset = MDSReception.objects.filter(
                 mds=mds
             ).order_by('nom')
