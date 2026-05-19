@@ -73,7 +73,33 @@
                     <p class="mt-1 text-sm text-gray-500">{{ form.beneficiaire.help_text }}</p>
                     {% endif %}
                 </div>
+<!-- Accompagnant -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.accompagnant.label }}</label>
+    {{ form.accompagnant }}
+    {% if form.accompagnant.help_text %}
+        <p class="text-xs text-gray-500 mt-1">{{ form.accompagnant.help_text }}</p>
+    {% endif %}
+</div>
 
+<!-- Co-intervenants -->
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.co_intervenants.label }}</label>
+    {{ form.co_intervenants }}
+    <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs agents</p>
+</div>
+
+<!-- Modalité -->
+<div class="grid grid-cols-2 gap-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.modalite.label }}</label>
+        {{ form.modalite }}
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.lieu_precis.label }}</label>
+        {{ form.lieu_precis }}
+    </div>
+</div>
                 <!-- Type de RDV -->
                 <div>
                     <label for="{{ form.type_rdv.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
