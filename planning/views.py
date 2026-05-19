@@ -619,6 +619,55 @@ def api_recherche_beneficiaire(request):
     ]
     return JsonResponse({'results': results})
 
+
+# rechercher rdv par 
+@login_required
+def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
+    from beneficiaire.models import Beneficiaire
+    from datetime import date, timedelta
+    from django.urls import reverse
+    from django.shortcuts import redirect, get_object_or_404
+    from django.contrib import messages
+    
+    beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
+    
+    # Vérification des droits
+    if not beneficiaire.peut_etre_vu_par(request.user):
+        messages.error(request, "Accès non autorisé à ce bénéficiaire.")
+        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
+    
+    # Déterminer l'agent référent
+    agent = beneficiaire.referent_mds
+    if not agent:
+        # Pas de référent : on prend l'agent connecté
+        agent = request.user
+        # On met à jour le référent pour les prochains RDV
+        beneficiaire.referent_mds = agent
+        beneficiaire.save(update_fields=['referent_mds'])
+    
+    # Trouver le premier créneau disponible dans les 15 jours
+    start_date = date.today() + timedelta(days=2)
+    end_date = start_date + timedelta(days=15)
+    
+    creneau = CreneauRdv.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        agent=agent,
+        statut='DISPONIBLE'
+    ).order_by('date', 'heure_debut').first()
+    
+    if not creneau:
+        messages.warning(
+            request, 
+            f"Aucun créneau disponible pour {agent.get_full_name()} dans les 15 jours. "
+            "Vous pouvez choisir un autre créneau dans le calendrier."
+        )
+        return redirect(f"{reverse('planning:calendrier_rdv')}?agent={agent.id}")
+    
+    # Rediriger vers le formulaire de réservation avec bénéficiaire pré-rempli
+    return redirect(f"{reverse('planning:reserver_rdv', args=[creneau.id])}?beneficiaire_id={beneficiaire.id}")
+
+
 # =============================================================================
 # GESTION DES PERMANENCES EXTERNES (CADRE) (Deepseek voulait que ce soit l'admin mais je ne suis pas d'accord)
 # =============================================================================
