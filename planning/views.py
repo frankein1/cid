@@ -90,8 +90,8 @@ def calendrier_rdv(request, beneficiaire_id=None):
     beneficiaire_id = request.GET.get('beneficiaire')
     beneficiaire = None
     if beneficiaire_id:
-    from beneficiaire.models import Beneficiaire
-    beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)    
+        from beneficiaire.models import Beneficiaire
+        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)    
 
     vue = request.GET.get('vue', 'mois')
     
