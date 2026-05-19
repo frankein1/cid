@@ -592,6 +592,33 @@ def exporter_mes_permanences_ics(request):
     response['Content-Disposition'] = 'attachment; filename="mes_permanences.ics"'
     return response
 
+@login_required
+def api_recherche_beneficiaire(request):
+    """API pour l'autocomplétion des bénéficiaires (Select2)"""
+    from beneficiaire.models import Beneficiaire
+    from django.db.models import Q
+    
+    q = request.GET.get('q', '')
+    if len(q) < 3:
+        return JsonResponse({'results': []})
+    
+    # Filtrer par MDS de l'utilisateur
+    mds = request.user.mds_principale
+    if not mds:
+        return JsonResponse({'results': []})
+    
+    beneficiaires = Beneficiaire.objects.filter(
+        Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(code_interne__icontains=q),
+        mds=mds,
+        statut='ACTIF'
+    )[:20]
+    
+    results = [
+        {'id': b.id, 'text': f"{b.nom} {b.prenom} ({b.code_interne})"}
+        for b in beneficiaires
+    ]
+    return JsonResponse({'results': results})
+
 # =============================================================================
 # GESTION DES PERMANENCES EXTERNES (CADRE) (Deepseek voulait que ce soit l'admin mais je ne suis pas d'accord)
 # =============================================================================
