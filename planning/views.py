@@ -223,9 +223,9 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
         form.fields['duree_minutes'].help_text = "Durée fixe de 30 minutes pour les permanences"
     
     if request.method == 'POST':
-    if form.is_valid():
-        rdv = form.save(commit=False)
-        target_beneficiaire = rdv.beneficiaire or beneficiaire
+        if form.is_valid():
+            rdv = form.save(commit=False)
+            target_beneficiaire = rdv.beneficiaire or beneficiaire
         if not target_beneficiaire:
             messages.error(request, "Aucun bénéficiaire sélectionné.")
         else:
