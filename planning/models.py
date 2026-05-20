@@ -62,15 +62,13 @@ class ConfigurationPlanning(models.Model):
 
 class CreneauRdv(models.Model):
     TYPE_RDV_CHOICES = [
-        ('PERMANENCE', 'Permanence'),
-        ('IP', 'Information préoccupante'),
-        ('ENFANCE', 'Enfance'),
-        ('HORS_PERMANENCE', 'Hors permanence'),
-        ('TELEPHONIQUE', 'Téléphonique'),
-        ('VISITE_DOMICILE', 'Visite à domicile'),
-        ('REUNION', 'Réunion'),
-        ('FORMATION', 'Formation'),
-        ('ADMINISTRATIF', 'Administratif'),
+    ('PERMANENCE', 'Permanence'),
+    ('IP', 'Information préoccupante'),
+    ('ENFANCE', 'Enfance'),
+    ('HORS_PERMANENCE', 'Hors permanence'),
+    ('TELEPHONIQUE', 'Téléphonique'),
+    ('VISITE_DOMICILE', 'Visite à domicile'),
+    ('AUTRE', 'Autre'),
     ]
 
     STATUT_RDV_CHOICES = [
