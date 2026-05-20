@@ -638,8 +638,7 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
         return redirect(f"{reverse('planning:calendrier_rdv')}?agent={agent.id}")
     
     # Rediriger vers le formulaire de réservation avec bénéficiaire pré-rempli
-    return redirect(f"{reverse('planning:reserver_rdv', args=[creneau.id])}?beneficiaire_id={beneficiaire.id}")
-
+    return redirect('planning:reserver_rdv', creneau_id=creneau.id, beneficiaire_id=beneficiaire.id)
 
 
 
