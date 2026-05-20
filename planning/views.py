@@ -223,17 +223,24 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
         form.fields['duree_minutes'].help_text = "Durée fixe de 30 minutes pour les permanences"
     
     if request.method == 'POST':
-        if form.is_valid():
-            rdv = form.save(commit=False)
-            target_beneficiaire = rdv.beneficiaire or beneficiaire
-            if not target_beneficiaire:
-                messages.error(request, "Aucun bénéficiaire sélectionné.")
-            else:
-                rdv.reserver(request.user, target_beneficiaire, rdv.description)
-                messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
-                return redirect('beneficiaire:detail_beneficiaire', code_interne=target_beneficiaire.code_interne)
+    if form.is_valid():
+        rdv = form.save(commit=False)
+        target_beneficiaire = rdv.beneficiaire or beneficiaire
+        if not target_beneficiaire:
+            messages.error(request, "Aucun bénéficiaire sélectionné.")
         else:
-            messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
+            rdv.reserver(request.user, target_beneficiaire, rdv.description)
+            
+            # ✅ Gestion du premier RDV
+            est_premier_rdv = request.POST.get('est_premier_rdv', 'true') == 'true'
+            if est_premier_rdv and rdv.statut == 'VENU_RECU':
+                target_beneficiaire.referent_mds = rdv.agent
+                target_beneficiaire.save(update_fields=['referent_mds'])
+            
+            messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
+            return redirect('beneficiaire:detail_beneficiaire', code_interne=target_beneficiaire.code_interne)
+    else:
+        messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
     
     return render(request, 'planning/reserver.html', {
         'form': form,
