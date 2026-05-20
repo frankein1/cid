@@ -48,6 +48,7 @@ urlpatterns = [
     path('permanences/externes/', views.gerer_permanences_externes, name='gerer_permanences_externes'),
     path('permanences/externes/supprimer/<int:pk>/', views.supprimer_permanence_externe, name='supprimer_permanence_externe'),
     path('creer-rdv/<int:beneficiaire_id>/', views.creer_rdv_depuis_beneficiaire, name='creer_rdv_depuis_beneficiaire'),
+    path('choisir-creneau/<int:beneficiaire_id>/', views.choisir_creneau, name='choisir_creneau'),
 
     
     # ==========================
