@@ -45,6 +45,9 @@
     <div class="bg-white rounded-lg shadow p-6">
         <form method="POST">
             {% csrf_token %}
+            
+            {# ✅ CHAMP CACHÉ POUR "PREMIER RDV" (par défaut true) #}
+            <input type="hidden" name="est_premier_rdv" value="{{ est_premier_rdv|default:'true' }}">
 
             {% if form.errors %}
             <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -160,8 +163,3 @@ $(document).ready(function() {
 });
 </script>
 {% endblock %}
-
-
-
-
-
