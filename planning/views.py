@@ -612,9 +612,7 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
     # Déterminer l'agent référent
     agent = beneficiaire.referent_mds
     if not agent:
-        # Pas de référent : on prend l'agent connecté
         agent = request.user
-        # On met à jour le référent pour les prochains RDV
         beneficiaire.referent_mds = agent
         beneficiaire.save(update_fields=['referent_mds'])
     
@@ -637,8 +635,10 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
         )
         return redirect(f"{reverse('planning:calendrier_rdv')}?agent={agent.id}")
     
-    # Rediriger vers le formulaire de réservation avec bénéficiaire pré-rempli
+    # ✅ CORRECTION ICI : deux paramètres nommés
     return redirect('planning:reserver_rdv', creneau_id=creneau.id, beneficiaire_id=beneficiaire.id)
+
+
 
 
 
