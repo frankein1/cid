@@ -200,7 +200,7 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
     
     beneficiaire = None
     if beneficiaire_id:
-        beneficiaire = get_object_or_404(beneficiaire, pk=beneficiaire_id)
+        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
         if not beneficiaire.peut_etre_vu_par(request.user):
             messages.error(request, "Accès non autorisé à ce bénéficiaire.")
             return redirect('planning:calendrier_rdv')
@@ -590,13 +590,13 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
     - Propose le premier créneau disponible dans les 15 jours
     - Redirige vers le formulaire de réservation avec bénéficiaire pré-rempli
     """
-    from beneficiaire.models import beneficiaire
+    from beneficiaire.models import Beneficiaire
     from datetime import date, timedelta
     from django.urls import reverse
     from django.shortcuts import redirect, get_object_or_404
     from django.contrib import messages
     
-    beneficiaire = get_object_or_404(beneficiaire, id=beneficiaire_id)
+    beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
     
     if not beneficiaire.peut_etre_vu_par(request.user):
         messages.error(request, "Accès non autorisé à ce bénéficiaire.")
@@ -641,7 +641,7 @@ def api_recherche_beneficiaire(request):
     API JSON pour l'autocomplétion des bénéficiaires (utilisée par Select2).
     Filtre par MDS de l'utilisateur et par statut 'ACTIF'.
     """
-    from beneficiaire.models import beneficiaire
+    from beneficiaire.models import Beneficiaire
     from django.db.models import Q
     
     q = request.GET.get('q', '')
@@ -652,7 +652,7 @@ def api_recherche_beneficiaire(request):
     if not mds:
         return JsonResponse({'results': []})
     
-    beneficiaires = beneficiaire.objects.filter(
+    beneficiaires = Beneficiaire.objects.filter(
         Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(code_interne__icontains=q),
         mds=mds,
         statut='ACTIF'
