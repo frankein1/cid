@@ -193,6 +193,7 @@ def api_creneaux(request):
 
     return JsonResponse(events, safe=False)
 
+
 @login_required
 def reserver_rdv(request, creneau_id, beneficiaire_id=None):
     creneau = get_object_or_404(CreneauRdv, pk=creneau_id)
@@ -208,8 +209,7 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
         if not beneficiaire.peut_etre_vu_par(request.user):
             messages.error(request, "Accès non autorisé à ce bénéficiaire.")
             return redirect('planning:calendrier_rdv')
-   
-   
+    
     # 2. Vérification de disponibilité
     if not creneau.is_disponible():
         messages.error(request, "Ce créneau n'est pas disponible.")
