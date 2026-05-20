@@ -29,6 +29,7 @@ from django.db.models import Q, Prefetch
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.template.loader import render_to_string
+from beneficiaire.models import Beneficiaire
 
 try:
     from mds.models import UserMDSProfile
