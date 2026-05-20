@@ -629,7 +629,7 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
         )
         return redirect(f"{reverse('planning:calendrier_rdv')}?agent={agent.id}")
     
-    return redirect('planning:reserver_rdv', creneau_id=creneau.id, beneficiaire_id=beneficiaire.id)
+    return redirect('planning:choisir_creneau', beneficiaire_id=beneficiaire.id)
 
 
 # =============================================================================
@@ -738,3 +738,68 @@ def preparer_sync_outlook_graph(request):
     """Placeholder pour future synchronisation Microsoft Graph"""
     messages.info(request, "Fonctionnalité prévue pour la phase 2.")
     return redirect('planning:calendrier_rdv')
+
+# =============================================================================
+# SECTION 12 : choisir créneau
+# =============================================================================
+
+
+@login_required
+def choisir_creneau(request, beneficiaire_id):
+    """
+    Vue intermédiaire : affiche la liste des créneaux disponibles
+    pour un bénéficiaire, selon son référent MDS (ou tous les agents si pas de référent).
+    """
+    from beneficiaire.models import Beneficiaire
+    from datetime import date, timedelta
+    from django.db.models import Q
+    
+    beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
+    
+    if not beneficiaire.peut_etre_vu_par(request.user):
+        messages.error(request, "Accès non autorisé à ce bénéficiaire.")
+        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
+    
+    # 1. Déterminer l'agent référent (ou tous les agents de la MDS)
+    if beneficiaire.referent_mds:
+        agents = [beneficiaire.referent_mds]
+    else:
+        # Récupérer tous les agents sociaux de la MDS (avec capacité 'peut_creer')
+        agents = User.objects.filter(
+            profils__capacites__code='peut_creer',
+            profils_mds__mds=beneficiaire.mds,
+            profils_mds__actif=True,
+            is_active=True
+        ).distinct()
+    
+    if not agents:
+        messages.error(request, "Aucun agent social disponible dans cette MDS.")
+        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
+    
+    # 2. Recherche des créneaux disponibles dans les 15 jours
+    start_date = date.today() + timedelta(days=2)
+    end_date = start_date + timedelta(days=15)
+    
+    creneaux = CreneauRdv.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        agent__in=agents,
+        statut='DISPONIBLE'
+    ).select_related('agent', 'salle').order_by('date', 'heure_debut')
+    
+    # 3. Si aucun créneau, message d'erreur
+    if not creneaux:
+        messages.warning(
+            request,
+            f"Aucun créneau disponible pour les agents sélectionnés dans les 15 jours."
+        )
+        # Redirection vers le calendrier filtré par MDS
+        return redirect(f"{reverse('planning:calendrier_rdv')}")
+    
+    # 4. Stocker beneficiaire_id en session pour le formulaire de réservation
+    request.session['beneficiaire_id_temp'] = beneficiaire.id
+    
+    return render(request, 'planning/choisir_creneau.html', {
+        'creneaux': creneaux,
+        'beneficiaire': beneficiaire,
+    })
