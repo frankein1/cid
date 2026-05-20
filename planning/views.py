@@ -768,7 +768,7 @@ def choisir_creneau(request, beneficiaire_id):
         return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
     
     # 1. Déterminer l'agent référent (ou tous les agents de la MDS)
-    if beneficiaire.referent_mds:
+    if beneficiaire.referent_mds and beneficiaire.referent_mds.a_la_capacite('peut_creer'):
         agents = [beneficiaire.referent_mds]
     else:
         # Récupérer tous les agents sociaux de la MDS (avec capacité 'peut_creer')
