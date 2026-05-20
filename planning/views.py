@@ -594,6 +594,7 @@ def exporter_mes_permanences_ics(request):
     response['Content-Disposition'] = 'attachment; filename="mes_permanences.ics"'
     return response
 
+
 @login_required
 def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
     from beneficiaire.models import Beneficiaire
@@ -637,9 +638,6 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
     
     # ✅ CORRECTION ICI : deux paramètres nommés
     return redirect('planning:reserver_rdv', creneau_id=creneau.id, beneficiaire_id=beneficiaire.id)
-
-
-
 
 
 @login_required
