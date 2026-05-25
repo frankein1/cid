@@ -12,32 +12,15 @@ User = get_user_model()
 
 MDS_LIST = [
     {
-        "code": "MDS01",
-        "nom": "MDS Port-de-Bouc",
+        "code": "MDSTEST1",
+        "nom": "MDS TEST 01",
         "adresse": "12 rue des Amandiers",
         "cp": "13110",
         "ville": "Port-de-Bouc",
         "tel": "0491450000",
         "email": "mds.portdebouc@example.com",
     },
-    {
-        "code": "MDS02",
-        "nom": "MDS Fos-sur-Mer",
-        "adresse": "8 avenue des Pins",
-        "cp": "13270",
-        "ville": "Fos-sur-Mer",
-        "tel": "0491452000",
-        "email": "mds.fos@example.com",
-    },
-    {
-        "code": "MDS03",
-        "nom": "MDS Martigues",
-        "adresse": "20 quai Général Leclerc",
-        "cp": "13500",
-        "ville": "Martigues",
-        "tel": "0491453000",
-        "email": "mds.martigues@example.com",
-    }
+    
 ]
 
 # ===========================================================
@@ -86,51 +69,6 @@ def init_mds_structures():
 
     return "\n".join(result)
 
-# ===========================================================
-# 2. AGENTS (FAUX AGENTS DE DEMO)
-# ===========================================================
-
-FAUX_AGENTS = [
-    ("agent1", "Agent Social", "MDS01", "Agents Sociaux MDS"),
-    ("agent2", "Agent Social", "MDS02", "Agents Sociaux MDS"),
-    ("admin_mds", "Administratif MDS", "MDS01", "MDS Administratifs"),
-    ("cadre1", "Cadre MDS", "MDS03", "Cadres MDS"),
-]
-
-def init_mds_agents():
-    result = []
-
-    for username, role, code_mds, profil in FAUX_AGENTS:
-
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={
-                "email": f"{username}@example.com",
-                "password": "pbkdf2_sha256$260000$fake$fake",
-                "is_active": True,
-                "matricule": username.upper()
-            }
-        )
-
-        mds = MDS.objects.filter(code_mds=code_mds).first()
-        if not mds:
-            result.append(f"[ERR] MDS {code_mds} introuvable")
-            continue
-
-        UserMDSProfile.objects.update_or_create(
-            user=user,
-            mds=mds,
-            defaults={
-                "principale": True,
-                "peut_gerer_utilisateurs": (role == "Cadre MDS"),
-                "actif": True,
-                "role_specifique": role,
-            }
-        )
-
-        result.append(f"{username} → {code_mds} ({profil})")
-
-    return "\n".join(result)
 
 # ===========================================================
 # FONCTION D’INITIALISATION PRINCIPALE
@@ -140,8 +78,6 @@ def init_mds():
     log = []
     log.append("📌 Création des structures MDS")
     log.append(init_mds_structures())
-    log.append("\n📌 Création des faux agents MDS")
-    log.append(init_mds_agents())
     return "\n".join(log)
 
 # ===========================================================
@@ -149,7 +85,7 @@ def init_mds():
 # ===========================================================
 
 class Command(BaseCommand):
-    help = "Initialise les MDS et agents fictifs"
+    help = "Initialise la MDS de test"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS(init_mds()))
