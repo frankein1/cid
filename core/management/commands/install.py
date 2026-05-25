@@ -1,133 +1,52 @@
-# =============================================================================
-# © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
-# Interdiction de réutilisation commerciale
-# =============================================================================
-
-# core/management/commands/install.py - VERSION CORRIGÉE ET NETTOYÉE
-
 import os
-import sys
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
-from django.apps import apps
+from core.models import User
+
 
 class Command(BaseCommand):
-    help = "Installation SI-DITAS - Version Render SÉCURISÉE (Nettoyée)"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--etape',
-            type=str,
-            default='',
-            help='Étape spécifique : migrations | core | mds | planning | superuser'
-        )
-
-    def get_env(self, key, default=None):
-        """Récupère les variables depuis l'environnement Render (pas de .env)"""
-        value = os.environ.get(key, default)
-        # Masquer les mots de passe dans les logs
-        display_value = '***' if 'PASSWORD' in key else value
-        self.stdout.write(f"      🔧 {key} = {display_value}")
-        return value
+    help = "Installation complète SI-DITAS (migrations, profils, MDS, planning, documents)"
 
     def handle(self, *args, **options):
-        etape = options.get("etape")
+        self.stdout.write("\n🚀 INSTALLATION SI-DITAS")
+        self.stdout.write("=" * 40)
 
-        self.stdout.write("\n🚀 INSTALLATION SI-DITAS / MODE RENDER SAFE")
-        self.stdout.write("    ===========================================")
+        # 1. Migrations
+        self.stdout.write("\n📦 Migrations...")
+        call_command('migrate', interactive=False)
 
-        admin_username = self.get_env('ADMIN_USERNAME', 'admin')
-        admin_password = self.get_env('ADMIN_PASSWORD')
-        admin_email = self.get_env('ADMIN_EMAIL', 'admin@example.com')
+        # 2. Profils + capacités + AFASE
+        self.stdout.write("\n🔐 Profils et capacités...")
+        call_command('init_profils')
 
-        if not admin_password:
-            self.stdout.write(self.style.ERROR("❌ ADMIN_PASSWORD manquant"))
-            return
+        # 3. MDS par défaut
+        self.stdout.write("\n🏢 MDS par défaut...")
+        call_command('init_mds')
 
-        # ============================================================
-        # ETAPE A : MIGRATIONS
-        # ============================================================
-        if etape in ("", "migrations"):
-            self.stdout.write("\n📌 Étape : MIGRATIONS")
-            try:
-                call_command("migrate", interactive=False)
-                self.stdout.write(self.style.SUCCESS("   ✅ Migrations appliquées"))
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur migrations: {e}"))
-                return
+        # 4. Configuration planning
+        self.stdout.write("\n📅 Configuration planning...")
+        call_command('init_planning_config')
 
-        # ============================================================
-        # ETAPE B : CORE (Permissions, Capacités, Profils)
-        # ============================================================
-        if etape in ("", "core"):
-            self.stdout.write("\n📌 Étape : INITIALISATION CORE")
-            self.stdout.write("   (Appel unique à init_permissions_complet)")
+        # 5. Types de documents GED
+        self.stdout.write("\n📄 Types de documents...")
+        call_command('seed_document_types')
 
-            try:
-                # Appel unique : ce script gère lui-même :
-                # 1. L'appel à init_capacites (qui contient maintenant AidFi)
-                # 2. La création des profils
-                # 3. L'appel à init_afase
-                call_command("init_permissions_complet")
-                
-                self.stdout.write(self.style.SUCCESS("   ✅ Initialisation CORE terminée"))
+        # 6. Superuser (si ADMIN_PASSWORD défini)
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        admin_email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
 
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur CORE: {e}"))
-                return
+        if admin_password:
+            self.stdout.write("\n👤 Superuser...")
+            if not User.objects.filter(username=admin_username).exists():
+                User.objects.create_superuser(
+                    username=admin_username,
+                    password=admin_password,
+                    email=admin_email,
+                    matricule="ADMIN_RENDER"
+                )
+                self.stdout.write(self.style.SUCCESS(f"   ✅ Superuser '{admin_username}' créé"))
+            else:
+                self.stdout.write(f"   ℹ️ Superuser '{admin_username}' existe déjà")
 
-        # ============================================================
-        # ETAPE C : MDS
-        # ============================================================
-        if etape in ("", "mds"):
-            self.stdout.write("\n📌 Étape : INITIALISATION MDS")
-            try:
-                from mds.init_mds import init_mds
-                log = init_mds()
-                self.stdout.write(log)
-                self.stdout.write(self.style.SUCCESS("   ✅ MDS OK"))
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur MDS: {e}"))
-                return
-
-        # ============================================================
-        # ETAPE D : PLANNING
-        # ============================================================
-        if etape in ("", "planning"):
-            self.stdout.write("\n📌 Étape : INITIALISATION PLANNING")
-
-            try:
-                from planning.init_planning_config import init_planning_config
-                init_planning_config()
-                self.stdout.write(self.style.SUCCESS("   ✅ Planning OK"))
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur Planning: {e}"))
-                return
-
-        # ============================================================
-        # ETAPE E : SUPERUSER
-        # ============================================================
-        if etape in ("", "superuser"):
-            self.stdout.write("\n📌 Étape : CRÉATION SUPERUSER")
-
-            from core.models import User
-
-            try:
-                if not User.objects.filter(username=admin_username).exists():
-                    User.objects.create_superuser(
-                        username=admin_username,
-                        email=admin_email,
-                        password=admin_password,
-                        matricule="ADMIN_RENDER"
-                    )
-                    self.stdout.write(self.style.SUCCESS(
-                        f"   ✅ Superuser '{admin_username}' créé"
-                    ))
-                else:
-                    self.stdout.write(f"   ℹ️ Superuser '{admin_username}' existe déjà")
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"   ❌ Erreur Superuser: {e}"))
-                return
-
-        self.stdout.write(self.style.SUCCESS("\n🎉 INSTALLATION ÉTAPE TERMINÉE"))
+        self.stdout.write(self.style.SUCCESS("\n🎉 Installation terminée."))

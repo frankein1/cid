@@ -1,11 +1,4 @@
-# =============================================================================
-# © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
-# Interdiction de réutilisation commerciale
-# =============================================================================
-
-# mds/init_mds.py -- Initialisation Render Safe
-
+from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from mds.models import MDS, HoraireMDS, UserMDSProfile, MDSReception
 from django.utils import timezone
@@ -72,7 +65,7 @@ def init_mds_structures():
 
         # Création horaires (seulement si absent)
         if mds.horaires.count() == 0:
-            for jour in range(5):   # lundi → vendredi
+            for jour in range(5):
                 HoraireMDS.objects.create(
                     mds=mds,
                     jour=jour,
@@ -139,10 +132,10 @@ def init_mds_agents():
 
     return "\n".join(result)
 
+# ===========================================================
+# FONCTION D’INITIALISATION PRINCIPALE
+# ===========================================================
 
-# ===========================================================
-# APPEL PRINCIPAL (pour install.py)
-# ===========================================================
 def init_mds():
     log = []
     log.append("📌 Création des structures MDS")
@@ -150,3 +143,13 @@ def init_mds():
     log.append("\n📌 Création des faux agents MDS")
     log.append(init_mds_agents())
     return "\n".join(log)
+
+# ===========================================================
+# COMMANDE DJANGO
+# ===========================================================
+
+class Command(BaseCommand):
+    help = "Initialise les MDS et agents fictifs"
+
+    def handle(self, *args, **options):
+        self.stdout.write(self.style.SUCCESS(init_mds()))

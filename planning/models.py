@@ -307,7 +307,11 @@ class HistoriqueCreneau(models.Model):
 
 
 class PermanenceExterne(models.Model):
-    agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    agent = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='permanences_externes_agent'  # ← unique
+    )
     salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE)
     jour_semaine = models.IntegerField(choices=HoraireMDS.JOURS_SEMAINE)
     heure_debut = models.TimeField()
@@ -322,5 +326,12 @@ class PermanenceExterne(models.Model):
     date_debut = models.DateField(default=timezone.now)
     date_fin = models.DateField(null=True, blank=True)
 
-    cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    cree_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='permanences_externes_crees'  # ← unique
+    )
     date_creation = models.DateTimeField(auto_now_add=True)
+
+
