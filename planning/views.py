@@ -6,16 +6,7 @@
 
 """
 planning/views.py
-VERSION FINALE CORRIGÉE - 20/05/2026
-
-Ce fichier contient toutes les vues du module Planning :
-- Calendrier principal (FullCalendar)
-- Réservation / annulation / création de RDV
-- Génération automatique des créneaux
-- Exports Outlook (ICS) et PDF
-- Gestion des permanences externes (cadres)
-- API pour autocomplétion bénéficiaire
-- RDV contextualisé depuis la fiche bénéficiaire
+VERSION FINALE CORRIGÉE - 21/05/2026
 """
 
 from datetime import date, timedelta, datetime, time
@@ -50,10 +41,6 @@ from .utils import generer_creneaux_permanences, est_jour_ferie
 
 User = get_user_model()
 
-# =============================================================================
-# CONSTANTES DE FONCTIONNEMENT
-# =============================================================================
-
 HEURE_DEBUT_MATIN = time(9, 0)
 HEURE_FIN_MATIN = time(12, 0)
 HEURE_DEBUT_APRES_MIDI = time(13, 30)
@@ -61,16 +48,11 @@ HEURE_FIN_APRES_MIDI = time(16, 30)
 
 
 # =============================================================================
-# SECTION 1 : CALENDRIER PRINCIPAL (FullCalendar)
+# SECTION 1 : CALENDRIER PRINCIPAL
 # =============================================================================
 
 @login_required
 def calendrier_rdv(request, beneficiaire_id=None):
-    """
-    Vue principale du calendrier.
-    Affiche le planning FullCalendar.
-    Accès réservé aux agents sociaux (peut_creer) et cadres.
-    """
     today = date.today()
     
     from core.models import Capacite
@@ -110,7 +92,6 @@ def calendrier_rdv(request, beneficiaire_id=None):
 
 @login_required
 def api_creneaux(request):
-    """API JSON pour FullCalendar : renvoie les événements (RDV, blocages, jours fériés)"""
     start_raw = request.GET.get("start")
     end_raw = request.GET.get("end")
     
@@ -119,7 +100,6 @@ def api_creneaux(request):
 
     events = []
 
-    # Jours fériés (fond rose)
     if start_date and end_date:
         curr = start_date
         while curr <= end_date:
@@ -133,7 +113,6 @@ def api_creneaux(request):
                 })
             curr += timedelta(days=1)
 
-    # Jours bloqués (rouge bordeaux)
     bloques = JourBloque.objects.filter(date__range=(start_date, end_date))
     for b in bloques:
         events.append({
@@ -147,7 +126,6 @@ def api_creneaux(request):
             'extendedProps': {'type': 'blocage'}
         })
 
-    # Créneaux de RDV
     creneaux = CreneauRdv.objects.filter(date__range=(start_date, end_date))
     
     profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
@@ -185,15 +163,11 @@ def api_creneaux(request):
 
 
 # =============================================================================
-# SECTION 2 : RÉSERVATION, ANNULATION, CRÉATION DE RDV
+# SECTION 2 : RÉSERVATION, ANNULATION
 # =============================================================================
 
 @login_required
 def reserver_rdv(request, creneau_id, beneficiaire_id=None):
-    """
-    Formulaire de réservation d'un créneau.
-    Le beneficiaire_id peut venir de l'URL ou du paramètre GET.
-    """
     creneau = get_object_or_404(CreneauRdv, pk=creneau_id)
     
     if not beneficiaire_id:
@@ -218,40 +192,43 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
             initial_data['beneficiaire'] = beneficiaire
         form = RdvForm(instance=creneau, creneau=creneau, request=request, initial=initial_data)
     
-    if creneau.type_rdv == 'PERMANENCE' and 'duree_minutes' in form.fields:
-        form.fields['duree_minutes'].disabled = True
-        form.fields['duree_minutes'].help_text = "Durée fixe de 30 minutes pour les permanences"
+    # Ne pas désactiver la durée (l'agent peut modifier)
+    # if creneau.type_rdv == 'PERMANENCE' and 'duree_minutes' in form.fields:
+    #     form.fields['duree_minutes'].disabled = True
     
     if request.method == 'POST':
         if form.is_valid():
             rdv = form.save(commit=False)
             target_beneficiaire = rdv.beneficiaire or beneficiaire
-        if not target_beneficiaire:
-            messages.error(request, "Aucun bénéficiaire sélectionné.")
+            if not target_beneficiaire:
+                messages.error(request, "Aucun bénéficiaire sélectionné.")
+            else:
+                rdv.reserver(request.user, target_beneficiaire, rdv.description)
+                
+                # Gestion du premier RDV (référent)
+                est_premier_rdv = request.POST.get('est_premier_rdv', 'true') == 'true'
+                if est_premier_rdv and rdv.statut == 'VENU_RECU':
+                    target_beneficiaire.referent_mds = rdv.agent
+                    target_beneficiaire.save(update_fields=['referent_mds'])
+                
+                messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
+                return redirect('beneficiaire:detail_beneficiaire', code_interne=target_beneficiaire.code_interne)
         else:
-            rdv.reserver(request.user, target_beneficiaire, rdv.description)
-            
-            # ✅ Gestion du premier RDV
-            est_premier_rdv = request.POST.get('est_premier_rdv', 'true') == 'true'
-            if est_premier_rdv and rdv.statut == 'VENU_RECU':
-                target_beneficiaire.referent_mds = rdv.agent
-                target_beneficiaire.save(update_fields=['referent_mds'])
-            
-            messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
-            return redirect('beneficiaire:detail_beneficiaire', code_interne=target_beneficiaire.code_interne)
-    else:
-        messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
+            messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
+    
+    # Pour le GET, déterminer si c'est un premier RDV
+    est_premier_rdv = request.GET.get('est_premier_rdv', 'true') == 'true'
     
     return render(request, 'planning/reserver.html', {
         'form': form,
         'creneau': creneau,
-        'beneficiaire': beneficiaire
+        'beneficiaire': beneficiaire,
+        'est_premier_rdv': est_premier_rdv,
     })
 
 
 @login_required
 def annuler_rdv(request, creneau_id):
-    """Annulation d'un RDV spécifique (par l'agent ou le cadre)"""
     creneau = get_object_or_404(CreneauRdv, pk=creneau_id)
     if creneau.peut_etre_modifie_par(request.user):
         creneau.annuler(request.user)
@@ -262,12 +239,11 @@ def annuler_rdv(request, creneau_id):
 
 
 # =============================================================================
-# SECTION 3 : GÉNÉRATION AUTOMATIQUE DES CRÉNEAUX (CADRE)
+# SECTION 3 : GÉNÉRATION DES CRÉNEAUX (CADRE)
 # =============================================================================
 
 @login_required
 def generer_creneaux(request):
-    """Génération en masse de créneaux selon les règles métier (salles, demi-journées, permanences externes)"""
     if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Seuls les gestionnaires peuvent générer des créneaux.")
         return redirect('planning:calendrier_rdv')
@@ -292,10 +268,8 @@ def generer_creneaux(request):
                 type_rdv = form.cleaned_data['type_rdv']
                 date_fin = date_debut + timedelta(weeks=nb_semaines)
                 
-                # Créneaux MDS classiques
                 creneaux = generer_creneaux_permanences(date_debut, nb_semaines, profile.mds, type_rdv)
                 
-                # Créneaux pour salles externes (si demandé)
                 inclure_externes = form.cleaned_data.get('inclure_externes', True)
                 if inclure_externes:
                     from .utils import generer_creneaux_depuis_permanences_externes
@@ -315,12 +289,11 @@ def generer_creneaux(request):
 
 
 # =============================================================================
-# SECTION 4 : JOURS BLOQUÉS (FERMETURES, ABSENCES COLLECTIVES)
+# SECTION 4 : JOURS BLOQUÉS
 # =============================================================================
 
 @login_required
 def ajouter_jour_bloque(request):
-    """Ajout d'une période de fermeture (réservé aux cadres / administrateurs)"""
     if not (request.user.a_la_capacite('peut_administrer') or request.user.is_superuser):
         messages.error(request, "Permission insuffisante.")
         return redirect('planning:calendrier_rdv')
@@ -339,12 +312,11 @@ def ajouter_jour_bloque(request):
 
 
 # =============================================================================
-# SECTION 5 : PLANNING ACCUEIL (VUES JOURNALIÈRE / HEBDOMADAIRE)
+# SECTION 5 : PLANNING ACCUEIL
 # =============================================================================
 
 @login_required
 def planning_accueil_jour(request, date_str=None):
-    """Vue journalière pour l'accueil (filtre territorial MDS)"""
     if not (request.user.a_la_capacite('peut_creer') or request.user.is_superuser):
         messages.error(request, "Accès refusé.")
         return redirect('core:dashboard')
@@ -388,7 +360,6 @@ def planning_accueil_jour(request, date_str=None):
 
 @login_required
 def planning_accueil_semaine(request, date_str=None):
-    """Vue hebdomadaire pour l'accueil (filtre territorial MDS)"""
     if date_str:
         try:
             date_ref = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -423,12 +394,11 @@ def planning_accueil_semaine(request, date_str=None):
 
 
 # =============================================================================
-# SECTION 6 : EXPORTS OUTLOOK (ICS) ET PDF
+# SECTION 6 : EXPORTS OUTLOOK ET PDF
 # =============================================================================
 
 @login_required
 def export_planning_ical(request):
-    """Export iCalendar (.ics) du planning (global ou filtré par agent)"""
     try:
         from icalendar import Calendar, Event as iCalEvent
     except ImportError:
@@ -461,13 +431,11 @@ def export_planning_ical(request):
 
 @login_required
 def exporter_planning_agent_outlook(request, agent_id):
-    """Redirection vers l'export standard avec filtre agent"""
     return redirect(f"{reverse('planning:export_ical')}?agent={agent_id}")
 
 
 @login_required
 def exporter_mes_permanences_ics(request):
-    """Export iCalendar des créneaux à venir de l'agent connecté"""
     try:
         from icalendar import Calendar, Event as iCalEvent
     except ImportError:
@@ -499,7 +467,6 @@ def exporter_mes_permanences_ics(request):
 
 @login_required
 def imprimer_planning_jour_pdf(request, date_str):
-    """Génération du PDF de planning quotidien (impression)"""
     try:
         date_affichage = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
@@ -545,15 +512,11 @@ def imprimer_planning_jour_pdf(request, date_str):
 
 
 # =============================================================================
-# SECTION 7 : MES PERMANENCES (VUE AGENT)
+# SECTION 7 : MES PERMANENCES (AGENT)
 # =============================================================================
 
 @login_required
 def mes_permanences_semaine(request, date_str=None):
-    """
-    Vue planning : les créneaux à venir de l'agent connecté.
-    Accessible depuis le menu "Planning" > "Mes permanences".
-    """
     if date_str:
         try:
             date_ref = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -587,17 +550,11 @@ def mes_permanences_semaine(request, date_str=None):
 
 
 # =============================================================================
-# SECTION 8 : RDV CONTEXTUALISÉ DEPUIS LA FICHE BÉNÉFICIAIRE
+# SECTION 8 : RDV CONTEXTUALISÉ DEPUIS BÉNÉFICIAIRE
 # =============================================================================
 
 @login_required
 def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
-    """
-    Crée un rendez-vous directement depuis la fiche bénéficiaire.
-    - Utilise le référent MDS du bénéficiaire (ou l'agent connecté)
-    - Propose le premier créneau disponible dans les 15 jours
-    - Redirige vers le formulaire de réservation avec bénéficiaire pré-rempli
-    """
     from beneficiaire.models import Beneficiaire
     from datetime import date, timedelta
     from django.urls import reverse
@@ -610,45 +567,16 @@ def creer_rdv_depuis_beneficiaire(request, beneficiaire_id):
         messages.error(request, "Accès non autorisé à ce bénéficiaire.")
         return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
     
-    # Déterminer l'agent référent
-    agent = beneficiaire.referent_mds
-    if not agent:
-        agent = request.user
-        beneficiaire.referent_mds = agent
-        beneficiaire.save(update_fields=['referent_mds'])
-    
-    # Recherche du premier créneau disponible
-    start_date = date.today() + timedelta(days=2)
-    end_date = start_date + timedelta(days=15)
-    
-    creneau = CreneauRdv.objects.filter(
-        date__gte=start_date,
-        date__lte=end_date,
-        agent=agent,
-        statut='DISPONIBLE'
-    ).order_by('date', 'heure_debut').first()
-    
-    if not creneau:
-        messages.warning(
-            request,
-            f"Aucun créneau disponible pour {agent.get_full_name()} dans les 15 jours. "
-            "Vous pouvez choisir un autre créneau dans le calendrier."
-        )
-        return redirect(f"{reverse('planning:calendrier_rdv')}?agent={agent.id}")
-    
+    # On ne touche pas au référent ici, on laisse choisir_creneau faire le travail
     return redirect('planning:choisir_creneau', beneficiaire_id=beneficiaire.id)
 
 
 # =============================================================================
-# SECTION 9 : API POUR AUTOCOMPLÉTION BÉNÉFICIAIRE (SELECT2)
+# SECTION 9 : API AUTOCOMPLÉTION BÉNÉFICIAIRE
 # =============================================================================
 
 @login_required
 def api_recherche_beneficiaire(request):
-    """
-    API JSON pour l'autocomplétion des bénéficiaires (utilisée par Select2).
-    Filtre par MDS de l'utilisateur et par statut 'ACTIF'.
-    """
     from beneficiaire.models import Beneficiaire
     from django.db.models import Q
     
@@ -674,12 +602,74 @@ def api_recherche_beneficiaire(request):
 
 
 # =============================================================================
-# SECTION 10 : GESTION DES PERMANENCES EXTERNES (CADRE)
+# SECTION 10 : CHOISIR UN CRÉNEAU (POUR BÉNÉFICIAIRE)
+# =============================================================================
+
+@login_required
+def choisir_creneau(request, beneficiaire_id):
+    """
+    Vue intermédiaire : affiche la liste des créneaux disponibles
+    pour un bénéficiaire.
+    """
+    from beneficiaire.models import Beneficiaire
+    from datetime import date, timedelta
+    from django.db.models import Q
+    
+    beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
+    
+    if not beneficiaire.peut_etre_vu_par(request.user):
+        messages.error(request, "Accès non autorisé à ce bénéficiaire.")
+        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
+    
+    # 1. Période de recherche
+    start_date = date.today() + timedelta(days=2)
+    end_date = start_date + timedelta(days=15)
+    
+    # 2. Récupérer les agents qui ont des créneaux disponibles
+    agents_avec_creneaux = CreneauRdv.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        agent__isnull=False,
+        statut='DISPONIBLE',
+        salle__mds=beneficiaire.mds
+    ).values_list('agent', flat=True).distinct()
+    
+    if not agents_avec_creneaux:
+        messages.warning(request, "Aucun agent n'a de créneaux disponibles dans les 15 jours.")
+        return redirect(f"{reverse('planning:calendrier_rdv')}")
+    
+    # 3. Si le bénéficiaire a déjà un référent et qu'il a des créneaux, on le met en priorité
+    referent_id = beneficiaire.referent_mds_id
+    if referent_id and referent_id in agents_avec_creneaux:
+        # On met le référent en premier dans l'ordre d'affichage
+        agents_liste = [referent_id] + [a for a in agents_avec_creneaux if a != referent_id]
+    else:
+        agents_liste = list(agents_avec_creneaux)
+    
+    # 4. Récupérer les créneaux dans l'ordre
+    creneaux = CreneauRdv.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+        agent__in=agents_liste,
+        statut='DISPONIBLE'
+    ).select_related('agent', 'salle').order_by('date', 'heure_debut')
+    
+    if not creneaux:
+        messages.warning(request, "Aucun créneau disponible dans les 15 jours.")
+        return redirect(f"{reverse('planning:calendrier_rdv')}")
+    
+    return render(request, 'planning/choisir_creneau.html', {
+        'creneaux': creneaux,
+        'beneficiaire': beneficiaire,
+    })
+
+
+# =============================================================================
+# SECTION 11 : PERMANENCES EXTERNES (CADRE)
 # =============================================================================
 
 @login_required
 def gerer_permanences_externes(request):
-    """Vue cadre : lister, créer, modifier, supprimer les permanences externes"""
     if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Accès réservé aux cadres gestionnaires.")
         return redirect('planning:calendrier_rdv')
@@ -716,7 +706,6 @@ def gerer_permanences_externes(request):
 
 @login_required
 def supprimer_permanence_externe(request, pk):
-    """Supprimer une permanence externe"""
     if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
         messages.error(request, "Accès refusé.")
         return redirect('planning:calendrier_rdv')
@@ -738,75 +727,9 @@ def supprimer_permanence_externe(request, pk):
 
 
 # =============================================================================
-# SECTION 11 : PLACEHOLDER (SYNCHRONISATION OUTLOOK GRAPH)
+# SECTION 12 : PLACEHOLDER
 # =============================================================================
 
 def preparer_sync_outlook_graph(request):
-    """Placeholder pour future synchronisation Microsoft Graph"""
     messages.info(request, "Fonctionnalité prévue pour la phase 2.")
     return redirect('planning:calendrier_rdv')
-
-# =============================================================================
-# SECTION 12 : choisir créneau
-# =============================================================================
-
-
-@login_required
-def choisir_creneau(request, beneficiaire_id):
-    """
-    Vue intermédiaire : affiche la liste des créneaux disponibles
-    pour un bénéficiaire, selon son référent MDS (ou tous les agents si pas de référent).
-    """
-    from beneficiaire.models import Beneficiaire
-    from datetime import date, timedelta
-    from django.db.models import Q
-    
-    beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
-    
-    if not beneficiaire.peut_etre_vu_par(request.user):
-        messages.error(request, "Accès non autorisé à ce bénéficiaire.")
-        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
-    
-    # 1. Déterminer l'agent référent (ou tous les agents de la MDS)
-    if beneficiaire.referent_mds and beneficiaire.referent_mds.a_la_capacite('peut_creer'):
-        agents = [beneficiaire.referent_mds]
-    else:
-        # Récupérer tous les agents sociaux de la MDS (avec capacité 'peut_creer')
-        agents = User.objects.filter(
-            profils__capacites__code='peut_creer',
-            profils_mds__mds=beneficiaire.mds,
-            profils_mds__actif=True,
-            is_active=True
-        ).distinct()
-    
-    if not agents:
-        messages.error(request, "Aucun agent social disponible dans cette MDS.")
-        return redirect('beneficiaire:detail_beneficiaire', code_interne=beneficiaire.code_interne)
-    
-    # 2. Recherche des créneaux disponibles dans les 15 jours
-    start_date = date.today() + timedelta(days=2)
-    end_date = start_date + timedelta(days=15)
-    
-    creneaux = CreneauRdv.objects.filter(
-        date__gte=start_date,
-        date__lte=end_date,
-        agent__in=agents,
-        statut='DISPONIBLE'
-    ).select_related('agent', 'salle').order_by('date', 'heure_debut')
-    
-    # 3. Si aucun créneau, message d'erreur
-    if not creneaux:
-        messages.warning(
-            request,
-            f"Aucun créneau disponible pour les agents sélectionnés dans les 15 jours."
-        )
-        # Redirection vers le calendrier filtré par MDS
-        return redirect(f"{reverse('planning:calendrier_rdv')}")
-    
-    # 4. Stocker beneficiaire_id en session pour le formulaire de réservation
-    request.session['beneficiaire_id_temp'] = beneficiaire.id
-    
-    return render(request, 'planning/choisir_creneau.html', {
-        'creneaux': creneaux,
-        'beneficiaire': beneficiaire,
-    })
