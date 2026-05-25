@@ -189,12 +189,9 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
     else:
         initial_data = {}
         if beneficiaire:
-            initial_data['beneficiaire'] = beneficiaire
+            initial_data['beneficiaire_recherche'] = f"{beneficiaire.nom} {beneficiaire.prenom} ({beneficiaire.code_interne})"
+            initial_data['beneficiaire_id'] = beneficiaire.id
         form = RdvForm(instance=creneau, creneau=creneau, request=request, initial=initial_data)
-    
-    # Ne pas désactiver la durée (l'agent peut modifier)
-    # if creneau.type_rdv == 'PERMANENCE' and 'duree_minutes' in form.fields:
-    #     form.fields['duree_minutes'].disabled = True
     
     if request.method == 'POST':
         if form.is_valid():
@@ -216,7 +213,6 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
         else:
             messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")
     
-    # Pour le GET, déterminer si c'est un premier RDV
     est_premier_rdv = request.GET.get('est_premier_rdv', 'true') == 'true'
     
     return render(request, 'planning/reserver.html', {
