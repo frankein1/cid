@@ -7,7 +7,7 @@
 """
 planning/utils.py
 Utilitaires pour la gestion des créneaux de rendez-vous
-VERSION CORRIGÉE - Plus d'erreur usermdsprofile
+VERSION CORRIGÉE - Distribution des salles + filtrage agents sociaux
 """
 
 from datetime import datetime, timedelta, time, date
@@ -167,12 +167,19 @@ def generer_creneaux_permanences(
     date_debut, nombre_semaines, mds, type_rdv='PERMANENCE'
 ):
     creneaux_crees = []
-    salles = MDSReception.objects.filter(mds=mds, actif=True)
+    salles = list(MDSReception.objects.filter(mds=mds, actif=True))
 
     # ✅ Récupération des IDs des agents de la MDS (une seule fois)
     ids_agents_mds = UserMDSProfile.objects.filter(
         mds=mds, actif=True
     ).values_list('user_id', flat=True)
+
+    # ✅ Récupération des agents SOCIAUX uniquement
+    agents_sociaux = list(User.objects.filter(
+        id__in=ids_agents_mds,
+        is_active=True,
+        profils__code='MDS_AGENTS_SOCIAUX'
+    ).distinct())
 
     for i in range(nombre_semaines * 7):
         current_date = date_debut + timedelta(days=i)
@@ -225,14 +232,11 @@ def generer_creneaux_permanences(
                 if dj.get('agent'):
                     agents = [dj['agent']]
                 else:
-                    # ✅ FILTRAGE CORRECT : on utilise les IDs des agents de la MDS
-                    agents = User.objects.filter(
-                        id__in=ids_agents_mds,
-                        is_active=True,
-                        profils__capacites__code='peut_creer'
-                    ).distinct()
+                    agents = agents_sociaux
 
-                for agent in agents:
+                # ✅ Distribution équitable des salles
+                for idx, agent in enumerate(agents):
+                    salle_utilisee = salles[idx % len(salles)]
                     if agent_est_disponible(
                         agent,
                         current_date,
@@ -242,7 +246,7 @@ def generer_creneaux_permanences(
                         creneaux_crees.extend(
                             generer_creneaux_agent_demi_journee(
                                 current_date,
-                                salle,
+                                salle_utilisee,
                                 agent,
                                 dj['heure_debut'],
                                 dj['heure_fin'],
