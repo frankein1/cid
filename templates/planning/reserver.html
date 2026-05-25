@@ -46,7 +46,7 @@
         <form method="POST">
             {% csrf_token %}
             
-            {# ✅ CHAMP CACHÉ POUR "PREMIER RDV" (par défaut true) #}
+            {# Champ caché pour "premier RDV" (par défaut true) #}
             <input type="hidden" name="est_premier_rdv" value="{{ est_premier_rdv|default:'true' }}">
 
             {% if form.errors %}
@@ -66,49 +66,51 @@
             {% endif %}
 
             <div class="space-y-6">
-            <!-- Bénéficiaire avec autocomplétion -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.beneficiaire_recherche.label }} *</label>
-    {{ form.beneficiaire_recherche }}
-    {{ form.beneficiaire_id }}
-    {% if form.beneficiaire_recherche.help_text %}
-        <p class="text-xs text-gray-500 mt-1">{{ form.beneficiaire_recherche.help_text }}</p>
-    {% endif %}
-    {% if form.beneficiaire_recherche.errors %}
-        <p class="text-red-500 text-sm mt-1">{{ form.beneficiaire_recherche.errors }}</p>
-    {% endif %}
-</div>
+                <!-- Bénéficiaire avec autocomplétion -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.beneficiaire_recherche.label }} *</label>
+                    {{ form.beneficiaire_recherche }}
+                    {{ form.beneficiaire_id }}
+                    {% if form.beneficiaire_recherche.help_text %}
+                        <p class="text-xs text-gray-500 mt-1">{{ form.beneficiaire_recherche.help_text }}</p>
+                    {% endif %}
+                    {% if form.beneficiaire_recherche.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.beneficiaire_recherche.errors }}</p>
+                    {% endif %}
+                </div>
 
-<!-- Accompagnant -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.accompagnant.label }}</label>
-    {{ form.accompagnant }}
-</div>
+                <!-- Accompagnant (chargé dynamiquement) -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.accompagnant.label }}</label>
+                    <select id="id_accompagnant" name="accompagnant" class="w-full px-3 py-2 border rounded-md">
+                        <option value="">---------</option>
+                    </select>
+                </div>
 
-<!-- Co-intervenants -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.co_intervenants.label }}</label>
-    {{ form.co_intervenants }}
-    <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs agents</p>
-</div>
+                <!-- Co-intervenants -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.co_intervenants.label }}</label>
+                    {{ form.co_intervenants }}
+                    <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs agents</p>
+                </div>
 
-<!-- Type de RDV -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.type_rdv.label }} *</label>
-    {{ form.type_rdv }}
-</div>
+                <!-- Type de RDV -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.type_rdv.label }} *</label>
+                    {{ form.type_rdv }}
+                </div>
 
-<!-- Description -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }} *</label>
-    {{ form.description }}
-</div>
+                <!-- Description -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.description.label }} *</label>
+                    {{ form.description }}
+                </div>
 
-<!-- Durée -->
-<div class="mb-4">
-    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.duree_minutes.label }}</label>
-    {{ form.duree_minutes }}
-</div>             
+                <!-- Durée -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.duree_minutes.label }}</label>
+                    {{ form.duree_minutes }}
+                </div>             
             </div>
 
             <!-- Boutons -->
@@ -125,12 +127,14 @@
         </form>
     </div>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 
 <script>
 $(document).ready(function() {
+    // Select2 pour le bénéficiaire
     $('#id_beneficiaire_recherche').select2({
         ajax: {
             url: "{% url 'planning:api_recherche_beneficiaire' %}",
@@ -153,12 +157,30 @@ $(document).ready(function() {
         }
     });
     
+    // Quand un bénéficiaire est sélectionné, on charge sa famille
     $('#id_beneficiaire_recherche').on('select2:select', function(e) {
         $('#id_beneficiaire_id').val(e.params.data.id);
+        
+        var benefId = e.params.data.id;
+        if (benefId) {
+            $.ajax({
+                url: "{% url 'planning:api_famille_beneficiaire' 0 %}".replace('0', benefId),
+                dataType: 'json',
+                success: function(data) {
+                    var select = $('#id_accompagnant');
+                    select.empty();
+                    select.append('<option value="">---------</option>');
+                    $.each(data.results, function(i, item) {
+                        select.append('<option value="' + item.id + '">' + item.text + '</option>');
+                    });
+                }
+            });
+        }
     });
     
     $('#id_beneficiaire_recherche').on('select2:clear', function() {
         $('#id_beneficiaire_id').val('');
+        $('#id_accompagnant').empty().append('<option value="">---------</option>');
     });
 });
 </script>
