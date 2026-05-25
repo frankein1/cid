@@ -729,3 +729,44 @@ def supprimer_permanence_externe(request, pk):
 def preparer_sync_outlook_graph(request):
     messages.info(request, "Fonctionnalité prévue pour la phase 2.")
     return redirect('planning:calendrier_rdv')
+
+
+# =============================================================================
+# SECTION 13 : API POUR RÉCUPÉRER LA FAMILLE D'UN BÉNÉFICIAIRE
+# =============================================================================
+
+@login_required
+def api_famille_beneficiaire(request, beneficiaire_id):
+    """
+    API JSON pour récupérer les membres de la famille d'un bénéficiaire
+    (via les liens familiaux).
+    """
+    from beneficiaire.models import Beneficiaire, LienFamilial
+    from django.db.models import Q
+    
+    beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
+    
+    # Vérification des droits
+    if not beneficiaire.peut_etre_vu_par(request.user):
+        return JsonResponse({'results': []})
+    
+    # Récupérer les liens familiaux
+    liens = LienFamilial.objects.filter(
+        Q(personne_a=beneficiaire) | Q(personne_b=beneficiaire)
+    ).select_related('personne_a', 'personne_b')
+    
+    ids_famille = {beneficiaire.id}
+    for lien in liens:
+        ids_famille.add(lien.personne_a_id)
+        ids_famille.add(lien.personne_b_id)
+    
+    membres = Beneficiaire.objects.filter(
+        id__in=ids_famille,
+        statut='ACTIF'
+    ).order_by('nom', 'prenom')
+    
+    results = [
+        {'id': m.id, 'text': f"{m.nom} {m.prenom} ({m.code_interne})"}
+        for m in membres
+    ]
+    return JsonResponse({'results': results})
