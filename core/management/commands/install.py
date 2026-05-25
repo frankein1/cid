@@ -7,7 +7,21 @@ from core.models import User
 class Command(BaseCommand):
     help = "Installation complète SI-DITAS (migrations, profils, MDS, planning, documents)"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--no-input',
+            action='store_true',
+            help='Désactive les interactions utilisateur',
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force la réinstallation même si un flag existe (non utilisé ici)',
+        )
+
     def handle(self, *args, **options):
+        no_input = options.get('no_input', False)
+
         self.stdout.write("\n🚀 INSTALLATION SI-DITAS")
         self.stdout.write("=" * 40)
 
@@ -48,5 +62,9 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"   ✅ Superuser '{admin_username}' créé"))
             else:
                 self.stdout.write(f"   ℹ️ Superuser '{admin_username}' existe déjà")
+        elif not no_input:
+            self.stdout.write(self.style.WARNING(
+                "\n⚠️  ADMIN_PASSWORD non défini, superuser non créé."
+            ))
 
         self.stdout.write(self.style.SUCCESS("\n🎉 Installation terminée."))
