@@ -26,8 +26,7 @@ except Exception as e:
 # --- Étape 0 : Installation unique ---
 print("🔧 [Render] Exécution de l'installation...")
 from django.core.management import call_command
-call_command('install', interactive=False)
-
+call_command('install', '--no-input')
 
 # --- Étape 1 : Migrations automatiques (TOUTES les apps) ---
 print("📦 Étape 1: Création et application des migrations...")
