@@ -23,6 +23,12 @@ except Exception as e:
     print(f"❌ Django setup FAILED: {e}")
     sys.exit(1)
 
+# --- Étape 0 : Installation unique ---
+print("🔧 [Render] Exécution de l'installation...")
+from django.core.management import call_command
+call_command('install', interactive=False)
+
+
 # --- Étape 1 : Migrations automatiques (TOUTES les apps) ---
 print("📦 Étape 1: Création et application des migrations...")
 try:
