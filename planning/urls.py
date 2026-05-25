@@ -68,6 +68,7 @@ urlpatterns = [
     # recherche beneficiaire
     # ==========================
     path('api/recherche-beneficiaire/', views.api_recherche_beneficiaire, name='api_recherche_beneficiaire'),
+    path('api/famille/<int:beneficiaire_id>/', views.api_famille_beneficiaire, name='api_famille_beneficiaire'),
 
     
     # ==========================
