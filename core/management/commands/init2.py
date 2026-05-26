@@ -90,20 +90,26 @@ class Command(BaseCommand):
         ]
 
         for username, fullname, profil_key, est_proprietaire in agents_data:
+            # Extraire prénom et nom depuis "Agent Social 1"
+            parts = fullname.split()
+            prenom = parts[0]
+            nom = " ".join(parts[1:]) if len(parts) > 1 else "Agent"
+
             user, created = User.objects.get_or_create(
                 username=username,
                 defaults={
-                    "first_name": fullname.split()[0],
-                    "last_name": fullname.split()[-1],
+                    "first_name": prenom,
+                    "last_name": nom,
                     "email": f"{username}@test.fr",
                     "is_active": True,
+                    "matricule": username.upper(),
                 }
             )
             if created:
                 user.set_password("testpass123")
                 user.save()
 
-            profil = profils[profil_key]
+            profil_code = profils[profil_key]
             profile, _ = UserMDSProfile.objects.get_or_create(
                 user=user,
                 mds=mds,
@@ -114,7 +120,8 @@ class Command(BaseCommand):
                     "role_specifique": "Chef de service" if est_proprietaire else "",
                 }
             )
-            self.stdout.write(f"   {'✅ Créé' if created else '📌 Existe'} : {username} ({fullname}) – {profil}")
+            self.stdout.write(f"   {'✅ Créé' if created else '📌 Existe'} : {username} ({fullname}) – {profil_code}")
+        
 
         # ==========================================================
         # 4. Création des bénéficiaires (familles)
