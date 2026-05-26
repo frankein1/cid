@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from mds.models import MDS, UserMDSProfile, MDSReception
 from beneficiaire.models import Beneficiaire, LienFamilial
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 User = get_user_model()
 
