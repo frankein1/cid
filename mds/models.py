@@ -318,6 +318,9 @@ class DemiJourneeReception(TimestampedMixin):
     mds = models.ForeignKey(MDS, on_delete=models.CASCADE, related_name='demi_journees_reception')
     jour_semaine = models.IntegerField(choices=HoraireMDS.JOURS_SEMAINE)
     type_demi_journee = models.CharField(max_length=20, choices=[('MATIN', 'Matin'), ('APRES_MIDI', 'Après-midi')])
+    # Lieu de la permanence (MDS, externe, etc.)
+    type_lieu = models.CharField(max_length=10, choices=[('MDS', 'En MDS'), ('EXTERNE', 'Lieu externe')], default='MDS')
+    lieu_externe = models.CharField(max_length=100, blank=True, help_text="Nom du lieu si externe (CCAS, école, etc.)")
     actif = models.BooleanField(default=True)
 
     # ✅ On enlève les default ici, ils seront gérés dans save()
