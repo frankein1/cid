@@ -79,12 +79,8 @@ class Command(BaseCommand):
             ("asmith", "Agent Social 1", "agent_social", False),
             ("bjones", "Agent Social 2", "agent_social", False),
             ("cdubois", "Agent Social 3", "agent_social", False),
-            ("dmorel", "Agent Social 4", "agent_social", False),
-            ("elambert", "Agent Social 5", "agent_social", False),
-            ("fbernard", "Agent Social 6", "agent_social", False),
-            ("garnaud", "Agent Social 7", "agent_social", False),
-            ("hadmin", "Agent Admin 1", "agent_administratif", False),
-            ("iadm2", "Agent Admin 2", "agent_administratif", False),
+            ("MarioB", "Agent Admin 1", "agent_administratif", False),
+            ("LuigiB", "Agent Admin 2", "agent_administratif", False),
             ("jcadre1", "Cadre MDS 1", "cadre", False),
             ("kchef", "Chef de service (propriétaire)", "cadre", True),
         ]
@@ -106,7 +102,7 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                user.set_password("testpass123")
+                user.set_password("D13azerty.")
                 user.save()
 
             profil_code = profils[profil_key]
