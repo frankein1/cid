@@ -28,6 +28,7 @@ urlpatterns = [
     path('mes-demi-journees/', reception_views.mes_demi_journees, name='mes_demi_journees'),
     path('gestion-demi-journees/', reception_views.mes_demi_journees, name='gestion_demi_journees'),
     path('toggle-demi-journee/', reception_views.toggle_demi_journee, name='toggle_demi_journee'),
+    path('update-demi-journee-lieu/', reception_views.update_demi_journee_lieu, name='update_demi_journee_lieu'),
     
     # SALLES
     path('<int:mds_id>/salles/', salle_views.gestion_salles_mds, name='gestion_salles_mds'),
