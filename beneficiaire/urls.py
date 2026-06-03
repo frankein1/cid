@@ -25,7 +25,8 @@ urlpatterns = [
     path('<str:code_interne>/modifier/', views.modifier_beneficiaire, name='modifier_beneficiaire'),
     
     # Ayant droit
-    path('<str:code_interne>/ayant-droit/ajouter/', views.ajouter_ayant_droit, name='ajouter_ayant_droit'),
+    #path('<str:code_interne>/ayant-droit/ajouter/', views.ajouter_ayant_droit, name='ajouter_ayant_droit'),
+    path('<str:code_interne>/lien/ajouter/', views.ajouter_lien_beneficiaire, name='ajouter_lien_beneficiaire'),
     
     # NOUVEAU : Gestion sortie et décès
     path('<str:code_interne>/sortir/', views.sortir_beneficiaire, name='sortir_beneficiaire'),
