@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ajouter un lien - {{ source.nom }} {{ source.prenom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-2">Ajouter un lien familial</h1>
+    <p class="text-gray-600 mb-6">
+        Pour <strong>{{ source.prenom }} {{ source.nom }}</strong>
+    </p>
+
+    <form method="post" class="bg-white shadow rounded-lg p-6 space-y-6">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="bg-red-100 text-red-700 p-3 rounded">{{ form.non_field_errors }}</div>
+        {% endif %}
+        
+        <div>
+            <label class="block font-semibold mb-1">{{ form.type_lien.label }}</label>
+            {{ form.type_lien }}
+        </div>
+        
+        <div>
+            <label class="block font-semibold mb-1">{{ form.beneficiaire_cible_recherche.label }}</label>
+            {{ form.beneficiaire_cible_recherche }}
+            {{ form.beneficiaire_cible_id }}
+            <p class="text-xs text-gray-500 mt-1">Recherchez un bénéficiaire existant (3 caractères minimum)</p>
+        </div>
+        
+        <div class="border-t pt-4">
+            <p class="font-semibold text-gray-700 mb-2">Ou créez un nouveau bénéficiaire :</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm">{{ form.nouveau_civilite.label }}</label>
+                    {{ form.nouveau_civilite }}
+                </div>
+                <div>
+                    <label class="block text-sm">{{ form.nouveau_nom.label }}</label>
+                    {{ form.nouveau_nom }}
+                </div>
+                <div>
+                    <label class="block text-sm">{{ form.nouveau_prenom.label }}</label>
+                    {{ form.nouveau_prenom }}
+                </div>
+                <div>
+                    <label class="block text-sm">{{ form.nouveau_date_naissance.label }}</label>
+                    {{ form.nouveau_date_naissance }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex gap-4">
+            <label class="flex items-center gap-2">
+                {{ form.vit_au_foyer }} <span>Vit au foyer</span>
+            </label>
+            <label class="flex items-center gap-2">
+                {{ form.est_responsable_legal }} <span>Responsable légal</span>
+            </label>
+        </div>
+        
+        <div>
+            <label class="block font-semibold mb-1">{{ form.commentaire.label }}</label>
+            {{ form.commentaire }}
+        </div>
+        
+        <div class="flex justify-end gap-3 pt-4">
+            <a href="{% url 'beneficiaire:detail_beneficiaire' source.code_interne %}" class="px-4 py-2 border rounded">Annuler</a>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Créer le lien</button>
+        </div>
+    </form>
+</div>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#id_beneficiaire_cible_recherche').select2({
+        ajax: {
+            url: "{% url 'planning:api_recherche_beneficiaire' %}",
+            dataType: 'json',
+            delay: 300,
+            data: function(params) { return { q: params.term }; },
+            processResults: function(data) { return { results: data.results }; },
+            cache: true
+        },
+        minimumInputLength: 3,
+        placeholder: 'Rechercher un bénéficiaire...',
+        allowClear: true
+    });
+    
+    $('#id_beneficiaire_cible_recherche').on('select2:select', function(e) {
+        $('#id_beneficiaire_cible_id').val(e.params.data.id);
+    });
+});
+</script>
+{% endblock %}
