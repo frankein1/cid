@@ -229,32 +229,34 @@ def generer_creneaux_permanences(
                 continue
 
             for dj in demi_journees:
-                if dj.get('agent'):
-                    agents = [dj['agent']]
-                else:
-                    agents = agents_sociaux
-
-                # ✅ Distribution équitable des salles
-                for idx, agent in enumerate(agents):
-                    salle_utilisee = salles[idx % len(salles)]
-                    if agent_est_disponible(
-                        agent,
-                        current_date,
-                        dj['heure_debut'],
-                        dj['heure_fin']
-                    ):
-                        creneaux_crees.extend(
-                            generer_creneaux_agent_demi_journee(
-                                current_date,
-                                salle_utilisee,
-                                agent,
-                                dj['heure_debut'],
-                                dj['heure_fin'],
-                                type_rdv
-                            )
-                        )
-
-    return creneaux_crees
+    agent = dj.get('agent')
+    if not agent:
+        continue
+    
+    # Déterminer la salle à utiliser
+    if dj.get('type_lieu') == 'MDS':
+        salles_disponibles = [s for s in salles if salle_est_disponible(s, current_date)]
+        if not salles_disponibles:
+            continue
+        salle_utilisee = random.choice(salles_disponibles)
+    else:
+        # Pour les lieux externes, on crée un créneau sans salle
+        salle_utilisee = None
+        # TODO : adapter generer_creneaux_agent_demi_journee pour accepter None
+    
+    # Génération des créneaux
+    if agent_est_disponible(agent, current_date, dj['heure_debut'], dj['heure_fin']):
+        creneaux_crees.extend(
+            generer_creneaux_agent_demi_journee(
+                current_date,
+                salle_utilisee,
+                agent,
+                dj['heure_debut'],
+                dj['heure_fin'],
+                type_rdv
+            )
+        )
+    
 
 
 # =============================================================================
