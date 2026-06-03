@@ -279,6 +279,124 @@ def ajouter_ayant_droit(request, code_interne):
         "form": form, "lien_form": lien_form, "beneficiaire_principal": referent
     })
 
+
+
+@login_required
+def ajouter_lien_beneficiaire(request, code_interne):
+    source = get_object_or_404(Beneficiaire, code_interne=code_interne)
+    
+    if not user_peut_agir_sur_beneficiaire(request.user, source):
+        messages.error(request, "Action interdite hors secteur.")
+        return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+    
+    from .forms import AjouterLienForm
+    
+    if request.method == "POST":
+        form = AjouterLienForm(request.POST)
+        if form.is_valid():
+            type_lien = form.cleaned_data['type_lien']
+            cible_id = form.cleaned_data.get('beneficiaire_cible_id')
+            
+            # Création ou récupération du bénéficiaire cible
+            if cible_id:
+                cible = get_object_or_404(Beneficiaire, pk=cible_id)
+            else:
+                # Création d'un nouveau bénéficiaire
+                cible = Beneficiaire.objects.create(
+                    nom=form.cleaned_data['nouveau_nom'].upper(),
+                    prenom=form.cleaned_data['nouveau_prenom'],
+                    civilite=form.cleaned_data.get('nouveau_civilite', 'M.'),
+                    date_naissance=form.cleaned_data.get('nouveau_date_naissance') or date.today(),
+                    adresse=source.adresse,
+                    code_postal=source.code_postal,
+                    ville=source.ville,
+                    mds=source.mds,
+                    cree_par=request.user,
+                    statut='ACTIF'
+                )
+                # Générer un code interne automatiquement
+                from .models import generate_code_interne
+                generate_code_interne(sender=None, instance=cible)
+                cible.save()
+                messages.info(request, f"Nouveau bénéficiaire créé : {cible.prenom} {cible.nom}")
+            
+            # Création des liens avec symétrie
+            vit_au_foyer = form.cleaned_data.get('vit_au_foyer', True)
+            est_responsable_legal = form.cleaned_data.get('est_responsable_legal', False)
+            commentaire = form.cleaned_data.get('commentaire', '')
+            
+            # Lien principal : source → cible
+            LienFamilial.objects.get_or_create(
+                personne_a=source,
+                personne_b=cible,
+                type_lien=type_lien,
+                defaults={
+                    'vit_au_foyer': vit_au_foyer,
+                    'est_responsable_legal': est_responsable_legal,
+                    'commentaire': commentaire,
+                    'date_debut': timezone.now().date(),
+                }
+            )
+            
+            # Gestion de la symétrie
+            if type_lien == 'CONJOINT':
+                # Lien inverse : cible → source
+                LienFamilial.objects.get_or_create(
+                    personne_a=cible,
+                    personne_b=source,
+                    type_lien='CONJOINT',
+                    defaults={
+                        'vit_au_foyer': vit_au_foyer,
+                        'est_responsable_legal': False,
+                        'commentaire': commentaire,
+                        'date_debut': timezone.now().date(),
+                    }
+                )
+            elif type_lien == 'ENFANT':
+                # Lien PARENT pour l'enfant vers le parent
+                LienFamilial.objects.get_or_create(
+                    personne_a=cible,
+                    personne_b=source,
+                    type_lien='PARENT',
+                    defaults={
+                        'vit_au_foyer': vit_au_foyer,
+                        'est_responsable_legal': est_responsable_legal,
+                        'commentaire': commentaire,
+                        'date_debut': timezone.now().date(),
+                    }
+                )
+            elif type_lien == 'PARENT':
+                # Lien ENFANT pour l'enfant vers le parent (déjà fait dans l'autre sens)
+                LienFamilial.objects.get_or_create(
+                    personne_a=cible,
+                    personne_b=source,
+                    type_lien='ENFANT',
+                    defaults={
+                        'vit_au_foyer': vit_au_foyer,
+                        'est_responsable_legal': est_responsable_legal,
+                        'commentaire': commentaire,
+                        'date_debut': timezone.now().date(),
+                    }
+                )
+            
+            messages.success(request, f"Lien '{dict(LienFamilial.TYPE_LIEN_CHOICES).get(type_lien)}' ajouté entre {source.prenom} {source.nom} et {cible.prenom} {cible.nom}.")
+            return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+        else:
+            messages.error(request, "Erreur dans le formulaire.")
+    else:
+        form = AjouterLienForm(initial={
+            'type_lien': request.GET.get('type', 'ENFANT')
+        })
+    
+    return render(request, "beneficiaire/ajouter_lien_beneficiaire.html", {
+        'form': form,
+        'source': source,
+    })
+
+
+
+
+
 @login_required
 def sortir_beneficiaire(request, code_interne):
     beneficiaire = get_object_or_404(Beneficiaire, code_interne=code_interne)
