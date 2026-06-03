@@ -23,27 +23,35 @@ except Exception as e:
     print(f"❌ Django setup FAILED: {e}")
     sys.exit(1)
 
-# --- Étape 0 : Installation unique ---
+# ============================================================
+# Étape 0 : Installation complète (migrations + données de base)
+# ============================================================
 print("🔧 [Render] Exécution de l'installation...")
 from django.core.management import call_command
 call_command('install', '--no-input')
 
-# --- Étape 1 : Migrations automatiques (TOUTES les apps) ---
+# ============================================================
+# 🆕 Optionnel : Données de test (à COMMENTER après 1er déploiement)
+# ============================================================
+print("📦 [Render] Création des données de test (init2)...")
+call_command('init2')   # ← À COMMENTER ou SUPPRIMER après le premier déploiement
+
+# ============================================================
+# Étape 1 : Migrations (au cas où install ne les aurait pas faites)
+# ============================================================
 print("📦 Étape 1: Création et application des migrations...")
 try:
-    from django.core.management import call_command
-    
     # Détecte les changements dans TOUTES les applications
     call_command('makemigrations', '--noinput', verbosity=1)
-    
     # Applique toutes les migrations (si nouvelles)
     call_command('migrate', '--noinput', verbosity=1)
-    
     print("✅ Migrations OK")
 except Exception as e:
     print(f"⚠️  Erreur migrations (on continue): {e}")
 
-# --- Étape 2 : Superuser ---
+# ============================================================
+# Étape 2 : Superuser (fallback si pas créé par install)
+# ============================================================
 print("👤 Étape 2: Superuser...")
 try:
     from django.contrib.auth import get_user_model
@@ -66,7 +74,9 @@ try:
 except Exception as e:
     print(f"⚠️  Superuser warning (continuing): {e}")
 
-# --- Étape 3 : Permissions ---
+# ============================================================
+# Étape 3 : Permissions (ancien, peut être supprimé si install suffit)
+# ============================================================
 print("🔐 Étape 3: Permissions...")
 try:
     from core.models import Profil
@@ -81,7 +91,9 @@ try:
 except Exception as e:
     print(f"⚠️  Permissions warning (continuing): {e}")
 
-# --- Étape 4 : Démarrer Gunicorn ---
+# ============================================================
+# Étape 4 : Démarrer Gunicorn
+# ============================================================
 print("🚀 Étape 4: Lancement Gunicorn...")
 
 render_port = os.environ.get('PORT', '8000')
