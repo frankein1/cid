@@ -49,10 +49,10 @@
         <!-- Bloc de gauche : actions de gestion du dossier -->
         <div class="flex flex-wrap gap-2 flex-1">
             {% if peut_modifier %}
-            <a href="{% url 'beneficiaire:ajouter_ayant_droit' beneficiaire.code_interne %}" 
-               class="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm">
-                <i class="fas fa-user-plus mr-2"></i>Membre
-            </a>
+            <a href="{% url 'beneficiaire:ajouter_lien_beneficiaire' beneficiaire.code_interne %}" 
+   class="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm">
+    <i class="fas fa-user-plus mr-2"></i>Ajouter un lien
+</a>
             <a href="{% url 'beneficiaire:modifier_beneficiaire' beneficiaire.code_interne %}" 
                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
                 <i class="fas fa-edit mr-2"></i>Modifier
@@ -190,10 +190,10 @@
                         <i class="fas fa-users text-blue-500 mr-2"></i>Réseau Familial
                     </h2>
                     {% if peut_modifier %}
-                    <a href="{% url 'beneficiaire:ajouter_ayant_droit' code_interne=beneficiaire.code_interne %}" 
-                       class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100 transition">
-                        <i class="fas fa-plus mr-1"></i>Ajouter
-                    </a>
+                    <a href="{% url 'beneficiaire:ajouter_lien_beneficiaire' beneficiaire.code_interne %}" 
+   class="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm">
+    <i class="fas fa-user-plus mr-2"></i>Ajouter un lien
+</a>
                     {% endif %}
                 </div>
 
