@@ -56,6 +56,10 @@ def mes_demi_journees(request):
             'jour_nom': jour_nom, 
             'matin': matin, 
             'apresmidi': aprem
+            'type_lieu_matin': matin.type_lieu if matin else 'MDS',
+            'lieu_externe_matin': matin.lieu_externe if matin else '',
+            'type_lieu_aprem': aprem.type_lieu if aprem else 'MDS',
+            'lieu_externe_aprem': aprem.lieu_externe if aprem else '',
         })
     
     return render(request, "mds/mes_demi_journees.html", {
