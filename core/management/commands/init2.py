@@ -8,7 +8,7 @@ from datetime import date, time, timedelta
 User = get_user_model()
 
 class Command(BaseCommand):
-    help = "Initialisation des données de test (agents, familles, salles)"
+    help = "Initialisation des données de test (agents, familles, salles) – âges réalistes et liens bidirectionnels"
 
     def handle(self, *args, **options):
         self.stdout.write("🚀 Création des données de test")
@@ -44,7 +44,6 @@ class Command(BaseCommand):
             {"nom": "École Jean Jaurès", "capacite": 4, "type": "EXTERNE", "est_externe": True},
         ]
 
-        salles = []
         for s in salles_data:
             salle, created = MDSReception.objects.get_or_create(
                 mds=mds,
@@ -63,7 +62,6 @@ class Command(BaseCommand):
                     "disponible_vendredi": True,
                 }
             )
-            salles.append(salle)
             self.stdout.write(f"   {'✅ Créée' if created else '📌 Existe'} : {salle.nom} (cap. {salle.capacite})")
 
         # ==========================================================
@@ -86,7 +84,6 @@ class Command(BaseCommand):
         ]
 
         for username, fullname, profil_key, est_proprietaire in agents_data:
-            # Extraire prénom et nom depuis "Agent Social 1"
             parts = fullname.split()
             prenom = parts[0]
             nom = " ".join(parts[1:]) if len(parts) > 1 else "Agent"
@@ -102,11 +99,11 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                user.set_password("D13azerty.")
+                user.set_password("testpass123")
                 user.save()
 
             profil_code = profils[profil_key]
-            profile, _ = UserMDSProfile.objects.get_or_create(
+            UserMDSProfile.objects.get_or_create(
                 user=user,
                 mds=mds,
                 defaults={
@@ -117,12 +114,16 @@ class Command(BaseCommand):
                 }
             )
             self.stdout.write(f"   {'✅ Créé' if created else '📌 Existe'} : {username} ({fullname}) – {profil_code}")
-        
 
         # ==========================================================
-        # 4. Création des bénéficiaires (familles)
+        # 4. Création des bénéficiaires (familles avec âges réalistes)
         # ==========================================================
-        def create_beneficiaire(nom, prenom, role, mds, code_interne_prefix):
+        def create_beneficiaire(nom, prenom, role, mds, code_interne_prefix, age_ans=None, marital_status=None):
+            if age_ans is not None:
+                date_naiss = date.today() - timedelta(days=365 * age_ans)
+            else:
+                date_naiss = date.today() - timedelta(days=365 * 30)
+
             code = f"{code_interne_prefix}-{prenom[:3].upper()}"
             benef, created = Beneficiaire.objects.get_or_create(
                 code_interne=code,
@@ -130,56 +131,68 @@ class Command(BaseCommand):
                     "nom": nom.upper(),
                     "prenom": prenom,
                     "civilite": "M." if role == "pere" else "MME",
-                    "date_naissance": date.today() - timedelta(days=365 * 30),
+                    "date_naissance": date_naiss,
                     "adresse": "1 rue de la MDS",
                     "code_postal": "13110",
                     "ville": "Port-de-Bouc",
                     "mds": mds,
                     "statut": "ACTIF",
+                    "marital_status": marital_status,
                 }
             )
             if created:
-                self.stdout.write(f"   ✅ {prenom} {nom.upper()} ({code})")
+                age_msg = f" – {age_ans} ans" if age_ans else ""
+                self.stdout.write(f"   ✅ {prenom} {nom.upper()} ({code}){age_msg}")
             return benef
 
-        # Famille 1 : monoparentale (père + 2 enfants)
-        pere = create_beneficiaire("MONOP", "Jean", "pere", mds, "FAM1")
-        enfant1 = create_beneficiaire("MONOP", "Lucas", "enfant", mds, "FAM1")
-        enfant2 = create_beneficiaire("MONOP", "Emma", "enfant", mds, "FAM1")
+        # ----------------------------------------------------------
+        # Famille 1 : monoparentale (père 42 ans, enfants 12 et 8 ans)
+        # ----------------------------------------------------------
+        pere = create_beneficiaire("MONOP", "Jean", "pere", mds, "FAM1", 42)
+        enfant1 = create_beneficiaire("MONOP", "Lucas", "enfant", mds, "FAM1", 12)
+        enfant2 = create_beneficiaire("MONOP", "Emma", "enfant", mds, "FAM1", 8)
 
         LienFamilial.objects.get_or_create(personne_a=pere, personne_b=enfant1, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=pere, personne_b=enfant2, type_lien="ENFANT", defaults={"vit_au_foyer": True})
 
+        # ----------------------------------------------------------
         # Famille 2 : recomposée
-        pere2 = create_beneficiaire("RECOMP", "Paul", "pere", mds, "FAM2")
-        mere2 = create_beneficiaire("RECOMP", "Sophie", "mere", mds, "FAM2")
-        enfant_paul1 = create_beneficiaire("RECOMP", "Tom", "enfant", mds, "FAM2")
-        enfant_paul2 = create_beneficiaire("RECOMP", "Lea", "enfant", mds, "FAM2")
-        enfant_commun = create_beneficiaire("RECOMP", "Leo", "enfant", mds, "FAM2")
-        nouvelle_compagne = create_beneficiaire("RECOMP", "Julie", "conjointe", mds, "FAM2")
+        # ----------------------------------------------------------
+        pere2 = create_beneficiaire("RECOMP", "Paul", "pere", mds, "FAM2", 44)
+        mere2 = create_beneficiaire("RECOMP", "Sophie", "mere", mds, "FAM2", 40)
+        enfant_paul1 = create_beneficiaire("RECOMP", "Tom", "enfant", mds, "FAM2", 14)
+        enfant_paul2 = create_beneficiaire("RECOMP", "Lea", "enfant", mds, "FAM2", 10)
+        enfant_commun = create_beneficiaire("RECOMP", "Leo", "enfant", mds, "FAM2", 5)
+        nouvelle_compagne = create_beneficiaire("RECOMP", "Julie", "conjointe", mds, "FAM2", 38)
 
+        # Liens parents → enfants
         LienFamilial.objects.get_or_create(personne_a=pere2, personne_b=enfant_paul1, type_lien="ENFANT", defaults={"vit_au_foyer": False})
         LienFamilial.objects.get_or_create(personne_a=pere2, personne_b=enfant_paul2, type_lien="ENFANT", defaults={"vit_au_foyer": False})
         LienFamilial.objects.get_or_create(personne_a=mere2, personne_b=enfant_paul1, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=mere2, personne_b=enfant_paul2, type_lien="ENFANT", defaults={"vit_au_foyer": True})
-        LienFamilial.objects.get_or_create(personne_a=pere2, personne_b=nouvelle_compagne, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=pere2, personne_b=enfant_commun, type_lien="ENFANT", defaults={"vit_au_foyer": True})
+        LienFamilial.objects.get_or_create(personne_a=pere2, personne_b=nouvelle_compagne, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
+        LienFamilial.objects.get_or_create(personne_a=nouvelle_compagne, personne_b=pere2, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
 
-        # Famille 3 : classique avec 3 enfants dont 1 de -5 ans
-        pere3 = create_beneficiaire("CLASSIC", "Marc", "pere", mds, "FAM3")
-        mere3 = create_beneficiaire("CLASSIC", "Claire", "mere", mds, "FAM3")
-        enfant3a = create_beneficiaire("CLASSIC", "Hugo", "enfant", mds, "FAM3")
-        enfant3b = create_beneficiaire("CLASSIC", "Chloe", "enfant", mds, "FAM3")
-        enfant3c = create_beneficiaire("CLASSIC", "Louis", "enfant", mds, "FAM3")
-        enfant3c.date_naissance = date.today() - timedelta(days=365 * 4)
-        enfant3c.save()
+        # ----------------------------------------------------------
+        # Famille 3 : classique (parents 40/38 ans, enfants 15, 9, 4 ans)
+        # ----------------------------------------------------------
+        pere3 = create_beneficiaire("CLASSIC", "Marc", "pere", mds, "FAM3", 40, "MARIE")
+        mere3 = create_beneficiaire("CLASSIC", "Claire", "mere", mds, "FAM3", 38, "MARIE")
+        enfant3a = create_beneficiaire("CLASSIC", "Hugo", "enfant", mds, "FAM3", 15)
+        enfant3b = create_beneficiaire("CLASSIC", "Chloe", "enfant", mds, "FAM3", 9)
+        enfant3c = create_beneficiaire("CLASSIC", "Louis", "enfant", mds, "FAM3", 4)
 
+        # Liens parents → enfants
         LienFamilial.objects.get_or_create(personne_a=pere3, personne_b=enfant3a, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=pere3, personne_b=enfant3b, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=pere3, personne_b=enfant3c, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=mere3, personne_b=enfant3a, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=mere3, personne_b=enfant3b, type_lien="ENFANT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=mere3, personne_b=enfant3c, type_lien="ENFANT", defaults={"vit_au_foyer": True})
+
+        # Liens conjoints (bidirectionnels)
         LienFamilial.objects.get_or_create(personne_a=pere3, personne_b=mere3, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
+        LienFamilial.objects.get_or_create(personne_a=mere3, personne_b=pere3, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
 
         self.stdout.write(self.style.SUCCESS("\n🎉 Données de test créées avec succès"))
