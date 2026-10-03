@@ -50,22 +50,5 @@ def peut_modifier_ged(document, user):
     return document.peut_etre_modifie_par(user)
 
 
-# =========================
-# CORE (DÉLÉGATION PURE)
-# =========================
-
-@register.filter(name='a_la_capacite')
-def a_la_capacite(user, capacite_nom):
-    """
-    Délégation directe au CORE.
-    """
-    if not user or not user.is_authenticated:
-        return False
-    return user.a_la_capacite(capacite_nom)
-
-
-@register.simple_tag
-def peut_agir(user, obj, action):
-    if not user or not user.is_authenticated:
-        return False
-    return user.peut_agir_sur_objet(obj, action)
+# Les filtres de capacités (a_la_capacite, peut, peut_agir) sont centralisés
+# dans core/templatetags/capacites.py : {% load capacites ged_tags %}
