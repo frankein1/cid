@@ -32,3 +32,14 @@ def peut(user, capacite):
 def a_la_capacite(user, capacite):
     """DEPRECATED: Utilisez 'peut' à la place"""
     return peut(user, capacite)
+
+
+@register.simple_tag
+def peut_agir(user, obj, action):
+    """
+    Capacité métier + barrière territoriale (MDS) sur un objet.
+    Usage : {% peut_agir user objet 'peut_modifier' as ok %}
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return user.peut_agir_sur_objet(obj, action)
