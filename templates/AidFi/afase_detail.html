@@ -66,7 +66,7 @@
             {% for piece in pieces %}
                 <li class="flex items-center justify-between border-b pb-2">
                     <div>
-                        <span class="font-medium">{{ piece.document_ged.titre }}</span>
+                        <span class="font-medium">{{ piece.document_ged.titre|default:"Document supprimé" }}</span>
                         <span class="text-xs text-gray-500 ml-2">{{ piece.get_type_piece_display }}</span>
                         {% if piece.obligatoire %}
                             <span class="text-red-500 text-xs ml-2">(obligatoire)</span>
@@ -78,7 +78,11 @@
                         {% else %}
                             <span class="text-orange-500 text-sm">⏳ en attente</span>
                         {% endif %}
+                        {% if piece.document_ged %}
                         <a href="{% url 'ged:download_document' piece.document_ged.id %}" class="ml-3 text-blue-500">📥</a>
+                        {% else %}
+                        <span class="ml-3 text-xs text-gray-400">(document supprimé de la GED)</span>
+                        {% endif %}
                     </div>
                 </li>
             {% endfor %}
