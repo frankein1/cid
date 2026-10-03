@@ -1,6 +1,6 @@
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
+# Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
@@ -170,7 +170,7 @@ class MDS(AuditedMixin):
         Une MDS ne peut être modifiée que par un superutilisateur 
         ou un cadre rattaché à CETTE MDS ayant le droit de gestion.
         """
-        if user.is_superuser:
+        if user.a_la_capacite('peut_administrer'):  # inclut le superuser
             return True
         return UserMDSProfile.objects.filter(
             user=user, mds=self, peut_gerer_utilisateurs=True, actif=True
@@ -446,10 +446,8 @@ def auto_cadre_peut_gerer(sender, instance, **kwargs):
     gérer les utilisateurs et voir les statistiques.
     S'exécute à la création ET à chaque modification du profil MDS.
     """
-    # Vérifier si l'utilisateur a le profil cadre (id=3)
-    est_cadre = instance.user.profils.filter(id=3).exists()
-    
-    if est_cadre:
+    # CORE : un cadre est un utilisateur ayant la capacité 'peut_valider'
+    if instance.user.est_cadre:
         # Mise à jour directe en base pour éviter les boucles infinies
         UserMDSProfile.objects.filter(pk=instance.pk).update(
             peut_gerer_utilisateurs=True,
