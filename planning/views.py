@@ -55,15 +55,9 @@ HEURE_FIN_APRES_MIDI = time(16, 30)
 def calendrier_rdv(request, beneficiaire_id=None):
     today = date.today()
     
-    from core.models import Capacite
-    user = User.objects.prefetch_related('profils__capacites').get(pk=request.user.pk)
+    user = request.user
     
-    capacites_user = set()
-    for profil in user.profils.all():
-        for capacite in profil.capacites.all():
-            capacites_user.add(capacite.code)
-    
-    if not (user.is_superuser or 'peut_creer' in capacites_user or 'peut_voir_stats' in capacites_user):
+    if not (user.a_la_capacite('peut_creer') or user.a_la_capacite('peut_voir_stats')):
         messages.error(request, "Accès refusé au planning.")
         return redirect('core:dashboard')
     
@@ -129,7 +123,7 @@ def api_creneaux(request):
     creneaux = CreneauRdv.objects.filter(date__range=(start_date, end_date))
     
     profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
-    if profile and profile.mds and not request.user.is_superuser:
+    if profile and profile.mds and not request.user.a_la_capacite('peut_administrer'):
         creneaux = creneaux.filter(salle__mds=profile.mds)
 
     for c in creneaux:
@@ -240,7 +234,7 @@ def annuler_rdv(request, creneau_id):
 
 @login_required
 def generer_creneaux(request):
-    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
+    if not request.user.a_la_capacite('planning_generer'):
         messages.error(request, "Seuls les gestionnaires peuvent générer des créneaux.")
         return redirect('planning:calendrier_rdv')
 
@@ -290,7 +284,7 @@ def generer_creneaux(request):
 
 @login_required
 def ajouter_jour_bloque(request):
-    if not (request.user.a_la_capacite('peut_administrer') or request.user.is_superuser):
+    if not request.user.a_la_capacite('planning_bloquer'):
         messages.error(request, "Permission insuffisante.")
         return redirect('planning:calendrier_rdv')
 
@@ -313,7 +307,7 @@ def ajouter_jour_bloque(request):
 
 @login_required
 def planning_accueil_jour(request, date_str=None):
-    if not (request.user.a_la_capacite('peut_creer') or request.user.is_superuser):
+    if not request.user.a_la_capacite('peut_creer'):
         messages.error(request, "Accès refusé.")
         return redirect('core:dashboard')
     
@@ -333,7 +327,7 @@ def planning_accueil_jour(request, date_str=None):
     
     creneaux_query = CreneauRdv.objects.filter(date=date_affichage).select_related('agent', 'salle', 'beneficiaire').order_by('heure_debut')
     
-    if mds_courante and not request.user.is_superuser:
+    if mds_courante and not request.user.a_la_capacite('peut_administrer'):
         creneaux_query = creneaux_query.filter(salle__mds=mds_courante)
     
     creneaux = [c for c in creneaux_query if c.peut_etre_vu_par(request.user)]
@@ -371,7 +365,7 @@ def planning_accueil_semaine(request, date_str=None):
     
     creneaux_query = CreneauRdv.objects.filter(date__range=[debut_semaine, fin_semaine]).select_related('agent', 'salle', 'beneficiaire').order_by('date', 'heure_debut')
     
-    if profile and profile.mds and not request.user.is_superuser:
+    if profile and profile.mds and not request.user.a_la_capacite('peut_administrer'):
         creneaux_query = creneaux_query.filter(salle__mds=profile.mds)
     
     creneaux_par_jour = {}
@@ -471,7 +465,7 @@ def imprimer_planning_jour_pdf(request, date_str):
     profile = UserMDSProfile.objects.filter(user=request.user, actif=True).first()
     
     creneaux = CreneauRdv.objects.filter(date=date_affichage).select_related('agent', 'salle', 'beneficiaire').order_by('heure_debut')
-    if profile and not request.user.is_superuser:
+    if profile and profile.mds and not request.user.a_la_capacite('peut_administrer'):
         creneaux = creneaux.filter(salle__mds=profile.mds)
 
     buffer = BytesIO()
@@ -666,7 +660,7 @@ def choisir_creneau(request, beneficiaire_id):
 
 @login_required
 def gerer_permanences_externes(request):
-    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
+    if not request.user.a_la_capacite('planning_generer'):
         messages.error(request, "Accès réservé aux cadres gestionnaires.")
         return redirect('planning:calendrier_rdv')
     
@@ -702,14 +696,14 @@ def gerer_permanences_externes(request):
 
 @login_required
 def supprimer_permanence_externe(request, pk):
-    if not (request.user.is_superuser or request.user.a_la_capacite('planning_generer')):
+    if not request.user.a_la_capacite('planning_generer'):
         messages.error(request, "Accès refusé.")
         return redirect('planning:calendrier_rdv')
     
     perm = get_object_or_404(PermanenceExterne, pk=pk)
     mds = request.user.mds_principale
     
-    if perm.salle.mds != mds and not request.user.is_superuser:
+    if perm.salle.mds != mds and not request.user.a_la_capacite('peut_administrer'):
         messages.error(request, "Cette permanence n'appartient pas à votre MDS.")
         return redirect('planning:gerer_permanences_externes')
     

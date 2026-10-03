@@ -170,17 +170,6 @@ def generer_creneaux_permanences(
     creneaux_crees = []
     salles = list(MDSReception.objects.filter(mds=mds, actif=True))
 
-    # ✅ Récupération des IDs des agents de la MDS (une seule fois)
-    ids_agents_mds = UserMDSProfile.objects.filter(
-        mds=mds, actif=True
-    ).values_list('user_id', flat=True)
-
-    # ✅ Récupération des agents SOCIAUX uniquement
-    agents_sociaux = list(User.objects.filter(
-        id__in=ids_agents_mds,
-        is_active=True,
-        profils__code='MDS_AGENTS_SOCIAUX'
-    ).distinct())
 
     for i in range(nombre_semaines * 7):
         current_date = date_debut + timedelta(days=i)

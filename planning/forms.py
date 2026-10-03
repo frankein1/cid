@@ -158,18 +158,20 @@ class JourBloqueForm(forms.ModelForm):
         self.fields['salle'].queryset = MDSReception.objects.filter(actif=True)
         self.fields['agent'].queryset = User.objects.filter(is_active=True)
 
-        if self.request and self.request.user.a_la_capacite('peut_administrer'):
+        # CORE : l'administrateur voit tout ; les autres sont limités à leur MDS
+        if self.request and not self.request.user.a_la_capacite('peut_administrer'):
             profile = UserMDSProfile.objects.filter(
                 user=self.request.user, actif=True
             ).first()
-            if profile and profile.mds:
-                self.fields['salle'].queryset = MDSReception.objects.filter(
-                    mds=profile.mds, actif=True
-                )
-                self.fields['agent'].queryset = User.objects.filter(
-                    profils__capacites__code='peut_creer',
-                    is_active=True
-                ).distinct()
+            mds = profile.mds if profile else None
+            self.fields['salle'].queryset = MDSReception.objects.filter(
+                mds=mds, actif=True
+            )
+            self.fields['agent'].queryset = User.objects.filter(
+                profils_mds__mds=mds,
+                profils_mds__actif=True,
+                is_active=True
+            ).distinct()
 
     def clean(self):
         cleaned_data = super().clean()
