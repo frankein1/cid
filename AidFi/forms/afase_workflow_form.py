@@ -1,5 +1,5 @@
 # © AGPL3 - CID - Developpement : frederic cotta
-# Assistance technique: Perplexity / DeepSeek
+# Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # afase_workflow_form.py
 

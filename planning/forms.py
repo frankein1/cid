@@ -1,6 +1,6 @@
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
+# Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
