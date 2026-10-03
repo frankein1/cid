@@ -10,6 +10,7 @@ Utilitaires pour la gestion des créneaux de rendez-vous
 VERSION CORRIGÉE - Distribution des salles + filtrage agents sociaux
 """
 
+import random
 from datetime import datetime, timedelta, time, date
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -209,54 +210,50 @@ def generer_creneaux_permanences(
                 {
                     'heure_debut': d.heure_debut,
                     'heure_fin': d.heure_fin,
-                    'agent': d.agent
+                    'agent': d.agent,
+                    'type_lieu': d.type_lieu,
                 }
                 for d in dj_perso
             ]
 
-        for salle in salles:
-            if not salle_est_disponible(salle, current_date):
+        for dj in demi_journees:
+            agent = dj.get('agent')
+            if not agent:
                 continue
 
-            dispo = [
-                salle.disponible_lundi,
-                salle.disponible_mardi,
-                salle.disponible_mercredi,
-                salle.disponible_jeudi,
-                salle.disponible_vendredi
-            ]
-            if not dispo[current_date.weekday()]:
-                continue
+            # Déterminer la salle à utiliser
+            if dj.get('type_lieu', 'MDS') == 'MDS':
+                salles_disponibles = [
+                    s for s in salles
+                    if salle_est_disponible(s, current_date)
+                    and [
+                        s.disponible_lundi, s.disponible_mardi,
+                        s.disponible_mercredi, s.disponible_jeudi,
+                        s.disponible_vendredi,
+                    ][current_date.weekday()]
+                ]
+                if not salles_disponibles:
+                    continue
+                salle_utilisee = random.choice(salles_disponibles)
+            else:
+                # Lieu externe : pas de salle
+                # TODO : adapter generer_creneaux_agent_demi_journee pour accepter None
+                salle_utilisee = None
 
-            for dj in demi_journees:
-    agent = dj.get('agent')
-    if not agent:
-        continue
-    
-    # Déterminer la salle à utiliser
-    if dj.get('type_lieu') == 'MDS':
-        salles_disponibles = [s for s in salles if salle_est_disponible(s, current_date)]
-        if not salles_disponibles:
-            continue
-        salle_utilisee = random.choice(salles_disponibles)
-    else:
-        # Pour les lieux externes, on crée un créneau sans salle
-        salle_utilisee = None
-        # TODO : adapter generer_creneaux_agent_demi_journee pour accepter None
-    
-    # Génération des créneaux
-    if agent_est_disponible(agent, current_date, dj['heure_debut'], dj['heure_fin']):
-        creneaux_crees.extend(
-            generer_creneaux_agent_demi_journee(
-                current_date,
-                salle_utilisee,
-                agent,
-                dj['heure_debut'],
-                dj['heure_fin'],
-                type_rdv
-            )
-        )
-    
+            # Génération des créneaux
+            if agent_est_disponible(agent, current_date, dj['heure_debut'], dj['heure_fin']):
+                creneaux_crees.extend(
+                    generer_creneaux_agent_demi_journee(
+                        current_date,
+                        salle_utilisee,
+                        agent,
+                        dj['heure_debut'],
+                        dj['heure_fin'],
+                        type_rdv
+                    )
+                )
+
+    return creneaux_crees
 
 
 # =============================================================================
