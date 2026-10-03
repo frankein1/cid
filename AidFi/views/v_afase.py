@@ -48,6 +48,9 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
     else:
         if not request.user.peut_agir_sur_objet(demande, "peut_modifier"):
             return HttpResponseForbidden("Accès refusé")
+        if not demande.est_modifiable:
+            messages.error(request, "Cette demande a fait l'objet d'une décision : elle n'est plus modifiable.")
+            return redirect("AidFi:afase_detail", demande_id=demande.id)
 
     if request.method == "POST":
         form = AFASEWorkflowForm(
@@ -102,7 +105,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
 def afase_detail(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_voir"):
+    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
@@ -114,9 +117,9 @@ def afase_detail(request, demande_id):
             "demande": demande,
             "decision": decision,
             "beneficiaire": demande.beneficiaire,
-            "can_modifier": request.user.peut_agir_sur_objet(demande, "peut_modifier"),
-            "can_decider": request.user.a_la_capacite("peut_decider"),
-            "can_instruire": request.user.a_la_capacite("peut_instruire"),
+            "can_modifier": demande.est_modifiable and request.user.peut_agir_sur_objet(demande, "peut_modifier"),
+            "can_decider": request.user.peut_agir_sur_objet(demande, "peut_decider"),
+            "can_instruire": request.user.peut_agir_sur_objet(demande, "peut_instruire"),
         },
     )
 
@@ -129,10 +132,10 @@ def afase_detail(request, demande_id):
 def afase_evaluation(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_instruire"):
+    if not request.user.peut_agir_sur_objet(demande, "peut_instruire"):
         return HttpResponseForbidden("Accès refusé")
 
-    if demande.statut not in ["EN_INSTRUCTION", "BROUILLON"]:
+    if not demande.est_modifiable:
         messages.error(request, "Cette demande n'est pas modifiable.")
         return redirect("AidFi:afase_detail", demande_id=demande.id)
 
@@ -171,7 +174,7 @@ def afase_evaluation(request, demande_id):
 def afase_decision(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_decider"):
+    if not request.user.peut_agir_sur_objet(demande, "peut_decider"):
         return HttpResponseForbidden("Accès refusé")
 
     if demande.statut != "DEPOSEE":
@@ -197,7 +200,11 @@ def afase_decision(request, demande_id):
                 decision.decide_par = request.user
                 decision.save()
 
-                demande.statut = "ACCORDEE" if decision.type_decision == "ACCORD" else "REFUSEE"
+                demande.statut = {
+                    "ACCORD": "ACCORDEE",
+                    "REFUS": "REFUSEE",
+                    "AJO": "AJO",   # retour au travailleur social
+                }[decision.type_decision]
                 demande.save(update_fields=["statut"])
 
                 buffer = generer_pdf_afase(demande)
@@ -227,7 +234,7 @@ def afase_decision(request, demande_id):
 def afase_previsualisation(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_voir"):
+    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
         return HttpResponseForbidden()
 
     buffer = generer_pdf_afase(demande)
@@ -250,14 +257,24 @@ def ajouter_document_afase(request, demande_id):
 
     if not request.user.peut_agir_sur_objet(demande, "peut_modifier"):
         return HttpResponseForbidden()
+    if not demande.est_modifiable:
+        messages.error(request, "Cette demande n'est plus modifiable.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
 
     if request.method == "POST":
         form = DocumentGEDForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
+            fichier = request.FILES["file"]
             doc = form.save(commit=False)
             doc.content_object = demande.beneficiaire
             doc.uploaded_by = request.user
             doc.save()
+            # Stockage physique du fichier (version 1)
+            doc.add_new_version(
+                buffer=fichier, filename=fichier.name,
+                user=request.user, raison=f"Pièce AFASE dossier {demande.id}",
+                request=request,
+            )
 
             PieceJustificative.objects.get_or_create(
                 demande=demande,
@@ -287,7 +304,7 @@ def ajouter_document_afase(request, demande_id):
 def afase_pdf(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.a_la_capacite("peut_voir"):
+    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
         return HttpResponseForbidden("Accès refusé")
 
     buffer = generer_pdf_afase(demande)
