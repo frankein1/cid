@@ -98,7 +98,7 @@
 </form>
 {% endif %}
 
-            {% if document|peut_modifier_ged:user or user.is_superuser %}
+            {% if document|peut_modifier_ged:user %}
             <a href="{% url 'ged:document_delete' pk=document.pk %}" class="ml-auto text-red-500 hover:text-red-700 font-bold text-sm transition">
                 <i class="fas fa-trash-alt mr-1"></i> SUPPRIMER L'ARCHIVE
             </a>
