@@ -41,63 +41,45 @@ def check_document_permission(user, document, action='view'):
 
 def get_documents_for_user(user):
     """
-    Retourne le QuerySet des documents accessibles (CORE-compatible).
-    Applique le double filtrage : Confidentialité (Profil) + Territoire (MDS).
+    Retourne le QuerySet des documents accessibles (CORE).
+    Traduit en requête la règle de DocumentGED.peut_etre_vu_par :
+    Territoire (MDS) + Confidentialité (capacités).
     """
-    # 1. ACCÈS TOTAL : Superuser ou Direction DITAS
-    if user.is_superuser or user.profils.filter(nom="DITAS_Direction").exists():
+    from django.contrib.contenttypes.models import ContentType
+    from beneficiaire.models import Beneficiaire
+
+    # 1. ACCÈS TOTAL : administrateur (inclut le superuser)
+    if user.a_la_capacite('peut_administrer'):
         return DocumentGED.objects.all()
 
-    # 2. IDENTIFICATION DU TERRITOIRE (MDS)
-    user_mds_ids = UserMDSProfile.objects.filter(
-        user=user, 
-        actif=True
-    ).values_list('mds_id', flat=True).distinct()
+    # Sans capacité de consultation : aucun document (comme le modèle)
+    if not user.a_la_capacite('peut_voir'):
+        return DocumentGED.objects.none()
 
-    # 3. FILTRE DE CONFIDENTIALITÉ (Selon capacités/profils)
+    # 2. FILTRE DE CONFIDENTIALITÉ (capacités CORE)
     # ------------------------------------------------------
-    profil_filter = Q()
-    user_profils = list(user.profils.values_list('nom', flat=True))
-
-    if "DGAS_Direction" in user_profils or "MDS_Cadres" in user_profils:
-        # Accès large : Tout sauf 'TRES_CONFIDENTIEL' (réservé DITAS)
-        profil_filter = Q(confidentialite__in=['PUBLIC', 'RESTREINT', 'CONFIDENTIEL'])
-    
-    elif "MDS_Agents_Sociaux" in user_profils:
-        # Accès standard + dossiers où l'agent est désigné explicitement
+    if user.a_la_capacite('peut_valider'):
+        # Cadres : tous les niveaux, y compris TRES_CONFIDENTIEL
+        profil_filter = Q()
+    else:
+        # Agents : accès standard + documents où ils sont nommément autorisés
         profil_filter = Q(confidentialite__in=['PUBLIC', 'RESTREINT']) | \
                         Q(confidentialite='CONFIDENTIEL', agents_autorises=user)
-    
-    elif "MDS_Administratifs" in user_profils:
-        # Accès administratif strict
-        profil_filter = Q(confidentialite__in=['PUBLIC', 'RESTREINT'])
-    
-    else:
-        # Sécurité : Si aucun profil matché, on ne voit que ses propres uploads
-        profil_filter = Q(uploaded_by=user)
 
-    # 4. FILTRE DE TERRITORIALITÉ (Barrière MDS)
+    # 3. FILTRE DE TERRITORIALITÉ (Barrière MDS)
     # ------------------------------------------------------
-    # On filtre les documents liés à des bénéficiaires appartenant aux MDS de l'utilisateur.
-    # On utilise 'beneficiaire__mds_id' car dans ton système, l'objet lié est souvent le bénéficiaire.
-    # Pour les GenericForeignKey, on filtre via le ContentType si nécessaire.
-    
-    qs = DocumentGED.objects.filter(profil_filter)
+    user_mds_ids = UserMDSProfile.objects.filter(
+        user=user,
+        actif=True
+    ).values_list('mds_id', flat=True)
 
-    # Si l'agent n'est pas "Direction globale", on applique la barrière MDS
-    if not ("DITAS_Direction" in user_profils or "DGAS_Direction" in user_profils):
-        # Filtrage territorial sur le bénéficiaire lié (via GenericRelation ou IDs)
-        # On suppose ici que le DocumentGED est lié à un bénéficiaire (object_id)
-        # On restreint aux documents dont l'object_id (bénéficiaire) appartient aux MDS autorisées.
-        from django.contrib.contenttypes.models import ContentType
-        from beneficiaire.models import Beneficiaire
-        
-        beneficiaire_type = ContentType.objects.get_for_model(Beneficiaire)
-        
-        # Filtre complexe : documents du territoire OU documents créés par l'utilisateur lui-même
-        qs = qs.filter(
-            Q(content_type=beneficiaire_type, object_id__in=Beneficiaire.objects.filter(mds_id__in=user_mds_ids).values('id')) |
-            Q(uploaded_by=user)
-        )
+    beneficiaire_type = ContentType.objects.get_for_model(Beneficiaire)
+    territoire_filter = Q(
+        content_type=beneficiaire_type,
+        object_id__in=Beneficiaire.objects.filter(mds_id__in=user_mds_ids).values('id')
+    )
+
+    # Documents du territoire visibles selon la confidentialité
+    qs = DocumentGED.objects.filter(territoire_filter & profil_filter)
 
     return qs.distinct()
