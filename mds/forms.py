@@ -80,6 +80,10 @@ class UserMDSProfileForm(forms.ModelForm):
         self.mds = kwargs.pop('mds', None)
         self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
+
+        # CORE : on ne propose que les profils que l'utilisateur peut attribuer
+        if self.request:
+            self.fields['profil_core'].queryset = self.request.user.profils_attribuables()
         
         if not self.instance.pk:
             self.initial['date_debut'] = timezone.now().date()
@@ -126,7 +130,10 @@ class UserMDSProfileUpdateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        gestionnaire = kwargs.pop('gestionnaire', None)
         super().__init__(*args, **kwargs)
+        if gestionnaire:
+            self.fields['profil_core'].queryset = gestionnaire.profils_attribuables()
         common_class = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
         for name, field in self.fields.items():
             if not isinstance(field.widget, forms.CheckboxInput):

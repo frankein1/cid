@@ -98,15 +98,12 @@ class MDS(AuditedMixin):
             mds=self, actif=True
         ).values_list('user_id', flat=True)
 
-        # 2. Construction dynamique du filtre pour le profil CORE
-        # Exemple : si nom_capacite='peut_valider', filtre sera {'profils__peut_valider': True}
-        filtre_capacite = {f"profils__{nom_capacite}": True}
-
-        # 3. On filtre le modèle User
+        # 2. CORE : capacité portée par un profil actif de l'utilisateur
         return User.objects.filter(
             id__in=ids_utilisateurs,
             is_active=True,
-            **filtre_capacite
+            profils__actif=True,
+            profils__capacites__code=nom_capacite,
         ).distinct()
 
     def get_utilisateurs_actifs(self):
@@ -171,6 +168,18 @@ class MDS(AuditedMixin):
         ou un cadre rattaché à CETTE MDS ayant le droit de gestion.
         """
         if user.a_la_capacite('peut_administrer'):  # inclut le superuser
+            return True
+        return UserMDSProfile.objects.filter(
+            user=user, mds=self, peut_gerer_utilisateurs=True, actif=True
+        ).exists()
+
+    def peut_gerer_comptes(self, user):
+        """
+        Gestion des comptes et droits de cette MDS (jamais l'accès aux dossiers) :
+        - gestionnaire des accès / administrateur : toutes les MDS
+        - gestionnaire local : cadre de CETTE MDS ayant le droit de gestion
+        """
+        if user.a_la_capacite('peut_gerer_acces'):
             return True
         return UserMDSProfile.objects.filter(
             user=user, mds=self, peut_gerer_utilisateurs=True, actif=True
