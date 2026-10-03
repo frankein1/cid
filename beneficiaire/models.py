@@ -168,32 +168,27 @@ class Beneficiaire(models.Model):
 
 
     def peut_etre_vu_par(self, user):
-        """✅ CORRIGÉ CORE : Utilise UserMDSProfile + a_la_capacite"""
-        if user.is_superuser or user.a_la_capacite('peut_voir_stats'):
+        """
+        CORE : capacité 'peut_voir' + barrière territoriale (MDS).
+        Un simple rattachement à une MDS, sans capacité, ne donne accès à rien.
+        """
+        if not user.is_authenticated:
+            return False
+        if user.a_la_capacite('peut_administrer'):   # inclut le superuser
             return True
-        
-        # Vérification via profil MDS actif
-        if self.mds:
-            try:
-                from mds.models import UserMDSProfile
-                profile = UserMDSProfile.objects.filter(
-                    user=user, 
-                    mds=self.mds, 
-                    actif=True
-                ).first()
-                return bool(profile)
-            except:
-                pass
-        
-        # Fallback : accès via liens familiaux (si capacité)
-        if user.a_la_capacite('peut_creer'):
-            liens = LienFamilial.objects.filter(
-                Q(personne_a=self, personne_b__mds__usermdsprofile__user=user) |
-                Q(personne_b=self, personne_a__mds__usermdsprofile__user=user)
-            )
-            return liens.exists()
-        
-        return False
+        if not user.a_la_capacite('peut_voir'):
+            return False
+
+        if self.mds_id:
+            return user.a_acces_mds(self.mds)
+
+        # Usager sans MDS : visible si un membre de sa famille est suivi dans une MDS de l'agent
+        from mds.models import UserMDSProfile
+        mds_ids = UserMDSProfile.objects.filter(user=user, actif=True).values_list('mds_id', flat=True)
+        return LienFamilial.objects.filter(
+            Q(personne_a=self, personne_b__mds_id__in=mds_ids) |
+            Q(personne_b=self, personne_a__mds_id__in=mds_ids)
+        ).exists()
 
     def peut_etre_modifie_par(self, user):
         """✅ CORRIGÉ CORE : peut_creer + même MDS"""
