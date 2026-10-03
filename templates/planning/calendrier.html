@@ -42,7 +42,7 @@
             </form>
 
             <div class="flex space-x-3">
-                {% if user.is_superuser or user|a_la_capacite:'peut_administrer' %}
+                {% if user|a_la_capacite:'planning_bloquer' %}
                 <a href="{% url 'planning:generer_creneaux' %}" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">Générer</a>
                 <a href="{% url 'planning:ajouter_jour_bloque' %}" class="px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-900 text-sm font-medium">Bloquer Jour</a>
                 {% endif %}
