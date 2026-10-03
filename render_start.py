@@ -38,12 +38,11 @@ call_command('init2')   # ← À COMMENTER ou SUPPRIMER après le premier déplo
 
 # ============================================================
 # Étape 1 : Migrations (au cas où install ne les aurait pas faites)
+# Les fichiers de migration sont versionnés dans GitHub :
+# on se contente de les appliquer, on n'en crée jamais sur le serveur.
 # ============================================================
-print("📦 Étape 1: Création et application des migrations...")
+print("📦 Étape 1: Application des migrations...")
 try:
-    # Détecte les changements dans TOUTES les applications
-    call_command('makemigrations', '--noinput', verbosity=1)
-    # Applique toutes les migrations (si nouvelles)
     call_command('migrate', '--noinput', verbosity=1)
     print("✅ Migrations OK")
 except Exception as e:
@@ -84,7 +83,7 @@ try:
     
     if Profil.objects.count() == 0:
         print("⚠️  Aucun profil détecté. Initialisation...")
-        call_command('init_permissions_complet', verbosity=0)
+        call_command('init_profils', verbosity=0)
         print("✅ Permissions initialisées")
     else:
         print(f"✅ {Profil.objects.count()} profils déjà présents")
