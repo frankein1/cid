@@ -118,7 +118,7 @@
                 <i class="fas fa-chart-line mr-2"></i> Analyses & Rapports
             </a>
             
-            {% if perms.mds.change_mds %}
+            {% if peut_modifier %}
             <div class="h-10 w-[1px] bg-gray-700 mx-2 hidden md:block"></div>
             <a href="{% url 'mds:modifier_mds' mds_id=mds.id %}" 
                class="flex items-center px-5 py-2.5 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg font-bold transition">
