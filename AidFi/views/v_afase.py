@@ -270,11 +270,16 @@ def ajouter_document_afase(request, demande_id):
             doc.uploaded_by = request.user
             doc.save()
             # Stockage physique du fichier (version 1)
-            doc.add_new_version(
-                buffer=fichier, filename=fichier.name,
-                user=request.user, raison=f"Pièce AFASE dossier {demande.id}",
-                request=request,
-            )
+            try:
+                doc.add_new_version(
+                    buffer=fichier, filename=fichier.name,
+                    user=request.user, raison=f"Pièce AFASE dossier {demande.id}",
+                    request=request,
+                )
+            except Exception:
+                doc.delete()
+                messages.error(request, "Le fichier n'a pas pu être stocké. Réessayez plus tard.")
+                return redirect("AidFi:afase_detail", demande_id=demande.id)
 
             PieceJustificative.objects.get_or_create(
                 demande=demande,
