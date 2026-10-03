@@ -129,13 +129,16 @@ def liste_beneficiaires(request):
 
         beneficiaires = Beneficiaire.objects.filter(filters)
     
-    # Filtrer selon les droits MDS seulement si on a des résultats
-    if beneficiaires is not None and not request.user.is_superuser:
-        from mds.models import UserMDSProfile
-        mds_ids = UserMDSProfile.objects.filter(
-            user=request.user, actif=True
-        ).values_list('mds_id', flat=True)
-        beneficiaires = beneficiaires.filter(mds_id__in=mds_ids)
+    # CORE : capacité 'peut_voir' + MDS de rattachement (l'administrateur voit tout)
+    if beneficiaires is not None and not request.user.a_la_capacite('peut_administrer'):
+        if not request.user.a_la_capacite('peut_voir'):
+            beneficiaires = Beneficiaire.objects.none()
+        else:
+            from mds.models import UserMDSProfile
+            mds_ids = UserMDSProfile.objects.filter(
+                user=request.user, actif=True
+            ).values_list('mds_id', flat=True)
+            beneficiaires = beneficiaires.filter(mds_id__in=mds_ids)
     
     # Trier et optimiser les requêtes
     if beneficiaires is not None:
