@@ -16,6 +16,14 @@ class Command(BaseCommand):
         call_command('init_afase')
 
         # 3. Définition des profils (code, nom, capacités)
+        CAPACITES_CADRE = [
+            'peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier',
+            'peut_instruire', 'peut_valider', 'peut_decider', 'peut_voir_stats',
+            'ged_televerser', 'ged_valider', 'ged_supprimer',
+            'planning_generer', 'planning_bloquer', 'planning_exporter',
+            'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi'
+        ]
+
         PROFILS = [
             {
                 "code": "MDS_ADMINISTRATIFS",
@@ -35,14 +43,34 @@ class Command(BaseCommand):
             {
                 "code": "MDS_CADRES",
                 "nom": "Cadres MDS",
-                "capacites": [
-                    'peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier',
-                    'peut_instruire', 'peut_valider', 'peut_decider', 'peut_voir_stats',
-                    'ged_televerser', 'ged_valider', 'ged_supprimer',
-                    'planning_generer', 'planning_bloquer', 'planning_exporter',
-                    'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi'
-                ]
+                "capacites": CAPACITES_CADRE
             },
+
+            # ---------------- ENCADREMENT MDS (droits de cadre) ----------------
+            {"code": "MDS_RESPONSABLE", "nom": "Responsable de MDS", "capacites": CAPACITES_CADRE},
+            {"code": "MDS_ADJOINT_RESPONSABLE", "nom": "Adjoint au responsable de MDS", "capacites": CAPACITES_CADRE},
+            {"code": "MDS_DIRECTION_TERRITOIRE", "nom": "Direction de MDS de territoire", "capacites": CAPACITES_CADRE},
+            {"code": "MDS_ADJOINT_PREVENTION", "nom": "Adjoint prévention sociale", "capacites": CAPACITES_CADRE},
+            {"code": "MDS_ADJOINT_ENFANCE_FAMILLE", "nom": "Adjoint enfance famille", "capacites": CAPACITES_CADRE},
+
+            # ---------------- MDS DE TERRITOIRE : droits à définir ----------------
+            {"code": "MDS_MEDECIN_REFERENT", "nom": "Médecin référent", "capacites": []},
+            {"code": "MDS_SECRETARIAT_GENERAL", "nom": "Secrétariat général", "capacites": []},
+
+            # ---------------- DIRECTIONS (DEF, DITAS, PMI...) : droits à définir ----------------
+            {"code": "DIR_DIRECTION", "nom": "Direction (directions centrales)", "capacites": []},
+            {"code": "DIR_CADRE", "nom": "Cadre de direction", "capacites": []},
+            {"code": "DIR_SECRETARIAT", "nom": "Secrétariat de direction", "capacites": []},
+
+            # ---------------- DGA SOLIDARITÉS : droits à définir ----------------
+            {"code": "DGA_DIRECTION", "nom": "Direction générale adjointe", "capacites": []},
+            {"code": "DGA_ADJOINT", "nom": "Adjoint DGA", "capacites": []},
+            {"code": "DGA_CHARGE_MISSION", "nom": "Chargé de mission DGA", "capacites": []},
+            {"code": "DGA_SECRETARIAT", "nom": "Secrétariat DGA", "capacites": []},
+
+            # ---------------- ADMINISTRATION DES COMPTES (sans accès aux dossiers) ----------------
+            {"code": "GESTIONNAIRE_ACCES", "nom": "Gestionnaire des accès", "capacites": ['peut_gerer_acces']},
+
             {
                 "code": "SUPER_ADMIN",
                 "nom": "Super Administrateur",

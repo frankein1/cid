@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from mds.models import MDS, UserMDSProfile, MDSReception
+from core.models import Profil
 from beneficiaire.models import Beneficiaire, LienFamilial
 from datetime import date, time, timedelta
 
@@ -103,7 +104,13 @@ class Command(BaseCommand):
                 user.save()
 
             profil_code = profils[profil_key]
-            UserMDSProfile.objects.get_or_create(
+
+            # Profil CORE (rattrapage aussi pour les comptes déjà existants)
+            profil = Profil.objects.filter(code=profil_code).first()
+            if profil and not user.profils.filter(pk=profil.pk).exists():
+                user.profils.add(profil)
+
+            ump, _ = UserMDSProfile.objects.get_or_create(
                 user=user,
                 mds=mds,
                 defaults={
@@ -113,6 +120,13 @@ class Command(BaseCommand):
                     "role_specifique": "Chef de service" if est_proprietaire else "",
                 }
             )
+            ump.save()  # déclenche l'auto-attribution des droits locaux pour les cadres
+
+            # Le chef de service devient directeur de la MDS si le poste est vacant
+            if est_proprietaire and not mds.responsable:
+                mds.responsable = user
+                mds.save(update_fields=["responsable"])
+
             self.stdout.write(f"   {'✅ Créé' if created else '📌 Existe'} : {username} ({fullname}) – {profil_code}")
 
         # ==========================================================

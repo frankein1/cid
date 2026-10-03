@@ -32,6 +32,7 @@ CAPACITES = [
     ('peut_administrer', 'Administrer'),
     ('peut_configurer', 'Configurer'),
     ('peut_gerer_utilisateurs', 'Gérer les utilisateurs'),
+    ('peut_gerer_acces', 'Gérer les comptes et les droits (toutes structures, sans accès aux dossiers)'),
 
     # --- GED ---
     ('ged_televerser', 'GED – Téléverser'),
