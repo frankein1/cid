@@ -150,7 +150,6 @@ TEMPLATES = [
             ],
             'libraries': {
                 'ged_tags': 'ged.ged_tags',
-                'permissions_tags': 'core.templatetags.permissions_tags',
             },
         },
     },
