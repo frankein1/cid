@@ -262,6 +262,42 @@ class User(TimestampedMixin, AbstractUser):
         return code in self.get_capacites_codes()
 
     # ------------------------------------------------------------------
+    # GESTION DES COMPTES (strictement séparée des dossiers sociaux)
+    # ------------------------------------------------------------------
+
+    PROFILS_RESERVES = ('SUPER_ADMIN', 'GESTIONNAIRE_ACCES')
+
+    def profils_attribuables(self):
+        """
+        Profils que cet utilisateur a le droit d'attribuer :
+        - superuser : tous
+        - administrateur (SUPER_ADMIN) : tous sauf SUPER_ADMIN
+        - gestionnaire des accès : tous sauf SUPER_ADMIN et GESTIONNAIRE_ACCES
+        - gestionnaire local (cadre de MDS) : profils MDS uniquement
+        """
+        from core.models import Profil
+        qs = Profil.objects.filter(actif=True)
+        if self.is_superuser:
+            return qs.order_by('nom')
+        if self.a_la_capacite('peut_administrer'):
+            return qs.exclude(code='SUPER_ADMIN').order_by('nom')
+        if self.a_la_capacite('peut_gerer_acces'):
+            return qs.exclude(code__in=self.PROFILS_RESERVES).order_by('nom')
+        return qs.filter(code__startswith='MDS_').order_by('nom')
+
+    def peut_gerer_le_compte(self, cible):
+        """
+        Peut-on modifier les droits de 'cible' ? Jamais les siens, jamais ceux
+        d'un compte plus élevé (profil que l'on n'a pas le droit d'attribuer).
+        """
+        if self.is_superuser:
+            return True
+        if cible.pk == self.pk or cible.is_superuser:
+            return False
+        autorises = set(self.profils_attribuables().values_list('id', flat=True))
+        return set(cible.profils.values_list('id', flat=True)) <= autorises
+
+    # ------------------------------------------------------------------
     # COMPATIBILITÉ (TEMPORAIRE - À supprimer après migration)
     # ------------------------------------------------------------------
 
