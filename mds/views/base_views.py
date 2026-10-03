@@ -1,6 +1,6 @@
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
+# Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
@@ -8,7 +8,8 @@
 # (Le socle : Liste, Détails et Statistiques)
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required
+from core.authentication.decorators import capacite_requise
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
@@ -18,7 +19,7 @@ from ..forms import MDSForm
 @login_required
 def liste_mds(request):
     user = request.user
-    mds_qs = MDS.objects.all() if (user.is_superuser or user.has_perm("mds.view_mds")) else \
+    mds_qs = MDS.objects.all() if user.a_la_capacite("peut_administrer") else \
              MDS.objects.filter(id__in=user.profils_mds.filter(actif=True).values_list("mds_id", flat=True))
     
     query = request.GET.get("q", "")
@@ -84,6 +85,7 @@ def detail_mds(request, mds_id):
         "pourcentage_occupation": pourcentage,            # Requis par template
         "stats_profils": stats_profils,                   # Requis par template
         "est_ouverte": est_ouverte,                       # Requis par template
+        "peut_modifier": mds.peut_etre_modifiee_par(request.user),
     })
 
 
@@ -127,8 +129,7 @@ def statistiques_mds(request, mds_id):
     })
 
 
-@login_required
-@permission_required('mds.add_mds', raise_exception=True)
+@capacite_requise('peut_administrer')
 def creer_mds(request):
     if request.method == 'POST':
         form = MDSForm(request.POST)
