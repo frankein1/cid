@@ -315,7 +315,7 @@ class DocumentTypeListView(LoginRequiredMixin, ListView):
     template_name = 'ged/admin/type_list.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
+        if not request.user.a_la_capacite('peut_administrer'):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
@@ -327,7 +327,7 @@ class DocumentTypeCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('ged:document_type_list')
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
+        if not request.user.a_la_capacite('peut_administrer'):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
@@ -339,6 +339,6 @@ class DocumentTypeUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('ged:document_type_list')
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_superuser:
+        if not request.user.a_la_capacite('peut_administrer'):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
