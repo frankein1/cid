@@ -194,7 +194,15 @@ class DownloadDocumentView(LoginRequiredMixin, View):
             return redirect("ged:document_detail", pk=document.pk)
 
         storage = SeaweedFSStorage()
-        file_data = storage.open(fid)
+        try:
+            file_data = storage.open(fid)
+        except FileNotFoundError:
+            messages.error(
+                request,
+                "Ce fichier n'est plus disponible : il avait été déposé dans le "
+                "stockage temporaire, effacé au redémarrage du serveur.",
+            )
+            return redirect("ged:document_detail", pk=document.pk)
 
         document.log_action(
             "TELECHARGEMENT",

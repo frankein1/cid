@@ -22,21 +22,45 @@ def is_render_environment():
     """Détecte Render sans ambiguïté"""
     return os.environ.get('RENDER') is not None
 
+def pcloud_configure():
+    """pCloud est actif dès que ses identifiants sont dans l'environnement."""
+    return bool(os.environ.get('PCLOUD_USER') and os.environ.get('PCLOUD_PASSWORD'))
+
+
+PCLOUD_PREFIX = "pc_"   # tous les identifiants de fichiers pCloud commencent ainsi
+
+
 @deconstructible
 class SeaweedFSStorage(Storage):
     """
-    Stockage UNIQUE qui sur Render utilise /tmp/, 
-    sinon tente l'API REST SeaweedFS
+    Stockage UNIQUE de la GED. Trois modes, par ordre de priorité :
+      1. pCloud (WebDAV)  : si PCLOUD_USER et PCLOUD_PASSWORD sont définis
+      2. temporaire /tmp  : sur Render sans pCloud (fichiers perdus au redémarrage)
+      3. SeaweedFS        : en local
     """
-    
+
+    _pcloud_dossier_pret = False   # le dossier n'est créé qu'une fois par processus
+
     def __init__(self, master_url=None, filer_url=None, volume_url=None):
         self.master_url = master_url or getattr(settings, 'SEAWEEDFS_MASTER_URL', 'http://localhost:9333')
         self.filer_url = filer_url or getattr(settings, 'SEAWEEDFS_FILER_URL', 'http://localhost:8888')
         self.volume_url = volume_url or getattr(settings, 'SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
-        
-        # DÉTECTION SIMPLE : sur Render → mode temporaire
+
+        # Toujours prêt pour relire d'anciens fichiers temporaires
+        self.temp_dir = '/tmp/ged_docs'
+
+        # --- MODE pCloud (prioritaire) ---
+        self.use_pcloud = pcloud_configure()
+        if self.use_pcloud:
+            self.pcloud_url = os.environ.get('PCLOUD_WEBDAV_URL', 'https://ewebdav.pcloud.com').rstrip('/')
+            self.pcloud_dossier = os.environ.get('PCLOUD_FOLDER', 'CID_GED').strip('/')
+            self.pcloud_auth = (os.environ['PCLOUD_USER'], os.environ['PCLOUD_PASSWORD'])
+            self.use_temporary = False
+            return
+
+        # --- MODE temporaire sur Render ---
         self.use_temporary = is_render_environment()
-        
+
         if self.use_temporary:
             self.temp_dir = '/tmp/ged_docs'
             os.makedirs(self.temp_dir, exist_ok=True)
@@ -48,6 +72,8 @@ class SeaweedFSStorage(Storage):
     
     def _save(self, name, content):
         """Sauvegarde un fichier, retourne un FID"""
+        if self.use_pcloud:
+            return self._save_pcloud(name, content)
         if self.use_temporary:
             return self._save_temporary(name, content)
         else:
@@ -107,8 +133,10 @@ class SeaweedFSStorage(Storage):
     def open(self, name, mode='rb'):
         """Ouvre un fichier par son FID"""
         fid = name
-        
-        if self.use_temporary:
+
+        if fid.startswith(PCLOUD_PREFIX):
+            return self._open_pcloud(fid)
+        if self.use_temporary or self.use_pcloud:
             return self._open_temporary(fid)
         else:
             return self._open_seaweedfs(fid)
@@ -136,6 +164,10 @@ class SeaweedFSStorage(Storage):
     
     def exists(self, name):
         fid = name
+        if fid.startswith(PCLOUD_PREFIX):
+            return self._exists_pcloud(fid)
+        if self.use_pcloud:
+            return False   # nom de fichier brut : l'identifiant pCloud sera de toute façon unique
         if self.use_temporary:
             import glob
             pattern = f"*{fid.replace(',', '_')}*"
@@ -150,7 +182,9 @@ class SeaweedFSStorage(Storage):
     
     def delete(self, name):
         fid = name
-        if self.use_temporary:
+        if fid.startswith(PCLOUD_PREFIX):
+            return self._delete_pcloud(fid)
+        if self.use_temporary or self.use_pcloud:
             import glob
             pattern = f"*{fid.replace(',', '_')}*"
             matches = glob.glob(os.path.join(self.temp_dir, pattern))
@@ -166,6 +200,8 @@ class SeaweedFSStorage(Storage):
     
     def url(self, name):
         fid = name
+        if fid.startswith(PCLOUD_PREFIX):
+            return f"/media/ged/{fid}"   # le téléchargement passe toujours par la vue GED (droits vérifiés)
         if self.use_temporary:
             return f"/media/ged/{fid}"  # URL factice pour l'affichage
         else:
@@ -174,10 +210,14 @@ class SeaweedFSStorage(Storage):
     # ==================== INFO POUR DEBUG ====================
     
     def get_mode(self):
+        if self.use_pcloud:
+            return "pcloud"
         return "temporaire" if self.use_temporary else "seaweedfs"
     
     def get_info(self):
         """Pour debug dans l'admin"""
+        if self.use_pcloud:
+            return {'mode': 'pcloud', 'url': self.pcloud_url, 'dossier': self.pcloud_dossier}
         if self.use_temporary:
             import glob
             files = glob.glob(os.path.join(self.temp_dir, "*"))
@@ -187,3 +227,63 @@ class SeaweedFSStorage(Storage):
                 'fichiers': len(files)
             }
         return {'mode': 'seaweedfs', 'url': self.master_url}
+
+    # ==================== MODE pCloud (WebDAV) ====================
+
+    def _pcloud_chemin(self, fid):
+        return f"{self.pcloud_url}/{self.pcloud_dossier}/{fid}"
+
+    def _pcloud_preparer_dossier(self):
+        """Crée le dossier de la GED sur pCloud s'il n'existe pas (une fois par processus)."""
+        if SeaweedFSStorage._pcloud_dossier_pret:
+            return
+        r = requests.request(
+            "MKCOL", f"{self.pcloud_url}/{self.pcloud_dossier}",
+            auth=self.pcloud_auth, timeout=30,
+        )
+        # 201 = créé, 405 = existe déjà
+        if r.status_code not in (201, 405):
+            r.raise_for_status()
+        SeaweedFSStorage._pcloud_dossier_pret = True
+
+    def _save_pcloud(self, name, content):
+        """Envoie le fichier sur pCloud, retourne l'identifiant (FID) à conserver en base."""
+        self._pcloud_preparer_dossier()
+
+        base = os.path.basename(name).replace(' ', '_')
+        fid = f"{PCLOUD_PREFIX}{uuid.uuid4().hex[:16]}_{base}"[:100]
+
+        if hasattr(content, 'seek'):
+            content.seek(0)
+        if hasattr(content, 'chunks'):
+            data = b''.join(content.chunks())
+        elif hasattr(content, 'read'):
+            data = content.read()
+        else:
+            data = content
+
+        r = requests.put(self._pcloud_chemin(fid), data=data, auth=self.pcloud_auth, timeout=120)
+        r.raise_for_status()
+        logger.info(f"☁️ [pCloud] {name} → {fid}")
+        return fid
+
+    def _open_pcloud(self, fid):
+        r = requests.get(self._pcloud_chemin(fid), auth=self.pcloud_auth, timeout=120)
+        if r.status_code == 404:
+            raise FileNotFoundError(f"Fichier {fid} absent de pCloud")
+        r.raise_for_status()
+        return ContentFile(r.content, name=fid)
+
+    def _exists_pcloud(self, fid):
+        try:
+            r = requests.head(self._pcloud_chemin(fid), auth=self.pcloud_auth, timeout=30)
+            return r.status_code == 200
+        except requests.exceptions.RequestException:
+            return False
+
+    def _delete_pcloud(self, fid):
+        try:
+            r = requests.delete(self._pcloud_chemin(fid), auth=self.pcloud_auth, timeout=30)
+            return r.status_code in (200, 204)
+        except requests.exceptions.RequestException:
+            return False
