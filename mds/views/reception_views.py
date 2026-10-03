@@ -1,6 +1,6 @@
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
-# Assistance technique: les IA et particulièrement DeepSeek 
+# Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
@@ -68,12 +68,14 @@ def mes_demi_journees(request):
 def toggle_demi_journee(request):
     agent_id = request.POST.get('agent_id')
     if agent_id and str(agent_id) != str(request.user.id):
-        if not request.user.has_perm('mds.change_mds'):
-            return JsonResponse({"error": "Interdit"}, status=403)
         try:
             agent = User.objects.get(id=agent_id)
         except User.DoesNotExist:
             return JsonResponse({"error": "Agent introuvable"}, status=404)
+        # CORE : seul un gestionnaire de la MDS de l'agent peut agir pour lui
+        mds_agent = agent.mds_principale
+        if not (mds_agent and mds_agent.peut_etre_modifiee_par(request.user)):
+            return JsonResponse({"error": "Interdit"}, status=403)
     else:
         agent = request.user
     
@@ -103,12 +105,14 @@ def toggle_demi_journee(request):
 def update_demi_journee_lieu(request):
     agent_id = request.POST.get('agent_id')
     if agent_id and str(agent_id) != str(request.user.id):
-        if not request.user.has_perm('mds.change_mds'):
-            return JsonResponse({"error": "Interdit"}, status=403)
         try:
             agent = User.objects.get(id=agent_id)
         except User.DoesNotExist:
             return JsonResponse({"error": "Agent introuvable"}, status=404)
+        # CORE : seul un gestionnaire de la MDS de l'agent peut agir pour lui
+        mds_agent = agent.mds_principale
+        if not (mds_agent and mds_agent.peut_etre_modifiee_par(request.user)):
+            return JsonResponse({"error": "Interdit"}, status=403)
     else:
         agent = request.user
     
