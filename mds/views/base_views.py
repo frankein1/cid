@@ -19,7 +19,8 @@ from ..forms import MDSForm
 @login_required
 def liste_mds(request):
     user = request.user
-    mds_qs = MDS.objects.all() if user.a_la_capacite("peut_administrer") else \
+    voit_tout = user.a_la_capacite("peut_administrer") or user.a_la_capacite("peut_gerer_acces")
+    mds_qs = MDS.objects.all() if voit_tout else \
              MDS.objects.filter(id__in=user.profils_mds.filter(actif=True).values_list("mds_id", flat=True))
     
     query = request.GET.get("q", "")
@@ -33,7 +34,9 @@ def liste_mds(request):
 def detail_mds(request, mds_id):
     mds = get_object_or_404(MDS, id=mds_id)
     
-    if not request.user.a_acces_mds(mds):
+    # La fiche structure ne contient aucune donnée d'usager :
+    # le gestionnaire des accès peut la consulter pour gérer les comptes.
+    if not (request.user.a_acces_mds(mds) or mds.peut_gerer_comptes(request.user)):
         messages.error(request, "Accès refusé.")
         return redirect("mds:liste_mds")
 
