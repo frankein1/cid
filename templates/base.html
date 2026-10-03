@@ -32,6 +32,12 @@
 
                     {% if user.is_authenticated %}
                     <div class="hidden md:flex space-x-4">
+
+                        {% if user|a_la_capacite:'peut_gerer_acces' %}
+                        <a href="{% url 'mds:liste_mds' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <i class="fas fa-user-shield mr-2"></i>Comptes & droits
+                        </a>
+                        {% endif %}
                         
                         {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                         <div class="relative">
