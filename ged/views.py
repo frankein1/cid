@@ -96,16 +96,20 @@ class DocumentUploadView(LoginRequiredMixin, CreateView):
         document.uploaded_by = self.request.user
         document._uploaded_file = file  # hash + taille
 
-        # --- STOCKAGE SEAWEEDFS ---
-        storage = SeaweedFSStorage()
-        try:
-            document.seaweedfs_id = storage.save(file.name, file)
-        except Exception:
-            form.add_error('file', "Erreur technique de stockage.")
-            return self.form_invalid(form)
-
         document.save()
         form.save_m2m()
+
+        # --- STOCKAGE PHYSIQUE (version 1) ---
+        try:
+            document.add_new_version(
+                buffer=file, filename=file.name,
+                user=self.request.user, raison="Version initiale",
+                request=self.request,
+            )
+        except Exception:
+            document.delete()
+            form.add_error('file', "Erreur technique de stockage.")
+            return self.form_invalid(form)
 
         # --- AUDIT ---
         document.log_action(
@@ -182,12 +186,15 @@ class DownloadDocumentView(LoginRequiredMixin, View):
             return HttpResponseForbidden()
 
         version = document.versions.first()
-        if not version:
-            messages.error(request, "Aucune version disponible.")
+        # Anciens documents (V1) : le fichier est référencé sur le document lui-même
+        fid = version.seaweedfs_id if version else document.seaweedfs_id
+        extension = version.extension if version else document.extension
+        if not fid:
+            messages.error(request, "Aucun fichier disponible pour ce document.")
             return redirect("ged:document_detail", pk=document.pk)
 
         storage = SeaweedFSStorage()
-        file_data = storage.open(version.seaweedfs_id)
+        file_data = storage.open(fid)
 
         document.log_action(
             "TELECHARGEMENT",
@@ -199,7 +206,7 @@ class DownloadDocumentView(LoginRequiredMixin, View):
         return FileResponse(
             file_data,
             as_attachment=True,
-            filename=f"{document.titre}.{version.extension}",
+            filename=f"{document.titre}.{extension}",
         )
 
 

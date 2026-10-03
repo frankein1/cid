@@ -47,32 +47,30 @@ def stocker_pdf_afase(demande, buffer, user):
     )
 
     # ------------------------------------------------------------------
-    # Création de l'entrée GED
-    # uploaded_by = user est conservé :
-    # cela permet de tracer qui a validé / archivé le document.
+    # Création de l'entrée GED, rattachée au BÉNÉFICIAIRE :
+    # - visible sur sa fiche et dans la GED (barrière MDS appliquée)
+    # - fichier physiquement stocké via add_new_version (version 1)
     # ------------------------------------------------------------------
     doc = DocumentGED.objects.create(
-        content_object=demande,
+        content_object=demande.beneficiaire,
         type_document=type_document,
         titre=f"Décision AFASE - Dossier {demande.id}",
         confidentialite="RESTREINT",
         uploaded_by=user,
     )
+    doc.add_new_version(
+        buffer=ContentFile(content, name=filename),
+        filename=filename,
+        user=user,
+        raison=f"Décision AFASE dossier {demande.id}",
+    )
 
-    # Affectation du fichier :
-    # doc.save() déclenche ensuite le stockage physique via le modèle GED
-    doc._uploaded_file = file
-    doc.save()
+    # Liaison à la demande : le PDF apparaît dans ses documents
+    from AidFi.models.m_generique import PieceJustificative
+    PieceJustificative.objects.create(
+        demande=demande, document_ged=doc,
+        type_piece="DECISION", statut="VALIDE",
+    )
 
-    # ------------------------------------------------------------------
-    # ⚠️ LIAISON DIRECTE COMMENTÉE
-    # Le champ 'document_final' n'existe pas dans le modèle DemandeAFASE
-    # Si tu veux l'ajouter plus tard, crée une migration dédiée.
-    # ------------------------------------------------------------------
-    # demande.document_final = doc
-    # demande.save(update_fields=["document_final"])
-
-    # On replace le curseur au début pour un éventuel réemploi du buffer
     buffer.seek(0)
-
     return doc
