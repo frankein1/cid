@@ -19,13 +19,17 @@ import uuid
 # --- CONSTANTES ---
 STATUT_DEMANDE = [
     ('BROUILLON', 'Draft'), ('DEPOSEE', 'Submitted'), ('EN_INSTRUCTION', 'In progress'),
-    ('VALIDE', 'Validated'), ('ACCORDEE', 'Granted'), ('AJO', 'Postponed'), ('ANNULEE', 'Cancelled'),
+    ('VALIDE', 'Validated'), ('ACCORDEE', 'Granted'), ('REFUSEE', 'Refused'), ('AJO', 'Postponed'), ('ANNULEE', 'Cancelled'),
 ]
+
+# Statuts dans lesquels le travailleur social peut encore modifier la demande
+STATUTS_MODIFIABLES = ('BROUILLON', 'EN_INSTRUCTION', 'AJO')
 
 TYPE_PIECE_CHOICES = [
     ('IDENTITE', 'ID document'), ('LIVRET_FAMILLE', 'Family record book'), 
     ('RIB', 'Bank account details'), ('DOMICILE', 'Proof of address'),
     ('RESSOURCES', 'Income proof'), ('CHARGES', 'Expense proof'), ('AUTRE', 'Other document'),
+    ('DECISION', 'Decision'),
 ]
 
 MAX_FILE_MB = getattr(settings, 'AIDFI_MAX_FILE_MB', 5)
@@ -83,6 +87,15 @@ class DemandeAide(models.Model):
     evaluation_sociale = models.TextField(blank=True)
     numero_dossier = models.CharField(max_length=100, blank=True)
     
+    @property
+    def mds(self):
+        """Territoire de la demande = MDS du bénéficiaire (barrière CORE)."""
+        return getattr(self.beneficiaire, 'mds', None)
+
+    @property
+    def est_modifiable(self):
+        return self.statut in STATUTS_MODIFIABLES
+
     def statut_badge_classes(self):
         return {"BROUILLON": "bg-gray-200 text-gray-700", "DEPOSEE": "bg-blue-100 text-blue-800",
                 "EN_INSTRUCTION": "bg-yellow-100 text-yellow-800", "ACCORDEE": "bg-emerald-100 text-emerald-800"}.get(self.statut)

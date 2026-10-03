@@ -105,10 +105,10 @@ class DemandeAFASE(DemandeAide):
     @property
     def est_modifiable(self):
         """
-        Une demande verrouillée ne peut plus être modifiée
-        par aucun acteur (TS ou cadre).
+        Modifiable seulement avant décision (brouillon, instruction, ajournement)
+        et jamais une fois verrouillée.
         """
-        return not self.est_verrouillee
+        return not self.est_verrouillee and super().est_modifiable
 
     # ------------------------------
     # ACCÈS MÉTIER SIMPLIFIÉS
