@@ -1,0 +1,55 @@
+name: Mettre à jour l'en-tête de licence
+
+on:
+  workflow_dispatch:
+
+jobs:
+  maj-entete:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: render
+
+      - name: Remplacer la ligne "Assistance technique"
+        run: |
+          python3 << 'PYEOF'
+          import os, re
+
+          NOUVELLE = "# Assistance technique: l'IA"
+          motif = re.compile(r"^# Assistance technique:.*$", re.MULTILINE)
+          ligne_aidfi = re.compile(r"^# Deep\w+ est la meilleure IA.*\n", re.MULTILINE)
+
+          modifies = 0
+          for racine, dossiers, fichiers in os.walk('.'):
+              dossiers[:] = [d for d in dossiers if d not in ('.git', '__pycache__')]
+              for nom in fichiers:
+                  if not nom.endswith('.py'):
+                      continue
+                  chemin = os.path.join(racine, nom)
+                  with open(chemin, encoding='utf-8') as f:
+                      contenu = f.read()
+                  nouveau = motif.sub(NOUVELLE, contenu)
+                  nouveau = ligne_aidfi.sub('', nouveau)
+                  if nouveau != contenu:
+                      with open(chemin, 'w', encoding='utf-8') as f:
+                          f.write(nouveau)
+                      print(f"✅ {chemin}")
+                      modifies += 1
+
+          print(f"Fichiers modifiés : {modifies}")
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f"modifies={modifies}\n")
+          PYEOF
+
+      - name: Commit et push
+        if: env.modifies != '0'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Mise à jour de l'en-tête de licence"
+          git push origin render
