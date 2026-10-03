@@ -200,8 +200,9 @@ class User(TimestampedMixin, AbstractUser):
     def a_acces_mds(self, mds):
         """
         Vérifie si l'utilisateur a un profil actif dans la MDS donnée.
+        L'administrateur (capacité 'peut_administrer') a accès à toutes les MDS.
         """
-        if self.is_superuser:
+        if self.a_la_capacite('peut_administrer'):  # inclut le superuser
             return True
         if not mds:
             return False
