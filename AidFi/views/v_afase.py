@@ -3,6 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
+# AidFi/views/v_afase.py
 
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -147,6 +148,7 @@ def afase_evaluation(request, demande_id):
         if form.is_valid():
             form.save()
             demande.statut = "DEPOSEE"
+            demande._acteur = request.user   # journal des statuts
             demande.save(update_fields=["statut"])
             messages.success(request, "Instruction finalisée et demande transmise au cadre.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
@@ -188,6 +190,7 @@ def afase_decision(request, demande_id):
 
         if action == "RETOUR_INSTRUCTION":
             demande.statut = "EN_INSTRUCTION"
+            demande._acteur = request.user   # journal des statuts
             demande.save(update_fields=["statut"])
             messages.success(request, "La demande a été retournée en instruction.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
@@ -205,6 +208,7 @@ def afase_decision(request, demande_id):
                     "REFUS": "REFUSEE",
                     "AJO": "AJO",   # retour au travailleur social
                 }[decision.type_decision]
+                demande._acteur = request.user   # journal des statuts
                 demande.save(update_fields=["statut"])
 
                 buffer = generer_pdf_afase(demande)
