@@ -1,3 +1,4 @@
+# 📁 Emplacement : ged/views.py
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
 # Assistance technique: l'IA
@@ -168,10 +169,20 @@ class DocumentListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         from .utils import get_documents_for_user
-        return (
+        qs = (
             get_documents_for_user(self.request.user)
             .select_related('type_document', 'uploaded_by')
+            .order_by('-date_creation')
         )
+        # Depuis la fiche d'un usager : uniquement SES documents
+        code_interne = self.kwargs.get('code_interne')
+        if code_interne:
+            beneficiaire = get_object_or_404(Beneficiaire, code_interne=code_interne)
+            qs = qs.filter(
+                content_type=ContentType.objects.get_for_model(Beneficiaire),
+                object_id=beneficiaire.pk,
+            )
+        return qs
 
 
 # =============================================================================
