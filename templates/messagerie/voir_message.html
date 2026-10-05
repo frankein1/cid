@@ -52,6 +52,16 @@
                 <p class="whitespace-pre-wrap text-gray-700">{{ msg.contenu }}</p>
             </div>
 
+            <!-- Lien vers le dossier concerné (les droits sont vérifiés à l'ouverture) -->
+            {% with lien=msg.objet_lie.get_absolute_url %}
+            {% if lien %}
+            <a href="{{ lien }}"
+               class="inline-flex items-center px-4 py-2 mb-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm">
+                <i class="fas fa-folder-open mr-2"></i>Ouvrir le dossier
+            </a>
+            {% endif %}
+            {% endwith %}
+
             <!-- Pièces jointes -->
             {% if msg.pieces_jointes.all %}
             <div class="bg-gray-50 rounded-lg p-4">
