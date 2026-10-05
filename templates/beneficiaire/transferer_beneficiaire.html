@@ -1,0 +1,70 @@
+<!-- 📁 Emplacement : templates/beneficiaire/transferer_beneficiaire.html -->
+{% extends "base.html" %}
+{% block title %}Transfert de MDS - {{ beneficiaire.prenom }} {{ beneficiaire.nom }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+    <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="text-sm text-blue-600 hover:underline">
+        <i class="fas fa-arrow-left mr-1"></i>Retour à la fiche
+    </a>
+
+    <h1 class="text-2xl font-bold text-gray-800 mt-3 mb-1">Transférer vers ma MDS</h1>
+    <p class="text-gray-500 mb-6">
+        {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }} est actuellement suivi(e) par
+        <strong>{{ beneficiaire.mds.nom|default:"aucune MDS" }}</strong>.
+    </p>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">MDS de destination</label>
+            <select name="mds_destination" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                {% for m in destinations %}<option value="{{ m.pk }}">{{ m.nom }}</option>{% endfor %}
+            </select>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="font-bold text-gray-800 mb-1">Membres de la famille</h2>
+            <p class="text-xs text-gray-500 mb-4">
+                Cochez les personnes qui déménagent avec l'usager. Par défaut : celles qui vivent au foyer
+                et sont suivies par la même MDS. Décochez par exemple un conjoint en cas de séparation.
+            </p>
+            {% for m in membres %}
+            <label class="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+                <input type="checkbox" name="membres" value="{{ m.personne.pk }}" class="mt-1" {% if m.coche %}checked{% endif %}>
+                <span class="flex-1">
+                    <span class="font-medium text-gray-800">{{ m.personne.prenom }} {{ m.personne.nom|upper }}</span>
+                    <span class="text-xs text-gray-500 ml-1">{{ m.lien.get_type_lien_display }}{% if m.lien.vit_au_foyer %} · vit au foyer{% endif %}</span>
+                    <span class="block text-xs text-gray-400">
+                        MDS : {{ m.personne.mds.nom|default:"aucune" }}
+                        {% if m.aides_en_cours %} · <span class="text-amber-600">{{ m.aides_en_cours }} aide(s) en cours</span>{% endif %}
+                    </span>
+                </span>
+            </label>
+            {% empty %}
+            <p class="text-sm text-gray-400 italic">Aucun membre de famille lié.</p>
+            {% endfor %}
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 space-y-1">
+            <p><i class="fas fa-info-circle mr-1"></i>Les documents et les aides suivent automatiquement les personnes transférées.</p>
+            {% if aides_principal %}<p>{{ aides_principal }} aide(s) en cours pour l'usager seront désormais traitées par votre MDS.</p>{% endif %}
+            <p>Le référent est remis à zéro.</p>
+            <p>Un message sera envoyé à
+                {% if beneficiaire.referent_mds %}<strong>{{ beneficiaire.referent_mds.get_full_name }}</strong> (référent sortant){% endif %}
+                {% if beneficiaire.referent_mds and responsable_origine %} et à {% endif %}
+                {% if responsable_origine %}<strong>{{ responsable_origine.get_full_name|default:responsable_origine.username }}</strong> (responsable){% endif %}
+                {% if not beneficiaire.referent_mds and not responsable_origine %}personne : aucun référent ni responsable trouvé dans l'ancienne MDS{% endif %}.
+            </p>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Annuler</a>
+            <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700">
+                <i class="fas fa-right-left mr-2"></i>Confirmer le transfert
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

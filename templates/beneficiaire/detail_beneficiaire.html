@@ -1,4 +1,4 @@
-<!-- /templates/beneficiaire/detail_beneficiaire.html -->
+<!-- 📁 Emplacement : templates/beneficiaire/detail_beneficiaire.html -->
 {% extends 'base.html' %}
 {% load static %}
 {% load ged_tags %} {# IMPORTANT : Chargement des tags pour le badge #}
@@ -41,6 +41,23 @@
         </div>
     </div>
 
+    {% if acces_restreint %}
+    <!-- CONSULTATION TRANSVERSALE : usager suivi par une autre MDS -->
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-3">
+        <div class="flex-1 text-sm text-amber-900">
+            <i class="fas fa-lock mr-2"></i>
+            Usager suivi par <strong>{{ beneficiaire.mds.nom|default:"aucune MDS" }}</strong>.
+            Consultation limitée à l'identité, aux coordonnées, au référent et à la famille.
+            Les documents et les aides seront accessibles après transfert.
+        </div>
+        {% if peut_transferer %}
+        <a href="{% url 'beneficiaire:transferer_beneficiaire' beneficiaire.code_interne %}"
+           class="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm">
+            <i class="fas fa-right-left mr-2"></i>Transférer vers ma MDS
+        </a>
+        {% endif %}
+    </div>
+    {% else %}
     <!-- ======================================================= -->
     <!-- BANDEAU D'ACTIONS PRINCIPALES (GESTION DOSSIER)        -->
     <!-- ======================================================= -->
@@ -98,6 +115,8 @@
             <i class="fas fa-file-contract mr-2"></i>CER
         </a>
     </div>
+
+    {% endif %}{# fin des bandeaux réservés à la MDS de l'usager #}
 
     <!-- ======================================================= -->
     <!-- CONTENU PRINCIPAL (INFORMATIONS + DOCUMENTS)          -->
@@ -235,6 +254,22 @@
                 </div>
             </div>
             
+            {% if not acces_restreint %}
+            {% if transferts %}
+            <!-- Historique des transferts -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3"><i class="fas fa-right-left mr-2 text-amber-500"></i>Transferts de MDS</h2>
+                <ul class="space-y-2 text-sm">
+                {% for t in transferts %}
+                    <li class="text-gray-700">
+                        {{ t.date_transfert|date:"d/m/Y" }} : {{ t.mds_origine.nom|default:"?" }} → <strong>{{ t.mds_destination.nom|default:"?" }}</strong>
+                        <span class="block text-xs text-gray-400">par {{ t.demande_par.get_full_name|default:t.demande_par.username }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
             <!-- Documents -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div class="flex justify-between items-center mb-4">
@@ -265,6 +300,7 @@
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}{# fin documents / historique #}
         </div>
     </div>
 </div>
