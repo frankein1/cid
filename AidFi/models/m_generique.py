@@ -145,12 +145,27 @@ class DemandeAide(models.Model):
         
         super().save(*args, **kwargs)
 
+LIBELLES_STATUT_FR = {
+    'NEANT': 'Création', 'BROUILLON': 'Brouillon', 'EN_INSTRUCTION': 'En instruction',
+    'DEPOSEE': 'Déposée au cadre', 'VALIDE': 'Validée', 'ACCORDEE': 'Accordée',
+    'REFUSEE': 'Refusée', 'AJO': 'Ajournée', 'ANNULEE': 'Annulée',
+}
+
+
 class SuiviDemande(models.Model):
     demande = models.ForeignKey(DemandeAide, on_delete=models.CASCADE, related_name='suivis')
     statut_precedent = models.CharField(max_length=50)
     statut_nouveau = models.CharField(max_length=50)
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     date_action = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def libelle_precedent(self):
+        return LIBELLES_STATUT_FR.get(self.statut_precedent, self.statut_precedent)
+
+    @property
+    def libelle_nouveau(self):
+        return LIBELLES_STATUT_FR.get(self.statut_nouveau, self.statut_nouveau)
     
 class PieceJustificative(models.Model):
     demande = models.ForeignKey(DemandeAide, on_delete=models.CASCADE, related_name='pieces_justificatives')
