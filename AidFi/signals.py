@@ -4,46 +4,59 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 # AidFi/signals.py
+"""
+Journal des statuts des demandes d'aide (SuiviDemande).
 
-from django.db.models.signals import post_save
+- Écoute TOUTES les demandes (DemandeAide et ses sous-types : DemandeAFASE...).
+  Avec l'héritage Django, une DemandeAFASE envoie le signal sous son propre
+  nom : écouter seulement DemandeAide ne suffisait pas.
+- Une ligne par création et par changement de statut, jamais modifiée.
+- L'auteur est l'agent connecté : la vue le transmet via demande._acteur ;
+  à défaut, le créateur de la demande.
+"""
+
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from django.core.mail import send_mail
 
 from AidFi.models.m_generique import DemandeAide, SuiviDemande
 
 
-@receiver(post_save, sender=DemandeAide)
-def suivi_creation_demande(sender, instance, created, **kwargs):
-    """
-    Création initiale du suivi métier.
-    Déclenché UNE SEULE FOIS.
-    """
-    if not created:
+def _est_demande(instance):
+    return isinstance(instance, DemandeAide)
+
+
+@receiver(pre_save)
+def memoriser_statut_precedent(sender, instance, **kwargs):
+    """Avant l'enregistrement : on retient le statut en base."""
+    if not _est_demande(instance):
+        return
+    if instance.pk:
+        instance._statut_precedent = (
+            DemandeAide.objects.filter(pk=instance.pk)
+            .values_list('statut', flat=True).first()
+        )
+    else:
+        instance._statut_precedent = None
+
+
+@receiver(post_save)
+def journaliser_statut(sender, instance, created, **kwargs):
+    """Après l'enregistrement : une ligne de suivi si le statut a changé."""
+    if not _est_demande(instance):
+        return
+    # Un sous-type (AFASE) déclenche aussi la sauvegarde de sa partie parente :
+    # on ne journalise qu'une fois, sur le type réel de la demande.
+    if sender is not type(instance):
+        return
+
+    precedent = getattr(instance, '_statut_precedent', None)
+    if not created and precedent == instance.statut:
         return
 
     SuiviDemande.objects.create(
-        demande=instance,
-        statut_precedent="NEANT",
+        demande_id=instance.pk,
+        statut_precedent=precedent or "NEANT",
         statut_nouveau=instance.statut,
-        agent=instance.cree_par,
+        agent=getattr(instance, '_acteur', None) or instance.cree_par,
     )
-
-
-@receiver(post_save, sender=DemandeAide)
-def alerte_depot_demande(sender, instance, created, **kwargs):
-    """
-    Alerte mail UNIQUEMENT lors du passage à DEPOSEE.
-    """
-    if created:
-        return
-
-    if instance.statut != "DEPOSEE":
-        return
-
-    send_mail(
-        subject=f"Nouvelle demande AidFi déposée",
-        message=f"Dossier {instance.id} prêt pour instruction.",
-        from_email="noreply@ditas.fr",
-        recipient_list=["cadre.mds@departement.fr"],
-        fail_silently=True,
-    )
+    instance._statut_precedent = instance.statut
