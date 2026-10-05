@@ -30,6 +30,7 @@ urlpatterns = [
     
     # NOUVEAU : Gestion sortie et décès
     path('<str:code_interne>/sortir/', views.sortir_beneficiaire, name='sortir_beneficiaire'),
+    path('<str:code_interne>/transferer/', views.transferer_beneficiaire, name='transferer_beneficiaire'),
     path('<str:code_interne>/deces/', views.declarer_deces, name='declarer_deces'),
     path('<str:code_interne>/supprimer/', views.supprimer_beneficiaire, name='supprimer_beneficiaire'),
     

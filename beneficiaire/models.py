@@ -190,6 +190,21 @@ class Beneficiaire(models.Model):
             Q(personne_b=self, personne_a__mds_id__in=mds_ids)
         ).exists()
 
+    def peut_etre_consulte_par(self, user):
+        """
+        Consultation RESTREINTE (toutes MDS) : identité, coordonnées, référent, famille.
+        Jamais les documents, aides ou messages.
+        """
+        return user.is_authenticated and user.a_la_capacite('peut_consulter_tous_usagers')
+
+    def niveau_acces(self, user):
+        """'complet' (MDS de l'usager), 'restreint' (consultation transversale) ou None."""
+        if self.peut_etre_vu_par(user):
+            return 'complet'
+        if self.peut_etre_consulte_par(user):
+            return 'restreint'
+        return None
+
     def peut_etre_modifie_par(self, user):
         """✅ CORRIGÉ CORE : peut_creer + même MDS"""
         if user.is_superuser or user.a_la_capacite('peut_administrer'):
@@ -271,3 +286,26 @@ def generate_code_interne(sender, instance, **kwargs):
             if not Beneficiaire.objects.filter(code_interne=code).exists():
                 instance.code_interne = code
                 break
+
+
+class TransfertMDS(models.Model):
+    """Historique des changements de MDS d'un usager (jamais modifié ni supprimé)."""
+    beneficiaire = models.ForeignKey(Beneficiaire, on_delete=models.CASCADE, related_name='transferts')
+    mds_origine = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, related_name='transferts_sortants')
+    mds_destination = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, related_name='transferts_entrants')
+    referent_sortant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='transferts_sortis')
+    demande_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='transferts_demandes')
+    transfere_avec = models.ForeignKey(
+        Beneficiaire, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+        help_text="Usager principal si transféré avec son foyer")
+    date_transfert = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_transfert']
+        verbose_name = "Transfert de MDS"
+        verbose_name_plural = "Transferts de MDS"
+
+    def __str__(self):
+        return f"{self.beneficiaire} : {self.mds_origine} → {self.mds_destination}"
