@@ -1,3 +1,4 @@
+# 📁 Emplacement : core/management/commands/init_profils.py
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from core.models import Profil, Capacite
@@ -21,7 +22,8 @@ class Command(BaseCommand):
             'peut_instruire', 'peut_valider', 'peut_decider', 'peut_voir_stats',
             'ged_televerser', 'ged_valider', 'ged_supprimer',
             'planning_generer', 'planning_bloquer', 'planning_exporter',
-            'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi'
+            'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi',
+            'peut_consulter_tous_usagers',
         ]
 
         PROFILS = [
@@ -29,7 +31,8 @@ class Command(BaseCommand):
                 "code": "MDS_ADMINISTRATIFS",
                 "nom": "MDS Administratifs",
                 "capacites": [
-                    'peut_voir', 'peut_lister', 'peut_creer', 'peut_voir_stats'
+                    'peut_voir', 'peut_lister', 'peut_creer', 'peut_voir_stats',
+                    'peut_consulter_tous_usagers',
                 ]
             },
             {
@@ -37,7 +40,8 @@ class Command(BaseCommand):
                 "nom": "Agents Sociaux MDS",
                 "capacites": [
                     'peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier',
-                    'peut_instruire', 'ged_televerser', 'peut_gestion_aides_aidfi'
+                    'peut_instruire', 'ged_televerser', 'peut_gestion_aides_aidfi',
+                    'peut_consulter_tous_usagers',
                 ]
             },
             {

@@ -1,3 +1,4 @@
+# 📁 Emplacement : core/management/commands/init_capacites.py
 # =============================================================================
 # © AGPL3 - CID - Developpeur : Frederic COTTA
 # Assistance technique: l'IA
@@ -15,6 +16,7 @@ CAPACITES = [
     ('peut_voir', 'Voir'),
     ('peut_voir_stats', 'Voir statistiques'),
     ('peut_lister', 'Lister'),
+    ('peut_consulter_tous_usagers', 'Rechercher un usager dans toutes les MDS (identité, coordonnées, référent, famille)'),
 
     # --- CRUD Standard ---
     ('peut_creer', 'Créer'),
