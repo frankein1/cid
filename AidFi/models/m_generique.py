@@ -87,6 +87,14 @@ class DemandeAide(models.Model):
     evaluation_sociale = models.TextField(blank=True)
     numero_dossier = models.CharField(max_length=100, blank=True)
     
+    def get_absolute_url(self):
+        """Page du dossier (utilisée par la messagerie : bouton « Ouvrir le dossier »)."""
+        from django.urls import reverse
+        from AidFi.models.m_afase import DemandeAFASE
+        if isinstance(self, DemandeAFASE) or DemandeAFASE.objects.filter(pk=self.pk).exists():
+            return reverse('AidFi:afase_detail', args=[self.pk])
+        return None
+
     @property
     def mds(self):
         """Territoire de la demande = MDS du bénéficiaire (barrière CORE)."""
