@@ -25,8 +25,8 @@ def gestion_utilisateurs_mds(request, mds_id):
     """Tableau de bord agents MDS"""
     mds = get_object_or_404(MDS, id=mds_id)
     
-    if not mds.peut_etre_modifiee_par(request.user):
-        messages.error(request, "Cadre local requis.")
+    if not mds.peut_gerer_comptes(request.user):
+        messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
         return redirect("mds:detail_mds", mds_id=mds.id)
     
     profiles = UserMDSProfile.objects.filter(
@@ -44,8 +44,8 @@ def ajouter_utilisateur_mds(request, mds_id):
     """Ajout agent (existant ou nouveau)"""
     mds = get_object_or_404(MDS, id=mds_id)
     
-    if not mds.peut_etre_modifiee_par(request.user):
-        messages.error(request, "Cadre local requis.")
+    if not mds.peut_gerer_comptes(request.user):
+        messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
         return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
     
     if request.method == "POST":
@@ -97,6 +97,7 @@ def ajouter_utilisateur_mds(request, mds_id):
                     profil_core = form.cleaned_data.get('profil_core')
                     if profil_core:
                         user.profils.add(profil_core)
+                        profile.save()  # un cadre devient gestionnaire local de la MDS
                     
                     # 5. Gestion principale
                     if profile.principale:
@@ -124,12 +125,15 @@ def modifier_profil_utilisateur(request, mds_id, user_id):
     mds = get_object_or_404(MDS, id=mds_id)
     profile = get_object_or_404(UserMDSProfile, mds=mds, user_id=user_id)
     
-    if not mds.peut_etre_modifiee_par(request.user):
-        messages.error(request, "Cadre local requis.")
+    if not mds.peut_gerer_comptes(request.user):
+        messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
+        return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
+    if not request.user.peut_gerer_le_compte(profile.user):
+        messages.error(request, "Vous ne pouvez pas modifier les droits de ce compte (le vôtre ou un compte de niveau supérieur).")
         return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
     
     if request.method == "POST":
-        form = UserMDSProfileUpdateForm(request.POST, instance=profile)
+        form = UserMDSProfileUpdateForm(request.POST, instance=profile, gestionnaire=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -140,6 +144,7 @@ def modifier_profil_utilisateur(request, mds_id, user_id):
                     if profil_core:
                         profile.user.profils.clear()
                         profile.user.profils.add(profil_core)
+                        profile.save()  # recalcule les droits locaux d'un cadre
                     
                     # ✅ CORRIGÉ : Gestion principale via UserMDSProfile uniquement
                     if profile.principale:
@@ -155,7 +160,8 @@ def modifier_profil_utilisateur(request, mds_id, user_id):
         initial_profil = profile.user.profils.first()
         form = UserMDSProfileUpdateForm(
             instance=profile, 
-            initial={'profil_core': initial_profil}
+            initial={'profil_core': initial_profil},
+            gestionnaire=request.user,
         )
         
     return render(request, "mds/modifier_profil_utilisateur.html", {
@@ -170,8 +176,11 @@ def supprimer_utilisateur_mds(request, mds_id, user_id):
     mds = get_object_or_404(MDS, id=mds_id)
     profile = get_object_or_404(UserMDSProfile, mds=mds, user_id=user_id)
     
-    if not mds.peut_etre_modifiee_par(request.user):
-        messages.error(request, "Cadre local requis.")
+    if not mds.peut_gerer_comptes(request.user):
+        messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
+        return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
+    if not request.user.peut_gerer_le_compte(profile.user):
+        messages.error(request, "Vous ne pouvez pas détacher ce compte (le vôtre ou un compte de niveau supérieur).")
         return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
     
     if request.method == "POST":
