@@ -129,8 +129,11 @@ def liste_beneficiaires(request):
 
         beneficiaires = Beneficiaire.objects.filter(filters)
     
-    # CORE : capacité 'peut_voir' + MDS de rattachement (l'administrateur voit tout)
-    if beneficiaires is not None and not request.user.a_la_capacite('peut_administrer'):
+    # CORE : l'administrateur et la consultation transversale cherchent dans toutes les MDS ;
+    # sinon capacité 'peut_voir' + MDS de rattachement
+    recherche_globale = (request.user.a_la_capacite('peut_administrer')
+                         or request.user.a_la_capacite('peut_consulter_tous_usagers'))
+    if beneficiaires is not None and not recherche_globale:
         if not request.user.a_la_capacite('peut_voir'):
             beneficiaires = Beneficiaire.objects.none()
         else:
@@ -189,12 +192,14 @@ def modifier_beneficiaire(request, code_interne):
 
     if request.method == "POST":
         form = BeneficiaireForm(request.POST, instance=beneficiaire)
+        form.fields.pop('mds', None)   # changement de MDS : uniquement via « Transférer » (tracé)
         if form.is_valid():
             form.save()
             messages.success(request, f"Mise à jour de {beneficiaire.nom} effectuée.")
             return redirect("beneficiaire:detail_beneficiaire", code_interne=beneficiaire.code_interne)
     else:
         form = BeneficiaireForm(instance=beneficiaire)
+        form.fields.pop('mds', None)
 
     # VOICI LA CORRECTION : Ajouter "action" dans le dictionnaire
     return render(request, "beneficiaire/modifier_beneficiaire.html", {
@@ -211,9 +216,11 @@ def detail_beneficiaire(request, code_interne):
         code_interne=code_interne
     )
     
-    if not beneficiaire.peut_etre_vu_par(request.user):
+    niveau = beneficiaire.niveau_acces(request.user)
+    if niveau is None:
         messages.error(request, "Accès refusé à ce bénéficiaire.")
         return redirect('beneficiaire:liste')
+    acces_restreint = (niveau == 'restreint')
     
     # Optimisation des requêtes pour les liens familiaux
     liens = LienFamilial.objects.filter(
@@ -234,15 +241,22 @@ def detail_beneficiaire(request, code_interne):
     context = {
         "beneficiaire": beneficiaire,
         "liens_familiaux": liens,
-        "documents": DocumentBeneficiaireLink.objects.filter(
-            beneficiaire=beneficiaire
-        ).select_related('document_ged').order_by("-date_creation"),
         "inclure_sortis": request.GET.get("inclure_sortis", "non") == "oui",
-        "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
-        "messages": Message.objects.filter(
-            beneficiaire=beneficiaire
-        ).select_related('expediteur', 'destinataire')[:10]
+        "acces_restreint": acces_restreint,
+        "peut_transferer": bool(mds_destination_possibles(request.user, beneficiaire)),
     }
+    if not acces_restreint:
+        # Dossier complet : uniquement pour la MDS de l'usager
+        context.update({
+            "documents": DocumentBeneficiaireLink.objects.filter(
+                beneficiaire=beneficiaire
+            ).select_related('document_ged').order_by("-date_creation"),
+            "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
+            "messages": Message.objects.filter(
+                beneficiaire=beneficiaire
+            ).select_related('expediteur', 'destinataire')[:10],
+            "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],
+        })
     return render(request, "beneficiaire/detail_beneficiaire.html", context)
    
 @login_required
@@ -491,4 +505,60 @@ def ajouter_document(request, code_interne):
     return render(request, "beneficiaire/ajouter_document.html", {
         "beneficiaire": benef,
         "form": form,
+    })
+
+
+# =============================================================================
+# TRANSFERT DE MDS (déménagement)
+# =============================================================================
+
+def mds_destination_possibles(user, beneficiaire):
+    """MDS de l'agent vers lesquelles il peut rapatrier cet usager."""
+    if not user.a_la_capacite('peut_creer') or beneficiaire.niveau_acces(user) is None:
+        return []
+    from mds.models import UserMDSProfile
+    return [
+        ump.mds for ump in UserMDSProfile.objects.filter(user=user, actif=True)
+        .select_related('mds').order_by('-principale')
+        if ump.mds_id != beneficiaire.mds_id
+    ]
+
+
+@login_required
+def transferer_beneficiaire(request, code_interne):
+    from .transfert import membres_famille, responsable_mds, aides_en_cours, transferer
+
+    beneficiaire = get_object_or_404(Beneficiaire.objects.select_related('mds', 'referent_mds'), code_interne=code_interne)
+    destinations = mds_destination_possibles(request.user, beneficiaire)
+    if not destinations:
+        messages.error(request, "Transfert impossible : cet usager est déjà dans votre MDS ou vous n'avez pas les droits.")
+        return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+
+    membres = membres_famille(beneficiaire)
+
+    if request.method == "POST":
+        ids_destinations = {m.pk: m for m in destinations}
+        try:
+            mds_destination = ids_destinations[int(request.POST.get("mds_destination"))]
+        except (TypeError, ValueError, KeyError):
+            messages.error(request, "MDS de destination invalide.")
+            return redirect("beneficiaire:transferer_beneficiaire", code_interne=code_interne)
+
+        ids_coches = set(request.POST.getlist("membres"))
+        a_transferer = [m["personne"] for m in membres if str(m["personne"].pk) in ids_coches]
+        transferts = transferer(beneficiaire, a_transferer, mds_destination, request.user, request=request)
+        messages.success(
+            request,
+            f"{len(transferts)} personne(s) transférée(s) vers {mds_destination}. L'ancienne MDS a été prévenue."
+        )
+        return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+
+    for m in membres:
+        m["aides_en_cours"] = aides_en_cours(m["personne"]).count()
+    return render(request, "beneficiaire/transferer_beneficiaire.html", {
+        "beneficiaire": beneficiaire,
+        "membres": membres,
+        "destinations": destinations,
+        "aides_principal": aides_en_cours(beneficiaire).count(),
+        "responsable_origine": responsable_mds(beneficiaire.mds),
     })
