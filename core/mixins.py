@@ -43,3 +43,23 @@ class AuditedMixin(TimestampedMixin):
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        """
+        Remplit automatiquement l'auteur à partir de l'utilisateur connecté
+        (voir core/utilisateur_courant.py) :
+        - cree_par    : à la création, s'il n'a pas été renseigné par la vue
+        - modifie_par : à chaque enregistrement
+        Sans utilisateur connecté (scripts init2, install...), rien ne change.
+        """
+        from core.utilisateur_courant import get_utilisateur_courant
+        user = get_utilisateur_courant()
+        if user is not None:
+            if self._state.adding and not self.cree_par_id:
+                self.cree_par = user
+            self.modifie_par = user
+            # save(update_fields=[...]) n'enregistre que les champs listés
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None:
+                kwargs['update_fields'] = set(update_fields) | {'modifie_par', 'updated_at'}
+        super().save(*args, **kwargs)
