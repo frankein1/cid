@@ -110,6 +110,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.utilisateur_courant.CurrentUserMiddleware',  # auteur des modifications (AuditedMixin)
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.authentication.middleware.ServiceSelectorMiddleware',
@@ -158,6 +159,20 @@ TEMPLATES = [
 # ============================================================
 # MOTS DE PASSE
 # ============================================================
+# Sel : ajouté automatiquement par Django (un par mot de passe).
+# Poivre : activé seulement si PASSWORD_PEPPER est défini (voir core/hashers.py).
+# Le premier hacheur sert aux nouveaux mots de passe ; les suivants
+# permettent de vérifier les anciens, re-hachés à la prochaine connexion.
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+if get_env('PASSWORD_PEPPER'):
+    PASSWORD_HASHERS.insert(0, 'core.hashers.PBKDF2PoivreHasher')
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {
