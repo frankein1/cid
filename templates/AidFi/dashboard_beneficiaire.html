@@ -41,9 +41,9 @@
     {% endif %}
 
     {% if actions.can_create_cap %}
-      <a href="{% url 'AidFi:cap_attribution' beneficiaire.id %}"
+      <a href="{% url 'AidFi:cap_creer' beneficiaire.id %}"
          class="p-4 rounded-xl border bg-emerald-50 hover:bg-emerald-100">
-        ➕ Chèque CAP
+        ➕ Chèques service (CAP)
       </a>
     {% endif %}
   </div>
@@ -76,9 +76,7 @@
           </td>
           <td class="px-6 py-4">{{ aide.date|date:"d/m/Y" }}</td>
           <td class="px-6 py-4">
-            {% if aide.montant %}{{ aide.montant }} €{% else %}-{% endif %}
-            <td class="px-6 py-4 bg-yellow-100">
-              DEBUG: {{ aide.montant|default:"None" }} | ID: {{ aide.id }} | Type: {{ aide.type }}</td>
+            {% if aide.montant %}{{ aide.montant|floatformat:0 }} €{% else %}-{% endif %}
           </td>
           <td class="px-6 py-4">
             <span class="px-2 py-1 rounded text-xs {{ aide.badge_classes }}">

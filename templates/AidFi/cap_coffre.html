@@ -1,0 +1,149 @@
+<!-- templates/AidFi/cap_coffre.html -->
+{% extends "base.html" %}
+{% block title %}Coffre CAP - {{ mds.nom }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-vault mr-2 text-gray-500"></i>Coffre de chèques service</h1>
+            <p class="text-gray-500">{{ mds.nom }} — régisseur : <strong>{{ mds.regisseur.get_full_name|default:"non désigné" }}</strong></p>
+        </div>
+        {% if est_regisseur %}
+        <div class="flex gap-2">
+            <a href="{% url 'AidFi:cap_reception_nouvelle' mds.pk %}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">
+                <i class="fas fa-barcode mr-2"></i>Nouvelle réception</a>
+            <form method="post" action="{% url 'AidFi:cap_inventaire_nouveau' mds.pk %}">{% csrf_token %}
+                <button class="px-4 py-2 rounded-lg bg-gray-800 text-white font-semibold hover:bg-gray-900">
+                    <i class="fas fa-clipboard-check mr-2"></i>Inventaire</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ÉTAT -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {% for l in etat.lignes %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <p class="text-xs uppercase font-bold text-gray-400">Chèques de {{ l.valeur }} €</p>
+            <p class="text-2xl font-bold text-gray-800">{{ l.disponibles }}</p>
+            {% if l.perimes %}<p class="text-xs text-orange-600">+ {{ l.perimes }} périmé(s)</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="bg-emerald-600 text-white rounded-xl shadow-sm p-4">
+            <p class="text-xs uppercase font-bold opacity-80">Disponible</p>
+            <p class="text-2xl font-bold">{{ etat.total_disponible }} €</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- RECHERCHE / LISTE -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <form method="get" class="flex flex-wrap gap-2 mb-4">
+                    <input name="q" value="{{ q }}" placeholder="N° de chèque (douchette)" autofocus
+                           class="flex-1 min-w-[12rem] px-3 py-2 border border-gray-300 rounded-lg font-mono">
+                    <select name="statut" class="px-3 py-2 border border-gray-300 rounded-lg">
+                        {% for code, libelle in statuts %}<option value="{{ code }}" {% if code == statut %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+                    </select>
+                    <button class="px-4 py-2 rounded-lg bg-gray-800 text-white">Rechercher</button>
+                </form>
+                <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead><tr class="text-left text-gray-500 border-b"><th class="py-2">N°</th><th>Valeur</th><th>Validité</th><th>Statut / traçabilité</th><th></th></tr></thead>
+                    <tbody>
+                    {% for t in titres %}
+                    <tr class="border-b align-top">
+                        <td class="py-2 font-mono">{{ t.numero }}</td>
+                        <td>{{ t.valeur }} €</td>
+                        <td class="{% if t.statut == 'EN_STOCK' and t.date_validite < aujourdhui %}text-orange-600 font-semibold{% endif %}">{{ t.date_validite|date:"d/m/Y" }}</td>
+                        <td>
+                            {{ t.get_statut_display }}
+                            {% if t.statut == 'REMIS' %}
+                            <span class="block text-xs text-gray-500">le {{ t.date_remise|date:"d/m/Y" }} par {{ t.remis_par.get_full_name }} à {{ t.remis_a.get_full_name }}
+                                — <a href="{% url 'AidFi:cap_detail' t.demande_id %}" class="text-blue-600 hover:underline">CAP-{{ t.demande_id }}</a>
+                                ({{ t.demande.beneficiaire.prenom }} {{ t.demande.beneficiaire.nom|upper }})</span>
+                            {% elif t.date_incident %}
+                            <span class="block text-xs text-gray-500">le {{ t.date_incident|date:"d/m/Y" }} par {{ t.incident_par.get_full_name }}{% if t.incident_commentaire %} : {{ t.incident_commentaire }}{% endif %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if t.statut == 'EN_STOCK' %}
+                            <details class="inline-block text-left">
+                                <summary class="cursor-pointer text-xs text-red-600">Signaler…</summary>
+                                <form method="post" action="{% url 'AidFi:cap_titre_incident' t.pk %}" class="mt-2 space-y-1 w-56">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="retour" value="{{ request.get_full_path }}">
+                                    <select name="statut" class="w-full text-xs border rounded px-1 py-1">
+                                        <option value="PERDU">Perdu</option><option value="VOLE">Volé</option>
+                                        {% if est_regisseur %}<option value="RETOURNE">Retourné (périmé / annulé)</option>{% endif %}
+                                    </select>
+                                    <input name="commentaire" placeholder="Commentaire" class="w-full text-xs border rounded px-1 py-1">
+                                    <button class="w-full text-xs bg-red-600 text-white rounded py-1">Confirmer</button>
+                                </form>
+                            </details>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="py-6 text-center text-gray-400 italic">Aucun chèque.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <!-- À REMETTRE -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Accordées, à remettre</h2>
+                {% for d in a_remettre %}
+                <a href="{% url 'AidFi:cap_detail' d.pk %}" class="block text-sm py-1 hover:underline">
+                    CAP-{{ d.pk }} — {{ d.beneficiaire.prenom }} {{ d.beneficiaire.nom|upper }} : {{ d.montant_accorde }} €</a>
+                {% empty %}<p class="text-sm text-gray-400 italic">Rien en attente.</p>{% endfor %}
+            </div>
+
+            <!-- RÉCEPTIONS -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Réceptions</h2>
+                {% for r in receptions %}
+                <div class="flex justify-between text-sm py-1">
+                    <a href="{% url 'AidFi:cap_reception' r.pk %}" class="hover:underline">{{ r.date_reception|date:"d/m/Y" }}{% if not r.saisie_terminee %} <span class="text-orange-600">(en cours)</span>{% endif %}</a>
+                    <a href="{% url 'AidFi:cap_reception_pdf' r.pk %}" target="_blank" class="text-blue-600 text-xs">bordereau</a>
+                </div>
+                {% empty %}<p class="text-sm text-gray-400 italic">Aucune réception.</p>{% endfor %}
+            </div>
+
+            {% if est_regisseur %}
+            <!-- INVENTAIRES -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Inventaires</h2>
+                {% for inv in inventaires %}
+                <a href="{% url 'AidFi:cap_inventaire' inv.pk %}" class="flex justify-between text-sm py-1 hover:underline">
+                    <span>{{ inv.date_debut|date:"d/m/Y" }}</span>
+                    {% if not inv.termine %}<span class="text-orange-600">en cours</span>
+                    {% elif inv.a_des_ecarts %}<span class="text-red-600 font-semibold">écarts</span>
+                    {% else %}<span class="text-emerald-600">conforme</span>{% endif %}
+                </a>
+                {% empty %}<p class="text-sm text-gray-400 italic">Aucun inventaire.</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- DÉSIGNATION DU RÉGISSEUR -->
+            {% if peut_designer %}
+            <form method="post" action="{% url 'AidFi:cap_designer_regisseur' mds.pk %}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-2">
+                {% csrf_token %}
+                <h2 class="font-bold text-gray-800">Régisseur (délégation de la direction)</h2>
+                <select name="regisseur" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option value="">— aucun —</option>
+                    {% for u in candidats_regisseur %}<option value="{{ u.pk }}" {% if u.pk == mds.regisseur_id %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}
+                </select>
+                <button class="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm">Enregistrer</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

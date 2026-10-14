@@ -56,9 +56,29 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
     # ==========================================================
     # CAP
     # ==========================================================
-    path("beneficiaire/<int:beneficiaire_id>/cap/nouvelle/", v_cap.cap_attribution, name="cap_attribution",),
-
+    # Demande (AS) → décision → remise → feuille → clôture
+    path("beneficiaire/<int:beneficiaire_id>/cap/nouvelle/", v_cap.cap_creer, name="cap_creer",),
     path("cap/<int:demande_id>/", v_cap.cap_detail, name="cap_detail",),
+    path("cap/<int:demande_id>/decision/", v_cap.cap_decision, name="cap_decision",),
+    path("cap/<int:demande_id>/remise/", v_cap.cap_remise, name="cap_remise",),
+    path("cap/<int:demande_id>/remise-paierie/", v_cap.cap_remise_paierie, name="cap_remise_paierie",),
+    path("cap/<int:demande_id>/feuille.pdf", v_cap.cap_feuille_pdf, name="cap_feuille_pdf",),
+    path("cap/<int:demande_id>/cloturer/", v_cap.cap_cloturer, name="cap_cloturer",),
+
+    # Coffre et réception (régisseur de la MDS)
+    path("cap/coffres/", v_cap.cap_coffres, name="cap_coffres",),
+    path("cap/coffre/<int:mds_id>/", v_cap.cap_coffre, name="cap_coffre",),
+    path("cap/coffre/<int:mds_id>/regisseur/", v_cap.cap_designer_regisseur, name="cap_designer_regisseur",),
+    path("cap/coffre/<int:mds_id>/reception/", v_cap.cap_reception_nouvelle, name="cap_reception_nouvelle",),
+    path("cap/reception/<int:reception_id>/", v_cap.cap_reception, name="cap_reception",),
+    path("cap/reception/<int:reception_id>/bordereau.pdf", v_cap.cap_reception_pdf, name="cap_reception_pdf",),
+    path("cap/titre/<int:titre_id>/incident/", v_cap.cap_titre_incident, name="cap_titre_incident",),
+    path("cap/coffre/<int:mds_id>/inventaire/", v_cap.cap_inventaire_nouveau, name="cap_inventaire_nouveau",),
+    path("cap/inventaire/<int:inventaire_id>/", v_cap.cap_inventaire, name="cap_inventaire",),
+    path("cap/inventaire/<int:inventaire_id>/proces-verbal.pdf", v_cap.cap_inventaire_pdf, name="cap_inventaire_pdf",),
+
+    # Régie centrale (paierie départementale)
+    path("cap/paierie/", v_cap.cap_paierie, name="cap_paierie",),
 
     # ==========================================================
     # DASHBOARD CADRE

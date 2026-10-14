@@ -18,8 +18,12 @@ import uuid
 
 # --- CONSTANTES ---
 STATUT_DEMANDE = [
-    ('BROUILLON', 'Draft'), ('DEPOSEE', 'Submitted'), ('EN_INSTRUCTION', 'In progress'),
-    ('VALIDE', 'Validated'), ('ACCORDEE', 'Granted'), ('REFUSEE', 'Refused'), ('AJO', 'Postponed'), ('ANNULEE', 'Cancelled'),
+    ('BROUILLON', 'Brouillon'), ('DEPOSEE', 'Déposée au cadre'), ('EN_INSTRUCTION', 'En instruction'),
+    ('VALIDE', 'Validée'), ('ACCORDEE', 'Accordée'), ('REFUSEE', 'Refusée'), ('AJO', 'Ajournée'), ('ANNULEE', 'Annulée'),
+    # Circuit CAP (chèques service)
+    ('TRANSMISE_PAIERIE', 'Transmise à la paierie'),
+    ('REMISE', 'Remise, en attente de clôture'),
+    ('CLOTUREE', 'Clôturée'),
 ]
 
 # Statuts dans lesquels le travailleur social peut encore modifier la demande
@@ -30,6 +34,7 @@ TYPE_PIECE_CHOICES = [
     ('RIB', 'Bank account details'), ('DOMICILE', 'Proof of address'),
     ('RESSOURCES', 'Income proof'), ('CHARGES', 'Expense proof'), ('AUTRE', 'Other document'),
     ('DECISION', 'Decision'),
+    ('REMISE_CAP', 'Feuille de remise CAP signée'),
 ]
 
 MAX_FILE_MB = getattr(settings, 'AIDFI_MAX_FILE_MB', 5)
@@ -91,8 +96,11 @@ class DemandeAide(models.Model):
         """Page du dossier (utilisée par la messagerie : bouton « Ouvrir le dossier »)."""
         from django.urls import reverse
         from AidFi.models.m_afase import DemandeAFASE
+        from AidFi.models.m_cap import DemandeCAP
         if isinstance(self, DemandeAFASE) or DemandeAFASE.objects.filter(pk=self.pk).exists():
             return reverse('AidFi:afase_detail', args=[self.pk])
+        if isinstance(self, DemandeCAP) or DemandeCAP.objects.filter(pk=self.pk).exists():
+            return reverse('AidFi:cap_detail', args=[self.pk])
         return None
 
     @property
@@ -106,7 +114,10 @@ class DemandeAide(models.Model):
 
     def statut_badge_classes(self):
         return {"BROUILLON": "bg-gray-200 text-gray-700", "DEPOSEE": "bg-blue-100 text-blue-800",
-                "EN_INSTRUCTION": "bg-yellow-100 text-yellow-800", "ACCORDEE": "bg-emerald-100 text-emerald-800"}.get(self.statut)
+                "EN_INSTRUCTION": "bg-yellow-100 text-yellow-800", "ACCORDEE": "bg-emerald-100 text-emerald-800",
+                "REFUSEE": "bg-red-100 text-red-800", "AJO": "bg-orange-100 text-orange-800",
+                "TRANSMISE_PAIERIE": "bg-purple-100 text-purple-800", "REMISE": "bg-amber-100 text-amber-800",
+                "CLOTUREE": "bg-gray-100 text-gray-600"}.get(self.statut, "bg-gray-200 text-gray-700")
     
     def save(self, *args, **kwargs):
         # Si type_aide n'est pas défini, chercher ou créer AFASE par défaut
@@ -157,6 +168,8 @@ LIBELLES_STATUT_FR = {
     'NEANT': 'Création', 'BROUILLON': 'Brouillon', 'EN_INSTRUCTION': 'En instruction',
     'DEPOSEE': 'Déposée au cadre', 'VALIDE': 'Validée', 'ACCORDEE': 'Accordée',
     'REFUSEE': 'Refusée', 'AJO': 'Ajournée', 'ANNULEE': 'Annulée',
+    'TRANSMISE_PAIERIE': 'Transmise à la paierie', 'REMISE': 'Chèques remis (attente de clôture)',
+    'CLOTUREE': 'Clôturée',
 }
 
 

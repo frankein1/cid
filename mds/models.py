@@ -54,6 +54,14 @@ class MDS(AuditedMixin):
         related_name='mdss_dirigees',
         help_text="L'utilisateur doit posséder la capacité de validation/encadrement."
     )
+    regisseur = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='mds_regies',
+        help_text="Régisseur des chèques service (CAP), désigné par la direction de la MDS."
+    )
 
     # Statut
     active = models.BooleanField(default=True)

@@ -14,11 +14,11 @@ from .m_generique import (
     TypeAide, MotifDemande, DemandeAide, SuiviDemande, PieceJustificative
 )
 from .m_regie import RegieUrgence
-from .m_cap import CAPCheque
+from .m_cap import ReceptionCAP, TitreCAP, DemandeCAP, InventaireCAP
 from .m_afase import (
     DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE
 )
 
 __all__ = [
-    'TypeAide', 'DemandeAide', 'RegieUrgence', 'CAPCheque', 'DemandeAFASE'
+    'TypeAide', 'DemandeAide', 'RegieUrgence', 'DemandeAFASE', 'DemandeCAP'
 ]

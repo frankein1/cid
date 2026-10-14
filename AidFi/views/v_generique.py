@@ -16,8 +16,8 @@ from AidFi.models.m_afase import DemandeAFASE
 def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
     beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
 
-    # 🔒 Sécurité minimale
-    if not request.user.a_la_capacite("peut_voir"):
+    # 🔒 Capacité de consultation + MDS de l'usager (CORE)
+    if not beneficiaire.peut_etre_vu_par(request.user):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("Accès refusé")
 
@@ -28,7 +28,7 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
     # ➕ Actions globales possibles
     actions = {
         "can_create_afase": request.user.a_la_capacite("peut_creer"),
-        "can_create_cap": request.user.a_la_capacite("peut_gerer_finance"),
+        "can_create_cap": request.user.peut_agir_sur_objet(beneficiaire, "peut_instruire"),
         "can_create_regie": request.user.a_la_capacite("peut_gerer_finance"),
     }
 
@@ -90,7 +90,12 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
         elif type_code == "CAP":
             aide["urls"]["detail"] = "AidFi:cap_detail"
             aide["urls"]["detail_args"] = [demande.id]
-            # Décision / PDF : à venir plus tard
+            if demande.statut == "DEPOSEE" and request.user.peut_agir_sur_objet(demande, "peut_valider_cheque_aidfi"):
+                aide["can"]["decider"] = True
+                aide["urls"]["decision"] = "AidFi:cap_detail"   # la décision se prend sur la fiche
+            if demande.statut in ("REMISE", "CLOTUREE"):
+                aide["can"]["pdf"] = True
+                aide["urls"]["pdf"] = "AidFi:cap_feuille_pdf"
 
         # ==========================
         # 🔹 CAS RÉGIE (partiel)

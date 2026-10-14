@@ -1,0 +1,18 @@
+<!-- templates/AidFi/cap_coffres.html -->
+{% extends "base.html" %}
+{% block title %}Coffres CAP{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6"><i class="fas fa-vault mr-2 text-gray-500"></i>Coffres de chèques service</h1>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y">
+        {% for m in mds_list %}
+        <a href="{% url 'AidFi:cap_coffre' m.pk %}" class="flex justify-between items-center p-4 hover:bg-gray-50">
+            <span class="font-medium text-gray-800">{{ m.nom }}</span>
+            <span class="text-sm text-gray-500">Régisseur : {{ m.regisseur.get_full_name|default:"non désigné" }} →</span>
+        </a>
+        {% empty %}
+        <p class="p-6 text-gray-400 italic">Aucun coffre accessible.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

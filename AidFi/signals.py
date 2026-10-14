@@ -20,6 +20,8 @@ Journal des statuts des demandes d'aide (SuiviDemande).
   l'agent qui avait déposé la demande est prévenu.
 - Chaque message est rattaché à la demande : la messagerie affiche un bouton
   « Ouvrir le dossier » (les droits restent vérifiés à l'ouverture).
+- CAP : messages en priorité « urgente » ; si la remise passe par la paierie,
+  les régisseurs centraux sont prévenus.
 """
 
 from django.db.models.signals import pre_save, post_save
@@ -75,7 +77,12 @@ def journaliser_statut(sender, instance, created, **kwargs):
         prevenir_reponse_cadre(instance, acteur)
 
 
-def _envoyer(expediteur, destinataire, demande, objet, contenu, motif):
+def _est_cap(demande):
+    from AidFi.models.m_cap import DemandeCAP
+    return isinstance(demande, DemandeCAP)
+
+
+def _envoyer(expediteur, destinataire, demande, objet, contenu, motif, priorite=None):
     from messagerie.models import Message, StatutLecture
     from django.contrib.contenttypes.models import ContentType
     msg = Message.objects.create(
@@ -85,7 +92,7 @@ def _envoyer(expediteur, destinataire, demande, objet, contenu, motif):
         objet=objet,
         contenu=contenu,
         motif=motif,
-        priorite='importante',
+        priorite=priorite or ('urgente' if _est_cap(demande) else 'importante'),
         content_type=ContentType.objects.get_for_model(demande),
         object_id=demande.pk,
         reference=f"AIDE-{demande.pk}",
@@ -107,7 +114,14 @@ def prevenir_reponse_cadre(demande, cadre):
     type_aide = demande.type_aide.nom if demande.type_aide else "Aide financière"
     decision = getattr(demande, 'decision', None)
 
-    if demande.statut == "ACCORDEE":
+    if _est_cap(demande) and demande.statut == "ACCORDEE":
+        resultat = (f"ACCORDÉE : {demande.montant_accorde} € en chèques service, "
+                    f"à retirer auprès de {cadre.get_full_name() or cadre.username}")
+    elif demande.statut == "TRANSMISE_PAIERIE":
+        resultat = (f"ACCORDÉE : {demande.montant_accorde} € en chèques service, "
+                    f"remise par la paierie départementale (dossier transmis au régisseur central)")
+        prevenir_regie_centrale(demande, cadre)
+    elif demande.statut == "ACCORDEE":
         resultat = "ACCORDÉE"
         if decision and decision.montant_accorde:
             resultat += f" : {decision.montant_accorde} € pour {decision.duree_accordee} mois"
@@ -123,6 +137,8 @@ def prevenir_reponse_cadre(demande, cadre):
     motivation = ""
     if decision and decision.motivation and demande.statut in ("ACCORDEE", "REFUSEE", "AJO"):
         motivation = f"\nMotivation : {decision.motivation}\n"
+    if _est_cap(demande) and demande.statut == "REFUSEE" and demande.motif_refus:
+        motivation = f"\nMotif : {demande.motif_refus}\n"
 
     _envoyer(
         cadre, agent, demande,
@@ -158,3 +174,24 @@ def prevenir_depot(demande, acteur):
         ),
         motif='validation_cadre',
     )
+
+
+def prevenir_regie_centrale(demande, cadre):
+    """CAP remis par la paierie : message à chaque régisseur central."""
+    from core.models import User
+    benef = demande.beneficiaire
+    for regisseur in User.objects.filter(is_active=True, profils__code='REGISSEUR_CENTRAL',
+                                         profils__actif=True).distinct():
+        _envoyer(
+            cadre, regisseur, demande,
+            objet=f"CAP à remettre en paierie : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
+            contenu=(
+                f"Une demande de chèques service a été accordée par {demande.mds} "
+                f"pour {benef.prenom} {benef.nom.upper()} : {demande.montant_accorde} €.\n"
+                f"La remise doit avoir lieu à la paierie départementale.\n\n"
+                f"Décision de : {cadre.get_full_name() or cadre.username}.\n"
+                f"Message automatique de CID."
+            ),
+            motif='validation_cadre',
+        )
+

@@ -1,251 +1,186 @@
-<!-- /templates/AidFi/cap_detail.html -->
+<!-- templates/AidFi/cap_detail.html -->
 {% extends "base.html" %}
-{% load capacites %}
-
-{% block title %}Chèque CAP - Détail{% endblock %}
+{% block title %}CAP-{{ demande.pk }} - {{ beneficiaire.prenom }} {{ beneficiaire.nom }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8">
-    <!-- En-tête -->
-    <div class="mb-6">
-        <div class="flex justify-between items-start">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800 flex items-center">
-                    <i class="fas fa-ticket-alt text-emerald-600 mr-2"></i>
-                    Chèque d'Accompagnement Personnalisé (CAP)
-                </h1>
-                <p class="text-gray-600 mt-1">
-                    Pour {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
-                </p>
-            </div>
-            <div class="flex space-x-2">
-                <a href="{% url 'AidFi:dashboard_beneficiaire' demande.beneficiaire.id %}"
-                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Retour au dashboard
-                </a>
-            </div>
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- EN-TÊTE -->
+    <a href="{% url 'AidFi:dashboard_beneficiaire' beneficiaire.id %}" class="text-sm text-blue-600 hover:underline">
+        <i class="fas fa-arrow-left mr-1"></i>Aides financières de l'usager
+    </a>
+    <div class="flex flex-wrap justify-between items-start gap-3 mt-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-ticket-alt text-emerald-600 mr-2"></i>Chèques service — CAP-{{ demande.pk }}
+            </h1>
+            <p class="text-gray-500">
+                <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="hover:underline">
+                    {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</a>
+                — {{ demande.mds.nom|default:"MDS non renseignée" }}
+            </p>
         </div>
+        <span class="px-3 py-1 rounded-full text-sm font-semibold {{ demande.statut_badge_classes }}">{{ demande.get_statut_display }}</span>
     </div>
 
-    <!-- Carte principale -->
-    <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200 mb-6">
-        <!-- En-tête de la carte -->
-        <div class="px-6 py-4 border-b border-gray-200 bg-emerald-50">
-            <div class="flex justify-between items-center">
-                <div>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold 
-                        {% if demande.statut == 'ATTRIBUE' %}bg-emerald-100 text-emerald-800
-                        {% elif demande.statut == 'UTILISE' %}bg-blue-100 text-blue-800
-                        {% elif demande.statut == 'EXPIRE' %}bg-gray-100 text-gray-800
-                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                        {{ demande.get_statut_display }}
-                    </span>
-                    <span class="ml-3 text-sm text-gray-600">
-                        N° {{ demande.numero_cap|default:demande.id }} • 
-                        Attribué le {{ demande.date_attribution|date:"d/m/Y" }}
-                    </span>
-                </div>
-                <div class="text-right">
-                    <span class="text-2xl font-bold text-gray-900">
-                        {{ demande.montant|default:"0.00" }} €
-                    </span>
-                    <div class="text-sm text-gray-500">Valeur faciale</div>
-                </div>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Corps de la carte -->
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Colonne gauche : Informations du CAP -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-info-circle text-gray-400 mr-2"></i>
-                        Caractéristiques du CAP
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Type de CAP</label>
-                            <p class="mt-1 text-gray-900">{{ demande.get_type_cap_display|default:"Standard" }}</p>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Prestataire partenaire</label>
-                            <p class="mt-1 text-gray-900">{{ demande.prestataire.nom|default:"Non spécifié" }}</p>
-                            {% if demande.prestataire.activite %}
-                            <p class="text-sm text-gray-500">{{ demande.prestataire.activite }}</p>
-                            {% endif %}
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Validité</label>
-                            <p class="mt-1 text-gray-900">
-                                Du {{ demande.date_debut_validite|date:"d/m/Y" }} 
-                                au {{ demande.date_fin_validite|date:"d/m/Y" }}
-                            </p>
-                            {% if demande.est_expire %}
-                            <p class="text-sm text-red-600 font-medium mt-1">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                                Expiré depuis {{ demande.jours_depuis_expiration }} jour{{ demande.jours_depuis_expiration|pluralize }}
-                            </p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+        <!-- COLONNE PRINCIPALE -->
+        <div class="lg:col-span-2 space-y-6">
 
-                <!-- Colonne droite : Utilisation -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-shopping-cart text-gray-400 mr-2"></i>
-                        Utilisation
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Statut d'utilisation</label>
-                            <div class="mt-1">
-                                {% if demande.date_utilisation %}
-                                <p class="text-gray-900">
-                                    Utilisé le {{ demande.date_utilisation|date:"d/m/Y à H:i" }}
-                                </p>
-                                {% if demande.lieu_utilisation %}
-                                <p class="text-sm text-gray-600 mt-1">
-                                    <i class="fas fa-map-marker-alt mr-1"></i>
-                                    {{ demande.lieu_utilisation }}
-                                </p>
-                                {% endif %}
-                                {% else %}
-                                <p class="text-gray-900">Non encore utilisé</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Montant utilisé</label>
-                            <p class="mt-1 text-gray-900">
-                                {{ demande.montant_utilise|default:"0.00" }} €
-                                {% if demande.montant_restant %}
-                                <span class="text-sm text-gray-500">
-                                    (reste {{ demande.montant_restant }} €)
-                                </span>
-                                {% endif %}
-                            </p>
-                        </div>
-                        
-                        {% if demande.objet_utilisation %}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Objet de l'utilisation</label>
-                            <p class="mt-1 text-gray-900">{{ demande.objet_utilisation }}</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notes/Justification -->
-            {% if demande.justification or demande.notes %}
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-sticky-note text-gray-400 mr-2"></i>
-                    Notes et justifications
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {% if demande.justification %}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-2">Justification de l'attribution</label>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-gray-700 whitespace-pre-line">{{ demande.justification }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if demande.notes %}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-2">Notes complémentaires</label>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-gray-700 whitespace-pre-line">{{ demande.notes }}</p>
-                        </div>
-                    </div>
+            <!-- La demande -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Demande</h2>
+                <p class="text-sm text-gray-600">
+                    <strong>{{ demande.montant_sollicite|floatformat:0 }} €</strong> demandés le {{ demande.date_creation|date:"d/m/Y à H:i" }}
+                    par {{ demande.cree_par.get_full_name|default:demande.cree_par.username }}
+                    {% if demande.remise_paierie %}<span class="ml-2 px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-xs">Remise par la paierie</span>{% endif %}
+                </p>
+                <p class="mt-3 whitespace-pre-wrap text-gray-800">{{ demande.motivation }}</p>
+                {% if demande.date_decision %}
+                <div class="mt-4 pt-4 border-t text-sm">
+                    {% if demande.statut == 'REFUSEE' %}
+                        <p class="text-red-700"><strong>Refusée</strong> par {{ demande.decide_par.get_full_name }} le {{ demande.date_decision|date:"d/m/Y" }}</p>
+                        <p class="text-gray-700 mt-1">Motif : {{ demande.motif_refus }}</p>
+                    {% else %}
+                        <p class="text-emerald-700"><strong>{{ demande.montant_accorde }} € accordés</strong> par {{ demande.decide_par.get_full_name }} le {{ demande.date_decision|date:"d/m/Y à H:i" }}</p>
                     {% endif %}
                 </div>
+                {% endif %}
+            </div>
+
+            <!-- DÉCISION -->
+            {% if can_decider %}
+            <form method="post" action="{% url 'AidFi:cap_decision' demande.pk %}" class="bg-white rounded-xl shadow-sm border-2 border-purple-200 p-6 space-y-4">
+                {% csrf_token %}
+                <h2 class="font-bold text-purple-800"><i class="fas fa-scale-balanced mr-2"></i>Décision</h2>
+                <div class="flex gap-6">
+                    {% for radio in decision_form.decision %}<label class="flex items-center gap-2">{{ radio.tag }} {{ radio.choice_label }}</label>{% endfor %}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">{{ decision_form.montant_accorde.label }}</label>
+                    {{ decision_form.montant_accorde }}
+                    {% for e in decision_form.montant_accorde.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">{{ decision_form.motif_refus.label }}</label>
+                    {{ decision_form.motif_refus }}
+                    {% for e in decision_form.motif_refus.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+                {% if demande.remise_paierie %}<p class="text-sm text-purple-700">En cas d'accord, le dossier sera transmis au régisseur central (paierie).</p>{% endif %}
+                <button class="px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700">Enregistrer la décision</button>
+            </form>
+            {% endif %}
+
+            <!-- REMISE (cadre → AS) -->
+            {% if can_remettre %}
+            <form method="post" action="{% url 'AidFi:cap_remise' demande.pk %}" class="bg-white rounded-xl shadow-sm border-2 border-emerald-200 p-6 space-y-4">
+                {% csrf_token %}
+                <h2 class="font-bold text-emerald-800"><i class="fas fa-hand-holding mr-2"></i>Remise des chèques ({{ demande.montant_accorde }} €)</h2>
+                <p class="text-sm text-gray-600">Scannez à la douchette les chèques sortis du coffre (un par ligne), ou reprenez la proposition.</p>
+                <textarea id="numeros" name="numeros" rows="6" autofocus
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                          placeholder="Scannez ici...">{{ numeros_saisis|default:"" }}</textarea>
+                {% if proposition %}
+                <div class="text-sm bg-gray-50 rounded-lg p-3">
+                    <p class="font-semibold text-gray-700 mb-1">Proposition selon le coffre :</p>
+                    <p class="font-mono text-gray-600">{% for t in proposition %}{{ t.numero }} ({{ t.valeur }} €){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                    <button type="button" class="mt-2 text-emerald-700 hover:underline"
+                            onclick="document.getElementById('numeros').value='{% for t in proposition %}{{ t.numero|escapejs }}{% if not forloop.last %}\n{% endif %}{% endfor %}'">
+                        Utiliser cette proposition</button>
+                </div>
+                {% else %}
+                <p class="text-sm text-red-600">Le coffre ne permet pas de composer ce montant : prévenez le régisseur.</p>
+                {% endif %}
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Chèques remis à</label>
+                    <select name="remis_a" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        {% for a in agents %}
+                        <option value="{{ a.pk }}" {% if a.pk == remis_a_id or not remis_a_id and a.pk == demande.cree_par_id %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Enregistrer la remise</button>
+            </form>
+            {% endif %}
+
+            <!-- REMISE PAR LA PAIERIE -->
+            {% if can_remise_paierie %}
+            <form method="post" action="{% url 'AidFi:cap_remise_paierie' demande.pk %}" class="bg-white rounded-xl shadow-sm border-2 border-purple-200 p-6 space-y-4">
+                {% csrf_token %}
+                <h2 class="font-bold text-purple-800"><i class="fas fa-building-columns mr-2"></i>Remise par la paierie ({{ demande.montant_accorde }} €)</h2>
+                <textarea name="numeros" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                          placeholder="Numéros des chèques remis (facultatif)"></textarea>
+                <button class="px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold">Enregistrer la remise</button>
+            </form>
+            {% endif %}
+
+            <!-- CHÈQUES REMIS -->
+            {% if titres or demande.numeros_paierie %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Chèques remis</h2>
+                {% if titres %}
+                <table class="w-full text-sm">
+                    {% for t in titres %}<tr class="border-b"><td class="py-1 font-mono">{{ t.numero }}</td><td class="text-right">{{ t.valeur }} €</td></tr>{% endfor %}
+                    <tr><td class="py-1 font-bold">Total</td><td class="text-right font-bold">{{ demande.total_remis }} €</td></tr>
+                </table>
+                {% else %}<p class="font-mono text-sm whitespace-pre-wrap">{{ demande.numeros_paierie }}</p>{% endif %}
+                {% if demande.date_remise %}
+                <p class="text-xs text-gray-500 mt-3">Remis le {{ demande.date_remise|date:"d/m/Y à H:i" }} par {{ demande.remis_par.get_full_name|default:demande.remis_par.username }}{% if demande.remis_a %} à {{ demande.remis_a.get_full_name }}{% endif %}</p>
+                {% endif %}
             </div>
             {% endif %}
 
-            <!-- Métadonnées -->
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                    <i class="fas fa-user-cog text-gray-400 mr-2"></i>
-                    Métadonnées
-                </h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Attribué par</label>
-                        <p class="mt-1 text-gray-900">{{ demande.attribue_par.get_full_name|default:demande.attribue_par.username }}</p>
-                    </div>
-                    
-                    {% if demande.valide_par %}
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Validé par</label>
-                        <p class="mt-1 text-gray-900">{{ demande.valide_par.get_full_name|default:demande.valide_par.username }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Date de création</label>
-                        <p class="mt-1 text-gray-900">{{ demande.date_creation|date:"d/m/Y à H:i" }}</p>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Dernière modification</label>
-                        <p class="mt-1 text-gray-900">{{ demande.date_modification|date:"d/m/Y à H:i" }}</p>
-                    </div>
-                </div>
+            <!-- FEUILLE DE REMISE + CLÔTURE -->
+            {% if can_feuille %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <h2 class="font-bold text-gray-800">Feuille de remise</h2>
+                <a href="{% url 'AidFi:cap_feuille_pdf' demande.pk %}" target="_blank"
+                   class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm">
+                    <i class="fas fa-print mr-2"></i>Imprimer la feuille à signer (cadre, AS, usager)</a>
+                {% if demande.feuille_signee %}
+                <p class="text-sm text-emerald-700">
+                    <i class="fas fa-check-circle mr-1"></i>Feuille signée archivée le {{ demande.date_cloture|date:"d/m/Y" }}
+                    — <a href="{% url 'ged:download_document' demande.feuille_signee.pk %}" class="underline">télécharger</a>
+                </p>
+                {% elif can_cloturer %}
+                <form method="post" enctype="multipart/form-data" action="{% url 'AidFi:cap_cloturer' demande.pk %}" class="pt-3 border-t space-y-2">
+                    {% csrf_token %}
+                    <label class="block text-sm font-bold text-gray-700">{{ cloture_form.fichier.label }}</label>
+                    {{ cloture_form.fichier }}
+                    {% for e in cloture_form.fichier.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+                    <button class="block px-4 py-2 rounded-lg bg-gray-800 text-white text-sm">Archiver et clôturer le dossier</button>
+                </form>
+                {% endif %}
             </div>
+            {% endif %}
         </div>
 
-        <!-- Pied de carte : Actions -->
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <div class="flex justify-between items-center">
-                <div class="text-sm text-gray-500">
-                    {% if demande.qr_code %}
-                    <a href="{{ demande.qr_code.url }}" 
-                       target="_blank"
-                       class="text-emerald-600 hover:text-emerald-800 inline-flex items-center">
-                        <i class="fas fa-qrcode mr-1"></i>
-                        Voir QR Code
-                    </a>
-                    {% endif %}
-                </div>
-                <div class="flex space-x-2">
-                    {% if demande.statut == 'ATTRIBUE' and user|a_la_capacite:'peut_gerer_finance' %}
-                    <button type="button"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">
-                        <i class="fas fa-check mr-2"></i>
-                        Marquer comme utilisé
-                    </button>
-                    {% endif %}
-                    
-                    {% if user|a_la_capacite:'peut_gerer_finance' %}
-                    <button type="button"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                        <i class="fas fa-print mr-2"></i>
-                        Imprimer le CAP
-                    </button>
-                    {% endif %}
-                </div>
+        <!-- COLONNE LATÉRALE -->
+        <div class="space-y-6">
+            {% if stock %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3"><i class="fas fa-vault mr-2 text-gray-500"></i>Coffre de la MDS</h2>
+                <ul class="text-sm space-y-1">
+                    {% for l in stock.lignes %}<li class="flex justify-between"><span>{{ l.valeur }} €</span><span>{{ l.disponibles }} chèque(s)</span></li>{% endfor %}
+                </ul>
+                <p class="mt-2 pt-2 border-t font-bold text-sm flex justify-between"><span>Disponible</span><span>{{ stock.total_disponible }} €</span></p>
+                {% if stock.total_perimes %}<p class="text-xs text-orange-600 mt-1">{{ stock.total_perimes }} chèque(s) périmé(s) au coffre</p>{% endif %}
+            </div>
+            {% endif %}
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">🕓 Historique</h2>
+                <ul class="space-y-2 text-sm">
+                {% for s in suivis %}
+                    <li class="border-l-4 border-emerald-200 pl-3">
+                        <span class="font-medium text-gray-800">{{ s.libelle_nouveau }}</span>
+                        <span class="block text-xs text-gray-500">{{ s.date_action|date:"d/m/Y à H:i" }}{% if s.agent %} · {{ s.agent.get_full_name|default:s.agent.username }}{% endif %}</span>
+                    </li>
+                {% empty %}<li class="text-gray-400 italic">Aucun historique.</li>{% endfor %}
+                </ul>
             </div>
         </div>
-    </div>
-
-    <!-- Retour au bénéficiaire -->
-    <div class="mt-4">
-        <a href="{% url 'beneficiaire:detail_beneficiaire' demande.beneficiaire.code_interne %}"
-           class="text-sm text-gray-600 hover:text-gray-800 inline-flex items-center">
-            <i class="fas fa-user mr-1"></i>
-            Voir la fiche complète de {{ demande.beneficiaire.prenom }} {{ demande.beneficiaire.nom }}
-        </a>
     </div>
 </div>
 {% endblock %}

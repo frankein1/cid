@@ -59,7 +59,8 @@ class Command(BaseCommand):
 
             # ---------------- MDS DE TERRITOIRE : droits à définir ----------------
             {"code": "MDS_MEDECIN_REFERENT", "nom": "Médecin référent", "capacites": []},
-            {"code": "MDS_SECRETARIAT_GENERAL", "nom": "Secrétariat général", "capacites": []},
+            # Peut décider et remettre les CAP en l'absence du cadre (autres droits à définir)
+            {"code": "MDS_SECRETARIAT_GENERAL", "nom": "Secrétariat général", "capacites": ['peut_valider_cheque_aidfi']},
 
             # ---------------- DIRECTIONS (DEF, DITAS, PMI...) : droits à définir ----------------
             {"code": "DIR_DIRECTION", "nom": "Direction (directions centrales)", "capacites": []},
@@ -74,6 +75,9 @@ class Command(BaseCommand):
 
             # ---------------- ADMINISTRATION DES COMPTES (sans accès aux dossiers) ----------------
             {"code": "GESTIONNAIRE_ACCES", "nom": "Gestionnaire des accès", "capacites": ['peut_gerer_acces']},
+
+            # ---------------- PAIERIE DÉPARTEMENTALE ----------------
+            {"code": "REGISSEUR_CENTRAL", "nom": "Régisseur central (paierie)", "capacites": ['cap_regie_centrale']},
 
             {
                 "code": "SUPER_ADMIN",

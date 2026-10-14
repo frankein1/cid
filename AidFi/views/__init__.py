@@ -25,7 +25,7 @@ from .v_regie import (
 )
 
 from .v_cap import (
-    cap_attribution,
+    cap_creer,
     cap_detail,
 )
 

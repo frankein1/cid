@@ -1,0 +1,124 @@
+<!-- templates/AidFi/cap_inventaire.html -->
+{% extends "base.html" %}
+{% block title %}Inventaire CAP - {{ mds.nom }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <a href="{% url 'AidFi:cap_coffre' mds.pk %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Coffre {{ mds.nom }}</a>
+
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-clipboard-check mr-2 text-gray-500"></i>Inventaire du coffre</h1>
+            <p class="text-gray-500">Commencé le {{ inventaire.date_debut|date:"d/m/Y à H:i" }}
+                {% if inventaire.termine %} — terminé le {{ inventaire.date_fin|date:"d/m/Y à H:i" }}{% else %} — <span class="text-orange-600 font-semibold">en cours</span>{% endif %}</p>
+        </div>
+        <a href="{% url 'AidFi:cap_inventaire_pdf' inventaire.pk %}" target="_blank" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm">
+            <i class="fas fa-print mr-2"></i>Procès-verbal PDF</a>
+    </div>
+
+    <!-- BILAN COMPTABLE -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 overflow-x-auto">
+        <h2 class="font-bold text-gray-800 mb-3">Bilan : reçus − remis − perdus/volés − retournés = stock théorique</h2>
+        <table class="w-full text-sm text-right">
+            <thead class="text-gray-500 border-b"><tr><th class="text-left py-2">Valeur</th><th>Reçus</th><th>Remis</th><th>Perdus / volés</th><th>Retournés</th><th>Stock théorique</th></tr></thead>
+            <tbody>
+            {% for l in bilan.lignes %}
+            <tr class="border-b"><td class="text-left py-1">{{ l.valeur }} €</td><td>{{ l.recus }}</td><td>− {{ l.remis }}</td><td>− {{ l.pertes }}</td><td>− {{ l.retournes }}</td><td class="font-bold">= {{ l.stock }}</td></tr>
+            {% endfor %}
+            <tr class="font-bold"><td class="text-left py-1">En euros</td><td>{{ bilan.total.recus }} €</td><td>− {{ bilan.total.remis }} €</td><td>− {{ bilan.total.pertes }} €</td><td>− {{ bilan.total.retournes }} €</td><td>= {{ bilan.total.stock }} €</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- COMPARAISON PHYSIQUE / THÉORIQUE -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {% for l in r.par_valeur %}
+        <div class="bg-white rounded-xl border p-4 {% if l.ecart %}border-red-300 bg-red-50{% else %}border-gray-200{% endif %}">
+            <p class="text-xs font-bold text-gray-400 uppercase">{{ l.valeur }} €</p>
+            <p class="text-2xl font-bold">{{ l.compte }} <span class="text-sm font-normal text-gray-500">/ {{ l.theorique }} attendus</span></p>
+            {% if l.ecart %}<p class="text-sm font-bold text-red-700">Écart {{ l.ecart|stringformat:"+d" }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="rounded-xl p-4 text-white {% if r.ecart %}bg-red-600{% else %}bg-emerald-600{% endif %}">
+            <p class="text-xs font-bold opacity-80 uppercase">Compté / attendu</p>
+            <p class="text-2xl font-bold">{{ r.compte_euros }} € / {{ r.theorique_euros }} €</p>
+            <p class="text-sm">{{ r.nb_scannes }} chèque(s) scanné(s)</p>
+        </div>
+    </div>
+
+    {% if not inventaire.termine %}
+    <!-- SCAN -->
+    <form method="post" class="bg-white rounded-xl shadow-sm border-2 border-emerald-200 p-6 space-y-3">
+        {% csrf_token %}<input type="hidden" name="action" value="scan">
+        <p class="text-sm font-bold text-gray-700">Scannez tous les chèques présents dans le coffre</p>
+        <input name="numero" autofocus autocomplete="off" placeholder="Scannez le code-barres..."
+               class="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-lg">
+        <p class="text-xs text-gray-400">Vous pouvez interrompre et reprendre plus tard : l'inventaire reste ouvert jusqu'à ce que vous le terminiez.</p>
+    </form>
+    {% if derniers_scans %}
+    <div class="bg-white rounded-xl border border-gray-200 p-4 text-sm">
+        <p class="font-semibold text-gray-700 mb-2">Derniers scans</p>
+        <div class="flex flex-wrap gap-2">
+        {% for n in derniers_scans %}
+            <form method="post" class="inline">{% csrf_token %}
+                <input type="hidden" name="action" value="retirer"><input type="hidden" name="numero_retire" value="{{ n }}">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded font-mono">{{ n }}
+                    <button title="Retirer ce scan" class="text-red-500 hover:text-red-700">✕</button></span>
+            </form>
+        {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- MANQUANTS -->
+        <div class="bg-white rounded-xl shadow-sm border {% if r.manquants %}border-red-300{% else %}border-gray-200{% endif %} p-6">
+            <h2 class="font-bold {% if r.manquants %}text-red-700{% else %}text-gray-800{% endif %} mb-1">
+                Manquants ({{ r.manquants|length }}{% if r.manquant_euros %} — {{ r.manquant_euros }} €{% endif %})</h2>
+            <p class="text-xs text-gray-500 mb-3">Attendus au coffre mais non scannés{% if not inventaire.termine %} pour l'instant{% endif %}.</p>
+            <table class="w-full text-sm">
+                {% for i in r.manquants %}
+                <tr class="border-b"><td class="py-1 font-mono">{{ i.numero }}</td><td>{{ i.valeur }} €</td><td class="text-xs text-gray-500">reçu le {{ i.reception }}</td></tr>
+                {% empty %}<tr><td class="text-gray-400 italic">Aucun.</td></tr>{% endfor %}
+            </table>
+            {% if inventaire.termine and r.manquants %}
+            <p class="text-xs text-gray-500 mt-3">Après vérification, déclarez les chèques réellement perdus ou volés depuis le
+                <a href="{% url 'AidFi:cap_coffre' mds.pk %}" class="underline">coffre</a> (bouton « Signaler… »).</p>
+            {% endif %}
+        </div>
+
+        <!-- INATTENDUS -->
+        <div class="bg-white rounded-xl shadow-sm border {% if r.inattendus %}border-orange-300{% else %}border-gray-200{% endif %} p-6">
+            <h2 class="font-bold {% if r.inattendus %}text-orange-700{% else %}text-gray-800{% endif %} mb-1">Trouvés mais non attendus ({{ r.inattendus|length }})</h2>
+            <p class="text-xs text-gray-500 mb-3">Présents dans le coffre alors qu'ils sont enregistrés ailleurs, ou inconnus.</p>
+            <table class="w-full text-sm">
+                {% for i in r.inattendus %}
+                <tr class="border-b align-top"><td class="py-1 font-mono">{{ i.numero }}</td><td>{% if i.valeur %}{{ i.valeur }} €{% else %}?{% endif %}</td>
+                    <td class="text-xs text-gray-600">{{ i.motif }}{% if i.detail %} — {{ i.detail }}{% endif %}
+                        {% if i.demande %}(<a href="{% url 'AidFi:cap_detail' i.demande %}" class="underline">CAP-{{ i.demande }}</a>){% endif %}</td></tr>
+                {% empty %}<tr><td class="text-gray-400 italic">Aucun.</td></tr>{% endfor %}
+            </table>
+        </div>
+    </div>
+
+    {% if r.perimes_presents %}
+    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-900">
+        {{ r.perimes_presents|length }} chèque(s) périmé(s) encore au coffre :
+        <span class="font-mono">{% for i in r.perimes_presents %}{{ i.numero }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+        — à marquer « retourné » depuis le coffre.
+    </div>
+    {% endif %}
+
+    {% if inventaire.termine %}
+        {% if inventaire.commentaire %}<p class="text-sm text-gray-700"><strong>Observations :</strong> {{ inventaire.commentaire }}</p>{% endif %}
+    {% else %}
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3"
+          onsubmit="return confirm('Terminer l\'inventaire ? Le résultat sera figé.');">
+        {% csrf_token %}<input type="hidden" name="action" value="terminer">
+        <label class="block text-sm font-bold text-gray-700">Observations (facultatif)</label>
+        <textarea name="commentaire" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+        <button class="px-4 py-2 rounded-lg bg-gray-800 text-white">Terminer l'inventaire</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
