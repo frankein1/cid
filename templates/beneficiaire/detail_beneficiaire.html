@@ -217,13 +217,12 @@
                 </div>
 
                 <div class="space-y-4">
-                    {% for lien in liens_familiaux %}
-                        {% with autre=lien.personne_a %}{% if autre == beneficiaire %}{% with autre=lien.personne_b %}{% endwith %}{% endif %}
-                        
+                    {% for membre in reseau_familial %}
+                        {% with autre=membre.personne %}
                         <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 group">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center min-w-0">
-                                    <div class="w-8 h-8 rounded-full {% if lien.type_lien == 'CONJOINT' %}bg-blue-100 text-blue-600{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center mr-3">
+                                    <div class="w-8 h-8 rounded-full {% if membre.type_lien == 'CONJOINT' %}bg-blue-100 text-blue-600{% else %}bg-gray-200 text-gray-500{% endif %} flex items-center justify-center mr-3">
                                         <i class="fas fa-user text-xs"></i>
                                     </div>
                                     <div class="truncate">
@@ -231,13 +230,16 @@
                                             {{ autre.prenom }} {{ autre.nom|upper }}
                                         </p>
                                         <p class="text-[10px] text-gray-500 uppercase font-bold">
-                                            {{ lien.get_type_lien_display }} 
-                                            {% if lien.vit_au_foyer %}<span class="text-green-600 ml-1"><i class="fas fa-home"></i> Foyer</span>{% endif %}
+                                            {{ membre.libelle }}
+                                            {% if membre.vit_au_foyer %}<span class="text-green-600 ml-1"><i class="fas fa-home"></i> Foyer</span>{% endif %}
                                         </p>
                                     </div>
                                 </div>
                                 <div class="flex gap-1 ml-2">
-                                    {% if lien.est_responsable_legal %}
+                                    {% if autre.statut == 'SORTI' or autre.statut == 'DECEDE' %}
+                                        <span class="text-[10px] text-gray-400 uppercase">{{ autre.get_statut_display }}</span>
+                                    {% endif %}
+                                    {% if membre.est_responsable_legal %}
                                         <i class="fas fa-gavel text-xs text-blue-500" title="Responsable légal"></i>
                                     {% endif %}
                                     <a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=autre.code_interne %}" 
@@ -278,11 +280,11 @@
                         {# Badge d'alerte sur le titre du bloc documents #}
                         {% alerte_documents beneficiaire %}
                     </h2>
-                    <a href="{% url 'ged:beneficiary_documents' code_interne=beneficiaire.code_interne %}" class="text-xs text-blue-600 hover:underline">Voir tout ({{ beneficiaire.documents.count }})</a>
+                    <a href="{% url 'ged:beneficiary_documents' code_interne=beneficiaire.code_interne %}" class="text-xs text-blue-600 hover:underline">Voir tout ({{ nb_documents }})</a>
                 </div>
                 <div class="space-y-2">
                     {# On affiche les 5 derniers documents #}
-                    {% for doc in beneficiaire.documents.all|dictsortreversed:"date_creation"|slice:":5" %}
+                    {% for doc in documents_recents %}
                     <a href="{% url 'ged:document_detail' pk=doc.pk %}" class="flex items-center p-2 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition group">
                         <i class="fas {% if doc.statut == 'VALIDE' %}fa-file-check text-green-500{% else %}fa-file-alt text-blue-500{% endif %} mr-3"></i>
                         <div class="flex-1 min-w-0">
