@@ -222,37 +222,33 @@ def detail_beneficiaire(request, code_interne):
         return redirect('beneficiaire:liste')
     acces_restreint = (niveau == 'restreint')
     
-    # Optimisation des requêtes pour les liens familiaux
-    liens = LienFamilial.objects.filter(
-        Q(personne_a=beneficiaire) | Q(personne_b=beneficiaire)
-    ).select_related(
-        'personne_a__mds', 
-        'personne_b__mds',
-        'personne_a__referent_mds',
-        'personne_b__referent_mds'
-    )
-    
-    if request.GET.get("inclure_sortis", "non") != "oui":
-        liens = liens.exclude(
-            Q(personne_a__statut__in=["SORTI", "DECEDE"]) | 
-            Q(personne_b__statut__in=["SORTI", "DECEDE"])
-        )
+    inclure_sortis = request.GET.get("inclure_sortis", "non") == "oui"
 
     context = {
         "beneficiaire": beneficiaire,
-        "liens_familiaux": liens,
-        "inclure_sortis": request.GET.get("inclure_sortis", "non") == "oui",
+        "reseau_familial": beneficiaire.reseau_familial(inclure_sortis),
+        "inclure_sortis": inclure_sortis,
         "acces_restreint": acces_restreint,
         "peut_transferer": bool(mds_destination_possibles(request.user, beneficiaire)),
     }
     if not acces_restreint:
         # Dossier complet : uniquement pour la MDS de l'usager
+        # Documents GED de l'usager (y compris feuilles CAP et AFASE), selon les droits de l'agent
+        from ged.utils import get_documents_for_user
+        documents_ged = get_documents_for_user(request.user).filter(
+            content_type=ContentType.objects.get_for_model(Beneficiaire),
+            object_id=beneficiaire.pk,
+        ).select_related('type_document').order_by('-date_creation').distinct()
         context.update({
             "documents": DocumentBeneficiaireLink.objects.filter(
                 beneficiaire=beneficiaire
             ).select_related('document_ged').order_by("-date_creation"),
+            "documents_recents": documents_ged[:5],
+            "nb_documents": documents_ged.count(),
             "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
-            "messages": Message.objects.filter(
+            # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification
+            # de base.html, qui afficheraient alors ces messages CID en haut de chaque visite.
+            "messages_beneficiaire": Message.objects.filter(
                 beneficiaire=beneficiaire
             ).select_related('expediteur', 'destinataire')[:10],
             "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],

@@ -190,6 +190,57 @@ class Beneficiaire(models.Model):
             Q(personne_b=self, personne_a__mds_id__in=mds_ids)
         ).exists()
 
+    # Libellé vu depuis l'autre bout du lien (lien enregistré dans un seul sens)
+    LIBELLES_INVERSES = {
+        'ENFANT': 'Parent (Père/Mère)',
+        'PARENT': 'Enfant',
+        'CONJOINT': 'Conjoint / Concubin',
+        'PLACEMENT': "Personne accueillie / placée",
+        'TUTEUR': 'Personne protégée (tutelle / curatelle)',
+        'TIERS': 'Personne confiée',
+        'AUTRE': 'Autre lien',
+    }
+
+    def reseau_familial(self, inclure_sortis=False):
+        """
+        Membres liés à cet usager, UNE ligne par personne, vus depuis l'usager.
+
+        Les liens sont enregistrés dans les deux sens (A→B « Enfant » et B→A « Parent ») :
+        on garde le lien qui part de l'usager (libellé direct) ; à défaut, on inverse
+        le libellé du lien qui arrive vers lui.
+        """
+        liens = LienFamilial.objects.filter(
+            Q(personne_a=self) | Q(personne_b=self)
+        ).select_related('personne_a', 'personne_b').order_by('id')
+
+        membres = {}
+        for lien in liens:
+            direct = (lien.personne_a_id == self.pk)
+            autre = lien.personne_b if direct else lien.personne_a
+            if autre is None or autre.pk == self.pk:
+                continue
+            if not inclure_sortis and autre.statut in ('SORTI', 'DECEDE'):
+                continue
+            # Priorité au lien direct (libellé exact)
+            if autre.pk in membres and not direct:
+                continue
+            membres[autre.pk] = {
+                'personne': autre,
+                'lien': lien,
+                'libelle': lien.get_type_lien_display() if direct
+                           else self.LIBELLES_INVERSES.get(lien.type_lien, lien.get_type_lien_display()),
+                'type_lien': lien.type_lien if direct else {'ENFANT': 'PARENT', 'PARENT': 'ENFANT'}.get(lien.type_lien, lien.type_lien),
+                'vit_au_foyer': lien.vit_au_foyer,
+                'est_responsable_legal': lien.est_responsable_legal,
+            }
+
+        ordre = {'CONJOINT': 0, 'PARENT': 1, 'ENFANT': 2}
+        return sorted(
+            membres.values(),
+            key=lambda m: (ordre.get(m['type_lien'], 3),
+                           m['personne'].date_naissance or timezone.now().date())
+        )
+
     def peut_etre_consulte_par(self, user):
         """
         Consultation RESTREINTE (toutes MDS) : identité, coordonnées, référent, famille.
