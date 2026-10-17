@@ -326,10 +326,12 @@ def _nom(u):
 def feuille_remise_pdf(demande):
     """Feuille de remise à signer : cadre, AS, usager."""
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=3.5 * cm, bottomMargin=2 * cm,
-                            leftMargin=2 * cm, rightMargin=2 * cm)
-    st = get_ditas_styles()
     b = demande.beneficiaire
+    # Titre et auteur renseignés : sans eux, reportlab écrit « anonymous » dans le PDF
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=3.5 * cm, bottomMargin=2 * cm,
+                            leftMargin=2 * cm, rightMargin=2 * cm,
+                            title=f"Remise CAP {b.code_interne} - dossier {demande.pk}", author="CID")
+    st = get_ditas_styles()
     el = [
         Paragraph("FEUILLE DE REMISE DE CHÈQUES SERVICE", st["TitreOfficiel"]),
         Paragraph("Chèques d'Accompagnement Personnalisé – Alimentation, hygiène", st["Normal"]),
@@ -370,8 +372,11 @@ def feuille_remise_pdf(demande):
                   st["Normal"]),
         Spacer(1, 0.8 * cm),
     ]
+    # Date de remise par le cadre reportée automatiquement dans sa case
+    date_cadre = (f"Remis le {timezone.localtime(demande.date_remise):%d/%m/%Y}\nSignature"
+                  if demande.date_remise else "Date et signature")
     sig = Table([["Le cadre", "L'assistant(e) social(e)", "Le bénéficiaire"],
-                 ["Date et signature", "Date et signature", "Date et signature\n« Reçu les chèques ci-dessus »"],
+                 [date_cadre, "Date et signature", "Date et signature\n« Reçu les chèques ci-dessus »"],
                  ["\n\n\n\n", "", ""]],
                 colWidths=[5.6 * cm] * 3)
     sig.setStyle(TableStyle([
@@ -390,7 +395,8 @@ def bordereau_reception_pdf(reception):
     """Bordereau d'entrée au coffre : liste des numéros, totaux par valeur, signature du régisseur."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=3.5 * cm, bottomMargin=2 * cm,
-                            leftMargin=2 * cm, rightMargin=2 * cm)
+                            leftMargin=2 * cm, rightMargin=2 * cm,
+                            title=f"Bordereau de réception CAP {reception.pk}", author="CID")
     st = get_ditas_styles()
     titres = list(reception.titres.order_by('valeur', 'numero'))
     el = [
@@ -433,7 +439,8 @@ def proces_verbal_inventaire_pdf(inventaire):
     """Procès-verbal d'inventaire du coffre (écarts détaillés), à signer par le régisseur."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=3.5 * cm, bottomMargin=2 * cm,
-                            leftMargin=2 * cm, rightMargin=2 * cm)
+                            leftMargin=2 * cm, rightMargin=2 * cm,
+                            title=f"Inventaire CAP {inventaire.pk}", author="CID")
     st = get_ditas_styles()
     r = inventaire.resultat if inventaire.termine else comparer_inventaire(inventaire)
     el = [

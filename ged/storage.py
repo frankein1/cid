@@ -233,6 +233,23 @@ class SeaweedFSStorage(Storage):
     def _pcloud_chemin(self, fid):
         return f"{self.pcloud_url}/{self.pcloud_dossier}/{fid}"
 
+    def _pcloud_verifier(self, r, action):
+        """Transforme une réponse WebDAV en erreur lisible (sans jamais afficher le mot de passe)."""
+        if r.status_code < 400:
+            return
+        causes = {
+            401: "identifiants refusés : vérifier PCLOUD_USER (adresse e-mail du compte) et PCLOUD_PASSWORD, "
+                 "la région du compte (Europe : https://ewebdav.pcloud.com, États-Unis : https://webdav.pcloud.com "
+                 "dans PCLOUD_WEBDAV_URL) et que la double authentification est désactivée",
+            403: "accès interdit au dossier",
+            404: f"dossier « {self.pcloud_dossier} » introuvable (vérifier PCLOUD_FOLDER)",
+            409: f"dossier parent absent pour « {self.pcloud_dossier} » (vérifier PCLOUD_FOLDER)",
+            507: "espace pCloud plein",
+        }
+        cause = causes.get(r.status_code, "réponse inattendue du serveur")
+        logger.error(f"❌ [pCloud] {action} : HTTP {r.status_code} sur {self.pcloud_url}/{self.pcloud_dossier}")
+        raise IOError(f"pCloud ({action}, HTTP {r.status_code}) : {cause}")
+
     def _pcloud_preparer_dossier(self):
         """Crée le dossier de la GED sur pCloud s'il n'existe pas (une fois par processus)."""
         if SeaweedFSStorage._pcloud_dossier_pret:
@@ -243,7 +260,7 @@ class SeaweedFSStorage(Storage):
         )
         # 201 = créé, 405 = existe déjà
         if r.status_code not in (201, 405):
-            r.raise_for_status()
+            self._pcloud_verifier(r, "création du dossier")
         SeaweedFSStorage._pcloud_dossier_pret = True
 
     def _save_pcloud(self, name, content):
@@ -263,7 +280,7 @@ class SeaweedFSStorage(Storage):
             data = content
 
         r = requests.put(self._pcloud_chemin(fid), data=data, auth=self.pcloud_auth, timeout=120)
-        r.raise_for_status()
+        self._pcloud_verifier(r, "envoi du fichier")
         logger.info(f"☁️ [pCloud] {name} → {fid}")
         return fid
 
@@ -271,7 +288,7 @@ class SeaweedFSStorage(Storage):
         r = requests.get(self._pcloud_chemin(fid), auth=self.pcloud_auth, timeout=120)
         if r.status_code == 404:
             raise FileNotFoundError(f"Fichier {fid} absent de pCloud")
-        r.raise_for_status()
+        self._pcloud_verifier(r, "lecture du fichier")
         return ContentFile(r.content, name=fid)
 
     def _exists_pcloud(self, fid):

@@ -15,6 +15,8 @@ Cas exceptionnel : remise par la paierie départementale (régisseur central).
 Stock : le régisseur de la MDS saisit chaque arrivage à la douchette.
 """
 
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
@@ -31,6 +33,8 @@ from AidFi.forms.f_cap import (
 from AidFi.models.m_generique import TypeAide
 from AidFi.models.m_cap import DemandeCAP, ReceptionCAP, TitreCAP, InventaireCAP, VALEURS_CAP, est_regisseur
 from AidFi.services import cap as svc
+
+logger = logging.getLogger(__name__)
 
 CAP_VALIDER = 'peut_valider_cheque_aidfi'   # cadre, adjoints, secrétaire générale
 
@@ -219,7 +223,7 @@ def cap_feuille_pdf(request, demande_id):
     if not _peut_voir(request.user, demande) or demande.statut not in ('REMISE', 'CLOTUREE'):
         return HttpResponseForbidden("Accès refusé")
     return FileResponse(svc.feuille_remise_pdf(demande), as_attachment=False,
-                        filename=f"remise_CAP_{demande.pk}.pdf", content_type="application/pdf")
+                        filename=f"remise_CAP_{demande.beneficiaire.code_interne}_{demande.pk}.pdf", content_type="application/pdf")
 
 
 @login_required
@@ -233,8 +237,10 @@ def cap_cloturer(request, demande_id):
         return _render_detail(request, demande, cloture_form=form)
     try:
         svc.cloturer(demande, form.cleaned_data['fichier'], request.user, request=request)
-    except Exception:
-        messages.error(request, "La feuille n'a pas pu être stockée. Réessayez plus tard.")
+    except Exception as e:
+        # La cause exacte part dans les journaux Render et s'affiche à l'écran
+        logger.exception("Clôture CAP %s : échec du stockage GED", demande.pk)
+        messages.error(request, f"La feuille n'a pas pu être stockée dans la GED : {e}")
         return redirect("AidFi:cap_detail", demande_id=demande.pk)
     messages.success(request, "Feuille signée archivée : dossier clôturé.")
     return redirect("AidFi:cap_detail", demande_id=demande.pk)
