@@ -124,7 +124,11 @@ class Command(BaseCommand):
                 'categorie': DocumentCategorie.SANTE,
                 'extensions': ['pdf', 'jpg', 'jpeg', 'png'],
                 'taille_max': 5,
-                'sensible': True
+                'sensible': True,
+                # Désactivé : les documents médicaux ne sont pas traités par la MDS, ils partent
+                # sous pli scellé au médecin du service central. Les documents déjà enregistrés
+                # restent consultables ; le type n'est simplement plus proposé à l'enregistrement.
+                'actif': False,
             },
             {
                 'code': 'AUTRE',
@@ -148,7 +152,7 @@ class Command(BaseCommand):
                     'extensions_autorisees': type_data['extensions'],
                     'taille_max_mb': type_data['taille_max'],
                     'est_sensible': type_data['sensible'],
-                    'actif': True
+                    'actif': type_data.get('actif', True)
                 }
             )
             
@@ -164,7 +168,7 @@ class Command(BaseCommand):
                 obj.extensions_autorisees = type_data['extensions']
                 obj.taille_max_mb = type_data['taille_max']
                 obj.est_sensible = type_data['sensible']
-                obj.actif = True
+                obj.actif = type_data.get('actif', True)
                 obj.save()
                 self.stdout.write(
                     self.style.WARNING(f'↻ Mis à jour: {obj.code} - {obj.nom}')
