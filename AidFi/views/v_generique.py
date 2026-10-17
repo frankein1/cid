@@ -12,6 +12,30 @@ from beneficiaire.models import Beneficiaire
 from AidFi.models.m_generique import DemandeAide
 from AidFi.models.m_afase import DemandeAFASE
 
+# Décision affichée à côté du statut (un dossier « Clôturé » peut avoir été accordé ou refusé)
+DECISIONS = {
+    'ACCORD': ("Accordé", "bg-green-100 text-green-800"),
+    'REFUS': ("Refusé", "bg-red-100 text-red-800"),
+    'AJO': ("Ajourné", "bg-amber-100 text-amber-800"),
+}
+STATUTS_ACCORD = ('VALIDE', 'ACCORDEE', 'TRANSMISE_PAIERIE', 'REMISE', 'CLOTUREE')
+
+
+def _decision(demande, afase=None):
+    """Retourne (code, montant accordé) ; code = ACCORD, REFUS, AJO ou None (en attente)."""
+    if afase is not None and hasattr(afase, "decision"):
+        return afase.decision.type_decision, afase.decision.montant_accorde
+    if demande.statut == 'REFUSEE':
+        return 'REFUS', None
+    if demande.statut == 'AJO':
+        return 'AJO', None
+    if demande.statut in STATUTS_ACCORD:
+        # Le montant accordé est sur la demande spécialisée (ex. DemandeCAP), pas sur le socle commun
+        detail = getattr(demande, "demandecap", None) or demande
+        return 'ACCORD', getattr(detail, "montant_accorde", None)
+    return None, None
+
+
 @login_required
 def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
     beneficiaire = get_object_or_404(Beneficiaire, id=beneficiaire_id)
@@ -46,6 +70,7 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
         type_code = demande.type_aide.code  # ex: AFASE, CAP, REGIE
 
         aide = {
+            "decision": None,
             "id": demande.id,
             "type": type_code,
             "type_label": demande.type_aide.nom,
@@ -103,6 +128,12 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
         elif type_code == "REGIE":
             aide["urls"]["detail"] = "AidFi:regie_detail"
             aide["urls"]["detail_args"] = [demande.id]
+
+        # Décision (accordé / refusé / ajourné), en plus du statut
+        code, montant_accorde = _decision(demande, afase if type_code == "AFASE" else None)
+        if code in DECISIONS:
+            libelle, classes = DECISIONS[code]
+            aide["decision"] = {"libelle": libelle, "classes": classes, "montant": montant_accorde}
 
         aides.append(aide)
 
