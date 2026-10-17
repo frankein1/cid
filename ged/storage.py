@@ -30,6 +30,24 @@ def pcloud_configure():
 PCLOUD_PREFIX = "pc_"   # tous les identifiants de fichiers pCloud commencent ainsi
 
 
+def _sans_guillemets(valeur):
+    """Retire les guillemets entourant une valeur copiée-collée dans Render ("..." ou '...')."""
+    if len(valeur) >= 2 and valeur[0] == valeur[-1] and valeur[0] in "\"'":
+        return valeur[1:-1]
+    return valeur
+
+
+def _identifiants_pcloud():
+    """
+    Identifiants WebDAV, encodés en UTF-8 comme le fait un navigateur.
+    Sans cela, requests les encode en latin-1 : un mot de passe avec accent
+    ou caractère spécial (é, ç, €...) est alors refusé par pCloud (HTTP 401).
+    """
+    utilisateur = _sans_guillemets(os.environ['PCLOUD_USER'].strip())
+    mot_de_passe = _sans_guillemets(os.environ['PCLOUD_PASSWORD'].strip('\r\n'))
+    return (utilisateur.encode('utf-8'), mot_de_passe.encode('utf-8'))
+
+
 @deconstructible
 class SeaweedFSStorage(Storage):
     """
@@ -54,7 +72,7 @@ class SeaweedFSStorage(Storage):
         if self.use_pcloud:
             self.pcloud_url = os.environ.get('PCLOUD_WEBDAV_URL', 'https://ewebdav.pcloud.com').rstrip('/')
             self.pcloud_dossier = os.environ.get('PCLOUD_FOLDER', 'CID_GED').strip('/')
-            self.pcloud_auth = (os.environ['PCLOUD_USER'], os.environ['PCLOUD_PASSWORD'])
+            self.pcloud_auth = _identifiants_pcloud()
             self.use_temporary = False
             return
 
@@ -247,6 +265,12 @@ class SeaweedFSStorage(Storage):
             507: "espace pCloud plein",
         }
         cause = causes.get(r.status_code, "réponse inattendue du serveur")
+        if r.status_code == 401:
+            # Aide au diagnostic sans dévoiler le secret : e-mail masqué, longueur du mot de passe
+            user = self.pcloud_auth[0].decode('utf-8')
+            nom, _, domaine = user.partition('@')
+            cause += f" (identifiant reçu : {nom[:2]}***@{domaine or '?'}, {len(user)} caractères)"
+            logger.error(f"❌ [pCloud] mot de passe reçu : {len(self.pcloud_auth[1].decode('utf-8'))} caractères")
         logger.error(f"❌ [pCloud] {action} : HTTP {r.status_code} sur {self.pcloud_url}/{self.pcloud_dossier}")
         raise IOError(f"pCloud ({action}, HTTP {r.status_code}) : {cause}")
 
