@@ -1,0 +1,38 @@
+<!-- /templates/ged/_document_ligne.html -->
+{% load ged_tags %}
+<tr class="hover:bg-gray-50">
+    <td class="px-6 py-4 font-bold">{{ doc.titre }}</td>
+
+    <td class="px-6 py-4">
+        <div class="font-medium">{{ doc.type_document.nom }}</div>
+        <span class="text-xs bg-gray-100 px-2 py-1 rounded">
+            {{ doc.type_document.get_categorie_display }}
+        </span>
+    </td>
+
+    <td class="px-6 py-4">
+        {% if doc.date_expiration %}
+            {{ doc.date_expiration|date:"d/m/Y" }}
+        {% else %}
+            <span class="text-xs italic text-gray-400">Illimité</span>
+        {% endif %}
+    </td>
+
+    <td class="px-6 py-4">
+        {{ doc.get_statut_display }}
+    </td>
+
+    <td class="px-6 py-4 text-right">
+        <a href="{% url 'ged:document_detail' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-eye"></i>
+        </a>
+        <a href="{% url 'ged:download_document' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-download"></i>
+        </a>
+        {% if doc|peut_modifier_ged:user %}
+        <a href="{% url 'ged:document_edit' pk=doc.pk %}" class="px-2">
+            <i class="fas fa-edit"></i>
+        </a>
+        {% endif %}
+    </td>
+</tr>

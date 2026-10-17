@@ -234,7 +234,7 @@ def detail_beneficiaire(request, code_interne):
     if not acces_restreint:
         # Dossier complet : uniquement pour la MDS de l'usager
         # Documents GED de l'usager (y compris feuilles CAP et AFASE), selon les droits de l'agent
-        from ged.utils import get_documents_for_user
+        from ged.utils import get_documents_for_user, rubrique_document
         documents_ged = get_documents_for_user(request.user).filter(
             content_type=ContentType.objects.get_for_model(Beneficiaire),
             object_id=beneficiaire.pk,
@@ -243,7 +243,9 @@ def detail_beneficiaire(request, code_interne):
             "documents": DocumentBeneficiaireLink.objects.filter(
                 beneficiaire=beneficiaire
             ).select_related('document_ged').order_by("-date_creation"),
-            "documents_recents": documents_ged[:5],
+            "documents_recents": [
+                setattr(doc, "rubrique", rubrique_document(doc)) or doc for doc in documents_ged[:5]
+            ],
             "nb_documents": documents_ged.count(),
             "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification
