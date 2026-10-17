@@ -290,7 +290,7 @@
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-gray-800 truncate">{{ doc.titre }}</p>
                             <p class="text-[10px] text-gray-400 italic">
-                                {{ doc.type_document.nom }} - {{ doc.date_creation|date:"d/m/Y" }}
+                                <span class="not-italic font-semibold text-gray-500">{{ doc.rubrique }}</span> · {{ doc.type_document.nom }} - {{ doc.date_creation|date:"d/m/Y" }}
                                 {% if doc.date_expiration and doc.est_expire %}
                                     <span class="text-red-500 font-bold ml-1">Expiré</span>
                                 {% endif %}

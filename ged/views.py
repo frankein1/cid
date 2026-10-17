@@ -184,6 +184,19 @@ class DocumentListView(LoginRequiredMixin, ListView):
             )
         return qs
 
+    def get_paginate_by(self, queryset):
+        # Dossier d'un usager : tout sur une page, rangé par rubriques
+        return None if self.kwargs.get('code_interne') else self.paginate_by
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        code_interne = self.kwargs.get('code_interne')
+        if code_interne:
+            from .utils import grouper_par_rubrique
+            context['beneficiaire'] = get_object_or_404(Beneficiaire, code_interne=code_interne)
+            context['rubriques'] = grouper_par_rubrique(context['documents'])
+        return context
+
 
 # =============================================================================
 # TÉLÉCHARGEMENT

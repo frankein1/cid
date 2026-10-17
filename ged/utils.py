@@ -83,3 +83,45 @@ def get_documents_for_user(user):
     qs = DocumentGED.objects.filter(territoire_filter & profil_filter)
 
     return qs.distinct()
+
+
+# =============================================================================
+# RUBRIQUES D'AFFICHAGE DU DOSSIER USAGER
+# Les 8 catégories GED restent en base ; on les regroupe seulement à l'affichage.
+# =============================================================================
+
+RUBRIQUES = ["Identité", "Logement", "Aides accordées", "RSA", "Divers"]
+
+# Types rangés dans une rubrique précise, quelle que soit leur catégorie
+RUBRIQUE_PAR_TYPE = {
+    "AFASE_DECISION": "Aides accordées",
+    "CAP_REMISE": "Aides accordées",
+    "CER_RSA": "RSA",
+    "DECISION_RSA": "RSA",
+    "JUSTIF_DOM": "Logement",
+    "ATTEST_SECU": "Identité",
+}
+
+RUBRIQUE_PAR_CATEGORIE = {
+    "identite": "Identité",
+    "logement": "Logement",
+    "contrat RSA": "RSA",
+}
+
+
+def rubrique_document(doc):
+    """Rubrique d'affichage d'un document GED (par type, puis par catégorie ; sinon Divers)."""
+    type_doc = doc.type_document
+    if type_doc is None:
+        return "Divers"
+    if type_doc.code in RUBRIQUE_PAR_TYPE:
+        return RUBRIQUE_PAR_TYPE[type_doc.code]
+    return RUBRIQUE_PAR_CATEGORIE.get(type_doc.categorie, "Divers")
+
+
+def grouper_par_rubrique(documents):
+    """Liste ordonnée de (rubrique, [documents]) ; les rubriques vides sont conservées."""
+    groupes = {r: [] for r in RUBRIQUES}
+    for doc in documents:
+        groupes[rubrique_document(doc)].append(doc)
+    return list(groupes.items())
