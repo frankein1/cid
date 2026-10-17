@@ -58,6 +58,7 @@
           <th class="px-6 py-3 text-left">Date</th>
           <th class="px-6 py-3 text-left">Montant</th>
           <th class="px-6 py-3 text-left">Statut</th>
+          <th class="px-6 py-3 text-left">Décision</th>
           <th class="px-6 py-3 text-right">Actions</th>
         </tr>
       </thead>
@@ -82,6 +83,14 @@
             <span class="px-2 py-1 rounded text-xs {{ aide.badge_classes }}">
               {{ aide.statut }}
             </span>
+          </td>
+          <td class="px-6 py-4">
+            {% if aide.decision %}
+            <span class="px-2 py-1 rounded text-xs font-semibold {{ aide.decision.classes }}">{{ aide.decision.libelle }}</span>
+            {% if aide.decision.montant %}<span class="ml-1 text-xs text-gray-600">{{ aide.decision.montant|floatformat:0 }} €</span>{% endif %}
+            {% else %}
+            <span class="text-xs text-gray-400">En attente</span>
+            {% endif %}
           </td>
           
 <td class="px-6 py-4 text-right space-x-3">
@@ -114,7 +123,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="px-6 py-8 text-center text-gray-400">
+          <td colspan="6" class="px-6 py-8 text-center text-gray-400">
             Aucune aide enregistrée.
           </td>
         </tr>
