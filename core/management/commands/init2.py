@@ -209,4 +209,35 @@ class Command(BaseCommand):
         LienFamilial.objects.get_or_create(personne_a=pere3, personne_b=mere3, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
         LienFamilial.objects.get_or_create(personne_a=mere3, personne_b=pere3, type_lien="CONJOINT", defaults={"vit_au_foyer": True})
 
+        # ----------------------------------------------------------
+        # Démo API Particulier (bac à sable) : identités FICTIVES publiées par
+        # l'État dans le dépôt datagouv/apistration (mocks/payloads). Elles seules
+        # obtiennent une réponse du bac à sable.
+        # ----------------------------------------------------------
+        demo_api = [
+            # code, civilité, nom (usage), nom de naissance, prénom(s), naissance, INSEE commune, n° France Travail
+            ("API-SAM", "M.", "MARTIN", "", "Samuel", date(1980, 9, 20), "08480", "123456A"),   # RSA et prime d'activité majorés
+            ("API-JUL", "M.", "BERNANRD", "", "Julien", date(1979, 2, 27), "13090", ""),         # QF 1050 (2 enfants), C2S
+            ("API-MAX", "M.", "BERNANRD", "", "Maxime", date(2015, 9, 1), "13090", ""),          # enfant, C2S
+            ("API-FRA", "M.", "LALANNE", "", "Francis Gerard", date(2002, 11, 1), "08480", ""),  # ASF
+            ("API-PIE", "M.", "DUPONT", "MARTIN", "Pierre Richard", date(1987, 12, 1), "08480", "123461A"),  # AAH ; désinscrit FT
+        ]
+        demo = {}
+        for code, civ, nom, nom_naiss, prenom, naissance, insee, ft in demo_api:
+            benef, created = Beneficiaire.objects.get_or_create(
+                code_interne=code,
+                defaults={
+                    "civilite": civ, "nom": nom, "nom_naissance": nom_naiss, "prenom": prenom,
+                    "date_naissance": naissance, "code_insee_naissance": insee, "code_pays_naissance": "99100",
+                    "numero_france_travail": ft or None,
+                    "adresse": "1 rue de la MDS", "code_postal": "13110", "ville": "Port-de-Bouc",
+                    "mds": mds, "statut": "ACTIF",
+                },
+            )
+            demo[code] = benef
+            if created:
+                self.stdout.write(f"   ✅ Démo API : {prenom} {nom} ({code})")
+        LienFamilial.objects.get_or_create(personne_a=demo["API-JUL"], personne_b=demo["API-MAX"],
+                                           type_lien="ENFANT", defaults={"vit_au_foyer": True})
+
         self.stdout.write(self.style.SUCCESS("\n🎉 Données de test créées avec succès"))

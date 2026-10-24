@@ -47,6 +47,7 @@ urlpatterns = [
     path('planning/', include('planning.urls')),
     path('AidFi/', include('AidFi.urls')),
     path('messagerie/', include('messagerie.urls')),
+    path('connecteurs/', include('connecteurs.urls')),
     #    path('protection-enfance/', include('protection_enfance.urls')),
 ]
 

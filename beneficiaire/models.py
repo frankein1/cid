@@ -64,6 +64,13 @@ class Beneficiaire(models.Model):
     nom_naissance = models.CharField(max_length=30, blank=True)
     date_naissance = models.DateField()
     lieu_naissance = models.CharField(max_length=50, blank=True)
+    # Codes officiels (COG INSEE) exigés par l'API Particulier pour identifier la personne
+    code_insee_naissance = models.CharField(
+        max_length=5, blank=True, verbose_name="Code INSEE commune de naissance",
+        help_text="Ex. 13055 pour Marseille, 13077 pour Port-de-Bouc ; vide si né(e) à l'étranger")
+    code_pays_naissance = models.CharField(
+        max_length=5, blank=True, default='99100', verbose_name="Code INSEE pays de naissance",
+        help_text="99100 = France")
     
     # Situation personnelle / sociale (PDF AFASE)
     

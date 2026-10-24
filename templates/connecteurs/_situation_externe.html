@@ -1,0 +1,58 @@
+<!-- /templates/connecteurs/_situation_externe.html -->
+{# Situation CAF/MSA et France Travail (API Particulier) – agents de la MDS de l'usager uniquement #}
+<div id="situation-externe" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+        <h2 class="font-bold text-gray-800 text-lg">
+            <i class="fas fa-link text-blue-500 mr-2"></i>Situation CAF / MSA et France Travail
+        </h2>
+        <form method="post" action="{% url 'connecteurs:actualiser_situation' beneficiaire.code_interne %}">
+            {% csrf_token %}
+            <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm">
+                <i class="fas fa-sync-alt mr-2"></i>Tout actualiser
+            </button>
+        </form>
+    </div>
+
+    {% if situation_externe.environnement == 'bac_a_sable' %}
+    <p class="mb-4 text-xs text-amber-800 bg-amber-50 border-l-4 border-amber-400 p-2 rounded">
+        <i class="fas fa-flask mr-1"></i>
+        Bac à sable de l'API Particulier : informations <strong>fictives</strong>, renvoyées uniquement pour les identités de test.
+    </p>
+    {% endif %}
+
+    <div class="divide-y divide-gray-100">
+        {% for ligne in situation_externe.lignes %}
+        {% with s=ligne.situation %}
+        <div class="py-3 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-xs font-bold text-gray-500 uppercase">{{ ligne.libelle }}</p>
+                {% if s %}
+                    <p class="text-sm font-medium
+                        {% if s.statut_appel != 'OK' %}text-gray-500 italic
+                        {% elif s.est_beneficiaire %}text-green-700
+                        {% else %}text-gray-800{% endif %}">
+                        {% if s.statut_appel == 'ERREUR' %}<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>{% endif %}
+                        {% if s.statut_appel == 'INCOMPLET' %}<i class="fas fa-pen text-amber-500 mr-1"></i>{% endif %}
+                        {{ s.resume }}
+                    </p>
+                    <p class="text-[11px] text-gray-400">
+                        Dernière mise à jour info du {{ s.date_maj|date:"d/m/Y" }} à {{ s.date_maj|date:"H:i" }}
+                        {% if s.maj_par %}– {{ s.maj_par.get_full_name|default:s.maj_par.username }}{% endif %}
+                    </p>
+                {% else %}
+                    <p class="text-sm text-gray-400 italic">Jamais consultée</p>
+                {% endif %}
+            </div>
+            <form method="post" action="{% url 'connecteurs:actualiser_situation' beneficiaire.code_interne %}">
+                {% csrf_token %}
+                <input type="hidden" name="source" value="{{ ligne.code }}">
+                <button type="submit" title="Actualiser : {{ ligne.libelle }}"
+                        class="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-50 transition">
+                    <i class="fas fa-sync-alt text-sm"></i>
+                </button>
+            </form>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+</div>

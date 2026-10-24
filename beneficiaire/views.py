@@ -30,6 +30,7 @@ from .forms import (
     LienFamilialForm,
 )
 from .models import Beneficiaire, DocumentBeneficiaireLink, LienFamilial
+from connecteurs.api_particulier import tableau_situations
 from ged.models import DocumentGED, DocumentType
 from ged.storage import SeaweedFSStorage
 try:
@@ -254,6 +255,8 @@ def detail_beneficiaire(request, code_interne):
                 beneficiaire=beneficiaire
             ).select_related('expediteur', 'destinataire')[:10],
             "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],
+            # Situation CAF/MSA et France Travail (API Particulier) : agents de la MDS uniquement
+            "situation_externe": tableau_situations(beneficiaire),
         })
     return render(request, "beneficiaire/detail_beneficiaire.html", context)
    
