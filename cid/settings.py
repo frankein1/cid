@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     'mds',
     'planning',
     'AidFi',
+    'connecteurs',
 ]
 
 # ============================================================

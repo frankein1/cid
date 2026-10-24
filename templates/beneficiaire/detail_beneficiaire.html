@@ -257,6 +257,8 @@
             </div>
             
             {% if not acces_restreint %}
+            {% include "connecteurs/_situation_externe.html" %}
+
             {% if transferts %}
             <!-- Historique des transferts -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

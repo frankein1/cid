@@ -77,6 +77,18 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Lieu de naissance</label>
                 {{ form.lieu_naissance }}
             </div>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Code INSEE commune de naissance</label>
+                    {{ form.code_insee_naissance }}
+                    <p class="text-xs text-gray-500 mt-1">{{ form.code_insee_naissance.help_text }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Code INSEE pays de naissance</label>
+                    {{ form.code_pays_naissance }}
+                    <p class="text-xs text-gray-500 mt-1">{{ form.code_pays_naissance.help_text }}</p>
+                </div>
+            </div>
         </section>
 
         <section>
