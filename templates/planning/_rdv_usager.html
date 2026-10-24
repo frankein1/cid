@@ -1,0 +1,34 @@
+<!-- /templates/planning/_rdv_usager.html -->
+{# Rendez-vous de l'usager : depuis sa fiche, les agents de sa MDS voient le détail #}
+<div id="rdv-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+        <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-calendar-check text-blue-500 mr-2"></i>Rendez-vous</h2>
+        <div class="flex gap-2">
+            <a href="{% url 'planning:creer_rdv_depuis_beneficiaire' beneficiaire.id %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50">🏢 Permanence</a>
+            <a href="{% url 'planning:nouveau_rdv' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-md hover:bg-blue-800">🏠 VAD, hors permanence…</a>
+        </div>
+    </div>
+    <div class="divide-y divide-gray-100">
+        {% for r in rdvs_usager %}
+        <div class="py-2 flex items-start justify-between gap-3 text-sm {% if r.statut in 'ANNULE_USAGER REPORT_USAGER ANNULE_MDS REPORT_MDS ABSENT VENU_NON_RECU' %}opacity-60{% endif %}">
+            <div class="min-w-0">
+                <p class="font-medium text-gray-800">
+                    {{ r.date|date:"d/m/Y" }} · {{ r.heure_debut|time:"H:i" }}–{{ r.heure_fin|time:"H:i" }}
+                    — {{ r.get_nature_display }} – {{ r.get_domaine_display }}
+                    {% if r.premiere_fois %}<span title="1er rendez-vous">★</span>{% endif %}
+                </p>
+                <p class="text-xs text-gray-500">
+                    {{ r.agent.get_full_name|default:r.agent.username|default:"Non assigné" }} · {{ r.lieu_affichage }}
+                    {% if r.description %} · {{ r.description|truncatechars:80 }}{% endif %}
+                </p>
+            </div>
+            <span class="text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap
+                {% if r.statut == 'VENU_RECU' or r.statut == 'VAD_ABSENT' %}bg-green-100 text-green-800{% elif r.statut == 'RESERVE' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ r.get_statut_display }}
+            </span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-400 italic text-center py-3">Aucun rendez-vous</p>
+        {% endfor %}
+    </div>
+</div>

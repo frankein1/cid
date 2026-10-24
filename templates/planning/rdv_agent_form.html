@@ -1,0 +1,140 @@
+<!-- /templates/planning/rdv_agent_form.html -->
+{% extends "base.html" %}
+
+{% block title %}Noter un rendez-vous{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-1">
+        <i class="fas fa-calendar-plus text-blue-600 mr-2"></i>Noter un rendez-vous
+    </h1>
+    <p class="text-sm text-gray-500 mb-6">
+        VAD, hors permanence, rendez-vous partenaire, téléphonique… Les permanences restent créées par le cadre.
+        Vous pouvez aussi noter un rendez-vous déjà passé.
+    </p>
+
+    {% if form.non_field_errors %}
+    <div class="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-800 text-sm rounded">
+        {% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.motif.label }} *</label>
+            {{ form.motif }}
+            <p class="text-xs text-gray-500 mt-1">Nature – domaine : la couleur dans l'agenda dépend du domaine.</p>
+            {{ form.motif.errors }}
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Usager</label>
+            {% if beneficiaire %}
+                <p class="px-3 py-2 bg-gray-50 border rounded-md text-sm">
+                    {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }} ({{ beneficiaire.code_interne }})
+                </p>
+            {% else %}
+                <input type="text" id="recherche-usager" autocomplete="off" placeholder="Nom, prénom ou code (3 lettres minimum)"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <div id="resultats-usager" class="mt-1 border rounded-md bg-white shadow-sm hidden"></div>
+                <p class="text-xs text-gray-500 mt-1">Facultatif, sauf pour une VAD.</p>
+            {% endif %}
+            {{ form.beneficiaire_id }}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.date.label }} *</label>
+                {{ form.date }}{{ form.date.errors }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.heure_debut.label }} *</label>
+                {{ form.heure_debut }}{{ form.heure_debut.errors }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.heure_fin.label }} *</label>
+                {{ form.heure_fin }}{{ form.heure_fin.errors }}
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 -mt-3">Pour une VAD, incluez le temps de trajet dans les horaires.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.agent.label }} *</label>
+                {{ form.agent }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.lieu_precis.label }}</label>
+                {{ form.lieu_precis }}
+                <p class="text-xs text-gray-500 mt-1">{{ form.lieu_precis.help_text }}</p>
+                {{ form.lieu_precis.errors }}
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.co_intervenants.label }}</label>
+            {{ form.co_intervenants }}
+            <p class="text-xs text-gray-500 mt-1">Ctrl (ou appui long) pour en choisir plusieurs. Ils verront le détail du rendez-vous.</p>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.description.label }}</label>
+            {{ form.description }}
+        </div>
+
+        <div class="flex items-center gap-2">
+            {{ form.premiere_fois }}
+            <label for="{{ form.premiere_fois.id_for_label }}" class="text-sm text-gray-700">{{ form.premiere_fois.label }}</label>
+        </div>
+        <p class="text-xs text-gray-500 -mt-3">Cochée d'office quand CID ne trouve aucun rendez-vous réalisé ; corrigez si besoin.</p>
+
+        <div class="flex justify-end gap-3 pt-4 border-t">
+            <a href="{% if beneficiaire %}{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}{% else %}{% url 'planning:calendrier_rdv' %}{% endif %}"
+               class="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">Annuler</a>
+            <button type="submit" class="px-5 py-2 bg-blue-700 text-white rounded-md text-sm hover:bg-blue-800">
+                Enregistrer le rendez-vous
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if not beneficiaire %}
+<script>
+(function () {
+    const champ = document.getElementById('recherche-usager');
+    const liste = document.getElementById('resultats-usager');
+    const cache = document.getElementById('id_beneficiaire_id');
+    let minuteur;
+    champ.addEventListener('input', () => {
+        clearTimeout(minuteur);
+        cache.value = '';
+        const q = champ.value.trim();
+        if (q.length < 3) { liste.classList.add('hidden'); return; }
+        minuteur = setTimeout(() => {
+            fetch("{% url 'planning:api_recherche_beneficiaire' %}?q=" + encodeURIComponent(q))
+                .then(r => r.json()).then(data => {
+                    liste.innerHTML = '';
+                    (data.results || []).forEach(item => {
+                        const b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'block w-full text-left px-3 py-2 text-sm hover:bg-blue-50';
+                        b.textContent = item.text;
+                        b.addEventListener('click', () => {
+                            champ.value = item.text; cache.value = item.id; liste.classList.add('hidden');
+                            fetch("{% url 'planning:api_premiere_fois' %}?beneficiaire_id=" + item.id)
+                                .then(r => r.json()).then(r => {
+                                    document.getElementById('id_premiere_fois').checked = r.premiere_fois;
+                                });
+                        });
+                        liste.appendChild(b);
+                    });
+                    liste.classList.toggle('hidden', !(data.results || []).length);
+                });
+        }, 300);
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

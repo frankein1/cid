@@ -30,7 +30,7 @@
                     <tr class="border-t">
                         <td class="px-4 py-2">{{ jour|date:"d/m/Y" }}</td>
                         <td class="px-4 py-2">{{ c.heure_debut|time:"H:i" }} - {{ c.heure_fin|time:"H:i" }}</td>
-                        <td class="px-4 py-2">{{ c.salle.nom }}</td>
+                        <td class="px-4 py-2">{{ c.lieu_affichage }}</td>
                         <td class="px-4 py-2">
                             {% if c.beneficiaire %}
                                 {{ c.beneficiaire.prenom }} {{ c.beneficiaire.nom }}

@@ -94,10 +94,18 @@
                     <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs agents</p>
                 </div>
 
-                <!-- Type de RDV -->
+                <!-- Domaine (agenda unifié : couleur du rendez-vous) -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.type_rdv.label }} *</label>
-                    {{ form.type_rdv }}
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Domaine *</label>
+                    {{ form.domaine }}
+                </div>
+
+                <!-- 1er rendez-vous (pré-coché par CID, l'agent corrige si besoin) -->
+                <div class="mb-4 flex items-center gap-2">
+                    {{ form.premiere_fois }}
+                    <label for="{{ form.premiere_fois.id_for_label }}" class="text-sm text-gray-700">
+                        1er rendez-vous de l'usager avec un agent social de la MDS
+                    </label>
                 </div>
 
                 <!-- Description -->
@@ -162,6 +170,10 @@ $(document).ready(function() {
         $('#id_beneficiaire_id').val(e.params.data.id);
         
         var benefId = e.params.data.id;
+        // 1er rendez-vous : CID propose, l'agent corrige
+        $.getJSON("{% url 'planning:api_premiere_fois' %}", {beneficiaire_id: benefId}, function(r) {
+            $('#id_premiere_fois').prop('checked', r.premiere_fois);
+        });
         if (benefId) {
             $.ajax({
                 url: "{% url 'planning:api_famille_beneficiaire' 0 %}".replace('0', benefId),

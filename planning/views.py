@@ -81,6 +81,9 @@ def calendrier_rdv(request, beneficiaire_id=None):
             'fin_apres_midi': HEURE_FIN_APRES_MIDI.strftime('%H:%M')
         },
     }
+    # Agenda unifié : légende des couleurs, filtre par agent, issues de rendez-vous
+    from .views_agenda import contexte_calendrier
+    context.update(contexte_calendrier(request))
     return render(request, 'planning/calendrier.html', context)
 
 
@@ -140,7 +143,7 @@ def api_creneaux(request):
 
         events.append({
             'id': c.id,
-            'title': f"{c.agent.last_name if c.agent else 'MDS'} | {c.salle.nom}",
+            'title': f"{c.agent.last_name if c.agent else 'MDS'} | {c.lieu_affichage}",
             'start': f"{c.date.isoformat()}T{c.heure_debut.isoformat()}",
             'end': f"{c.date.isoformat()}T{c.heure_fin.isoformat()}",
             'backgroundColor': color,
@@ -148,7 +151,7 @@ def api_creneaux(request):
             'extendedProps': {
                 'statut': c.statut,
                 'agent': str(c.agent) if c.agent else "Non assigné",
-                'salle': c.salle.nom,
+                'salle': c.lieu_affichage,
                 'peut_reserver': c.peut_etre_reserve_par(request.user),
             }
         })
@@ -185,6 +188,8 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
         if beneficiaire:
             initial_data['beneficiaire_recherche'] = f"{beneficiaire.nom} {beneficiaire.prenom} ({beneficiaire.code_interne})"
             initial_data['beneficiaire_id'] = beneficiaire.id
+            from .agenda import est_premiere_fois
+            initial_data['premiere_fois'] = est_premiere_fois(beneficiaire, creneau.mds or getattr(creneau.salle, 'mds', None))
         form = RdvForm(instance=creneau, creneau=creneau, request=request, initial=initial_data)
     
     if request.method == 'POST':
@@ -194,7 +199,13 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
             if not target_beneficiaire:
                 messages.error(request, "Aucun bénéficiaire sélectionné.")
             else:
-                rdv.reserver(request.user, target_beneficiaire, rdv.description)
+                reserve = rdv.reserver(request.user, target_beneficiaire, rdv.description)
+                # reserver() repart de la base : on y reporte les autres champs saisis
+                reserve.domaine = form.cleaned_data['domaine']
+                reserve.premiere_fois = form.cleaned_data['premiere_fois']
+                reserve.accompagnant = form.cleaned_data.get('accompagnant')
+                reserve.save(update_fields=['domaine', 'premiere_fois', 'accompagnant'])
+                reserve.co_intervenants.set(form.cleaned_data.get('co_intervenants') or [])
                 
                 # Gestion du premier RDV (référent)
                 est_premier_rdv = request.POST.get('est_premier_rdv', 'true') == 'true'
@@ -408,7 +419,7 @@ def export_planning_ical(request):
     for c in creneaux:
         if c.peut_etre_vu_par(request.user):
             event = iCalEvent()
-            event.add('summary', f"RDV - {c.salle.nom}")
+            event.add('summary', f"RDV - {c.lieu_affichage}")
             event.add('dtstart', datetime.combine(c.date, c.heure_debut))
             event.add('dtend', datetime.combine(c.date, c.heure_fin))
             event.add('uid', f"creneau-{c.id}@mds.local")
@@ -444,7 +455,7 @@ def exporter_mes_permanences_ics(request):
     
     for c in creneaux:
         event = iCalEvent()
-        event.add('summary', f"Permanence MDS - {c.salle.nom}")
+        event.add('summary', f"Permanence MDS - {c.lieu_affichage}")
         event.add('dtstart', datetime.combine(c.date, c.heure_debut))
         event.add('dtend', datetime.combine(c.date, c.heure_fin))
         event.add('uid', f"permanence-{c.id}@mds.local")
@@ -481,7 +492,7 @@ def imprimer_planning_jour_pdf(request, date_str):
         if c.peut_etre_vu_par(request.user):
             data.append([
                 f"{c.heure_debut.strftime('%H:%M')}",
-                c.salle.nom,
+                c.lieu_affichage,
                 str(c.beneficiaire) if c.beneficiaire else "-",
                 c.agent.get_full_name() if c.agent else "-",
                 c.get_statut_display()
