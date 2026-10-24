@@ -40,14 +40,15 @@ class RdvForm(forms.ModelForm):
             'beneficiaire_id',
             'accompagnant',
             'co_intervenants',
-            'type_rdv',
+            'domaine',
+            'premiere_fois',
             'description',
             'duree_minutes'
         ]
         widgets = {
             'accompagnant': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
             'co_intervenants': forms.SelectMultiple(attrs={'class': 'w-full px-3 py-2 border rounded-md'}),
-            'type_rdv': forms.Select(attrs={
+            'domaine': forms.Select(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
             }),
             'description': forms.Textarea(attrs={
@@ -76,7 +77,7 @@ class RdvForm(forms.ModelForm):
 
         # Rendre les champs requis
         self.fields['beneficiaire_recherche'].required = True
-        self.fields['type_rdv'].required = True
+        self.fields['domaine'].required = True
         self.fields['description'].required = True
 
         # Co-intervenants : agents de la MDS
@@ -225,3 +226,81 @@ class PermanenceExterneForm(forms.ModelForm):
         self.fields['jour_semaine'].label = "Jour de la semaine"
         self.fields['heure_debut'].label = "Heure de début"
         self.fields['heure_fin'].label = "Heure de fin"
+
+
+# =============================================================================
+# AGENDA UNIFIÉ : rendez-vous hors permanence (VAD, hors permanence, partenaire…)
+# =============================================================================
+
+class RdvAgentForm(forms.Form):
+    """
+    Rendez-vous noté par un agent social ou d'accueil dans l'agenda unifié.
+    Contrairement aux permanences : pas de salle, horaires libres, saisie a posteriori possible.
+    """
+    motif = forms.ChoiceField(label="Motif")
+    agent = forms.ModelChoiceField(queryset=User.objects.none(), label="Agent")
+    date = forms.DateField(label="Date", widget=forms.DateInput(attrs={'type': 'date'}))
+    heure_debut = forms.TimeField(label="Début", widget=forms.TimeInput(attrs={'type': 'time'}))
+    heure_fin = forms.TimeField(label="Fin", widget=forms.TimeInput(attrs={'type': 'time'}))
+    beneficiaire_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
+    lieu_precis = forms.CharField(label="Lieu", required=False, max_length=200,
+                                  help_text="Adresse de la VAD, structure du partenaire…")
+    co_intervenants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), required=False,
+                                                     label="Co-intervenants")
+    description = forms.CharField(label="Motif détaillé (visible de l'agent et du cadre)", required=False,
+                                  widget=forms.Textarea(attrs={'rows': 3}))
+    premiere_fois = forms.BooleanField(label="1er rendez-vous avec un agent social de la MDS", required=False)
+
+    def __init__(self, *args, mds=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .agenda import choix_motifs
+        self.mds = mds
+        self.fields['motif'].choices = choix_motifs()
+        agents = User.objects.filter(profils_mds__mds=mds, profils_mds__actif=True, is_active=True)\
+            .distinct().order_by('last_name', 'first_name')
+        self.fields['agent'].queryset = agents
+        self.fields['co_intervenants'].queryset = agents
+        self.fields['agent'].label_from_instance = lambda u: u.get_full_name() or u.username
+        self.fields['co_intervenants'].label_from_instance = lambda u: u.get_full_name() or u.username
+        for name, field in self.fields.items():
+            if not isinstance(field.widget, (forms.CheckboxInput, forms.HiddenInput)):
+                field.widget.attrs['class'] = 'w-full px-3 py-2 border border-gray-300 rounded-md'
+
+    def clean(self):
+        data = super().clean()
+        debut, fin = data.get('heure_debut'), data.get('heure_fin')
+        if debut and fin and debut >= fin:
+            self.add_error('heure_fin', "L'heure de fin doit être après l'heure de début.")
+        nature, _, domaine = (data.get('motif') or '').partition('|')
+        data['nature'], data['domaine'] = nature, domaine
+        if nature == 'PARTENAIRE' and not data.get('lieu_precis'):
+            self.add_error('lieu_precis', "Indiquez le lieu ou la structure du partenaire.")
+        data['beneficiaire'] = None
+        if data.get('beneficiaire_id'):
+            data['beneficiaire'] = Beneficiaire.objects.filter(pk=data['beneficiaire_id'], mds=self.mds).first()
+            if data['beneficiaire'] is None:
+                self.add_error(None, "Usager introuvable dans votre MDS.")
+        if nature == 'VAD' and not data.get('beneficiaire'):
+            self.add_error(None, "Une visite à domicile concerne un usager : sélectionnez-le.")
+        agent, date = data.get('agent'), data.get('date')
+        if agent and date and debut and fin and not self.errors:
+            from .agenda import conflits_agent
+            conflit = conflits_agent(agent, date, debut, fin).first()
+            if conflit:
+                self.add_error(None, f"{agent.get_full_name() or agent.username} est déjà pris(e) de "
+                                     f"{conflit.heure_debut:%H:%M} à {conflit.heure_fin:%H:%M} "
+                                     f"({conflit.get_nature_display().lower()}).")
+        return data
+
+
+ISSUES_RDV = [
+    ('VENU_RECU', "Réalisé (venu et reçu)"),
+    ('VAD_ABSENT', "VAD – usager absent (déplacement effectué)"),
+    ('ABSENT', "Usager absent"),
+    ('VENU_NON_RECU', "Venu non reçu"),
+    ('ANNULE_USAGER', "Annulé par l'usager"),
+    ('REPORT_USAGER', "Reporté par l'usager"),
+    ('ANNULE_MDS', "Annulé par la MDS"),
+    ('REPORT_MDS', "Reporté par la MDS"),
+    ('RESERVE', "Prévu (remettre à prévu)"),
+]

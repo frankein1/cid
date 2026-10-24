@@ -11,7 +11,7 @@ VERSION COMPLÈTE avec accueil et exports
 """
 
 from django.urls import path
-from . import views
+from . import views, views_agenda
 
 app_name = 'planning'
 
@@ -21,6 +21,11 @@ urlpatterns = [
     # ==========================
     path('calendrier/<int:beneficiaire_id>/', views.calendrier_rdv, name='calendrier_rdv'),    
     path('api/creneaux/', views.api_creneaux, name='api_creneaux'),
+    # Agenda unifié
+    path('api/agenda/', views_agenda.api_agenda, name='api_agenda'),
+    path('rdv/nouveau/', views_agenda.nouveau_rdv, name='nouveau_rdv'),
+    path('rdv/<int:creneau_id>/issue/', views_agenda.issue_rdv, name='issue_rdv'),
+    path('api/premiere-fois/', views_agenda.api_premiere_fois, name='api_premiere_fois'),
     path('', views.calendrier_rdv, name='calendrier_rdv'),
     
     # ==========================

@@ -60,6 +60,41 @@ class ConfigurationPlanning(models.Model):
             return default
 
 
+# -----------------------------------------------------------------------------
+# Agenda unifié : un rendez-vous = une NATURE (ce qu'on fait) × un DOMAINE (pour qui)
+# -----------------------------------------------------------------------------
+NATURES_RDV = [
+    ('PERMANENCE', 'Permanence'),
+    ('VAD', 'Visite à domicile'),
+    ('HORS_PERMANENCE', 'Hors permanence'),
+    ('PARTENAIRE', 'Rendez-vous partenaire'),
+    ('TELEPHONIQUE', 'Téléphonique'),
+    ('REUNION', 'Réunion'),
+    ('AUTRE', 'Autre'),
+]
+DOMAINES_RDV = [
+    ('SOCIAL', 'Social'),
+    ('IP', 'IP'),
+    ('ENFANCE', 'Enfance'),
+    ('INSERTION', 'Insertion'),
+    ('INSTITUTIONNEL', 'Institutionnel'),
+]
+# Rendez-vous comptés comme réalisés pour l'agent (une VAD porte close compte : il s'est déplacé)
+STATUTS_REALISES = ('VENU_RECU', 'VAD_ABSENT')
+STATUTS_ANNULES = ('ANNULE_USAGER', 'REPORT_USAGER', 'ANNULE_MDS', 'REPORT_MDS', 'ABSENT', 'VENU_NON_RECU')
+
+# Ancien champ type_rdv → (nature, domaine)
+CORRESPONDANCE_TYPE_RDV = {
+    'PERMANENCE': ('PERMANENCE', 'SOCIAL'),
+    'IP': ('HORS_PERMANENCE', 'IP'),
+    'ENFANCE': ('HORS_PERMANENCE', 'ENFANCE'),
+    'HORS_PERMANENCE': ('HORS_PERMANENCE', 'SOCIAL'),
+    'TELEPHONIQUE': ('TELEPHONIQUE', 'SOCIAL'),
+    'VISITE_DOMICILE': ('VAD', 'SOCIAL'),
+    'AUTRE': ('AUTRE', 'SOCIAL'),
+}
+
+
 class CreneauRdv(models.Model):
     TYPE_RDV_CHOICES = [
     ('PERMANENCE', 'Permanence'),
@@ -81,6 +116,7 @@ class CreneauRdv(models.Model):
         ('ANNULE_MDS', 'Annulé par MDS'),
         ('REPORT_MDS', 'Reporté par MDS'),
         ('ABSENT', 'Absent'),
+        ('VAD_ABSENT', 'VAD – usager absent'),
     ]
 
     date = models.DateField()
@@ -88,7 +124,11 @@ class CreneauRdv(models.Model):
     heure_fin = models.TimeField()
     duree_minutes = models.PositiveIntegerField(default=30)
 
-    salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE, related_name='creneaux')
+    # Salle : obligatoire pour une permanence, vide pour une VAD, un rendez-vous partenaire…
+    salle = models.ForeignKey('mds.MDSReception', on_delete=models.CASCADE, related_name='creneaux',
+                              null=True, blank=True)
+    # MDS du rendez-vous (déduite de la salle, ou de l'agent pour un rendez-vous hors salle)
+    mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, blank=True, related_name='rdvs')
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='creneaux')
     beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True, related_name='rdvs')
 
@@ -119,7 +159,12 @@ class CreneauRdv(models.Model):
     modalite = models.CharField(max_length=10, choices=MODALITES_RDV, default='MDS')
     lieu_precis = models.CharField(max_length=200, blank=True, help_text="Adresse ou précision si autre lieu")
 
-    type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')
+    type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')  # ancien champ, remplacé par nature + domaine
+    nature = models.CharField(max_length=20, choices=NATURES_RDV, default='PERMANENCE')
+    domaine = models.CharField(max_length=20, choices=DOMAINES_RDV, default='SOCIAL')
+    premiere_fois = models.BooleanField(
+        default=False, verbose_name="1er rendez-vous",
+        help_text="Premier rendez-vous de la famille avec un agent social de la MDS")
     statut = models.CharField(max_length=20, choices=STATUT_RDV_CHOICES, default='DISPONIBLE')
     description = models.TextField(blank=True)
     notes_internes = models.TextField(blank=True)
@@ -154,9 +199,38 @@ class CreneauRdv(models.Model):
             return True
         if user == self.agent or user == self.cree_par:
             return True
-        if self.salle and self.salle.mds:
-            return UserMDSProfile.objects.filter(user=user, mds=self.salle.mds, actif=True).exists()
+        mds_id = self.mds_id or (self.salle.mds_id if self.salle_id else None)
+        if mds_id:
+            return UserMDSProfile.objects.filter(user=user, mds_id=mds_id, actif=True).exists()
         return False
+
+    def est_participant(self, user):
+        return user.pk == self.agent_id or self.co_intervenants.filter(pk=user.pk).exists()
+
+    def voit_le_detail(self, user):
+        """
+        Motif, usager, domaine : réservés à l'agent, aux co-intervenants et aux cadres de la MDS.
+        Les autres agents voient seulement « Occupé » (et la nature, par l'icône).
+        """
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser or user.a_la_capacite('peut_administrer'):
+            return True
+        if self.est_participant(user):
+            return True
+        mds_id = self.mds_id or (self.salle.mds_id if self.salle_id else None)
+        return bool(mds_id and user.a_la_capacite('peut_valider')
+                    and UserMDSProfile.objects.filter(user=user, mds_id=mds_id, actif=True).exists())
+
+    @property
+    def est_realise(self):
+        return self.statut in STATUTS_REALISES
+
+    @property
+    def lieu_affichage(self):
+        if self.salle_id:
+            return self.salle.nom
+        return self.lieu_precis or self.get_nature_display()
 
     def peut_etre_modifie_par(self, user):
         if not user.is_authenticated:
@@ -195,6 +269,13 @@ class CreneauRdv(models.Model):
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        if self.mds_id is None:
+            if self.salle_id and self.salle.mds_id:
+                self.mds_id = self.salle.mds_id
+            elif self.agent_id:
+                self.mds = getattr(self.agent, 'mds_principale', None)
+        if self._state.adding and self.nature == 'PERMANENCE' and self.type_rdv != 'PERMANENCE':
+            self.nature, self.domaine = CORRESPONDANCE_TYPE_RDV.get(self.type_rdv, ('AUTRE', 'SOCIAL'))
         if self.heure_debut and self.heure_fin:
             debut = self.heure_debut.hour * 60 + self.heure_debut.minute
             fin = self.heure_fin.hour * 60 + self.heure_fin.minute

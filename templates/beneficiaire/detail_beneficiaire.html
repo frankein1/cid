@@ -257,6 +257,8 @@
             </div>
             
             {% if not acces_restreint %}
+            {% include "planning/_rdv_usager.html" %}
+
             {% include "connecteurs/_situation_externe.html" %}
 
             {% if transferts %}

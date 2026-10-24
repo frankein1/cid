@@ -257,6 +257,8 @@ def detail_beneficiaire(request, code_interne):
             "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],
             # Situation CAF/MSA et France Travail (API Particulier) : agents de la MDS uniquement
             "situation_externe": tableau_situations(beneficiaire),
+            # Rendez-vous de l'usager (agenda unifié) : détail visible depuis la fiche
+            "rdvs_usager": beneficiaire.rdvs.select_related('agent', 'salle').order_by('-date', '-heure_debut')[:15],
         })
     return render(request, "beneficiaire/detail_beneficiaire.html", context)
    

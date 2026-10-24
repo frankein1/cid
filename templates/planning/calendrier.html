@@ -34,6 +34,16 @@
                     </select>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Agent</label>
+                    <select name="agent" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Tous les agents</option>
+                        {% for a in agents_mds %}
+                        <option value="{{ a.id }}" {% if agent_filtre == a.id|stringformat:"s" %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div class="flex space-x-2">
                     <button type="submit" class="px-4 py-2 bg-slate-700 text-white rounded-md hover:bg-slate-800 text-sm">Filtrer</button>
                     <a href="?vue=mois" class="px-4 py-2 text-sm font-medium rounded-md {% if vue == 'mois' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">Calendrier</a>
@@ -42,6 +52,11 @@
             </form>
 
             <div class="flex space-x-3">
+                {% if peut_noter_rdv %}
+                <a href="{% url 'planning:nouveau_rdv' %}" class="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 text-sm font-medium">
+                    <i class="fas fa-calendar-plus mr-1"></i>Noter un rendez-vous
+                </a>
+                {% endif %}
                 {% if user|a_la_capacite:'planning_bloquer' %}
                 <a href="{% url 'planning:generer_creneaux' %}" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">Générer</a>
                 <a href="{% url 'planning:ajouter_jour_bloque' %}" class="px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-900 text-sm font-medium">Bloquer Jour</a>
@@ -92,16 +107,41 @@
     </div>
     {% endif %}
 
-    <div class="mt-6 p-4 bg-gray-50 rounded-lg flex flex-wrap gap-6 text-sm border border-gray-200">
-        <div class="flex items-center"><span class="w-4 h-4 bg-[#10B981] rounded mr-2"></span> Libre</div>
-        <div class="flex items-center"><span class="w-4 h-4 bg-[#3B82F6] rounded mr-2"></span> Réservé</div>
-        <div class="flex items-center"><span class="w-4 h-4 bg-[#FCA5A5] rounded mr-2"></span> Annulé (MDS)</div>
-        <div class="flex items-center"><span class="w-4 h-4 bg-[#991B1B] rounded mr-2"></span> Fermeture MDS</div>
-        <div class="flex items-center"><span class="w-4 h-4 bg-[#FEE2E2] border border-red-200 rounded mr-2"></span> Jour Férié</div>
+    <div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm border border-gray-200 space-y-3">
+        <div class="flex flex-wrap gap-x-6 gap-y-2 items-center">
+            <span class="text-xs font-bold text-gray-500 uppercase w-24">Domaine</span>
+            {% for d in legende.domaines %}
+            <span class="flex items-center">
+                <span class="w-4 h-4 rounded-l" style="background:{{ d.prevu }}"></span><span class="w-4 h-4 rounded-r mr-2" style="background:{{ d.realise }}"></span>{{ d.libelle }}
+            </span>
+            {% endfor %}
+            <span class="text-xs text-gray-500">(clair = prévu, plein = réalisé)</span>
+        </div>
+        <div class="flex flex-wrap gap-x-6 gap-y-2 items-center">
+            <span class="text-xs font-bold text-gray-500 uppercase w-24">Nature</span>
+            {% for n in legende.natures %}<span>{{ n.icone }} {{ n.libelle }}</span>{% endfor %}
+            <span>★ 1er rendez-vous</span>
+        </div>
+        <div class="flex flex-wrap gap-x-6 gap-y-2 items-center">
+            <span class="text-xs font-bold text-gray-500 uppercase w-24">État</span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2 bg-white border-2 border-dashed border-gray-500"></span>Permanence libre</span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2" style="background:{{ legende.gris }}"></span>Occupé (détail réservé)</span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2 opacity-50 bg-gray-400"></span><s>Annulé, reporté, absent</s></span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2" style="background:{{ legende.noir }}"></span>Indisponible</span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2 bg-[#991B1B]"></span>Fermeture MDS</span>
+            <span class="flex items-center"><span class="w-4 h-4 rounded mr-2 bg-[#FEE2E2] border border-red-200"></span>Jour férié</span>
+        </div>
     </div>
+</div>
 </div>
 
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    .fc .cid-libre { border-style: dashed !important; border-width: 2px !important; }
+    .fc .cid-annule { opacity: .5; }
+    .fc .cid-annule .fc-event-title { text-decoration: line-through; }
+    .fc .cid-vad-absent .fc-event-title::after { content: " ⊘"; }
+</style>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js'></script>
 <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
@@ -117,7 +157,17 @@ document.addEventListener('DOMContentLoaded', function() {
         slotMinTime: '08:00:00',
         slotMaxTime: '18:00:00',
         allDaySlot: true, // Pour voir les fonds de jours fériés
-        events: '{% url "planning:api_creneaux" %}',
+        events: {
+            url: '{% url "planning:api_agenda" %}',
+            extraParams: { agent: '{{ agent_filtre|escapejs }}' }
+        },
+        {% if peut_noter_rdv %}
+        dateClick: function(info) {
+            if (info.allDay) return;
+            const d = info.dateStr.slice(0, 10), h = info.dateStr.slice(11, 16);
+            window.location = "{% url 'planning:nouveau_rdv' %}?date=" + d + "&debut=" + h;
+        },
+        {% endif %}
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -126,25 +176,54 @@ document.addEventListener('DOMContentLoaded', function() {
         eventClick: function(info) {
             if (info.event.display === 'background') return; // Ne rien faire sur les fériés
 
-            const props = info.event.extendedProps;
-            let content = `
-                <div class="text-left space-y-2">
-                    <p><b>📍 Salle :</b> ${props.salle}</p>
-                    <p><b>👤 Agent :</b> ${props.agent}</p>
-                    <p><b>🕒 Horaire :</b> ${info.event.start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</p>
-                </div>
-            `;
+            const p = info.event.extendedProps;
+            const heure = info.event.start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})
+                        + (info.event.end ? ' – ' + info.event.end.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '');
+            const esc = (t) => String(t || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            let content = '<div class="text-left space-y-2">';
+            let footer = '<div class="mt-4 flex flex-col items-center gap-2">';
 
-            let footer = '<div class="mt-4 flex justify-center gap-2">';
-            if (props.statut === 'DISPONIBLE') {
-                footer += `<a href="/planning/reserver/${info.event.id}/" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Réserver</a>`;
-            } else if (props.statut === 'RESERVE') {
-                footer += `<a href="/planning/annuler/${info.event.id}/" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onclick="return confirm('Annuler ?')">Annuler RDV</a>`;
+            if (p.type === 'indisponible' || p.type === 'blocage') {
+                content += `<p><b>${esc(info.event.title)}</b></p><p>🕒 ${heure}</p>`;
+            } else if (!p.detail) {
+                // Collègue : seulement « Occupé » et la nature, jamais le motif ni l'usager
+                content += `<p><b>Occupé</b> – ${esc(p.nature)}</p><p>👤 ${esc(p.agent)}</p><p>🕒 ${heure}</p>`;
+            } else if (p.statut === 'DISPONIBLE') {
+                content += `<p><b>Permanence libre</b></p><p>📍 ${esc(p.lieu)}</p><p>👤 ${esc(p.agent)}</p><p>🕒 ${heure}</p>`;
+                if (p.peut_reserver) {
+                    footer += `<a href="/planning/reserver/${info.event.id}/" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Réserver</a>`;
+                }
+            } else {
+                content += `<p><b>${esc(p.nature)} – ${esc(p.domaine)}</b>${p.premiere_fois ? ' ★ 1er rendez-vous' : ''}</p>`;
+                if (p.usager) content += `<p>🧑 ${esc(p.usager)}</p>`;
+                content += `<p>📍 ${esc(p.lieu)}</p><p>👤 ${esc(p.agent)}</p><p>🕒 ${heure}</p>`;
+                content += `<p>État : <b>${esc(p.statut_libelle)}</b></p>`;
+                if (p.description) content += `<p class="text-sm text-gray-600">${esc(p.description)}</p>`;
+                if (p.peut_modifier) {
+                    let options = '';
+                    {% for code, libelle in issues_rdv %}
+                    if ('{{ code }}' !== 'VAD_ABSENT' || p.nature_code === 'VAD') {
+                        options += `<option value="{{ code }}" ${p.statut === '{{ code }}' ? 'selected' : ''}>{{ libelle|escapejs }}</option>`;
+                    }
+                    {% endfor %}
+                    footer += `<form method="post" action="/planning/rdv/${info.event.id}/issue/" class="w-full text-left space-y-2 border-t pt-3">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <input type="hidden" name="retour" value="${esc(window.location.pathname + window.location.search)}">
+                        <label class="block text-sm font-semibold">Issue du rendez-vous</label>
+                        <select name="statut" class="w-full border rounded px-2 py-1">${options}</select>
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="premiere_fois" ${p.premiere_fois ? 'checked' : ''}> 1er rendez-vous</label>
+                        <button type="submit" class="w-full bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Enregistrer</button>
+                    </form>`;
+                }
+                if (p.est_permanence && p.statut === 'RESERVE') {
+                    footer += `<a href="/planning/annuler/${info.event.id}/" class="text-red-600 text-sm hover:underline" onclick="return confirm('Libérer ce créneau de permanence ?')">Libérer le créneau</a>`;
+                }
             }
+            content += '</div>';
             footer += '</div>';
 
             Swal.fire({
-                title: 'Détails du créneau',
+                title: 'Rendez-vous',
                 html: content + footer,
                 showConfirmButton: false,
                 showCloseButton: true
