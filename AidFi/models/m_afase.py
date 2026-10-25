@@ -256,6 +256,12 @@ class DecisionAFASE(AuditedMixin):
         related_name="decisions_afase",
     )
 
+    # Suivi du paiement (après un accord) : pour les statistiques mois par mois
+    date_envoi_regie = models.DateField("Envoyé à la régie le", null=True, blank=True)
+    date_delivrance = models.DateField("Délivré le", null=True, blank=True)
+    montant_delivre = models.DecimalField("Montant délivré", max_digits=10, decimal_places=2,
+                                          null=True, blank=True)
+
     class Meta:
         verbose_name = "Décision AFASE"
         verbose_name_plural = "Décisions AFASE"

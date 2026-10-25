@@ -7,6 +7,7 @@
 # AidFi/urls.py 
 
 from django.urls import path
+from AidFi.views import v_stats
 from AidFi.views import (
     v_afase,
     v_regie,
@@ -45,6 +46,7 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
 
     # ✅ PDF OFFICIEL
     path("afase/<int:demande_id>/pdf/", v_afase.afase_pdf, name="afase_pdf",),
+    path("afase/<int:demande_id>/paiement/", v_afase.afase_paiement, name="afase_paiement",),
 
     # ==========================================================
     # RÉGIE D'URGENCE
@@ -84,4 +86,5 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
     # DASHBOARD CADRE
     # ==========================================================
     path("cadre/dashboard/", v_cadre.dashboard_cadre, name="dashboard_cadre",),
+    path("statistiques/", v_stats.statistiques_aides, name="statistiques_aides",),
 ]
