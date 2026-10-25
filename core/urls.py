@@ -14,6 +14,7 @@ from django.urls import path
 from core import views  # Django chargera automatiquement via core/views/__init__.py
 from core.views.ajax import ajax_ville_par_cp
 from core.views import trigger_test_user 
+from core.views import accompagnement
 
 
 app_name = 'core'
@@ -29,6 +30,10 @@ urlpatterns = [
     # GESTION DU PROFIL (profile.py)
     # ============================================================================
     path('mon-profil/', views.mon_profil, name='mon_profil'),
+
+    # Menu « Accompagnement »
+    path('accompagnement/aides/', accompagnement.aides_financieres, name='aides_financieres'),
+    path('accompagnement/<slug:module>/', accompagnement.module_a_venir, name='module_a_venir'),
     
     # ============================================================================
     # ENDPOINTS AJAX (ajax.py)
