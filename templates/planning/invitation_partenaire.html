@@ -7,8 +7,7 @@
 <div class="max-w-3xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold text-gray-900 mb-1"><i class="fas fa-envelope-open-text text-blue-600 mr-2"></i>Inviter le partenaire</h1>
     <p class="text-sm text-gray-500 mb-6">
-        CID n'envoie rien lui-même. Pour chaque partenaire : 1) téléchargez l'invitation,
-        2) ouvrez l'e-mail préparé dans votre messagerie, 3) joignez-y le fichier et envoyez.
+        CID prépare l'e-mail ; c'est vous qui l'envoyez depuis votre messagerie professionnelle.
         Le partenaire n'aura qu'à cliquer sur l'invitation pour l'ajouter à son agenda.
     </p>
 
@@ -27,6 +26,25 @@
         </div>
     </div>
 
+    {% if nb_avec_email %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6 text-center">
+        <a href="{% url 'planning:invitation_eml' rdv.pk %}?lieu={{ avec_lieu|yesno:'1,0' }}"
+           class="inline-flex items-center px-6 py-3 bg-blue-700 text-white rounded-lg hover:bg-blue-800 text-base font-semibold">
+            <i class="fas fa-paper-plane mr-2"></i>Envoyer les invitations
+        </a>
+        <p class="text-sm text-gray-600 mt-3">
+            Ouvre un e-mail prêt à partir dans Outlook : {{ nb_avec_email }} destinataire{{ nb_avec_email|pluralize }},
+            objet, texte et invitation déjà jointe. Relisez, puis cliquez sur <b>Envoyer</b>.
+        </p>
+        <p class="text-xs text-gray-500 mt-1">Si le fichier ne s'ouvre pas tout seul, ouvrez-le depuis vos téléchargements.</p>
+    </div>
+    {% endif %}
+
+    <details class="mb-4">
+        <summary class="cursor-pointer text-sm text-gray-600 hover:text-gray-900">
+            Autre messagerie (webmail, téléphone) : envoyer partenaire par partenaire
+        </summary>
+        <p class="text-xs text-gray-500 mt-2 mb-3">1) téléchargez l'invitation, 2) ouvrez l'e-mail préparé, 3) joignez-y le fichier et envoyez.</p>
     <div class="space-y-3">
         {% for i in invites %}
         <div class="bg-white rounded-lg border p-4 flex flex-wrap items-center justify-between gap-3">
@@ -46,6 +64,7 @@
         <p class="text-sm text-gray-400 italic">Aucun partenaire sur ce rendez-vous.</p>
         {% endfor %}
     </div>
+    </details>
 
     <div class="mt-6 text-right">
         <a href="{% if rdv.beneficiaire %}{% url 'beneficiaire:detail_beneficiaire' rdv.beneficiaire.code_interne %}{% else %}{% url 'planning:calendrier_rdv' %}{% endif %}"

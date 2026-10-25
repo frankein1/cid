@@ -293,6 +293,33 @@ def nouvelle_reunion(request):
 # INVITATION DES PARTENAIRES (lot 3)
 # =============================================================================
 
+def _corps_invitation(user, texte):
+    return (f"Bonjour,\n\n{texte}\n\nVous trouverez l'invitation en pièce jointe : "
+            f"un clic l'ajoute à votre agenda.\n\nCordialement,\n{user.get_full_name() or user.username}")
+
+
+@login_required
+def invitation_eml(request, creneau_id):
+    """Un seul bouton : brouillon d'e-mail à tous les partenaires, invitation déjà jointe."""
+    from django.http import HttpResponse
+    from .invitation import brouillon_eml, texte_invitation
+    rdv = get_object_or_404(CreneauRdv, pk=creneau_id)
+    if not rdv.voit_le_detail(request.user):
+        return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
+    avec_lieu = request.GET.get('lieu', '1') != '0'
+    partenaires = [p for p in rdv.partenaires.all() if p.email]
+    if not partenaires:
+        messages.error(request, "Aucun partenaire de ce rendez-vous n'a d'e-mail dans l'annuaire.")
+        return redirect('planning:invitation_partenaire', creneau_id=rdv.pk)
+    contenu = brouillon_eml(rdv, partenaires, request.user,
+                            _corps_invitation(request.user, texte_invitation(rdv, avec_lieu)), avec_lieu)
+    HistoriqueCreneau.objects.create(creneau=rdv, action='MODIFICATION', utilisateur=request.user,
+                                     commentaire=f"Invitation préparée pour {len(partenaires)} partenaire(s)")
+    r = HttpResponse(contenu, content_type='message/rfc822')
+    r['Content-Disposition'] = f'attachment; filename="invitation_{rdv.date:%Y%m%d}_{rdv.heure_debut:%H%M}.eml"'
+    return r
+
+
 @login_required
 def invitation_partenaire(request, creneau_id):
     """Préparer l'e-mail et le fichier .ics pour chaque partenaire du rendez-vous."""
@@ -303,14 +330,13 @@ def invitation_partenaire(request, creneau_id):
         return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
     avec_lieu = request.GET.get('lieu', '1') != '0'
     objet, texte = objet_invitation(rdv), texte_invitation(rdv, avec_lieu)
-    corps = (f"Bonjour,\n\n{texte}\n\nVous trouverez l'invitation en pièce jointe : "
-             f"un clic l'ajoute à votre agenda.\n\nCordialement,\n"
-             f"{request.user.get_full_name() or request.user.username}")
+    corps = _corps_invitation(request.user, texte)
     invites = [{'partenaire': p,
                 'mailto': f"mailto:{p.email}?subject={quote(objet)}&body={quote(corps)}" if p.email else ""}
                for p in rdv.partenaires.all()]
     return render(request, 'planning/invitation_partenaire.html', {
         'rdv': rdv, 'invites': invites, 'texte': texte, 'objet': objet, 'avec_lieu': avec_lieu,
+        'nb_avec_email': sum(1 for i in invites if i['partenaire'].email),
     })
 
 
