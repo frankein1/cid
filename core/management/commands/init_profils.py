@@ -79,6 +79,8 @@ class Command(BaseCommand):
 
             # ---------------- PAIERIE DÉPARTEMENTALE ----------------
             {"code": "REGISSEUR_CENTRAL", "nom": "Régisseur central (paierie)", "capacites": ['cap_regie_centrale']},
+            # ---------------- SERVICE DE CONTRÔLE (AFASE) ----------------
+            {"code": "SERVICE_CONTROLE_AFASE", "nom": "Service de contrôle AFASE", "capacites": ['afase_controle']},
 
             {
                 "code": "SUPER_ADMIN",

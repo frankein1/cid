@@ -237,7 +237,16 @@ class DocumentGED(models.Model):
         """
         if user.is_superuser:
             return True
-        
+
+        # 0. Service de contrôle AFASE : uniquement les pièces des dossiers qui lui ont été transmis
+        if user.a_la_capacite("afase_controle"):
+            from AidFi.models.m_generique import PieceJustificative
+            if PieceJustificative.objects.filter(
+                    document_ged=self,
+                    demande__statut__in=('TRANSMISE_CONTROLE', 'PAIEMENT_DEMANDE', 'CLOTUREE'),
+                    demande__demandeafase__decision__date_transmission_controle__isnull=False).exists():
+                return True
+
         # 1. Vérification territoriale (via le bénéficiaire)
         if not user.peut_agir_sur_objet(self.content_object, "peut_voir"):
             return False

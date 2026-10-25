@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    {% if not user|a_la_capacite:"peut_voir" %}
+    {% if not user|a_la_capacite:"peut_voir" and not vue_controle %}
         <div class="bg-red-100 p-8 rounded-xl text-center">
             Accès refusé
         </div>
@@ -93,10 +93,12 @@
     {% endwith %}
 
     <div class="mt-4 flex gap-2">
+        {% if can_ajouter_piece %}
         <a href="{% url 'AidFi:afase_ajouter_document' demande.id %}"
            class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm">
             ➕ Ajouter un document
         </a>
+        {% endif %}
         <a href="{% url 'AidFi:afase_previsualisation' demande.id %}"
            class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
             👁️ Prévisualiser le dossier
@@ -122,12 +124,85 @@
                 </div>
 
                 {% if decision and decision.type_decision == "ACCORD" %}
-                <!-- SUIVI DU PAIEMENT (statistiques mois par mois) -->
-                <div class="bg-white rounded-3xl shadow p-6">
-                    <h3 class="font-bold text-gray-800 mb-3">💶 Suivi du paiement</h3>
-                    <p class="text-sm text-gray-600 mb-3">Accordé : <b>{{ decision.montant_accorde|floatformat:2 }} €</b>
-                        {% if decision.duree_accordee > 1 %}sur {{ decision.duree_accordee }} mois{% endif %}</p>
+                <!-- CIRCUIT DU PAIEMENT : cadre → contrôle → comptabilité → paierie -->
+                <div class="bg-white rounded-3xl shadow p-6 space-y-4">
+                    <h3 class="font-bold text-gray-800">💶 Circuit du paiement</h3>
+                    <p class="text-sm text-gray-600">Accordé : <b>{{ decision.montant_accorde|floatformat:2 }} €</b>
+                        {% if decision.duree_accordee > 1 %}sur {{ decision.duree_accordee }} mois{% endif %}
+                        {% if decision.paiement_a %} · paiement à {{ decision.get_paiement_a_display|lower }}{% if decision.organisme_paiement %} : <b>{{ decision.organisme_paiement }}</b>{% endif %}{% endif %}</p>
+
+                    <ol class="text-sm space-y-1">
+                        <li>✅ Accordée le {{ decision.date_decision|date:"d/m/Y" }}{% if decision.decide_par %} par {{ decision.decide_par.get_full_name|default:decision.decide_par.username }}{% endif %}</li>
+                        <li>{% if decision.date_transmission_controle %}✅ Transmise au contrôle le {{ decision.date_transmission_controle|date:"d/m/Y" }}{% if decision.transmis_par %} par {{ decision.transmis_par.get_full_name|default:decision.transmis_par.username }}{% endif %}{% else %}⬜ Transmission au service de contrôle{% endif %}</li>
+                        <li>{% if decision.date_demande_paiement %}✅ Paiement demandé le {{ decision.date_demande_paiement|date:"d/m/Y" }}{% if decision.reference_comptable %} – n° d'enregistrement {{ decision.reference_comptable }}{% endif %}{% else %}⬜ Demande de paiement (comptabilité){% endif %}</li>
+                        <li>{% if decision.date_delivrance %}✅ Payée le {{ decision.date_delivrance|date:"d/m/Y" }} : {{ decision.montant_delivre|floatformat:2 }} €{% else %}⬜ Paiement par la paierie{% endif %}</li>
+                    </ol>
+
+                    {% if decision.motif_renvoi and demande.statut == "ACCORDEE" %}
+                    <p class="text-sm bg-orange-50 border-l-4 border-orange-400 p-3 rounded">↩️ <b>Renvoyé par le contrôle :</b> {{ decision.motif_renvoi }}</p>
+                    {% endif %}
+
+                    {% if demande.statut == "ACCORDEE" %}
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase mb-1">Pièces exigées</p>
+                        <ul class="text-sm space-y-1">
+                            {% for code, libelle, n in pieces_requises %}
+                            <li class="flex justify-between gap-2">
+                                <span>{% if n %}✅{% else %}❌{% endif %} {{ libelle }}</span>
+                                {% if not n and can_ajouter_piece %}<a href="{% url 'AidFi:afase_ajouter_document' demande.id %}?type={{ code }}" class="text-indigo-600 text-xs whitespace-nowrap hover:underline">ajouter</a>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% if can_transmettre %}
+                    <form method="post" action="{% url 'AidFi:afase_transmettre' demande.id %}" class="space-y-2 text-sm border-t pt-3">
+                        {% csrf_token %}
+                        <p class="font-semibold">Paiement à :</p>
+                        <label class="flex items-center gap-2"><input type="radio" name="paiement_a" value="FAMILLE" {% if decision.paiement_a != "ORGANISME" %}checked{% endif %}> la famille (RIB de la famille)</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="paiement_a" value="ORGANISME" {% if decision.paiement_a == "ORGANISME" %}checked{% endif %}> un organisme (CLSH, colonie, cantine… : son RIB)</label>
+                        <input type="text" name="organisme_paiement" value="{{ decision.organisme_paiement }}" placeholder="Nom de l'organisme" class="w-full border rounded px-2 py-1">
+                        <label class="flex items-start gap-2"><input type="checkbox" name="identites" class="mt-1">
+                            <span>Je confirme que les pièces d'identité du bénéficiaire et des enfants ou majeurs à charge concernés sont jointes.</span></label>
+                        <button type="submit" {% if pieces_manquantes %}disabled title="Dossier incomplet"{% endif %}
+                                class="w-full rounded-lg py-2 text-white {% if pieces_manquantes %}bg-gray-300 cursor-not-allowed{% else %}bg-indigo-600 hover:bg-indigo-700{% endif %}">
+                            📤 Transmettre au service de contrôle
+                        </button>
+                        {% if pieces_manquantes %}<p class="text-xs text-red-600">Transmission impossible : dossier incomplet.</p>{% endif %}
+                    </form>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if vue_controle and demande.statut == "TRANSMISE_CONTROLE" %}
+                    <form method="post" action="{% url 'AidFi:afase_controle_action' demande.id 'paiement-demande' %}" class="space-y-2 text-sm border-t pt-3">
+                        {% csrf_token %}
+                        <p class="font-semibold">Service de contrôle : demande de paiement saisie dans le logiciel comptable</p>
+                        <label class="block">Date <input type="date" name="date" class="w-full border rounded px-2 py-1"></label>
+                        <label class="block">N° d'enregistrement comptable (facultatif) <input type="text" name="reference" class="w-full border rounded px-2 py-1"></label>
+                        <button type="submit" class="w-full bg-cyan-600 text-white rounded-lg py-2 hover:bg-cyan-700">Paiement demandé</button>
+                    </form>
+                    <form method="post" action="{% url 'AidFi:afase_controle_action' demande.id 'renvoi' %}" class="space-y-2 text-sm border-t pt-3">
+                        {% csrf_token %}
+                        <p class="font-semibold">Ou renvoyer le dossier à la MDS</p>
+                        <textarea name="motif" rows="2" required placeholder="Motif (pièce illisible, RIB au mauvais nom…)" class="w-full border rounded px-2 py-1"></textarea>
+                        <button type="submit" class="w-full bg-orange-500 text-white rounded-lg py-2 hover:bg-orange-600">↩️ Renvoyer à la MDS</button>
+                    </form>
+                    {% endif %}
+
+                    {% if vue_controle and demande.statut == "PAIEMENT_DEMANDE" %}
+                    <form method="post" action="{% url 'AidFi:afase_controle_action' demande.id 'paiement-effectue' %}" class="space-y-2 text-sm border-t pt-3">
+                        {% csrf_token %}
+                        <p class="font-semibold">Service de contrôle : paiement effectué par la paierie</p>
+                        <label class="block">Payé le <input type="date" name="date" class="w-full border rounded px-2 py-1"></label>
+                        <label class="block">Montant payé (€) <input type="text" inputmode="decimal" name="montant" placeholder="{{ decision.montant_accorde|floatformat:2 }}" class="w-full border rounded px-2 py-1"></label>
+                        <p class="text-xs text-gray-500">Vide : le montant accordé. Un paiement partiel est possible.</p>
+                        <button type="submit" class="w-full bg-green-600 text-white rounded-lg py-2 hover:bg-green-700">✅ Payé : clôturer le dossier</button>
+                    </form>
+                    {% endif %}
+
                     {% if can_paiement %}
+                    <details class="text-sm border-t pt-3">
+                        <summary class="cursor-pointer text-gray-500">Correction manuelle (cadre) : paiement hors circuit, ancien dossier</summary>
+                        <div class="mt-3">
                     <form method="post" action="{% url 'AidFi:afase_paiement' demande.id %}" class="space-y-3 text-sm">
                         {% csrf_token %}
                         <label class="block">Envoyé à la régie le
@@ -140,12 +215,8 @@
                         <p class="text-xs text-gray-500">Vide : le montant accordé est repris à la délivrance.</p>
                         <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 hover:bg-indigo-700">Enregistrer</button>
                     </form>
-                    {% else %}
-                    <ul class="text-sm text-gray-700 space-y-1">
-                        <li>Envoyé à la régie : {{ decision.date_envoi_regie|date:"d/m/Y"|default:"–" }}</li>
-                        <li>Délivré : {{ decision.date_delivrance|date:"d/m/Y"|default:"–" }}
-                            {% if decision.montant_delivre is not None %}({{ decision.montant_delivre|floatformat:2 }} €){% endif %}</li>
-                    </ul>
+                        </div>
+                    </details>
                     {% endif %}
                 </div>
                 {% endif %}

@@ -215,7 +215,8 @@ def cap_remise_paierie(request, demande_id):
     if (not request.user.a_la_capacite('cap_regie_centrale') or not demande.remise_paierie
             or demande.statut not in ('TRANSMISE_PAIERIE', 'REMISE')):
         return HttpResponseForbidden("Accès refusé")
-    svc.enregistrer_remise_paierie(demande, request.POST.get("numeros"), request.user)
+    svc.enregistrer_remise_paierie(demande, request.POST.get("numeros"), request.user,
+                                   request.POST.get("reference_comptable", ""))
     messages.success(request, "Remise enregistrée et dossier clôturé : l'AS et le cadre sont prévenus.")
     return redirect("AidFi:cap_detail", demande_id=demande.pk)
 

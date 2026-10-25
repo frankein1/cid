@@ -123,6 +123,8 @@ class DemandeCAP(DemandeAide):
     remis_a = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                 related_name='remises_cap_recues')
     numeros_paierie = models.TextField(blank=True, help_text="Numéros des titres remis par la paierie")
+    reference_comptable = models.CharField("N° d'enregistrement comptable", max_length=60, blank=True,
+                                           help_text="Saisi par la régie centrale (remise par la paierie)")
 
     # Clôture (feuille signée scannée)
     feuille_signee = models.ForeignKey('ged.DocumentGED', on_delete=models.SET_NULL, null=True, blank=True,

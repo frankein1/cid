@@ -47,6 +47,9 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
     # ✅ PDF OFFICIEL
     path("afase/<int:demande_id>/pdf/", v_afase.afase_pdf, name="afase_pdf",),
     path("afase/<int:demande_id>/paiement/", v_afase.afase_paiement, name="afase_paiement",),
+    path("afase/<int:demande_id>/transmettre/", v_afase.afase_transmettre, name="afase_transmettre",),
+    path("afase/<int:demande_id>/controle/<slug:action>/", v_afase.afase_controle_action, name="afase_controle_action",),
+    path("afase/controle/", v_afase.afase_controle, name="afase_controle",),
 
     # ==========================================================
     # RÉGIE D'URGENCE

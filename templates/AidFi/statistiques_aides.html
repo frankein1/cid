@@ -48,7 +48,7 @@
                     <th class="px-3 py-2 text-right">Accords</th>
                     <th class="px-3 py-2 text-right">Accordé</th>
                     <th class="px-3 py-2 text-right">Refus</th>
-                    {% if a.code == 'AFASE' %}<th class="px-3 py-2 text-right">Envois régie</th>{% endif %}
+                    {% if a.code == 'AFASE' %}<th class="px-3 py-2 text-right">Transmis contrôle</th><th class="px-3 py-2 text-right">Paiement demandé</th>{% endif %}
                     <th class="px-3 py-2 text-right">Délivrances</th>
                     <th class="px-3 py-2 text-right">Délivré</th>
                     <th class="px-3 py-2 text-right bg-blue-50">Cumul demandé</th>
@@ -58,14 +58,14 @@
             </thead>
             <tbody class="divide-y divide-gray-100 tabular-nums">
                 {% for m in a.mois %}
-                <tr class="{% if not m.deposees and not m.accords and not m.refus and not m.delivrees and not m.envois_regie %}text-gray-300{% endif %}">
+                <tr class="{% if not m.deposees and not m.accords and not m.refus and not m.delivrees and not m.envois_regie and not m.transmissions %}text-gray-300{% endif %}">
                     <td class="px-3 py-1.5 text-left text-gray-800">{{ m.mois }}</td>
                     <td class="px-3 py-1.5 text-right">{{ m.deposees|default:"–" }}</td>
                     <td class="px-3 py-1.5 text-right">{% if m.demande %}{{ m.demande|floatformat:2 }} €{% else %}–{% endif %}</td>
                     <td class="px-3 py-1.5 text-right">{{ m.accords|default:"–" }}</td>
                     <td class="px-3 py-1.5 text-right">{% if m.accorde %}{{ m.accorde|floatformat:2 }} €{% else %}–{% endif %}</td>
                     <td class="px-3 py-1.5 text-right">{{ m.refus|default:"–" }}</td>
-                    {% if a.code == 'AFASE' %}<td class="px-3 py-1.5 text-right">{{ m.envois_regie|default:"–" }}</td>{% endif %}
+                    {% if a.code == 'AFASE' %}<td class="px-3 py-1.5 text-right">{{ m.transmissions|default:"–" }}</td><td class="px-3 py-1.5 text-right">{{ m.envois_regie|default:"–" }}</td>{% endif %}
                     <td class="px-3 py-1.5 text-right">{{ m.delivrees|default:"–" }}</td>
                     <td class="px-3 py-1.5 text-right">{% if m.delivre %}{{ m.delivre|floatformat:2 }} €{% else %}–{% endif %}</td>
                     <td class="px-3 py-1.5 text-right bg-blue-50/50 text-gray-700">{{ m.cumul_demande|floatformat:2 }} €</td>
@@ -90,7 +90,7 @@
                     <th class="px-3 py-2 text-left">Usager</th><th class="px-3 py-2 text-left">Aide</th>
                     <th class="px-3 py-2 text-left">Déposé</th><th class="px-3 py-2 text-right">Demandé</th>
                     <th class="px-3 py-2 text-left">Décision</th><th class="px-3 py-2 text-right">Accordé</th>
-                    <th class="px-3 py-2 text-left">Envoi régie</th><th class="px-3 py-2 text-left">Délivré le</th>
+                    <th class="px-3 py-2 text-left">Transmis contrôle</th><th class="px-3 py-2 text-left">Paiement demandé</th><th class="px-3 py-2 text-left">Délivré le</th>
                     <th class="px-3 py-2 text-right">Délivré</th><th class="px-3 py-2 text-right">Délai</th>
                 </tr>
             </thead>
@@ -103,13 +103,14 @@
                     <td class="px-3 py-1.5 text-right">{{ l.montant_demande|floatformat:2 }} €</td>
                     <td class="px-3 py-1.5">{% if l.decision %}{{ l.decision|date:"d/m/Y" }} · {% if l.accord %}Accord{% elif l.accord is False %}Refus{% else %}Ajourné{% endif %}{% else %}–{% endif %}</td>
                     <td class="px-3 py-1.5 text-right">{% if l.montant_accorde is not None %}{{ l.montant_accorde|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5">{{ l.transmission|date:"d/m/Y"|default:"–" }}</td>
                     <td class="px-3 py-1.5">{{ l.envoi_regie|date:"d/m/Y"|default:"–" }}</td>
                     <td class="px-3 py-1.5">{{ l.delivrance|date:"d/m/Y"|default:"–" }}</td>
                     <td class="px-3 py-1.5 text-right">{% if l.montant_delivre is not None %}{{ l.montant_delivre|floatformat:2 }} €{% else %}–{% endif %}</td>
                     <td class="px-3 py-1.5 text-right">{% if l.delai_jours is not None %}{{ l.delai_jours }} j{% else %}–{% endif %}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="10" class="px-3 py-6 text-center text-gray-400 italic">Aucun dossier</td></tr>
+                <tr><td colspan="11" class="px-3 py-6 text-center text-gray-400 italic">Aucun dossier</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -118,7 +119,7 @@
 
     <p class="text-xs text-gray-500">
         Chaque montant est rangé au mois où il s'est produit : la demande au mois de dépôt, l'accord au mois de la décision,
-        la délivrance au mois de délivrance (AFASE : saisie dans « Suivi du paiement » ; CAP : remise des chèques ;
+        la délivrance au mois de délivrance (AFASE : paiement enregistré par le service de contrôle ; CAP : remise des chèques ;
         régie : versement). Les brouillons ne comptent pas. Filtre agent : demandes déposées par l'agent.
     </p>
 </div>

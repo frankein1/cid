@@ -1,0 +1,45 @@
+<!-- /templates/AidFi/afase_controle.html -->
+{% extends "base.html" %}
+
+{% block title %}Contrôle AFASE{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-1"><i class="fas fa-clipboard-check text-indigo-600 mr-2"></i>Contrôle AFASE</h1>
+    <p class="text-sm text-gray-500 mb-6">
+        Dossiers transmis par les MDS, complets. Après contrôle, saisissez la demande de paiement dans le logiciel comptable
+        (nom, RIB, somme), puis enregistrez le paiement : la MDS est prévenue.
+    </p>
+    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-4 py-3 text-left">Transmis le</th>
+                    <th class="px-4 py-3 text-left">MDS</th>
+                    <th class="px-4 py-3 text-left">Dossier</th>
+                    <th class="px-4 py-3 text-right">Accordé</th>
+                    <th class="px-4 py-3 text-left">Paiement à</th>
+                    <th class="px-4 py-3 text-left">État</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for d in demandes %}
+                <tr>
+                    <td class="px-4 py-3 whitespace-nowrap">{{ d.decision.date_transmission_controle|date:"d/m/Y" }}
+                        <span class="block text-xs text-gray-400">il y a {{ d.decision.date_transmission_controle|timesince:maintenant }}</span></td>
+                    <td class="px-4 py-3">{{ d.beneficiaire.mds.nom|default:"-" }}</td>
+                    <td class="px-4 py-3">AFASE n° {{ d.pk }}<span class="block text-xs text-gray-500">{{ d.beneficiaire.prenom }} {{ d.beneficiaire.nom|upper }}</span></td>
+                    <td class="px-4 py-3 text-right tabular-nums">{{ d.decision.montant_accorde|floatformat:2 }} €</td>
+                    <td class="px-4 py-3">{{ d.decision.get_paiement_a_display }}{% if d.decision.organisme_paiement %}<span class="block text-xs text-gray-500">{{ d.decision.organisme_paiement }}</span>{% endif %}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs {{ d.statut_badge_classes }}">{{ d.get_statut_display }}</span></td>
+                    <td class="px-4 py-3 text-right"><a href="{% url 'AidFi:afase_detail' d.pk %}" class="text-indigo-700 hover:underline">Ouvrir</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400 italic">Aucun dossier en attente</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
