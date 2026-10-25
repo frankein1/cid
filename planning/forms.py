@@ -304,3 +304,40 @@ ISSUES_RDV = [
     ('REPORT_MDS', "Reporté par la MDS"),
     ('RESERVE', "Prévu (remettre à prévu)"),
 ]
+
+
+# =============================================================================
+# RÉUNIONS (lot 2) : convocation par le cadre ou l'agent administratif
+# =============================================================================
+
+class ReunionForm(forms.Form):
+    intitule = forms.CharField(label="Intitulé", max_length=120,
+                               help_text="Visible des seuls participants. Ex. : Synthèse IP, réunion d'équipe…")
+    domaine = forms.ChoiceField(label="Domaine", initial='INSTITUTIONNEL')
+    date = forms.DateField(label="Date", widget=forms.DateInput(attrs={'type': 'date'}))
+    heure_debut = forms.TimeField(label="Début", widget=forms.TimeInput(attrs={'type': 'time'}))
+    heure_fin = forms.TimeField(label="Fin", widget=forms.TimeInput(attrs={'type': 'time'}))
+    lieu_precis = forms.CharField(label="Lieu", max_length=200, required=False, initial="Salle de réunion")
+    ordre_du_jour = forms.CharField(label="Ordre du jour", required=False, widget=forms.Textarea(attrs={'rows': 3}))
+    participants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), label="Participants",
+                                                  widget=forms.CheckboxSelectMultiple)
+
+    def __init__(self, *args, mds=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import DOMAINES_RDV
+        self.fields['domaine'].choices = DOMAINES_RDV
+        self.fields['participants'].queryset = User.objects.filter(
+            profils_mds__mds=mds, profils_mds__actif=True, is_active=True).distinct().order_by('last_name', 'first_name')
+        for name, field in self.fields.items():
+            if not isinstance(field.widget, (forms.CheckboxSelectMultiple, forms.CheckboxInput)):
+                field.widget.attrs['class'] = 'w-full px-3 py-2 border border-gray-300 rounded-md'
+
+    def clean(self):
+        data = super().clean()
+        debut, fin, jour = data.get('heure_debut'), data.get('heure_fin'), data.get('date')
+        if debut and fin and debut >= fin:
+            self.add_error('heure_fin', "L'heure de fin doit être après l'heure de début.")
+        from django.utils import timezone
+        if jour and jour < timezone.localdate():
+            self.add_error('date', "Une réunion se convoque pour aujourd'hui ou plus tard.")
+        return data

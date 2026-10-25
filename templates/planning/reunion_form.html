@@ -1,0 +1,155 @@
+<!-- /templates/planning/reunion_form.html -->
+{% extends "base.html" %}
+
+{% block title %}Convoquer une réunion{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-1">
+        <i class="fas fa-users text-orange-600 mr-2"></i>Convoquer une réunion
+    </h1>
+    <p class="text-sm text-gray-500 mb-6">
+        Cochez les participants dans la grille : vous voyez qui est libre, sans aucun détail sur les rendez-vous.
+        La convocation bloque leur agenda et leur envoie un message CID.
+    </p>
+
+    {% if avertissements %}
+    <div class="mb-4 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-900 text-sm rounded">
+        <p class="font-semibold mb-1"><i class="fas fa-exclamation-triangle mr-1"></i>Attention : conflits d'agenda</p>
+        <ul class="list-disc ml-5">{% for a in avertissements %}<li>{{ a }}</li>{% endfor %}</ul>
+        <p class="mt-2">Vous pouvez changer l'horaire, ou convoquer quand même (la convocation s'impose).</p>
+    </div>
+    {% endif %}
+    {% if form.non_field_errors %}
+    <div class="mb-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-800 text-sm rounded">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <input type="hidden" name="date" value="{{ jour|date:'Y-m-d' }}">
+
+        <!-- Disponibilités de l'équipe -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2">
+                    <a href="?date={{ jour_precedent|date:'Y-m-d' }}" class="px-3 py-1 border rounded hover:bg-gray-50" title="Jour précédent">‹</a>
+                    <h2 class="font-bold text-gray-800">{{ jour|date:"l j F Y"|capfirst }}</h2>
+                    <a href="?date={{ jour_suivant|date:'Y-m-d' }}" class="px-3 py-1 border rounded hover:bg-gray-50" title="Jour suivant">›</a>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-gray-600">
+                    <span class="flex items-center"><span class="w-4 h-4 border border-gray-300 bg-white mr-1"></span>Libre</span>
+                    <span class="flex items-center"><span class="w-4 h-4 bg-gray-300 mr-1"></span>Occupé</span>
+                    <span class="flex items-center"><span class="w-4 h-4 bg-gray-900 mr-1"></span>Indisponible</span>
+                    <span class="flex items-center"><span class="w-4 h-4 bg-orange-200 mr-1"></span>Horaire choisi</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="text-xs border-collapse" id="grille">
+                    <thead>
+                        <tr>
+                            <th class="sticky left-0 bg-white text-left pr-3 py-1">Agent</th>
+                            {% for h in grille.entetes %}
+                            <th class="px-0.5 py-1 font-normal text-gray-500 cursor-pointer hover:text-orange-700" data-heure="{{ h }}"
+                                title="Commencer à {{ h }}">{% if h|slice:"3:" == "00" %}{{ h|slice:":2" }}h{% endif %}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in grille.lignes %}
+                        <tr>
+                            <td class="sticky left-0 bg-white pr-3 py-1 whitespace-nowrap">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" name="participants" value="{{ ligne.agent.pk }}" {% if ligne.coche %}checked{% endif %}>
+                                    {{ ligne.agent.get_full_name|default:ligne.agent.username }}
+                                </label>
+                            </td>
+                            {% for etat in ligne.etats %}
+                            <td class="w-5 h-6 border border-gray-200 case
+                                {% if etat == 'occupe' %}bg-gray-300{% elif etat == 'indisponible' %}bg-gray-900{% else %}bg-white{% endif %}"
+                                data-index="{{ forloop.counter0 }}" data-etat="{{ etat }}"></td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {{ form.participants.errors }}
+            <p class="text-xs text-gray-500 mt-2">Astuce : cliquez sur une heure en haut de la grille pour la prendre comme début.</p>
+        </div>
+
+        <!-- La réunion -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.intitule.label }} *</label>
+                {{ form.intitule }}
+                <p class="text-xs text-gray-500 mt-1">{{ form.intitule.help_text }}</p>{{ form.intitule.errors }}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.domaine.label }}</label>
+                {{ form.domaine }}
+                <p class="text-xs text-gray-500 mt-1">Une synthèse IP se classe en IP : ses heures comptent dans le domaine IP.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.lieu_precis.label }}</label>
+                {{ form.lieu_precis }}
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.heure_debut.label }} *</label>
+                    {{ form.heure_debut }}{{ form.heure_debut.errors }}
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.heure_fin.label }} *</label>
+                    {{ form.heure_fin }}{{ form.heure_fin.errors }}
+                </div>
+            </div>
+            <div>{{ form.date.errors }}</div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.ordre_du_jour.label }}</label>
+                {{ form.ordre_du_jour }}
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'planning:calendrier_rdv' %}" class="px-5 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">Annuler</a>
+            {% if avertissements %}
+            <button type="submit" name="confirmer" value="1" class="px-5 py-2 bg-amber-600 text-white rounded-md text-sm hover:bg-amber-700">Convoquer quand même</button>
+            {% endif %}
+            <button type="submit" class="px-5 py-2 bg-orange-600 text-white rounded-md text-sm hover:bg-orange-700">Convoquer</button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const debut = document.getElementById('id_heure_debut');
+    const fin = document.getElementById('id_heure_fin');
+    const entetes = Array.from(document.querySelectorAll('#grille th[data-heure]')).map(th => th.dataset.heure);
+    const versMin = (h) => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+    // Colore en orange l'horaire choisi (sur les cases libres) pour repérer les conflits d'un coup d'œil
+    function surligner() {
+        if (!debut.value || !fin.value) return;
+        const d = versMin(debut.value), f = versMin(fin.value);
+        document.querySelectorAll('#grille td.case').forEach(td => {
+            const m = versMin(entetes[td.dataset.index]);
+            const dedans = m < f && m + 30 > d;
+            td.classList.toggle('bg-orange-200', dedans && td.dataset.etat === 'libre');
+            td.classList.toggle('bg-white', !dedans && td.dataset.etat === 'libre');
+            td.classList.toggle('ring-2', dedans && td.dataset.etat !== 'libre');
+            td.classList.toggle('ring-orange-500', dedans && td.dataset.etat !== 'libre');
+        });
+    }
+    document.querySelectorAll('#grille th[data-heure]').forEach(th => th.addEventListener('click', () => {
+        debut.value = th.dataset.heure;
+        if (!fin.value || versMin(fin.value) <= versMin(debut.value)) {
+            const m = versMin(debut.value) + 60;
+            fin.value = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+        }
+        surligner();
+    }));
+    debut.addEventListener('change', surligner);
+    fin.addEventListener('change', surligner);
+    surligner();
+})();
+</script>
+{% endblock %}

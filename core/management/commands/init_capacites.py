@@ -45,6 +45,7 @@ CAPACITES = [
     ('planning_generer', 'Planning – Générer'),
     ('planning_bloquer', 'Planning – Bloquer'),
     ('planning_exporter', 'Planning – Exporter'),
+    ('planning_convoquer', 'Planning – Convoquer une réunion (voir les disponibilités, bloquer les agendas)'),
 
     # --- SPÉCIFIQUES AIDFI (Ajoutés ici pour centralisation) ---
     ('peut_gestion_aides_aidfi', 'Gestion des aides AidFi'),
