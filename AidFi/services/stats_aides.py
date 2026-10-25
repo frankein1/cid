@@ -10,7 +10,7 @@ Statistiques des aides financières, MOIS PAR MOIS sur une année, avec cumuls.
 Pour chaque aide (AFASE, chèques service, régie d'urgence) :
   - demandes déposées (mois de dépôt)        : nombre, montant demandé
   - accords / refus (mois de la décision)    : nombre, montant accordé
-  - envois à la régie (AFASE, mois d'envoi)  : nombre
+  - AFASE : transmissions au contrôle, demandes de paiement au logiciel comptable (mois de chaque étape)
   - délivrances (mois de délivrance)         : nombre, montant délivré
   - cumuls de l'année : demandé, accordé, délivré
 Les brouillons ne comptent pas. Montants en euros.
@@ -37,7 +37,7 @@ def _jour(valeur):
 
 def _vide():
     return {'deposees': 0, 'demande': Decimal(0), 'accords': 0, 'accorde': Decimal(0), 'refus': 0,
-            'envois_regie': 0, 'delivrees': 0, 'delivre': Decimal(0)}
+            'transmissions': 0, 'envois_regie': 0, 'delivrees': 0, 'delivre': Decimal(0)}
 
 
 def dossiers(mds, annee, agent=None):
@@ -53,13 +53,14 @@ def dossiers(mds, annee, agent=None):
         l = {'demande': d, 'code': code, 'depot': _jour(d.date_creation),
              'montant_demande': d.montant_sollicite or Decimal(0),
              'decision': None, 'accord': None, 'montant_accorde': None,
-             'envoi_regie': None, 'delivrance': None, 'montant_delivre': None}
+             'transmission': None, 'envoi_regie': None, 'delivrance': None, 'montant_delivre': None}
         if code == 'AFASE':
             dec = getattr(getattr(d, 'demandeafase', None), 'decision', None)
             if dec:
                 l.update(decision=_jour(dec.date_decision), accord=dec.type_decision == 'ACCORD',
                          montant_accorde=dec.montant_accorde if dec.type_decision == 'ACCORD' else None,
-                         envoi_regie=dec.date_envoi_regie, delivrance=dec.date_delivrance,
+                         envoi_regie=dec.date_demande_paiement or dec.date_envoi_regie,
+                         transmission=_jour(dec.date_transmission_controle), delivrance=dec.date_delivrance,
                          montant_delivre=dec.montant_delivre)
                 if dec.type_decision == 'AJO':
                     l['accord'] = None
@@ -79,7 +80,7 @@ def dossiers(mds, annee, agent=None):
                     l.update(delivrance=_jour(regie.date_versement), montant_delivre=regie.montant_urgence)
         if l['delivrance'] and l['depot']:
             l['delai_jours'] = (l['delivrance'] - l['depot']).days
-        if any(x and x.year == annee for x in (l['depot'], l['decision'], l['envoi_regie'], l['delivrance'])):
+        if any(x and x.year == annee for x in (l['depot'], l['decision'], l['transmission'], l['envoi_regie'], l['delivrance'])):
             lignes.append(l)
     return sorted(lignes, key=lambda l: l['depot'] or date.min)
 
@@ -100,6 +101,8 @@ def calculer(mds, annee, agent=None):
                 m['accorde'] += l['montant_accorde'] or 0
             elif l['accord'] is False:
                 m['refus'] += 1
+        if l['transmission'] and l['transmission'].year == annee:
+            mois[l['transmission'].month - 1]['transmissions'] += 1
         if l['envoi_regie'] and l['envoi_regie'].year == annee:
             mois[l['envoi_regie'].month - 1]['envois_regie'] += 1
         if l['delivrance'] and l['delivrance'].year == annee:
@@ -128,21 +131,21 @@ def euros(v):
 
 def lignes_csv(resultat):
     yield ["Aide", "Mois", "Demandes déposées", "Montant demandé", "Accords", "Montant accordé", "Refus",
-           "Envois à la régie", "Délivrances", "Montant délivré", "Cumul demandé", "Cumul accordé", "Cumul délivré"]
+           "Transmis au contrôle", "Demandes de paiement (comptabilité)", "Délivrances", "Montant délivré", "Cumul demandé", "Cumul accordé", "Cumul délivré"]
     for a in resultat['aides']:
         if not a['a_des_donnees']:
             continue
         for m in a['mois']:
             yield [a['libelle'], m['mois'], m['deposees'], euros(m['demande']), m['accords'], euros(m['accorde']),
-                   m['refus'], m['envois_regie'], m['delivrees'], euros(m['delivre']),
+                   m['refus'], m['transmissions'], m['envois_regie'], m['delivrees'], euros(m['delivre']),
                    euros(m['cumul_demande']), euros(m['cumul_accorde']), euros(m['cumul_delivre'])]
     yield []
     yield ["Dossier", "Usager", "Aide", "Déposé le", "Montant demandé", "Décision le", "Décision",
-           "Montant accordé", "Envoyé à la régie le", "Délivré le", "Montant délivré", "Délai (jours)", "Agent"]
+           "Montant accordé", "Transmis au contrôle le", "Paiement demandé le", "Délivré le", "Montant délivré", "Délai (jours)", "Agent"]
     fr = lambda d: d.strftime('%d/%m/%Y') if d else ""
     for l in resultat['dossiers']:
         d = l['demande']
         yield [d.pk, d.beneficiaire.code_interne, l['code'], fr(l['depot']), euros(l['montant_demande']),
                fr(l['decision']), {True: "Accord", False: "Refus", None: ""}[l['accord']],
-               euros(l['montant_accorde']), fr(l['envoi_regie']), fr(l['delivrance']), euros(l['montant_delivre']),
+               euros(l['montant_accorde']), fr(l['transmission']), fr(l['envoi_regie']), fr(l['delivrance']), euros(l['montant_delivre']),
                l.get('delai_jours', ""), (d.cree_par.get_full_name() or d.cree_par.username) if d.cree_par else ""]

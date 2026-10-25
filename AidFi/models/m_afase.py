@@ -256,9 +256,21 @@ class DecisionAFASE(AuditedMixin):
         related_name="decisions_afase",
     )
 
-    # Suivi du paiement (après un accord) : pour les statistiques mois par mois
+    # Circuit du paiement (après un accord) : cadre → service de contrôle → comptabilité → paierie
+    PAIEMENT_A_CHOICES = [("FAMILLE", "La famille"), ("ORGANISME", "Un organisme (CLSH, colonie, cantine…)")]
+    paiement_a = models.CharField("Paiement à", max_length=10, choices=PAIEMENT_A_CHOICES, blank=True)
+    organisme_paiement = models.CharField("Organisme bénéficiaire du paiement", max_length=150, blank=True)
+    date_transmission_controle = models.DateTimeField("Transmis au contrôle le", null=True, blank=True)
+    transmis_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                     blank=True, related_name="+")
+    date_demande_paiement = models.DateField("Paiement demandé le", null=True, blank=True)
+    reference_comptable = models.CharField("N° d'enregistrement comptable", max_length=60, blank=True)
+    controle_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                     blank=True, related_name="+")
+    motif_renvoi = models.TextField("Motif du renvoi à la MDS", blank=True)
+    # Ancien suivi manuel (conservé pour l'historique et les statistiques)
     date_envoi_regie = models.DateField("Envoyé à la régie le", null=True, blank=True)
-    date_delivrance = models.DateField("Délivré le", null=True, blank=True)
+    date_delivrance = models.DateField("Payé / délivré le", null=True, blank=True)
     montant_delivre = models.DecimalField("Montant délivré", max_digits=10, decimal_places=2,
                                           null=True, blank=True)
 

@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
+from django.utils import timezone
 import base64
 
 from AidFi.forms.afase_workflow_form import AFASEWorkflowForm
@@ -17,6 +18,7 @@ from AidFi.forms.f_afase import EvaluationSocialeAFASEForm, DecisionAFASEForm
 from AidFi.models.m_afase import DemandeAFASE
 from AidFi.models.m_generique import PieceJustificative
 from AidFi.services.afase_pdf import generer_pdf_afase
+from AidFi.services import afase_circuit as circuit
 from ged.services import stocker_pdf_afase
 from ged.forms import DocumentGEDForm
 from beneficiaire.models import Beneficiaire
@@ -106,7 +108,8 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
 def afase_detail(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
+    vue_controle = circuit.controle_peut_voir(request.user, demande)
+    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or vue_controle):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
@@ -122,8 +125,75 @@ def afase_detail(request, demande_id):
             "can_decider": request.user.peut_agir_sur_objet(demande, "peut_decider"),
             "can_instruire": request.user.peut_agir_sur_objet(demande, "peut_instruire"),
             "can_paiement": _peut_suivre_paiement(request.user, demande, decision),
+            # Circuit du paiement (contrôle → comptabilité → paierie)
+            "pieces_requises": circuit.etat_pieces(demande),
+            "pieces_manquantes": circuit.pieces_manquantes(demande),
+            "can_transmettre": circuit.peut_transmettre(request.user, demande),
+            "vue_controle": vue_controle,
+            "can_ajouter_piece": _peut_ajouter_piece(request.user, demande),
         },
     )
+
+
+def _peut_ajouter_piece(user, demande):
+    """Avant décision : l'agent ; après un accord et avant transmission : aussi le cadre (compléter le dossier)."""
+    if demande.est_modifiable and user.peut_agir_sur_objet(demande, "peut_modifier"):
+        return True
+    return demande.statut == "ACCORDEE" and (
+        user.peut_agir_sur_objet(demande, "peut_modifier") or circuit.peut_transmettre(user, demande))
+
+
+@login_required
+def afase_transmettre(request, demande_id):
+    """Le cadre (ou le secrétariat) transmet le dossier complet au service de contrôle."""
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    if request.method != "POST":
+        return HttpResponseForbidden()
+    try:
+        circuit.transmettre(demande, request.user, request.POST.get("paiement_a"),
+                            request.POST.get("organisme_paiement", ""), request.POST.get("identites") == "on")
+        messages.success(request, "Dossier transmis au service de contrôle.")
+    except circuit.CircuitErreur as e:
+        messages.error(request, str(e))
+    return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+
+@login_required
+def afase_controle_action(request, demande_id, action):
+    """Service de contrôle : paiement demandé (logiciel comptable), paiement effectué, renvoi à la MDS."""
+    from django.utils.dateparse import parse_date
+    from decimal import InvalidOperation
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    if request.method != "POST" or not circuit.controle_peut_voir(request.user, demande):
+        return HttpResponseForbidden("Accès réservé au service de contrôle.")
+    try:
+        if action == "paiement-demande":
+            circuit.demander_paiement(demande, request.user, parse_date(request.POST.get("date") or ""),
+                                      request.POST.get("reference"))
+            messages.success(request, "Demande de paiement enregistrée.")
+        elif action == "paiement-effectue":
+            circuit.enregistrer_paiement(demande, request.user, parse_date(request.POST.get("date") or ""),
+                                         circuit.lire_montant(request.POST.get("montant")))
+            messages.success(request, "Paiement enregistré : dossier clôturé, la MDS est prévenue.")
+        elif action == "renvoi":
+            circuit.renvoyer(demande, request.user, request.POST.get("motif"))
+            messages.success(request, "Dossier renvoyé à la MDS.")
+            return redirect("AidFi:afase_controle")
+        else:
+            return HttpResponseForbidden()
+    except (circuit.CircuitErreur, InvalidOperation) as e:
+        messages.error(request, str(e) if isinstance(e, circuit.CircuitErreur) else "Montant invalide.")
+    return redirect("AidFi:afase_detail", demande_id=demande.id)
+
+
+@login_required
+def afase_controle(request):
+    """File du service de contrôle : dossiers AFASE transmis par toutes les MDS."""
+    if not circuit.est_controle(request.user):
+        return HttpResponseForbidden("Accès réservé au service de contrôle.")
+    demandes = (DemandeAFASE.objects.filter(statut__in=('TRANSMISE_CONTROLE', 'PAIEMENT_DEMANDE'))
+                .select_related('beneficiaire__mds', 'decision').order_by('decision__date_transmission_controle'))
+    return render(request, "AidFi/afase_controle.html", {"demandes": demandes, "maintenant": timezone.now()})
 
 
 def _peut_suivre_paiement(user, demande, decision):
@@ -292,10 +362,8 @@ def afase_previsualisation(request, demande_id):
 def ajouter_document_afase(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.peut_agir_sur_objet(demande, "peut_modifier"):
-        return HttpResponseForbidden()
-    if not demande.est_modifiable:
-        messages.error(request, "Cette demande n'est plus modifiable.")
+    if not _peut_ajouter_piece(request.user, demande):
+        messages.error(request, "Vous ne pouvez plus ajouter de pièce à cette demande.")
         return redirect("AidFi:afase_detail", demande_id=demande.id)
 
     if request.method == "POST":
@@ -318,10 +386,14 @@ def ajouter_document_afase(request, demande_id):
                 messages.error(request, "Le fichier n'a pas pu être stocké. Réessayez plus tard.")
                 return redirect("AidFi:afase_detail", demande_id=demande.id)
 
+            from AidFi.models.m_generique import TYPE_PIECE_CHOICES
+            type_piece = request.POST.get("type_piece")
+            if type_piece not in dict(TYPE_PIECE_CHOICES):
+                type_piece = 'AUTRE'
             PieceJustificative.objects.get_or_create(
                 demande=demande,
                 document_ged=doc,
-                defaults={'type_piece': 'AUTRE', 'statut': 'VALIDE'}
+                defaults={'type_piece': type_piece, 'statut': 'VALIDE'}
             )
             messages.success(request, "Document ajouté et lié à la demande.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
@@ -334,6 +406,8 @@ def ajouter_document_afase(request, demande_id):
         {
             "form": form,
             "demande": demande,
+            "types_piece": __import__('AidFi.models.m_generique', fromlist=['x']).TYPE_PIECE_CHOICES,
+            "type_initial": request.GET.get("type", ""),
         }
     )
 
@@ -346,7 +420,7 @@ def ajouter_document_afase(request, demande_id):
 def afase_pdf(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
+    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or circuit.controle_peut_voir(request.user, demande)):
         return HttpResponseForbidden("Accès refusé")
 
     buffer = generer_pdf_afase(demande)

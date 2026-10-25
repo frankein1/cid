@@ -115,6 +115,11 @@
                             <i class="fas fa-vault mr-2"></i>Coffre CAP
                         </a>
                         {% endif %}
+                        {% if user|a_la_capacite:'afase_controle' %}
+                        <a href="{% url 'AidFi:afase_controle' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <i class="fas fa-clipboard-check mr-2"></i>Contrôle AFASE
+                        </a>
+                        {% endif %}
                         {% if user|a_la_capacite:'cap_regie_centrale' %}
                         <a href="{% url 'AidFi:cap_paierie' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                             <i class="fas fa-building-columns mr-2"></i>Paierie CAP
@@ -242,6 +247,9 @@
 
                 {% if user.mds_regies.exists and not user|a_la_capacite:'peut_valider_cheque_aidfi' %}
                 <a href="{% url 'AidFi:cap_coffres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-vault mr-2 w-4"></i>Coffre CAP</a>
+                {% endif %}
+                {% if user|a_la_capacite:'afase_controle' %}
+                <a href="{% url 'AidFi:afase_controle' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-clipboard-check mr-2 w-4"></i>Contrôle AFASE</a>
                 {% endif %}
                 {% if user|a_la_capacite:'cap_regie_centrale' %}
                 <a href="{% url 'AidFi:cap_paierie' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-building-columns mr-2 w-4"></i>Paierie CAP</a>

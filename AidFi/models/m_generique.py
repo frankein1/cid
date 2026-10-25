@@ -23,16 +23,27 @@ STATUT_DEMANDE = [
     # Circuit CAP (chèques service)
     ('TRANSMISE_PAIERIE', 'Transmise à la paierie'),
     ('REMISE', 'Remise, en attente de clôture'),
+    # Circuit AFASE : cadre → service de contrôle → logiciel comptable (finances) → paierie
+    ('TRANSMISE_CONTROLE', 'Transmise au service de contrôle'),
+    ('PAIEMENT_DEMANDE', 'Paiement demandé (comptabilité)'),
     ('CLOTUREE', 'Clôturée'),
+]
+
+# Pièces exigées avant l'envoi d'une AFASE au service de contrôle
+PIECES_REQUISES_AFASE = [
+    ('IDENTITE', "Pièce(s) d'identité du bénéficiaire et des enfants ou majeurs à charge"),
+    ('LIVRET_FAMILLE', "Livret de famille complet"),
+    ('RIB', "RIB du destinataire du paiement (famille ou organisme)"),
+    ('FACTURE_DEVIS', "Facture ou devis (cantine, dentiste, club, CLSH, colonie…)"),
 ]
 
 # Statuts dans lesquels le travailleur social peut encore modifier la demande
 STATUTS_MODIFIABLES = ('BROUILLON', 'EN_INSTRUCTION', 'AJO')
 
 TYPE_PIECE_CHOICES = [
-    ('IDENTITE', 'ID document'), ('LIVRET_FAMILLE', 'Family record book'), 
-    ('RIB', 'Bank account details'), ('DOMICILE', 'Proof of address'),
-    ('RESSOURCES', 'Income proof'), ('CHARGES', 'Expense proof'), ('AUTRE', 'Other document'),
+    ('IDENTITE', "Pièce d'identité"), ('LIVRET_FAMILLE', 'Livret de famille'),
+    ('RIB', 'RIB'), ('FACTURE_DEVIS', 'Facture ou devis'), ('DOMICILE', 'Justificatif de domicile'),
+    ('RESSOURCES', 'Justificatif de ressources'), ('CHARGES', 'Justificatif de charges'), ('AUTRE', 'Autre document'),
     ('DECISION', 'Decision'),
     ('REMISE_CAP', 'Feuille de remise CAP signée'),
 ]
@@ -117,6 +128,7 @@ class DemandeAide(models.Model):
                 "EN_INSTRUCTION": "bg-yellow-100 text-yellow-800", "ACCORDEE": "bg-emerald-100 text-emerald-800",
                 "REFUSEE": "bg-red-100 text-red-800", "AJO": "bg-orange-100 text-orange-800",
                 "TRANSMISE_PAIERIE": "bg-purple-100 text-purple-800", "REMISE": "bg-amber-100 text-amber-800",
+                "TRANSMISE_CONTROLE": "bg-indigo-100 text-indigo-800", "PAIEMENT_DEMANDE": "bg-cyan-100 text-cyan-800",
                 "CLOTUREE": "bg-gray-100 text-gray-600"}.get(self.statut, "bg-gray-200 text-gray-700")
     
     def save(self, *args, **kwargs):
@@ -169,6 +181,7 @@ LIBELLES_STATUT_FR = {
     'DEPOSEE': 'Déposée au cadre', 'VALIDE': 'Validée', 'ACCORDEE': 'Accordée',
     'REFUSEE': 'Refusée', 'AJO': 'Ajournée', 'ANNULEE': 'Annulée',
     'TRANSMISE_PAIERIE': 'Transmise à la paierie', 'REMISE': 'Chèques remis (attente de clôture)',
+    'TRANSMISE_CONTROLE': 'Transmise au service de contrôle', 'PAIEMENT_DEMANDE': 'Paiement demandé (comptabilité)',
     'CLOTUREE': 'Clôturée',
 }
 

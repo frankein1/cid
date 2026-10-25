@@ -141,7 +141,7 @@ def enregistrer_remise(demande, numeros, cadre, agent_receveur):
     return []
 
 
-def enregistrer_remise_paierie(demande, numeros_texte, regisseur):
+def enregistrer_remise_paierie(demande, numeros_texte, regisseur, reference_comptable=""):
     """
     Remise faite par la paierie : pas de stock MDS, numéros notés pour mémoire.
     C'est le régisseur de la paierie qui CLÔTURE le dossier ; l'AS (et le cadre qui a décidé)
@@ -154,6 +154,8 @@ def enregistrer_remise_paierie(demande, numeros_texte, regisseur):
     numeros = "\n".join(lire_numeros(numeros_texte))
     if numeros:
         demande.numeros_paierie = numeros
+    if reference_comptable.strip():
+        demande.reference_comptable = reference_comptable.strip()[:60]
     demande.statut = 'CLOTUREE'
     demande.date_cloture = maintenant
     demande.cloture_par = regisseur
@@ -177,7 +179,8 @@ def prevenir_cloture_paierie(demande, regisseur):
             contenu=(f"Les chèques service ({demande.montant_accorde} €) pour {benef.prenom} {benef.nom.upper()} "
                      f"ont été remis par la paierie départementale le "
                      f"{timezone.localtime(demande.date_remise):%d/%m/%Y}.\n"
-                     f"Le dossier n° {demande.pk} est clôturé par {qui}.\n\nMessage automatique de CID."),
+                     + (f"N° d'enregistrement comptable : {demande.reference_comptable}.\n" if demande.reference_comptable else "")
+                     + f"Le dossier n° {demande.pk} est clôturé par {qui}.\n\nMessage automatique de CID."),
             motif='suivi_dossier',
         )
 

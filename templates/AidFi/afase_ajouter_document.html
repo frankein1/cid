@@ -15,6 +15,17 @@
         <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             
+            <!-- Type de pièce : sert à vérifier que le dossier est complet avant l'envoi au contrôle -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Type de pièce pour le dossier AFASE *</label>
+                <select name="type_piece" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    {% for code, libelle in types_piece %}{% if code != 'DECISION' and code != 'REMISE_CAP' %}
+                    <option value="{{ code }}" {% if code == type_initial %}selected{% endif %}>{{ libelle }}</option>
+                    {% endif %}{% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pièces exigées : identité(s), livret de famille, RIB du destinataire du paiement, facture ou devis.</p>
+            </div>
+
             {% for field in form %}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
