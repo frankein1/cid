@@ -71,9 +71,13 @@ def nouveau_rdv(request):
                 cree_par=request.user, reserve_par=request.user, date_reservation=timezone.now(),
             )
             rdv.co_intervenants.set(d['co_intervenants'])
+            rdv.partenaires.set(d['partenaires'])
             HistoriqueCreneau.objects.create(creneau=rdv, action='CREATION', utilisateur=request.user,
                                              commentaire=f"{rdv.get_nature_display()} – {rdv.get_domaine_display()}")
             messages.success(request, f"Rendez-vous noté le {rdv.date:%d/%m/%Y} à {rdv.heure_debut:%H:%M}.")
+            if rdv.partenaires.filter(email__gt='').exists():
+                # Tripartite : on propose tout de suite d'inviter le partenaire
+                return redirect('planning:invitation_partenaire', creneau_id=rdv.pk)
             if rdv.beneficiaire:
                 return redirect('beneficiaire:detail_beneficiaire', code_interne=rdv.beneficiaire.code_interne)
             return redirect('planning:calendrier_rdv')
@@ -283,3 +287,42 @@ def nouvelle_reunion(request):
         'jour_precedent': jour.fromordinal(jour.toordinal() - 1),
         'jour_suivant': jour.fromordinal(jour.toordinal() + 1),
     })
+
+
+# =============================================================================
+# INVITATION DES PARTENAIRES (lot 3)
+# =============================================================================
+
+@login_required
+def invitation_partenaire(request, creneau_id):
+    """Préparer l'e-mail et le fichier .ics pour chaque partenaire du rendez-vous."""
+    from urllib.parse import quote
+    from .invitation import objet_invitation, texte_invitation
+    rdv = get_object_or_404(CreneauRdv, pk=creneau_id)
+    if not rdv.voit_le_detail(request.user):
+        return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
+    avec_lieu = request.GET.get('lieu', '1') != '0'
+    objet, texte = objet_invitation(rdv), texte_invitation(rdv, avec_lieu)
+    corps = (f"Bonjour,\n\n{texte}\n\nVous trouverez l'invitation en pièce jointe : "
+             f"un clic l'ajoute à votre agenda.\n\nCordialement,\n"
+             f"{request.user.get_full_name() or request.user.username}")
+    invites = [{'partenaire': p,
+                'mailto': f"mailto:{p.email}?subject={quote(objet)}&body={quote(corps)}" if p.email else ""}
+               for p in rdv.partenaires.all()]
+    return render(request, 'planning/invitation_partenaire.html', {
+        'rdv': rdv, 'invites': invites, 'texte': texte, 'objet': objet, 'avec_lieu': avec_lieu,
+    })
+
+
+@login_required
+def invitation_ics(request, creneau_id, partenaire_id):
+    from django.http import HttpResponse
+    from .invitation import fichier_ics
+    rdv = get_object_or_404(CreneauRdv, pk=creneau_id)
+    if not rdv.voit_le_detail(request.user):
+        return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
+    partenaire = get_object_or_404(rdv.partenaires, pk=partenaire_id)
+    r = HttpResponse(fichier_ics(rdv, partenaire, request.GET.get('lieu', '1') != '0'),
+                     content_type='text/calendar; charset=utf-8; method=REQUEST')
+    r['Content-Disposition'] = f'attachment; filename="invitation_{rdv.date:%Y%m%d}_{rdv.heure_debut:%H%M}.ics"'
+    return r

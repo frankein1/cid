@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     'planning',
     'AidFi',
     'connecteurs',
+    'partenaires',
 ]
 
 # ============================================================

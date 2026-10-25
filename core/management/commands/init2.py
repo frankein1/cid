@@ -240,4 +240,20 @@ class Command(BaseCommand):
         LienFamilial.objects.get_or_create(personne_a=demo["API-JUL"], personne_b=demo["API-MAX"],
                                            type_lien="ENFANT", defaults={"vit_au_foyer": True})
 
+        # ----------------------------------------------------------
+        # Annuaire des partenaires : contacts FICTIFS (domaine exemple.fr, réservé aux exemples)
+        # ----------------------------------------------------------
+        from partenaires.models import Partenaire
+        for organisme, thematique, prenom, nom, fonction, email, ville in [
+            ("Bailleur social Les Pins (fictif)", "LOGEMENT", "Claire", "Durand", "Chargée de gestion locative",
+             "c.durand@exemple.fr", "Port-de-Bouc"),
+            ("Centre médico-psychologique (fictif)", "SANTE", "Marc", "Lefort", "Infirmier coordinateur",
+             "m.lefort@exemple.fr", "Martigues"),
+            ("Collège Jean Moulin (fictif)", "SCOLARITE", "Inès", "Benali", "Conseillère principale d'éducation",
+             "cpe.college@exemple.fr", "Port-de-Bouc"),
+        ]:
+            Partenaire.objects.get_or_create(organisme=organisme, defaults={
+                "thematique": thematique, "prenom_contact": prenom, "nom_contact": nom, "fonction": fonction,
+                "email": email, "ville": ville, "mds_origine": mds})
+
         self.stdout.write(self.style.SUCCESS("\n🎉 Données de test créées avec succès"))

@@ -1,0 +1,55 @@
+<!-- /templates/planning/invitation_partenaire.html -->
+{% extends "base.html" %}
+
+{% block title %}Inviter le partenaire{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-1"><i class="fas fa-envelope-open-text text-blue-600 mr-2"></i>Inviter le partenaire</h1>
+    <p class="text-sm text-gray-500 mb-6">
+        CID n'envoie rien lui-même. Pour chaque partenaire : 1) téléchargez l'invitation,
+        2) ouvrez l'e-mail préparé dans votre messagerie, 3) joignez-y le fichier et envoyez.
+        Le partenaire n'aura qu'à cliquer sur l'invitation pour l'ajouter à son agenda.
+    </p>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-2">Ce que le partenaire recevra</p>
+        <p class="font-semibold text-gray-800">{{ objet }}</p>
+        <pre class="whitespace-pre-wrap text-sm text-gray-700 mt-2 font-sans">{{ texte }}</pre>
+        <p class="text-xs text-green-700 mt-3"><i class="fas fa-shield-alt mr-1"></i>Ni le nom de l'usager, ni le motif du rendez-vous.</p>
+        <div class="mt-3 text-sm">
+            {% if avec_lieu %}
+            <a href="?lieu=0" class="text-gray-600 hover:underline"><i class="fas fa-map-marker-alt mr-1"></i>Retirer le lieu</a>
+            <span class="text-xs text-gray-500">(pour une VAD, le lieu est l'adresse de la famille)</span>
+            {% else %}
+            <a href="?lieu=1" class="text-gray-600 hover:underline"><i class="fas fa-map-marker-alt mr-1"></i>Ajouter le lieu</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        {% for i in invites %}
+        <div class="bg-white rounded-lg border p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="font-semibold text-gray-900">{{ i.partenaire.organisme }}</p>
+                <p class="text-sm text-gray-500">{{ i.partenaire.contact|default:"" }} {% if i.partenaire.email %}· {{ i.partenaire.email }}{% else %}· pas d'e-mail dans l'annuaire{% endif %}</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'planning:invitation_ics' rdv.pk i.partenaire.pk %}?lieu={{ avec_lieu|yesno:'1,0' }}"
+                   class="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"><i class="fas fa-download mr-1"></i>1. Invitation (.ics)</a>
+                {% if i.mailto %}
+                <a href="{{ i.mailto }}" class="px-3 py-2 bg-blue-700 text-white rounded-md text-sm hover:bg-blue-800"><i class="fas fa-envelope mr-1"></i>2. Préparer l'e-mail</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-400 italic">Aucun partenaire sur ce rendez-vous.</p>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 text-right">
+        <a href="{% if rdv.beneficiaire %}{% url 'beneficiaire:detail_beneficiaire' rdv.beneficiaire.code_interne %}{% else %}{% url 'planning:calendrier_rdv' %}{% endif %}"
+           class="text-sm text-gray-600 hover:underline">Terminé</a>
+    </div>
+</div>
+{% endblock %}

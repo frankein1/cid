@@ -125,6 +125,7 @@ def evenement(c, user):
                 'peut_modifier': (c.peut_gerer_reunion(user) if reunion
                                   else c.peut_etre_modifie_par(user) or c.est_participant(user)),
                 'participants': ", ".join(u.get_full_name() or u.username for u in participants) if reunion else "",
+                'partenaires': ", ".join(str(x) for x in c.partenaires.all()),
             }}
 
 

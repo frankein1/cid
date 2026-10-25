@@ -247,6 +247,9 @@ class RdvAgentForm(forms.Form):
                                   help_text="Adresse de la VAD, structure du partenaire…")
     co_intervenants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), required=False,
                                                      label="Co-intervenants")
+    partenaires = forms.ModelMultipleChoiceField(queryset=None, required=False, label="Partenaires",
+                                                 help_text="Annuaire commun aux MDS. Rendez-vous tripartite : "
+                                                           "usager + partenaire.")
     description = forms.CharField(label="Motif détaillé (visible de l'agent et du cadre)", required=False,
                                   widget=forms.Textarea(attrs={'rows': 3}))
     premiere_fois = forms.BooleanField(label="1er rendez-vous avec un agent social de la MDS", required=False)
@@ -256,6 +259,8 @@ class RdvAgentForm(forms.Form):
         from .agenda import choix_motifs
         self.mds = mds
         self.fields['motif'].choices = choix_motifs()
+        from partenaires.models import Partenaire
+        self.fields['partenaires'].queryset = Partenaire.objects.filter(actif=True)
         agents = User.objects.filter(profils_mds__mds=mds, profils_mds__actif=True, is_active=True)\
             .distinct().order_by('last_name', 'first_name')
         self.fields['agent'].queryset = agents
@@ -273,8 +278,8 @@ class RdvAgentForm(forms.Form):
             self.add_error('heure_fin', "L'heure de fin doit être après l'heure de début.")
         nature, _, domaine = (data.get('motif') or '').partition('|')
         data['nature'], data['domaine'] = nature, domaine
-        if nature == 'PARTENAIRE' and not data.get('lieu_precis'):
-            self.add_error('lieu_precis', "Indiquez le lieu ou la structure du partenaire.")
+        if nature == 'PARTENAIRE' and not data.get('lieu_precis') and not data.get('partenaires'):
+            self.add_error('partenaires', "Choisissez le partenaire (ou indiquez au moins le lieu).")
         data['beneficiaire'] = None
         if data.get('beneficiaire_id'):
             data['beneficiaire'] = Beneficiaire.objects.filter(pk=data['beneficiaire_id'], mds=self.mds).first()
