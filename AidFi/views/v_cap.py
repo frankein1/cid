@@ -493,4 +493,11 @@ def cap_paierie(request):
     return render(request, "AidFi/cap_paierie.html", {
         "demandes": DemandeCAP.objects.filter(statut__in=('TRANSMISE_PAIERIE', 'REMISE'), remise_paierie=True)
                                       .select_related('beneficiaire__mds').order_by('date_decision'),
+        "regies": _regies_a_verser(),
     })
+
+
+def _regies_a_verser():
+    """Régies d'urgence accordées en attente de versement (les plus anciennes d'abord)."""
+    from AidFi.models.m_regie import DemandeRegie
+    return DemandeRegie.objects.filter(statut='TRANSMISE_PAIERIE').select_related('beneficiaire__mds').order_by('date_decision')

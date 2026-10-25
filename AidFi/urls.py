@@ -57,6 +57,8 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
     path("beneficiaire/<int:beneficiaire_id>/regie/nouvelle/", v_regie.regie_urgence_create, name="regie_urgence_create",),
 
     path("regie/<int:demande_id>/", v_regie.regie_detail, name="regie_detail",),
+    path("regie/<int:demande_id>/decision/", v_regie.regie_decision, name="regie_decision",),
+    path("regie/<int:demande_id>/versement/", v_regie.regie_versement, name="regie_versement",),
 
     # ==========================================================
     # CAP

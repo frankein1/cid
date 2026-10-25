@@ -72,8 +72,16 @@ def dossiers(mds, annee, agent=None):
                          montant_accorde=Decimal(cap.montant_accorde or 0) if accord else None)
             if cap and cap.date_remise:
                 l.update(delivrance=_jour(cap.date_remise), montant_delivre=Decimal(cap.montant_accorde or 0))
+        elif code == 'REGIE' and hasattr(d, 'demanderegie'):
+            r = d.demanderegie
+            if r.date_decision:
+                l.update(decision=_jour(r.date_decision), accord=r.statut != 'REFUSEE',
+                         montant_accorde=r.montant_accorde if r.statut != 'REFUSEE' else None,
+                         envoi_regie=_jour(r.date_decision) if r.statut != 'REFUSEE' else None)
+            if r.date_versement:
+                l.update(delivrance=_jour(r.date_versement), montant_delivre=r.montant_verse)
         elif code == 'REGIE':
-            regie = getattr(d, 'regie_urgence', None)
+            regie = getattr(d, 'regie_urgence', None)      # anciennes fiches (modèle RegieUrgence)
             if regie:
                 l.update(decision=l['depot'], accord=True, montant_accorde=regie.montant_urgence)
                 if regie.date_versement:

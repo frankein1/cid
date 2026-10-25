@@ -247,6 +247,14 @@ class DocumentGED(models.Model):
                     demande__demandeafase__decision__date_transmission_controle__isnull=False).exists():
                 return True
 
+        # 0 bis. Régie centrale : facture et RIB du tiers des régies d'urgence accordées
+        if user.a_la_capacite("cap_regie_centrale"):
+            from AidFi.models.m_generique import PieceJustificative
+            if PieceJustificative.objects.filter(
+                    document_ged=self, demande__statut__in=('TRANSMISE_PAIERIE', 'CLOTUREE'),
+                    demande__demanderegie__isnull=False).exists():
+                return True
+
         # 1. Vérification territoriale (via le bénéficiaire)
         if not user.peut_agir_sur_objet(self.content_object, "peut_voir"):
             return False

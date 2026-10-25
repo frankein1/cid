@@ -122,7 +122,7 @@
                         {% endif %}
                         {% if user|a_la_capacite:'cap_regie_centrale' %}
                         <a href="{% url 'AidFi:cap_paierie' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
-                            <i class="fas fa-building-columns mr-2"></i>Paierie CAP
+                            <i class="fas fa-building-columns mr-2"></i>Régie centrale
                         </a>
                         {% endif %}
 
@@ -252,7 +252,7 @@
                 <a href="{% url 'AidFi:afase_controle' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-clipboard-check mr-2 w-4"></i>Contrôle AFASE</a>
                 {% endif %}
                 {% if user|a_la_capacite:'cap_regie_centrale' %}
-                <a href="{% url 'AidFi:cap_paierie' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-building-columns mr-2 w-4"></i>Paierie CAP</a>
+                <a href="{% url 'AidFi:cap_paierie' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-building-columns mr-2 w-4"></i>Régie centrale</a>
                 {% endif %}
 
                 <a href="{% url 'messagerie:boite_reception' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white mt-2"><i class="fas fa-envelope mr-2 w-4"></i>Messagerie</a>
