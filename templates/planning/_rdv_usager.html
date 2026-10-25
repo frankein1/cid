@@ -24,6 +24,8 @@
                 <p class="text-xs text-gray-500">
                     {% if r.nature == 'REUNION' %}👥 {% for p in r.co_intervenants.all %}{{ p.get_full_name|default:p.username }}{% if not forloop.last %}, {% endif %}{% endfor %}
                     {% else %}{{ r.agent.get_full_name|default:r.agent.username|default:"Non assigné" }}{% endif %} · {{ r.lieu_affichage }}
+                    {% with ps=r.partenaires.all %}{% if ps %} · 🤝 {{ ps|join:", " }}
+                    <a href="{% url 'planning:invitation_partenaire' r.pk %}" class="text-blue-700 hover:underline">inviter</a>{% endif %}{% endwith %}
                     {% if r.description %} · {{ r.description|truncatechars:80 }}{% endif %}
                 </p>
             </div>

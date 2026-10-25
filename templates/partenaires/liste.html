@@ -1,0 +1,78 @@
+<!-- /templates/partenaires/liste.html -->
+{% extends "base.html" %}
+
+{% block title %}Annuaire des partenaires{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-address-book text-blue-600 mr-2"></i>Annuaire des partenaires</h1>
+            <p class="text-sm text-gray-500">Commun à toutes les MDS. Chacun peut ajouter un partenaire ; l'auteur de la fiche et les cadres la modifient.</p>
+        </div>
+        <a href="{% url 'partenaires:ajouter' %}" class="px-4 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-800 text-sm">
+            <i class="fas fa-plus mr-1"></i>Ajouter un partenaire
+        </a>
+    </div>
+
+    <form method="get" class="bg-white rounded-lg shadow-sm border p-4 mb-4 flex flex-wrap gap-3 items-end">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Recherche</label>
+            <input type="text" name="q" value="{{ q }}" placeholder="Organisme, contact, ville…" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Thématique</label>
+            <select name="thematique" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                <option value="">Toutes</option>
+                {% for code, lib in thematiques %}<option value="{{ code }}" {% if thematique == code %}selected{% endif %}>{{ lib }}</option>{% endfor %}
+            </select>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-gray-600 pb-2">
+            <input type="checkbox" name="inactifs" value="1" {% if inactifs %}checked{% endif %}> Afficher les désactivés
+        </label>
+        <button type="submit" class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm">Filtrer</button>
+    </form>
+
+    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-4 py-3 text-left">Organisme</th>
+                    <th class="px-4 py-3 text-left">Contact</th>
+                    <th class="px-4 py-3 text-left">E-mail / téléphone</th>
+                    <th class="px-4 py-3 text-left">Ville</th>
+                    <th class="px-4 py-3 text-left">Thématique</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for p in partenaires %}
+                <tr class="{% if not p.actif %}opacity-50{% endif %}">
+                    <td class="px-4 py-3"><p class="font-semibold text-gray-900">{{ p.organisme }}</p><p class="text-xs text-gray-500">{{ p.service }}</p></td>
+                    <td class="px-4 py-3"><p>{{ p.contact|default:"-" }}</p><p class="text-xs text-gray-500">{{ p.fonction }}</p></td>
+                    <td class="px-4 py-3">
+                        {% if p.email %}<a href="mailto:{{ p.email }}" class="text-blue-700 hover:underline">{{ p.email }}</a><br>{% endif %}
+                        {% if p.telephone %}<a href="tel:{{ p.telephone }}" class="text-gray-700">{{ p.telephone }}</a>{% endif %}
+                    </td>
+                    <td class="px-4 py-3">{{ p.ville|default:"-" }}</td>
+                    <td class="px-4 py-3"><span class="text-xs bg-gray-100 px-2 py-1 rounded">{{ p.get_thematique_display }}</span></td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                        {% if p.modifiable %}
+                        <a href="{% url 'partenaires:modifier' p.pk %}" class="text-gray-500 hover:text-blue-700 px-1" title="Modifier"><i class="fas fa-edit"></i></a>
+                        <form method="post" action="{% url 'partenaires:basculer_actif' p.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-gray-500 hover:text-red-700 px-1" title="{% if p.actif %}Désactiver{% else %}Réactiver{% endif %}">
+                                <i class="fas {% if p.actif %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 italic">Aucun partenaire</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

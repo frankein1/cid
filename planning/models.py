@@ -162,6 +162,8 @@ class CreneauRdv(models.Model):
     type_rdv = models.CharField(max_length=20, choices=TYPE_RDV_CHOICES, default='PERMANENCE')  # ancien champ, remplacé par nature + domaine
     nature = models.CharField(max_length=20, choices=NATURES_RDV, default='PERMANENCE')
     domaine = models.CharField(max_length=20, choices=DOMAINES_RDV, default='SOCIAL')
+    # Partenaires présents (rendez-vous tripartite : agent + usager + partenaire)
+    partenaires = models.ManyToManyField('partenaires.Partenaire', blank=True, related_name='rdvs')
     premiere_fois = models.BooleanField(
         default=False, verbose_name="1er rendez-vous",
         help_text="Premier rendez-vous de la famille avec un agent social de la MDS")

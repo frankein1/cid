@@ -202,6 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 content += `<p><b>${esc(p.nature)} – ${esc(p.domaine)}</b>${p.premiere_fois ? ' ★ 1er rendez-vous' : ''}</p>`;
                 if (p.usager) content += `<p>🧑 ${esc(p.usager)}</p>`;
                 if (p.participants) content += `<p>👥 ${esc(p.participants)}</p>`;
+                if (p.partenaires) content += `<p>🤝 ${esc(p.partenaires)}</p>`;
                 content += `<p>📍 ${esc(p.lieu)}</p><p>👤 ${esc(p.agent)}</p><p>🕒 ${heure}</p>`;
                 content += `<p>État : <b>${esc(p.statut_libelle)}</b></p>`;
                 if (p.description) content += `<p class="text-sm text-gray-600">${esc(p.description)}</p>`;
@@ -221,6 +222,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="premiere_fois" ${p.premiere_fois ? 'checked' : ''}> 1er rendez-vous</label>
                         <button type="submit" class="w-full bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Enregistrer</button>
                     </form>`;
+                }
+                if (p.partenaires) {
+                    footer += `<a href="/planning/rdv/${info.event.id}/invitation/" class="text-blue-700 text-sm hover:underline">✉️ Inviter le partenaire</a>`;
                 }
                 if (p.est_permanence && p.statut === 'RESERVE') {
                     footer += `<a href="/planning/annuler/${info.event.id}/" class="text-red-600 text-sm hover:underline" onclick="return confirm('Libérer ce créneau de permanence ?')">Libérer le créneau</a>`;

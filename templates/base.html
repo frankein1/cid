@@ -71,6 +71,9 @@
     <a href="{% url 'mds:mes_demi_journees' %}" class="block px-4 py-2 text-sm text-blue-700 font-bold hover:bg-blue-50">
         <i class="fas fa-user-clock mr-2 w-4"></i>Mes jours de permanence
     </a>
+    <a href="{% url 'partenaires:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+        <i class="fas fa-address-book mr-2 w-4"></i>Annuaire des partenaires
+    </a>
 
     {% if user.is_superuser or user|a_la_capacite:'planning_generer' %}
         <div class="border-t border-gray-100 my-1"></div>
@@ -199,6 +202,7 @@
                 <a href="{% url 'planning:calendrier_rdv' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-calendar-day mr-2 w-4"></i>Calendrier mensuel</a>
                 <a href="{% url 'planning:planning_accueil_jour' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-clock mr-2 w-4"></i>Vue Accueil (Jour)</a>
                 <a href="{% url 'mds:mes_demi_journees' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-clock mr-2 w-4"></i>Mes jours de permanence</a>
+                <a href="{% url 'partenaires:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-address-book mr-2 w-4"></i>Annuaire des partenaires</a>
                 {% if user.is_superuser or user|a_la_capacite:'planning_generer' %}
                 <a href="{% url 'planning:generer_creneaux' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-magic mr-2 w-4"></i>Générer les créneaux</a>
                 <a href="{% url 'planning:gerer_permanences_externes' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-building mr-2 w-4"></i>Générer permanences externes</a>
