@@ -142,13 +142,44 @@ def enregistrer_remise(demande, numeros, cadre, agent_receveur):
 
 
 def enregistrer_remise_paierie(demande, numeros_texte, regisseur):
-    """Remise faite par la paierie : pas de stock MDS, numéros notés pour mémoire."""
-    demande.statut = 'REMISE'
-    demande.date_remise = timezone.now()
-    demande.remis_par = regisseur
-    demande.numeros_paierie = "\n".join(lire_numeros(numeros_texte))
+    """
+    Remise faite par la paierie : pas de stock MDS, numéros notés pour mémoire.
+    C'est le régisseur de la paierie qui CLÔTURE le dossier ; l'AS (et le cadre qui a décidé)
+    en sont informés par message CID.
+    """
+    maintenant = timezone.now()
+    if not demande.date_remise:
+        demande.date_remise = maintenant
+        demande.remis_par = regisseur
+    numeros = "\n".join(lire_numeros(numeros_texte))
+    if numeros:
+        demande.numeros_paierie = numeros
+    demande.statut = 'CLOTUREE'
+    demande.date_cloture = maintenant
+    demande.cloture_par = regisseur
     demande._acteur = regisseur
     demande.save()
+    prevenir_cloture_paierie(demande, regisseur)
+
+
+def prevenir_cloture_paierie(demande, regisseur):
+    """Message CID à l'AS qui a déposé la demande et au cadre qui l'a accordée."""
+    from AidFi.signals import _envoyer
+    from AidFi.models.m_generique import SuiviDemande
+    depot = SuiviDemande.objects.filter(demande_id=demande.pk, statut_nouveau="DEPOSEE").order_by('-id').first()
+    agent = (depot.agent if depot and depot.agent else None) or demande.cree_par
+    benef = demande.beneficiaire
+    qui = regisseur.get_full_name() or regisseur.username
+    for destinataire in {u for u in (agent, demande.decide_par) if u and u.pk != regisseur.pk}:
+        _envoyer(
+            regisseur, destinataire, demande,
+            objet=f"CAP remis par la paierie : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
+            contenu=(f"Les chèques service ({demande.montant_accorde} €) pour {benef.prenom} {benef.nom.upper()} "
+                     f"ont été remis par la paierie départementale le "
+                     f"{timezone.localtime(demande.date_remise):%d/%m/%Y}.\n"
+                     f"Le dossier n° {demande.pk} est clôturé par {qui}.\n\nMessage automatique de CID."),
+            motif='suivi_dossier',
+        )
 
 
 # =============================================================================
