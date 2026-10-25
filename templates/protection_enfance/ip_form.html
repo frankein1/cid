@@ -1,0 +1,80 @@
+<!-- templates/protection_enfance/ip_form.html -->
+{% extends "base.html" %}
+{% block title %}{% if ip %}Modifier l'IP {{ ip.numero }}{% else %}Enregistrer une IP{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <a href="{% if ip %}{% url 'protection_enfance:ip_detail' ip.numero %}{% else %}{% url 'protection_enfance:ip_liste' %}{% endif %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Retour</a>
+    <h1 class="text-2xl font-bold text-gray-800 mt-3 mb-6"><i class="fas fa-triangle-exclamation text-red-600 mr-2"></i>{% if ip %}IP {{ ip.numero }}{% else %}Nouvelle information préoccupante{% endif %}</h1>
+
+    {% if form.non_field_errors %}<div class="mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-sm">{{ form.non_field_errors }}</div>{% endif %}
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+            <h2 class="font-bold text-gray-800">Réception</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for f in form %}{% if f.name in "date_reception_crip origine niveau_urgence" %}
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ f.label }}</label>{{ f }}
+                    {% if f.help_text %}<p class="text-xs text-gray-400 mt-1">{{ f.help_text }}</p>{% endif %}
+                    {% for e in f.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}</div>
+                {% endif %}{% endfor %}
+            </div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.description.label }}</label>{{ form.description }}
+                {% for e in form.description.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}</div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.situation_particuliere.label }}</label>{{ form.situation_particuliere }}
+                <p class="text-xs text-gray-400 mt-1">{{ form.situation_particuliere.help_text }}</p></div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border-2 border-amber-200 p-6 space-y-4">
+            <h2 class="font-bold text-amber-800"><i class="fas fa-user-secret mr-2"></i>Déclarant</h2>
+            <p class="text-xs text-amber-700">Visible uniquement par la CRIP et les inspecteurs : jamais par la MDS, jamais dans les courriers ni dans le rapport.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.signalant_nom.label }}</label>{{ form.signalant_nom }}</div>
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.signalant_qualite.label }}</label>{{ form.signalant_qualite }}</div>
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.signalant_structure.label }}</label>{{ form.signalant_structure }}</div>
+            </div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.signalant_contact.label }}</label>{{ form.signalant_contact }}</div>
+            <label class="flex items-center gap-2 text-sm">{{ form.signalant_confidentialite }} {{ form.signalant_confidentialite.label }}</label>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+            <h2 class="font-bold text-gray-800">Famille et MDS</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.code_famille.label }}</label>{{ form.code_famille }}
+                    <p class="text-xs text-gray-400 mt-1">{{ form.code_famille.help_text }} Les enfants du dossier sont repris automatiquement.</p>
+                    {% for e in form.code_famille.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}</div>
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.famille_libelle.label }}</label>{{ form.famille_libelle }}
+                    {% for e in form.famille_libelle.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}</div>
+            </div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.famille_adresse.label }}</label>{{ form.famille_adresse }}</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.mds.label }}</label>{{ form.mds }}
+                    <p class="text-xs text-gray-400 mt-1">Vide : la MDS du dossier famille.</p></div>
+                <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.mds_partage.label }}</label>{{ form.mds_partage }}</div>
+            </div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">{{ form.autre_departement.label }}</label>{{ form.autre_departement }}
+                <p class="text-xs text-gray-400 mt-1">{{ form.autre_departement.help_text }}</p></div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
+            <h2 class="font-bold text-gray-800">Enfants concernés</h2>
+            {{ formset.management_form }}
+            {% for f in formset %}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                {{ f.id }}
+                <div><label class="block text-xs text-gray-500">Prénom</label>{{ f.prenom }}</div>
+                <div><label class="block text-xs text-gray-500">Nom</label>{{ f.nom }}</div>
+                <div><label class="block text-xs text-gray-500">Date de naissance</label>{{ f.date_naissance }}</div>
+                <div class="text-sm">{% if f.instance.pk %}<label class="flex items-center gap-2 text-red-700">{{ f.DELETE }} Retirer</label>{% endif %}</div>
+                {% for e in f.non_field_errors %}<p class="text-sm text-red-600 md:col-span-4">{{ e }}</p>{% endfor %}
+            </div>
+            {% endfor %}
+            <p class="text-xs text-gray-400">Deux lignes vides à chaque enregistrement pour ajouter d'autres enfants.</p>
+        </section>
+
+        <div class="flex justify-end gap-3">
+            <button class="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700">Enregistrer</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

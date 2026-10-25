@@ -1,0 +1,77 @@
+<!-- templates/protection_enfance/ip_liste.html -->
+{% extends "base.html" %}
+{% block title %}Informations préoccupantes{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-triangle-exclamation text-red-600 mr-2"></i>Informations préoccupantes</h1>
+            <p class="text-sm text-gray-500">Accès restreint : CRIP, inspecteurs, cadres de la MDS en charge et binôme d'évaluation.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'protection_enfance:statistiques_ip' %}" class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-chart-column mr-1"></i>Statistiques</a>
+            {% if est_crip %}
+            <a href="{% url 'protection_enfance:ip_creation' %}" class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"><i class="fas fa-plus mr-1"></i>Enregistrer une IP</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" class="flex flex-wrap gap-2 items-end mb-4">
+        <input type="text" name="q" value="{{ q }}" placeholder="Référence, famille, enfant…" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-60">
+        <select name="statut" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Toutes</option>
+            <option value="ouvertes" {% if statut == 'ouvertes' %}selected{% endif %}>En cours (avant l'inspecteur)</option>
+            {% for code, libelle in statuts %}<option value="{{ code }}" {% if statut == code %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+        </select>
+        <label class="flex items-center gap-2 text-sm px-2"><input type="checkbox" name="mes" value="oui" {% if mes %}checked{% endif %}> Mes évaluations</label>
+        <button class="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm">Filtrer</button>
+    </form>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-4 py-3 text-left">Référence</th>
+                    <th class="px-4 py-3 text-left">Famille / enfants</th>
+                    <th class="px-4 py-3 text-left">MDS · binôme</th>
+                    <th class="px-4 py-3 text-left">Reçue CRIP</th>
+                    <th class="px-4 py-3 text-left">Échéance</th>
+                    <th class="px-4 py-3 text-left">Statut</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for ip in page_obj %}
+                <tr class="hover:bg-gray-50 {% if ip.alerte == 'retard' %}bg-red-50{% elif ip.alerte == 'proche' %}bg-amber-50{% endif %}">
+                    <td class="px-4 py-3 font-mono"><a href="{% url 'protection_enfance:ip_detail' ip.numero %}" class="text-blue-700 hover:underline">{{ ip.numero }}</a>
+                        {% if ip.niveau_urgence == 'IMMEDIATE' %}<span class="ml-1 px-1.5 py-0.5 rounded bg-red-600 text-white text-xs font-sans">urgent</span>{% endif %}</td>
+                    <td class="px-4 py-3">{{ ip.libelle_famille }}
+                        <span class="block text-xs text-gray-500">{% for e in ip.enfants.all %}{{ e.prenom }}{% if e.age is not None %} ({{ e.age }} an{{ e.age|pluralize }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span></td>
+                    <td class="px-4 py-3">{{ ip.mds.nom|default:"—" }}
+                        <span class="block text-xs text-gray-500">{% for u in ip.binome %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %} · {% endif %}{% empty %}binôme à désigner{% endfor %}</span></td>
+                    <td class="px-4 py-3">{{ ip.date_reception_crip|date:"d/m/Y" }}</td>
+                    <td class="px-4 py-3">{{ ip.date_echeance|date:"d/m/Y" }}
+                        {% if ip.jours_restants is not None %}
+                        <span class="block text-xs {% if ip.jours_restants < 0 %}text-red-700 font-semibold{% elif ip.alerte == 'proche' %}text-amber-700{% else %}text-gray-500{% endif %}">
+                            {% if ip.jours_restants < 0 %}dépassée{% else %}J-{{ ip.jours_restants }}{% endif %}</span>
+                        {% elif ip.delai_respecte is not None %}
+                        <span class="block text-xs {% if ip.delai_respecte %}text-emerald-700{% else %}text-red-700{% endif %}">{% if ip.delai_respecte %}délai respecté{% else %}+{{ ip.depassement_jours }} j{% endif %}</span>
+                        {% endif %}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs {{ ip.badge }}">{{ ip.get_statut_display }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400 italic">Aucune information préoccupante.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2 mt-4 text-sm">
+        {% if page_obj.has_previous %}<a href="?{{ query }}&page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded">←</a>{% endif %}
+        <span class="px-3 py-1">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{{ query }}&page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded">→</a>{% endif %}
+    </div>
+    {% endif %}
+    <p class="text-xs text-gray-500 mt-3"><span class="inline-block w-3 h-3 bg-amber-100 border border-amber-300 align-middle"></span> point intermédiaire passé ·
+        <span class="inline-block w-3 h-3 bg-red-100 border border-red-300 align-middle"></span> délai de 3 mois dépassé</p>
+</div>
+{% endblock %}

@@ -260,6 +260,16 @@ def detail_beneficiaire(request, code_interne):
             # Rendez-vous de l'usager (agenda unifié) : détail visible depuis la fiche
             "rdvs_usager": beneficiaire.rdvs.select_related('agent', 'salle').order_by('-date', '-heure_debut')[:15],
         })
+    # Informations préoccupantes : visibles uniquement des personnes habilitées (CRIP, inspecteurs, cadres, binôme)
+    from protection_enfance.models import InformationPreoccupante
+    ips = [ip for ip in InformationPreoccupante.objects.filter(
+               Q(famille=beneficiaire) | Q(enfants__beneficiaire=beneficiaire)).distinct().select_related('mds')
+           if ip.peut_voir(request.user)]
+    context["ips_famille"] = ips
+    if "rdvs_usager" in context and not ips:
+        # Les rendez-vous du domaine IP ne révèlent pas l'existence d'une IP aux autres agents
+        context["rdvs_usager"] = beneficiaire.rdvs.exclude(domaine='IP').select_related('agent', 'salle')\
+            .order_by('-date', '-heure_debut')[:15]
     return render(request, "beneficiaire/detail_beneficiaire.html", context)
    
 @login_required

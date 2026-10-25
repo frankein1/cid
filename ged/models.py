@@ -238,6 +238,11 @@ class DocumentGED(models.Model):
         if user.is_superuser:
             return True
 
+        # IP : les pièces suivent les droits de l'IP (CRIP, inspecteurs, cadres de la MDS, binôme)
+        from protection_enfance.models import InformationPreoccupante
+        if isinstance(self.content_object, InformationPreoccupante):
+            return self.content_object.peut_voir(user)
+
         # 0. Service de contrôle AFASE : uniquement les pièces des dossiers qui lui ont été transmis
         if user.a_la_capacite("afase_controle"):
             from AidFi.models.m_generique import PieceJustificative

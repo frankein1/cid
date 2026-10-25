@@ -43,3 +43,11 @@ def peut_agir(user, obj, action):
     if not user or not user.is_authenticated:
         return False
     return user.peut_agir_sur_objet(obj, action)
+
+
+@register.filter(name='acces_ip')
+def acces_ip(user):
+    """Module IP : CRIP, inspecteurs, cadres pilotes et professionnels évaluateurs."""
+    if not user or not user.is_authenticated:
+        return False
+    return user.is_superuser or any(user.a_la_capacite(c) for c in ('ip_crip', 'ip_pief', 'ip_piloter', 'ip_evaluer'))

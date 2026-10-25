@@ -256,4 +256,39 @@ class Command(BaseCommand):
                 "thematique": thematique, "prenom_contact": prenom, "nom_contact": nom, "fonction": fonction,
                 "email": email, "ville": ville, "mds_origine": mds})
 
+        # ----------------------------------------------------------
+        # Protection de l'enfance : comptes de démonstration et une IP fictive
+        # ----------------------------------------------------------
+        for username, prenom, nom, code, dans_mds in [
+            ("pmi1", "Agent", "PMI 1", "MDS_PMI_INFANTILE", True),
+            ("crip1", "Agent", "CRIP 1", "CRIP", False),
+            ("pief1", "Inspecteur", "Enfance famille 1", "PIEF", False),
+        ]:
+            u, cree = User.objects.get_or_create(username=username, defaults={
+                "first_name": prenom, "last_name": nom, "email": f"{username}@test.fr",
+                "is_active": True, "matricule": username.upper()})
+            if cree:
+                u.set_password("testpass123")
+                u.save()
+            profil = Profil.objects.filter(code=code).first()
+            if profil and not u.profils.filter(pk=profil.pk).exists():
+                u.profils.add(profil)
+            if dans_mds:
+                UserMDSProfile.objects.get_or_create(user=u, mds=mds, defaults={"principale": True, "actif": True})
+            self.stdout.write(f"   {'✅ Créé' if cree else '📌 Existe'} : {username} – {code}")
+
+        from protection_enfance.models import EnfantIP, HistoriqueAction, InformationPreoccupante
+        if not InformationPreoccupante.objects.filter(famille=pere3).exists():
+            crip = User.objects.get(username="crip1")
+            ip = InformationPreoccupante.objects.create(
+                date_reception_crip=timezone.localdate() - timedelta(days=20), recue_par=crip, cree_par=crip,
+                origine="EDUCATION", niveau_urgence="COURANTE", famille=pere3, mds=mds,
+                description="Données fictives de démonstration : absences répétées et fatigue signalées par l'école.",
+                signalant_qualite="Directrice d'école (fictif)", signalant_nom="Mme Exemple",
+                statut="TRANSMISE_MDS", date_transmission_mds=timezone.now())
+            for e in (enfant3a, enfant3b, enfant3c):
+                EnfantIP.objects.create(ip=ip, beneficiaire=e, nom=e.nom, prenom=e.prenom, date_naissance=e.date_naissance)
+            HistoriqueAction.objects.create(information=ip, action="IP de démonstration créée (init2)", user=crip)
+            self.stdout.write(f"   ✅ IP de démonstration {ip.numero} (famille CLASSIC)")
+
         self.stdout.write(self.style.SUCCESS("\n🎉 Données de test créées avec succès"))

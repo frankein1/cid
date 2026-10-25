@@ -6,7 +6,7 @@
 # core/views/accompagnement.py
 """
 Menu « Accompagnement » : un point d'entrée par domaine d'intervention.
-Aides financières : opérationnel. RSA (CER), IP, Enfance, Logement : pages d'attente,
+Aides financières et IP : opérationnels. RSA (CER), Enfance, Logement : pages d'attente,
 alimentées au fur et à mesure des ateliers.
 """
 from django.contrib import messages
@@ -53,6 +53,8 @@ MODULES = {
 
 @login_required
 def module_a_venir(request, module):
+    if module == 'ip':          # module IP opérationnel : anciens liens redirigés
+        return redirect('protection_enfance:ip_liste')
     infos = MODULES.get(module)
     if not infos:
         raise Http404

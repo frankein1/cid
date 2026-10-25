@@ -1,0 +1,103 @@
+<!-- templates/protection_enfance/ip_rapport.html -->
+{% extends "base.html" %}
+{% block title %}Rapport – IP {{ ip.numero }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <a href="{% url 'protection_enfance:ip_detail' ip.numero %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>IP {{ ip.numero }}</a>
+    <div class="flex flex-wrap justify-between items-start gap-3 mt-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-lines text-red-600 mr-2"></i>Rapport d'évaluation</h1>
+            <p class="text-gray-500">{{ ip.libelle_famille }} — {% for e in ip.enfants.all %}{{ e.prenom }}{% if not forloop.last %}, {% endif %}{% endfor %} · échéance {{ ip.date_echeance|date:"d/m/Y" }}</p>
+        </div>
+        <div class="flex gap-2 items-center">
+            <span class="px-3 py-1 rounded-full text-sm font-semibold {{ ip.badge }}">{{ ip.get_statut_display }}</span>
+            <a href="{% url 'protection_enfance:rapport_pdf' ip.numero %}" target="_blank" class="px-3 py-2 rounded-lg border text-sm"><i class="fas fa-print mr-1"></i>Imprimer (PDF)</a>
+        </div>
+    </div>
+
+    <!-- Déroulé (automatique) -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="font-bold text-gray-800 mb-2">Déroulé de l'évaluation <span class="text-xs font-normal text-gray-500">(repris automatiquement des démarches enregistrées)</span></h2>
+        <ul class="text-sm divide-y">
+            {% for a in actions %}<li class="py-1 flex justify-between gap-2"><span>{{ a.date|date:"d/m/Y H:i" }} – {{ a.get_type_action_display }}{% if a.enfant %} ({{ a.enfant }}){% endif %}{% if a.numero_lrar %} · n° {{ a.numero_lrar }}{% endif %}</span><span class="text-xs text-gray-500">{{ a.get_resultat_display }}</span></li>
+            {% empty %}<li class="py-1 text-gray-400 italic">Aucune démarche.</li>{% endfor %}
+        </ul>
+    </section>
+
+    {% if modifiable %}
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        {% for f in form %}
+        {% if f.name == 'non_cooperation' %}
+        <label class="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">{{ f }} {{ f.label }}</label>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <label class="block text-sm font-bold text-gray-700 mb-1">{{ f.label }}</label>{{ f }}
+            {% for e in f.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        <div class="flex flex-wrap justify-end gap-3">
+            <button class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Enregistrer le brouillon</button>
+            <button name="soumettre" value="1" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold">Soumettre pour la synthèse</button>
+        </div>
+        <p class="text-xs text-gray-500 text-right">Une fois soumis, le rapport n'est plus modifiable (sauf renvoi par le cadre ou l'inspecteur).</p>
+    </form>
+    {% else %}
+    <div class="space-y-4">
+        {% if not rapport.verrouille %}<p class="text-sm bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-900">Rapport en cours de rédaction par le binôme (brouillon non soumis).</p>{% endif %}
+        {% if rapport.non_cooperation %}<p class="text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">Famille non coopérante malgré la LRAR : rapport établi avec les éléments recueillis.</p>{% endif %}
+        {% for code, titre, texte in rapport.rubriques %}
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"><h3 class="font-bold text-gray-800 mb-1">{{ titre }}</h3><p class="whitespace-pre-wrap text-sm text-gray-800">{{ texte|default:"—" }}</p></section>
+        {% endfor %}
+        <section class="bg-white rounded-xl shadow-sm border-2 border-red-200 p-4"><h3 class="font-bold text-red-800 mb-1">Préconisation : {{ rapport.get_preconisation_display|default:"—" }}</h3><p class="whitespace-pre-wrap text-sm">{{ rapport.preconisation_detail }}</p></section>
+    </div>
+    {% endif %}
+
+    <!-- SYNTHÈSE ET VISAS -->
+    {% if ip.statut == 'SYNTHESE' %}
+    <section class="bg-white rounded-xl shadow-sm border-2 border-purple-200 p-6 mt-6 space-y-4">
+        <h2 class="font-bold text-purple-800"><i class="fas fa-signature mr-2"></i>Synthèse et visas</h2>
+        <p class="text-sm text-gray-600">Le rapport part à l'inspecteur enfance famille dès que le cadre et l'AS l'ont visé.</p>
+        <ul class="text-sm">
+            <li>Cadre : {% if rapport.visa_cadre_par %}<b class="text-emerald-700">✔ {{ rapport.visa_cadre_par.get_full_name }}</b> le {{ rapport.date_visa_cadre|date:"d/m/Y" }}{% else %}en attente{% endif %}</li>
+            <li>AS : {% if rapport.visa_as_par %}<b class="text-emerald-700">✔ {{ rapport.visa_as_par.get_full_name }}</b> le {{ rapport.date_visa_as|date:"d/m/Y" }}{% else %}en attente{% endif %}</li>
+        </ul>
+        {% if peut_piloter and not rapport.visa_cadre_par or est_binome and not rapport.visa_as_par %}
+        <form method="post" action="{% url 'protection_enfance:rapport_viser' ip.numero %}" class="flex flex-wrap gap-3 items-end">{% csrf_token %}
+            <label class="text-sm">Date de la réunion de synthèse<input type="date" name="date_synthese" value="{{ rapport.date_synthese|date:'Y-m-d' }}" class="block mt-1 px-3 py-2 border rounded-lg"></label>
+            {% if peut_piloter and not rapport.visa_cadre_par %}<button name="role" value="cadre" class="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold">Viser (cadre)</button>{% endif %}
+            {% if est_binome and not rapport.visa_as_par %}<button name="role" value="as" class="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold">Viser (AS)</button>{% endif %}
+        </form>{% endif %}
+        {% if peut_piloter %}
+        <form method="post" action="{% url 'protection_enfance:rapport_renvoyer' ip.numero %}" class="flex flex-wrap gap-2 pt-3 border-t">{% csrf_token %}
+            <input type="text" name="motif" placeholder="Ce qu'il faut reprendre" class="flex-1 min-w-[12rem] px-3 py-2 border rounded-lg text-sm">
+            <button class="px-4 py-2 rounded-lg border text-sm">Renvoyer au binôme</button>
+        </form>{% endif %}
+    </section>
+    {% endif %}
+
+    <!-- INSPECTEUR -->
+    {% if rapport.visa_pief_par %}
+    <section class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 mt-6 text-sm">
+        <h2 class="font-bold text-indigo-800 mb-1">Inspecteur enfance famille</h2>
+        <p><b>{{ rapport.get_avis_pief_display }}</b> – {{ rapport.visa_pief_par.get_full_name|default:rapport.visa_pief_par.username }}, {{ rapport.date_visa_pief|date:"d/m/Y" }}</p>
+        {% if ip.decision_finale %}<p>Décision : {{ ip.get_decision_finale_display }}</p>{% endif %}
+        {% if rapport.commentaire_pief %}<p class="whitespace-pre-wrap mt-1">{{ rapport.commentaire_pief }}</p>{% endif %}
+    </section>
+    {% endif %}
+    {% if ip.statut == 'TRANSMISE_PIEF' and est_pief %}
+    <section id="avis" class="bg-white rounded-xl shadow-sm border-2 border-indigo-300 p-6 mt-6 space-y-3">
+        <h2 class="font-bold text-indigo-800"><i class="fas fa-stamp mr-2"></i>Votre avis</h2>
+        <form method="post" action="{% url 'protection_enfance:avis_rapport' ip.numero %}" class="space-y-3">{% csrf_token %}
+            <label class="flex items-center gap-2 text-sm"><input type="radio" name="avis" value="ACCORD" checked> D'accord avec la préconisation ({{ rapport.get_preconisation_display }}) : je contresigne</label>
+            <label class="flex items-center gap-2 text-sm"><input type="radio" name="avis" value="AUTRE_SUITE"> Je décide d'une autre suite :
+                <select name="decision" class="px-2 py-1 border rounded text-sm">{% for code, lib in decisions %}{% if code %}<option value="{{ code }}">{{ lib }}</option>{% endif %}{% endfor %}</select></label>
+            <label class="flex items-center gap-2 text-sm"><input type="radio" name="avis" value="COMPLEMENT"> Je demande un complément d'évaluation (le dossier revient au binôme)</label>
+            <textarea name="commentaire" rows="3" placeholder="Commentaire (obligatoire pour une autre suite ou un complément)" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+            <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold">Enregistrer mon avis</button>
+        </form>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

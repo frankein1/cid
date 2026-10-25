@@ -52,16 +52,20 @@
                         </div>
                         {% endif %}
 
-                        {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                        {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip %}
                         <div class="relative">
                             <button id="acc-button" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                                 <i class="fas fa-hands-helping mr-2"></i>Accompagnement
                                 <i class="fas fa-chevron-down ml-1 text-xs"></i>
                             </button>
                             <div id="acc-menu" class="hidden absolute left-0 mt-2 w-60 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                                 <a href="{% url 'core:aides_financieres' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-euro-sign mr-2 w-4"></i>Aides financières</a>
                                 <a href="{% url 'core:module_a_venir' 'rsa' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-file-signature mr-2 w-4"></i>RSA – CER <span class="text-xs text-gray-400">(à venir)</span></a>
-                                <a href="{% url 'core:module_a_venir' 'ip' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>IP <span class="text-xs text-gray-400">(à venir)</span></a>
+                                {% endif %}
+                                {% if user|acces_ip %}
+                                <a href="{% url 'protection_enfance:ip_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>Informations préoccupantes</a>
+                                {% endif %}
                                 <a href="{% url 'core:module_a_venir' 'enfance' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-children mr-2 w-4"></i>Enfance <span class="text-xs text-gray-400">(à venir)</span></a>
                                 <a href="{% url 'core:module_a_venir' 'logement' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house mr-2 w-4"></i>Logement <span class="text-xs text-gray-400">(à venir)</span></a>
                             </div>
@@ -225,11 +229,15 @@
                 <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-plus mr-2 w-4"></i>Ajouter un usager</a>
                 {% endif %}
 
-                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip %}
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Accompagnement</p>
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                 <a href="{% url 'core:aides_financieres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-euro-sign mr-2 w-4"></i>Aides financières</a>
                 <a href="{% url 'core:module_a_venir' 'rsa' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-file-signature mr-2 w-4"></i>RSA – CER <span class="text-xs text-blue-300">(à venir)</span></a>
-                <a href="{% url 'core:module_a_venir' 'ip' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>IP <span class="text-xs text-blue-300">(à venir)</span></a>
+                {% endif %}
+                {% if user|acces_ip %}
+                <a href="{% url 'protection_enfance:ip_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>Informations préoccupantes</a>
+                {% endif %}
                 <a href="{% url 'core:module_a_venir' 'enfance' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-children mr-2 w-4"></i>Enfance <span class="text-xs text-blue-300">(à venir)</span></a>
                 <a href="{% url 'core:module_a_venir' 'logement' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house mr-2 w-4"></i>Logement <span class="text-xs text-blue-300">(à venir)</span></a>
                 {% endif %}

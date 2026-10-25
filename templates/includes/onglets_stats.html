@@ -9,7 +9,10 @@
        class="px-4 py-2 text-sm font-medium -mb-px border-b-2 {% if onglet == 'aides' %}border-blue-700 text-blue-700{% else %}border-transparent text-gray-500 hover:text-gray-800{% endif %}">
         💶 Aides financières
     </a>
-    <span class="px-4 py-2 text-sm text-gray-300 cursor-not-allowed" title="Avec le module IP">⚠️ IP (à venir)</span>
+    <a href="{% url 'protection_enfance:statistiques_ip' %}"
+       class="px-4 py-2 text-sm font-medium -mb-px border-b-2 {% if onglet == 'ip' %}border-blue-700 text-blue-700{% else %}border-transparent text-gray-500 hover:text-gray-800{% endif %}">
+        ⚠️ Informations préoccupantes
+    </a>
     <span class="px-4 py-2 text-sm text-gray-300 cursor-not-allowed" title="Avec le module Enfance">🧒 Enfance (à venir)</span>
     <span class="px-4 py-2 text-sm text-gray-300 cursor-not-allowed" title="Avec le module CER">📝 CER (à venir)</span>
 </nav>
