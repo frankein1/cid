@@ -9,6 +9,7 @@ Agenda unifié : rendez-vous de l'agent (VAD, hors permanence, partenaire…) à
 Les permanences restent créées par le cadre (génération des créneaux) ; tout le reste se note ici.
 """
 from django.contrib import messages
+from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -101,7 +102,10 @@ def api_premiere_fois(request):
 def issue_rdv(request, creneau_id):
     """Après le rendez-vous : réalisé, VAD usager absent, absent, annulé, reporté…"""
     rdv = get_object_or_404(CreneauRdv, pk=creneau_id)
-    if not rdv.voit_le_detail(request.user):
+    if rdv.nature == 'REUNION':
+        if not rdv.peut_gerer_reunion(request.user):
+            return HttpResponseForbidden("Une réunion se gère par celui qui l'a convoquée ou par un cadre.")
+    elif not rdv.voit_le_detail(request.user):
         return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
     statut = request.POST.get('statut')
     if statut not in dict(ISSUES_RDV) or (statut == 'VAD_ABSENT' and rdv.nature != 'VAD'):
@@ -114,6 +118,14 @@ def issue_rdv(request, creneau_id):
     rdv.save(update_fields=['statut', 'premiere_fois', 'date_modification'])
     HistoriqueCreneau.objects.create(creneau=rdv, action='MODIFICATION', utilisateur=request.user,
                                      commentaire=f"{ancien} → {rdv.get_statut_display()}")
+    # Réunion annulée ou reportée : les participants sont prévenus, leur agenda est libéré
+    if rdv.nature == 'REUNION' and statut in ('ANNULE_MDS', 'REPORT_MDS', 'ANNULE_USAGER', 'REPORT_USAGER'):
+        qui = request.user.get_full_name() or request.user.username
+        _prevenir(rdv.co_intervenants.all(), request.user, rdv,
+                  f"Annulation : {rdv.intitule} – {rdv.date:%d/%m/%Y} à {rdv.heure_debut:%H:%M}",
+                  f"La réunion « {rdv.intitule} » du {rdv.date:%d/%m/%Y} ({rdv.heure_debut:%H:%M}–"
+                  f"{rdv.heure_fin:%H:%M}) est {rdv.get_statut_display().lower()} par {qui}.\n"
+                  f"Le créneau est libéré dans votre agenda CID.")
     # 1er rendez-vous réalisé avec un agent social : il devient référent s'il n'y en a pas
     b = rdv.beneficiaire
     if (b and statut == 'VENU_RECU' and rdv.premiere_fois and b.referent_mds_id is None
@@ -157,7 +169,7 @@ def api_agenda(request):
     if mds and not request.user.a_la_capacite('peut_administrer'):
         rdvs = rdv_de_la_mds(mds).filter(date__range=(debut, fin))
     if request.GET.get('agent'):
-        rdvs = rdvs.filter(agent_id=request.GET['agent'])
+        rdvs = rdvs.filter(Q(agent_id=request.GET['agent']) | Q(co_intervenants=request.GET['agent']))
     rdvs = rdvs.select_related('agent', 'salle', 'beneficiaire').distinct()
     for c in rdvs:
         if c.peut_etre_vu_par(request.user):
@@ -179,4 +191,83 @@ def contexte_calendrier(request):
         'agent_filtre': request.GET.get('agent', ''),
         'issues_rdv': ISSUES_RDV,
         'peut_noter_rdv': request.user.a_la_capacite('peut_creer') and mds is not None,
+        'peut_convoquer': request.user.a_la_capacite('planning_convoquer') and mds is not None,
     }
+
+
+# =============================================================================
+# RÉUNIONS (lot 2)
+# =============================================================================
+
+def _prevenir(participants, organisateur, reunion, objet, texte):
+    """Message CID à chaque participant (l'organisateur ne s'écrit pas à lui-même)."""
+    from messagerie.models import Message, StatutLecture
+    for p in participants:
+        if p.pk == organisateur.pk:
+            continue
+        msg = Message.objects.create(
+            expediteur=organisateur, destinataire=p, objet=objet[:255], contenu=texte,
+            motif='coordination_equipe', priorite='importante', reference=f"REUNION-{reunion.pk}")
+        StatutLecture.objects.create(message=msg, utilisateur=p, type_reception='destinataire')
+
+
+@login_required
+def nouvelle_reunion(request):
+    """
+    Convoquer une réunion : grille des disponibilités de l'équipe (libre / occupé / indisponible),
+    puis blocage automatique de l'agenda des participants. La convocation s'impose.
+    """
+    from .agenda import conflits_agent, grille_disponibilites, indisponibilites
+    mds = _mds_de(request.user)
+    if not (request.user.a_la_capacite('planning_convoquer') and mds):
+        messages.error(request, "Vous n'avez pas le droit de convoquer une réunion.")
+        return redirect('planning:calendrier_rdv')
+
+    jour = parse_date(request.POST.get('date') or request.GET.get('date') or '') or timezone.localdate()
+    avertissements = []
+    from .forms import ReunionForm
+    if request.method == 'POST':
+        form = ReunionForm(request.POST, mds=mds)
+        if form.is_valid():
+            d = form.cleaned_data
+            for p in d['participants']:
+                for c in conflits_agent(p, d['date'], d['heure_debut'], d['heure_fin']):
+                    avertissements.append(f"{p.get_full_name() or p.username} : déjà occupé(e) de "
+                                          f"{c.heure_debut:%H:%M} à {c.heure_fin:%H:%M}")
+                if indisponibilites(p, d['date'], d['heure_debut'], d['heure_fin']).exists():
+                    avertissements.append(f"{p.get_full_name() or p.username} : indisponible ce jour-là")
+            if not avertissements or request.POST.get('confirmer') == '1':
+                texte = d['intitule'] + (f"\n{d['ordre_du_jour']}" if d['ordre_du_jour'] else "")
+                reunion = CreneauRdv.objects.create(
+                    salle=None, mds=mds, agent=None, date=d['date'],
+                    heure_debut=d['heure_debut'], heure_fin=d['heure_fin'],
+                    nature='REUNION', domaine=d['domaine'], type_rdv='AUTRE', modalite='MDS',
+                    lieu_precis=d['lieu_precis'], description=texte, statut='RESERVE',
+                    cree_par=request.user, reserve_par=request.user, date_reservation=timezone.now())
+                reunion.co_intervenants.set(d['participants'])
+                HistoriqueCreneau.objects.create(creneau=reunion, action='CREATION', utilisateur=request.user,
+                                                 commentaire=f"Réunion : {len(d['participants'])} participant(s)")
+                organisateur = request.user.get_full_name() or request.user.username
+                _prevenir(d['participants'], request.user, reunion,
+                          f"Convocation : {d['intitule']} – {d['date']:%d/%m/%Y} à {d['heure_debut']:%H:%M}",
+                          f"Vous êtes convoqué(e) par {organisateur}.\n\n"
+                          f"Réunion : {d['intitule']}\nDate : {d['date']:%d/%m/%Y}, de {d['heure_debut']:%H:%M} "
+                          f"à {d['heure_fin']:%H:%M}\nLieu : {d['lieu_precis'] or '-'}\n\n"
+                          f"{d['ordre_du_jour']}\n\nLe créneau est bloqué dans votre agenda CID. "
+                          f"En cas d'empêchement, prévenez {organisateur} ou votre cadre.")
+                messages.success(request, f"Réunion convoquée : {len(d['participants'])} agenda(s) bloqué(s).")
+                return redirect('planning:calendrier_rdv')
+    else:
+        form = ReunionForm(mds=mds, initial={'date': jour, 'domaine': 'INSTITUTIONNEL',
+                                             'heure_debut': request.GET.get('debut', '')})
+
+    agents = form.fields['participants'].queryset
+    coches = set(int(x) for x in request.POST.getlist('participants') if x.isdigit())
+    grille = grille_disponibilites(agents, jour)
+    for ligne in grille['lignes']:
+        ligne['coche'] = ligne['agent'].pk in coches
+    return render(request, 'planning/reunion_form.html', {
+        'form': form, 'grille': grille, 'jour': jour, 'avertissements': avertissements,
+        'jour_precedent': jour.fromordinal(jour.toordinal() - 1),
+        'jour_suivant': jour.fromordinal(jour.toordinal() + 1),
+    })

@@ -70,7 +70,12 @@ def evenement(c, user):
         'end': f"{c.date.isoformat()}T{_heure(c.heure_fin)}",
     }
     icone = ICONES_NATURE.get(c.nature, '•')
-    nom_agent = (c.agent.get_full_name() or c.agent.username) if c.agent else "Non assigné"
+    reunion = c.nature == 'REUNION'
+    if reunion:
+        participants = list(c.co_intervenants.all())
+        nom_agent = f"Réunion – {len(participants)} participant{'s' if len(participants) > 1 else ''}"
+    else:
+        nom_agent = (c.agent.get_full_name() or c.agent.username) if c.agent else "Non assigné"
 
     # Créneau de permanence libre : blanc pointillé, réservable
     if c.statut == 'DISPONIBLE':
@@ -86,7 +91,7 @@ def evenement(c, user):
     if not c.voit_le_detail(user):
         if c.statut in STATUTS_ANNULES:
             return None
-        return {**base, 'title': f"{icone} Occupé – {nom_agent}",
+        return {**base, 'title': f"{icone} Occupé – {'Réunion' if reunion else nom_agent}",
                 'backgroundColor': GRIS_OCCUPE, 'borderColor': '#9CA3AF', 'textColor': '#111827',
                 'extendedProps': {'statut': 'OCCUPE', 'detail': False, 'agent': nom_agent,
                                   'nature': c.get_nature_display()}}
@@ -101,6 +106,8 @@ def evenement(c, user):
     if c.statut == 'VAD_ABSENT':
         classes.append('cid-vad-absent')
     usager = f" – {c.beneficiaire.prenom} {c.beneficiaire.nom.upper()}" if c.beneficiaire_id else ""
+    if reunion:
+        usager = f" – {c.intitule}" if c.intitule else ""
     return {**base,
             'title': f"{icone}{' ★' if c.premiere_fois else ''} {c.get_nature_display()}{usager}",
             'backgroundColor': fond, 'borderColor': plein,
@@ -115,7 +122,9 @@ def evenement(c, user):
                 'premiere_fois': c.premiere_fois,
                 'description': c.description,
                 'est_permanence': c.nature == 'PERMANENCE',
-                'peut_modifier': c.peut_etre_modifie_par(user) or c.est_participant(user),
+                'peut_modifier': (c.peut_gerer_reunion(user) if reunion
+                                  else c.peut_etre_modifie_par(user) or c.est_participant(user)),
+                'participants': ", ".join(u.get_full_name() or u.username for u in participants) if reunion else "",
             }}
 
 
@@ -155,3 +164,51 @@ def conflits_agent(agent, date, debut, fin, exclure_id=None):
                     heure_debut__lt=fin, heure_fin__gt=debut)
             .exclude(statut__in=STATUTS_ANNULES)
             .exclude(pk=exclure_id).distinct())
+
+
+# =============================================================================
+# DISPONIBILITÉS (lot 2) : qui est libre, d'un coup d'œil, sans aucun détail
+# =============================================================================
+
+PAS_MINUTES = 30
+HEURE_GRILLE_DEBUT, HEURE_GRILLE_FIN = 8, 18
+
+
+def _minutes(t):
+    return t.hour * 60 + t.minute
+
+
+def grille_disponibilites(agents, jour):
+    """
+    Pour chaque agent : une case par demi-heure de 8 h à 18 h, 'libre', 'occupe' ou 'indisponible'.
+    Rien d'autre n'est révélé (ni la nature, ni l'usager, ni le motif).
+    """
+    from .models import JourBloque
+    cases = list(range(HEURE_GRILLE_DEBUT * 60, HEURE_GRILLE_FIN * 60, PAS_MINUTES))
+    entetes = [f"{m // 60:02d}:{m % 60:02d}" for m in cases]
+    fermetures = list(JourBloque.objects.filter(date=jour, agent__isnull=True, salle__isnull=True))
+    lignes = []
+    for agent in agents:
+        occupe = [(_minutes(r.heure_debut), _minutes(r.heure_fin)) for r in
+                  CreneauRdv.objects.filter(Q(agent=agent) | Q(co_intervenants=agent), date=jour)
+                  .exclude(statut__in=STATUTS_ANNULES).distinct()]
+        indispo = [(_minutes(b.heure_debut), _minutes(b.heure_fin)) for b in
+                   list(JourBloque.objects.filter(date=jour, agent=agent)) + fermetures]
+        etats = []
+        for m in cases:
+            fin = m + PAS_MINUTES
+            if any(d < fin and f > m for d, f in indispo):
+                etats.append('indisponible')
+            elif any(d < fin and f > m for d, f in occupe):
+                etats.append('occupe')
+            else:
+                etats.append('libre')
+        lignes.append({'agent': agent, 'etats': etats})
+    return {'entetes': entetes, 'lignes': lignes}
+
+
+def indisponibilites(agent, jour, debut, fin):
+    """Jours bloqués (congés, formation… ou fermeture de la MDS) qui tombent sur l'horaire."""
+    from .models import JourBloque
+    return JourBloque.objects.filter(Q(agent=agent) | Q(agent__isnull=True, salle__isnull=True),
+                                     date=jour, heure_debut__lt=fin, heure_fin__gt=debut)

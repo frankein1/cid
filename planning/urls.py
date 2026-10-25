@@ -26,6 +26,7 @@ urlpatterns = [
     path('rdv/nouveau/', views_agenda.nouveau_rdv, name='nouveau_rdv'),
     path('rdv/<int:creneau_id>/issue/', views_agenda.issue_rdv, name='issue_rdv'),
     path('api/premiere-fois/', views_agenda.api_premiere_fois, name='api_premiere_fois'),
+    path('reunion/nouvelle/', views_agenda.nouvelle_reunion, name='nouvelle_reunion'),
     path('', views.calendrier_rdv, name='calendrier_rdv'),
     
     # ==========================

@@ -57,6 +57,11 @@
                     <i class="fas fa-calendar-plus mr-1"></i>Noter un rendez-vous
                 </a>
                 {% endif %}
+                {% if peut_convoquer %}
+                <a href="{% url 'planning:nouvelle_reunion' %}" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-sm font-medium">
+                    <i class="fas fa-users mr-1"></i>Convoquer une réunion
+                </a>
+                {% endif %}
                 {% if user|a_la_capacite:'planning_bloquer' %}
                 <a href="{% url 'planning:generer_creneaux' %}" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">Générer</a>
                 <a href="{% url 'planning:ajouter_jour_bloque' %}" class="px-4 py-2 bg-red-800 text-white rounded-md hover:bg-red-900 text-sm font-medium">Bloquer Jour</a>
@@ -196,13 +201,15 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 content += `<p><b>${esc(p.nature)} – ${esc(p.domaine)}</b>${p.premiere_fois ? ' ★ 1er rendez-vous' : ''}</p>`;
                 if (p.usager) content += `<p>🧑 ${esc(p.usager)}</p>`;
+                if (p.participants) content += `<p>👥 ${esc(p.participants)}</p>`;
                 content += `<p>📍 ${esc(p.lieu)}</p><p>👤 ${esc(p.agent)}</p><p>🕒 ${heure}</p>`;
                 content += `<p>État : <b>${esc(p.statut_libelle)}</b></p>`;
                 if (p.description) content += `<p class="text-sm text-gray-600">${esc(p.description)}</p>`;
                 if (p.peut_modifier) {
                     let options = '';
                     {% for code, libelle in issues_rdv %}
-                    if ('{{ code }}' !== 'VAD_ABSENT' || p.nature_code === 'VAD') {
+                    if (('{{ code }}' !== 'VAD_ABSENT' || p.nature_code === 'VAD')
+                        && (p.nature_code !== 'REUNION' || ['VENU_RECU', 'ANNULE_MDS', 'REPORT_MDS', 'RESERVE'].includes('{{ code }}'))) {
                         options += `<option value="{{ code }}" ${p.statut === '{{ code }}' ? 'selected' : ''}>{{ libelle|escapejs }}</option>`;
                     }
                     {% endfor %}

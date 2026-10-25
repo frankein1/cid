@@ -218,9 +218,21 @@ class CreneauRdv(models.Model):
             return True
         if self.est_participant(user):
             return True
+        if self.nature == 'REUNION' and user.pk == self.cree_par_id:
+            return True   # celui qui convoque suit sa réunion
         mds_id = self.mds_id or (self.salle.mds_id if self.salle_id else None)
         return bool(mds_id and user.a_la_capacite('peut_valider')
                     and UserMDSProfile.objects.filter(user=user, mds_id=mds_id, actif=True).exists())
+
+    def peut_gerer_reunion(self, user):
+        """Une réunion se gère (réalisée, annulée) par celui qui l'a convoquée ou par un cadre."""
+        return self.nature == 'REUNION' and (
+            user.pk == self.cree_par_id or user.is_superuser or user.a_la_capacite('peut_valider'))
+
+    @property
+    def intitule(self):
+        """Première ligne de la description (intitulé d'une réunion)."""
+        return (self.description or '').strip().split('\n')[0][:120]
 
     @property
     def est_realise(self):
