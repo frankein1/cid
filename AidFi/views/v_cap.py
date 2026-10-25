@@ -56,8 +56,8 @@ def _peut_voir(user, demande):
 
 
 def _peut_cloturer(user, demande):
-    if demande.statut != 'REMISE':
-        return False
+    if demande.statut != 'REMISE' or demande.remise_paierie:
+        return False   # une remise par la paierie est clôturée par le régisseur de la paierie
     if user.pk in (demande.cree_par_id, demande.remis_a_id) or _peut_decider(user, demande):
         return True
     return demande.remise_paierie and user.a_la_capacite('cap_regie_centrale')
@@ -123,7 +123,9 @@ def _render_detail(request, demande, **extra):
         "titres": demande.titres.order_by('valeur', 'numero'),
         "can_decider": peut_decider and demande.statut == 'DEPOSEE',
         "can_remettre": peut_decider and demande.statut == 'ACCORDEE',
-        "can_remise_paierie": demande.statut == 'TRANSMISE_PAIERIE' and user.a_la_capacite('cap_regie_centrale'),
+        # La paierie remet ET clôture (y compris un ancien dossier resté « remis »)
+        "can_remise_paierie": (demande.remise_paierie and demande.statut in ('TRANSMISE_PAIERIE', 'REMISE')
+                               and user.a_la_capacite('cap_regie_centrale')),
         "can_cloturer": _peut_cloturer(user, demande),
         "can_feuille": demande.statut in ('REMISE', 'CLOTUREE'),
         "decision_form": DecisionCAPForm(initial={'decision': 'ACCORD',
@@ -210,10 +212,11 @@ def cap_remise(request, demande_id):
 @require_POST
 def cap_remise_paierie(request, demande_id):
     demande = get_object_or_404(DemandeCAP, pk=demande_id)
-    if not request.user.a_la_capacite('cap_regie_centrale') or demande.statut != 'TRANSMISE_PAIERIE':
+    if (not request.user.a_la_capacite('cap_regie_centrale') or not demande.remise_paierie
+            or demande.statut not in ('TRANSMISE_PAIERIE', 'REMISE')):
         return HttpResponseForbidden("Accès refusé")
     svc.enregistrer_remise_paierie(demande, request.POST.get("numeros"), request.user)
-    messages.success(request, "Remise par la paierie enregistrée.")
+    messages.success(request, "Remise enregistrée et dossier clôturé : l'AS et le cadre sont prévenus.")
     return redirect("AidFi:cap_detail", demande_id=demande.pk)
 
 
