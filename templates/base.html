@@ -150,6 +150,12 @@
            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
             🔐 Coffre CAP
         </a>
+        {% if user|a_la_capacite:'peut_valider' %}
+        <a href="{% url 'planning:statistiques' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            📊 Statistiques d'activité
+        </a>
+        {% endif %}
 
         {# Placeholder futur #}
         <a href="#"
@@ -247,6 +253,9 @@
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase text-yellow-200">Cadre</p>
                 <a href="{% url 'AidFi:dashboard_cadre' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">⚖️ AFASE et CAP à traiter</a>
                 <a href="{% url 'AidFi:cap_coffres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">🔐 Coffre CAP</a>
+                {% if user|a_la_capacite:'peut_valider' %}
+                <a href="{% url 'planning:statistiques' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">📊 Statistiques d'activité</a>
+                {% endif %}
                 {% endif %}
             </div>
             {% endif %}

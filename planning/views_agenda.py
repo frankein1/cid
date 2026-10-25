@@ -352,3 +352,50 @@ def invitation_ics(request, creneau_id, partenaire_id):
                      content_type='text/calendar; charset=utf-8; method=REQUEST')
     r['Content-Disposition'] = f'attachment; filename="invitation_{rdv.date:%Y%m%d}_{rdv.heure_debut:%H%M}.ics"'
     return r
+
+
+# =============================================================================
+# STATISTIQUES D'ACTIVITÉ (lot 4)
+# =============================================================================
+
+@login_required
+def statistiques(request):
+    """Heures et nombre de rendez-vous par nature × domaine, prévus / réalisés, premières fois."""
+    import csv
+    from django.contrib.auth import get_user_model
+    from django.http import HttpResponse
+    from .statistiques import calculer, lignes_csv, periodes_rapides
+    mds = _mds_de(request.user)
+    if not (mds and (request.user.is_superuser or request.user.a_la_capacite('peut_valider'))):
+        messages.error(request, "Statistiques réservées aux cadres de la MDS.")
+        return redirect('planning:calendrier_rdv')
+
+    raccourcis = periodes_rapides(timezone.localdate())
+    debut = parse_date(request.GET.get('du', '')) or raccourcis[0][1]
+    fin = parse_date(request.GET.get('au', '')) or raccourcis[0][2]
+    if fin < debut:
+        debut, fin = fin, debut
+    agents = get_user_model().objects.filter(profils_mds__mds=mds, profils_mds__actif=True)\
+        .distinct().order_by('last_name', 'first_name')
+    agent = agents.filter(pk=request.GET.get('agent')).first() if request.GET.get('agent', '').isdigit() else None
+    resultat = calculer(mds, debut, fin, agent)
+
+    if request.GET.get('format') == 'csv':
+        r = HttpResponse(content_type='text/csv; charset=utf-8')
+        nom = f"activite_{mds.code_mds}_{debut:%Y%m%d}_{fin:%Y%m%d}{'_' + agent.username if agent else ''}.csv"
+        r['Content-Disposition'] = f'attachment; filename="{nom}"'
+        r.write('﻿')   # pour qu'Excel lise bien les accents
+        ecrivain = csv.writer(r, delimiter=';')
+        ecrivain.writerow([f"Activité {mds.nom}", f"du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}",
+                           agent.get_full_name() if agent else "Toute la MDS"])
+        for ligne in lignes_csv(resultat):
+            ecrivain.writerow(ligne)
+        return r
+
+    from .agenda import COULEURS_DOMAINE
+    return render(request, 'planning/statistiques.html', {
+        'r': resultat, 'debut': debut, 'fin': fin, 'agents': agents, 'agent': agent, 'mds': mds,
+        'raccourcis': raccourcis, 'couleurs': {code: c[1] for code, c in COULEURS_DOMAINE.items()},
+        'query': request.GET.urlencode(),
+        'max_domaine': max([d['valeurs']['min_realisees'] for d in resultat['domaines']] + [1]),
+    })
