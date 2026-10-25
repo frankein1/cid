@@ -1,4 +1,5 @@
 <!-- /templates/planning/_rdv_usager.html -->
+{% load capacites %}
 {# Rendez-vous de l'usager : depuis sa fiche, les agents de sa MDS voient le détail #}
 <div id="rdv-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
@@ -6,6 +7,9 @@
         <div class="flex gap-2">
             <a href="{% url 'planning:creer_rdv_depuis_beneficiaire' beneficiaire.id %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50">🏢 Permanence</a>
             <a href="{% url 'planning:nouveau_rdv' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-md hover:bg-blue-800">🏠 VAD, hors permanence…</a>
+            {% if user|a_la_capacite:'planning_convoquer' %}
+            <a href="{% url 'planning:nouvelle_reunion' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-orange-600 text-white rounded-md hover:bg-orange-700">👥 Réunion</a>
+            {% endif %}
         </div>
     </div>
     <div class="divide-y divide-gray-100">
@@ -18,7 +22,8 @@
                     {% if r.premiere_fois %}<span title="1er rendez-vous">★</span>{% endif %}
                 </p>
                 <p class="text-xs text-gray-500">
-                    {{ r.agent.get_full_name|default:r.agent.username|default:"Non assigné" }} · {{ r.lieu_affichage }}
+                    {% if r.nature == 'REUNION' %}👥 {% for p in r.co_intervenants.all %}{{ p.get_full_name|default:p.username }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% else %}{{ r.agent.get_full_name|default:r.agent.username|default:"Non assigné" }}{% endif %} · {{ r.lieu_affichage }}
                     {% if r.description %} · {{ r.description|truncatechars:80 }}{% endif %}
                 </p>
             </div>

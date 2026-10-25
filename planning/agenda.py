@@ -107,7 +107,7 @@ def evenement(c, user):
         classes.append('cid-vad-absent')
     usager = f" – {c.beneficiaire.prenom} {c.beneficiaire.nom.upper()}" if c.beneficiaire_id else ""
     if reunion:
-        usager = f" – {c.intitule}" if c.intitule else ""
+        usager = (f" – {c.intitule}" if c.intitule else "") + usager
     return {**base,
             'title': f"{icone}{' ★' if c.premiere_fois else ''} {c.get_nature_display()}{usager}",
             'backgroundColor': fond, 'borderColor': plein,

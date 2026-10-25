@@ -321,9 +321,12 @@ class ReunionForm(forms.Form):
     ordre_du_jour = forms.CharField(label="Ordre du jour", required=False, widget=forms.Textarea(attrs={'rows': 3}))
     participants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), label="Participants",
                                                   widget=forms.CheckboxSelectMultiple)
+    # Dossier concerné (ex. synthèse IP) : la réunion apparaît alors sur la fiche de l'usager
+    beneficiaire_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
 
     def __init__(self, *args, mds=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.mds = mds
         from .models import DOMAINES_RDV
         self.fields['domaine'].choices = DOMAINES_RDV
         self.fields['participants'].queryset = User.objects.filter(
@@ -340,4 +343,9 @@ class ReunionForm(forms.Form):
         from django.utils import timezone
         if jour and jour < timezone.localdate():
             self.add_error('date', "Une réunion se convoque pour aujourd'hui ou plus tard.")
+        data['beneficiaire'] = None
+        if data.get('beneficiaire_id'):
+            data['beneficiaire'] = Beneficiaire.objects.filter(pk=data['beneficiaire_id'], mds=self.mds).first()
+            if data['beneficiaire'] is None:
+                self.add_error(None, "Dossier introuvable dans votre MDS.")
         return data

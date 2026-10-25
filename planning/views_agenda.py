@@ -207,6 +207,7 @@ def _prevenir(participants, organisateur, reunion, objet, texte):
             continue
         msg = Message.objects.create(
             expediteur=organisateur, destinataire=p, objet=objet[:255], contenu=texte,
+            beneficiaire=reunion.beneficiaire,   # rattaché au dossier si la réunion en concerne un
             motif='coordination_equipe', priorite='importante', reference=f"REUNION-{reunion.pk}")
         StatutLecture.objects.create(message=msg, utilisateur=p, type_reception='destinataire')
 
@@ -242,6 +243,7 @@ def nouvelle_reunion(request):
                     salle=None, mds=mds, agent=None, date=d['date'],
                     heure_debut=d['heure_debut'], heure_fin=d['heure_fin'],
                     nature='REUNION', domaine=d['domaine'], type_rdv='AUTRE', modalite='MDS',
+                    beneficiaire=d['beneficiaire'],
                     lieu_precis=d['lieu_precis'], description=texte, statut='RESERVE',
                     cree_par=request.user, reserve_par=request.user, date_reservation=timezone.now())
                 reunion.co_intervenants.set(d['participants'])
@@ -251,23 +253,33 @@ def nouvelle_reunion(request):
                 _prevenir(d['participants'], request.user, reunion,
                           f"Convocation : {d['intitule']} – {d['date']:%d/%m/%Y} à {d['heure_debut']:%H:%M}",
                           f"Vous êtes convoqué(e) par {organisateur}.\n\n"
-                          f"Réunion : {d['intitule']}\nDate : {d['date']:%d/%m/%Y}, de {d['heure_debut']:%H:%M} "
+                          f"Réunion : {d['intitule']}\n"
+                          + (f"Dossier : {d['beneficiaire'].prenom} {d['beneficiaire'].nom.upper()} "
+                             f"({d['beneficiaire'].code_interne})\n" if d['beneficiaire'] else "")
+                          + f"Date : {d['date']:%d/%m/%Y}, de {d['heure_debut']:%H:%M} "
                           f"à {d['heure_fin']:%H:%M}\nLieu : {d['lieu_precis'] or '-'}\n\n"
                           f"{d['ordre_du_jour']}\n\nLe créneau est bloqué dans votre agenda CID. "
                           f"En cas d'empêchement, prévenez {organisateur} ou votre cadre.")
                 messages.success(request, f"Réunion convoquée : {len(d['participants'])} agenda(s) bloqué(s).")
+                if reunion.beneficiaire:
+                    return redirect('beneficiaire:detail_beneficiaire', code_interne=reunion.beneficiaire.code_interne)
                 return redirect('planning:calendrier_rdv')
     else:
-        form = ReunionForm(mds=mds, initial={'date': jour, 'domaine': 'INSTITUTIONNEL',
-                                             'heure_debut': request.GET.get('debut', '')})
+        initial = {'date': jour, 'domaine': 'INSTITUTIONNEL', 'heure_debut': request.GET.get('debut', '')}
+        dossier = Beneficiaire.objects.filter(pk=request.GET.get('beneficiaire') or 0, mds=mds).first()
+        if dossier:
+            initial['beneficiaire_id'] = dossier.pk
+        form = ReunionForm(mds=mds, initial=initial)
 
     agents = form.fields['participants'].queryset
     coches = set(int(x) for x in request.POST.getlist('participants') if x.isdigit())
     grille = grille_disponibilites(agents, jour)
     for ligne in grille['lignes']:
         ligne['coche'] = ligne['agent'].pk in coches
+    id_dossier = form['beneficiaire_id'].value()
+    dossier = Beneficiaire.objects.filter(pk=id_dossier, mds=mds).first() if str(id_dossier or '').isdigit() else None
     return render(request, 'planning/reunion_form.html', {
-        'form': form, 'grille': grille, 'jour': jour, 'avertissements': avertissements,
+        'form': form, 'grille': grille, 'jour': jour, 'avertissements': avertissements, 'dossier': dossier,
         'jour_precedent': jour.fromordinal(jour.toordinal() - 1),
         'jour_suivant': jour.fromordinal(jour.toordinal() + 1),
     })
