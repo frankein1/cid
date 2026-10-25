@@ -1,0 +1,125 @@
+<!-- /templates/AidFi/statistiques_aides.html -->
+{% extends "base.html" %}
+
+{% block title %}Statistiques des aides financières{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    {% include "includes/onglets_stats.html" with onglet="aides" %}
+
+    <div class="flex flex-wrap justify-between items-end gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">💶 Aides financières – {{ annee }}</h1>
+            <p class="text-sm text-gray-500">{{ mds.nom }} · {% if agent %}demandes de {{ agent.get_full_name|default:agent.username }}{% else %}toute la MDS{% endif %} · mois par mois, avec cumuls</p>
+        </div>
+        <div class="flex flex-wrap gap-2 items-end">
+            <form method="get" class="flex flex-wrap gap-2 items-end">
+                <select name="annee" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    {% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}
+                </select>
+                <select name="agent" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <option value="">Toute la MDS</option>
+                    {% for a in agents %}<option value="{{ a.pk }}" {% if agent and agent.pk == a.pk %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm">Afficher</button>
+            </form>
+            <a href="?{{ query }}{% if query %}&{% endif %}format=csv" class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">📥 Exporter (Excel)</a>
+        </div>
+    </div>
+
+    {% for a in r.aides %}
+    <div class="bg-white rounded-lg border overflow-x-auto">
+        <div class="px-5 pt-5 flex flex-wrap justify-between items-baseline gap-2">
+            <h2 class="font-bold text-gray-800">{{ a.libelle }}</h2>
+            <p class="text-sm text-gray-600">
+                Année : {{ a.total.deposees }} demande{{ a.total.deposees|pluralize }} ·
+                demandé <b>{{ a.total.demande|floatformat:2 }} €</b> ·
+                accordé <b>{{ a.total.accorde|floatformat:2 }} €</b> ({{ a.total.accords }} accord{{ a.total.accords|pluralize }}, {{ a.total.refus }} refus) ·
+                délivré <b>{{ a.total.delivre|floatformat:2 }} €</b>
+            </p>
+        </div>
+        {% if a.a_des_donnees %}
+        <table class="min-w-full text-sm mt-3">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">Mois</th>
+                    <th class="px-3 py-2 text-right">Demandes</th>
+                    <th class="px-3 py-2 text-right">Demandé</th>
+                    <th class="px-3 py-2 text-right">Accords</th>
+                    <th class="px-3 py-2 text-right">Accordé</th>
+                    <th class="px-3 py-2 text-right">Refus</th>
+                    {% if a.code == 'AFASE' %}<th class="px-3 py-2 text-right">Envois régie</th>{% endif %}
+                    <th class="px-3 py-2 text-right">Délivrances</th>
+                    <th class="px-3 py-2 text-right">Délivré</th>
+                    <th class="px-3 py-2 text-right bg-blue-50">Cumul demandé</th>
+                    <th class="px-3 py-2 text-right bg-blue-50">Cumul accordé</th>
+                    <th class="px-3 py-2 text-right bg-blue-50">Cumul délivré</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for m in a.mois %}
+                <tr class="{% if not m.deposees and not m.accords and not m.refus and not m.delivrees and not m.envois_regie %}text-gray-300{% endif %}">
+                    <td class="px-3 py-1.5 text-left text-gray-800">{{ m.mois }}</td>
+                    <td class="px-3 py-1.5 text-right">{{ m.deposees|default:"–" }}</td>
+                    <td class="px-3 py-1.5 text-right">{% if m.demande %}{{ m.demande|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{{ m.accords|default:"–" }}</td>
+                    <td class="px-3 py-1.5 text-right">{% if m.accorde %}{{ m.accorde|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{{ m.refus|default:"–" }}</td>
+                    {% if a.code == 'AFASE' %}<td class="px-3 py-1.5 text-right">{{ m.envois_regie|default:"–" }}</td>{% endif %}
+                    <td class="px-3 py-1.5 text-right">{{ m.delivrees|default:"–" }}</td>
+                    <td class="px-3 py-1.5 text-right">{% if m.delivre %}{{ m.delivre|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right bg-blue-50/50 text-gray-700">{{ m.cumul_demande|floatformat:2 }} €</td>
+                    <td class="px-3 py-1.5 text-right bg-blue-50/50 text-gray-700">{{ m.cumul_accorde|floatformat:2 }} €</td>
+                    <td class="px-3 py-1.5 text-right bg-blue-50/50 text-gray-700">{{ m.cumul_delivre|floatformat:2 }} €</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="px-5 py-4 text-sm text-gray-400 italic">Aucune demande sur l'année.</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <details class="bg-white rounded-lg border">
+        <summary class="cursor-pointer px-5 py-4 font-bold text-gray-800">Détail des dossiers ({{ r.dossiers|length }})</summary>
+        <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">Usager</th><th class="px-3 py-2 text-left">Aide</th>
+                    <th class="px-3 py-2 text-left">Déposé</th><th class="px-3 py-2 text-right">Demandé</th>
+                    <th class="px-3 py-2 text-left">Décision</th><th class="px-3 py-2 text-right">Accordé</th>
+                    <th class="px-3 py-2 text-left">Envoi régie</th><th class="px-3 py-2 text-left">Délivré le</th>
+                    <th class="px-3 py-2 text-right">Délivré</th><th class="px-3 py-2 text-right">Délai</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for l in r.dossiers %}
+                <tr>
+                    <td class="px-3 py-1.5"><a href="{% url 'beneficiaire:detail_beneficiaire' l.demande.beneficiaire.code_interne %}" class="text-blue-700 hover:underline">{{ l.demande.beneficiaire.code_interne }}</a></td>
+                    <td class="px-3 py-1.5">{{ l.code }}</td>
+                    <td class="px-3 py-1.5">{{ l.depot|date:"d/m/Y" }}</td>
+                    <td class="px-3 py-1.5 text-right">{{ l.montant_demande|floatformat:2 }} €</td>
+                    <td class="px-3 py-1.5">{% if l.decision %}{{ l.decision|date:"d/m/Y" }} · {% if l.accord %}Accord{% elif l.accord is False %}Refus{% else %}Ajourné{% endif %}{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{% if l.montant_accorde is not None %}{{ l.montant_accorde|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5">{{ l.envoi_regie|date:"d/m/Y"|default:"–" }}</td>
+                    <td class="px-3 py-1.5">{{ l.delivrance|date:"d/m/Y"|default:"–" }}</td>
+                    <td class="px-3 py-1.5 text-right">{% if l.montant_delivre is not None %}{{ l.montant_delivre|floatformat:2 }} €{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{% if l.delai_jours is not None %}{{ l.delai_jours }} j{% else %}–{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="10" class="px-3 py-6 text-center text-gray-400 italic">Aucun dossier</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </details>
+
+    <p class="text-xs text-gray-500">
+        Chaque montant est rangé au mois où il s'est produit : la demande au mois de dépôt, l'accord au mois de la décision,
+        la délivrance au mois de délivrance (AFASE : saisie dans « Suivi du paiement » ; CAP : remise des chèques ;
+        régie : versement). Les brouillons ne comptent pas. Filtre agent : demandes déposées par l'agent.
+    </p>
+</div>
+{% endblock %}

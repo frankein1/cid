@@ -121,8 +121,41 @@ def afase_detail(request, demande_id):
             "can_modifier": demande.est_modifiable and request.user.peut_agir_sur_objet(demande, "peut_modifier"),
             "can_decider": request.user.peut_agir_sur_objet(demande, "peut_decider"),
             "can_instruire": request.user.peut_agir_sur_objet(demande, "peut_instruire"),
+            "can_paiement": _peut_suivre_paiement(request.user, demande, decision),
         },
     )
+
+
+def _peut_suivre_paiement(user, demande, decision):
+    """Suivi du paiement d'une AFASE accordée : cadre, secrétariat ou gestion financière de la MDS."""
+    if not decision or decision.type_decision != "ACCORD":
+        return False
+    return any(user.peut_agir_sur_objet(demande, cap)
+               for cap in ("peut_decider", "peut_valider_cheque_aidfi", "peut_gerer_finance"))
+
+
+@login_required
+def afase_paiement(request, demande_id):
+    """Enregistrer l'envoi à la régie, la délivrance et le montant délivré."""
+    from decimal import Decimal, InvalidOperation
+    from django.utils.dateparse import parse_date
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    decision = getattr(demande, "decision", None)
+    if request.method != "POST" or not _peut_suivre_paiement(request.user, demande, decision):
+        return HttpResponseForbidden("Accès refusé")
+    decision.date_envoi_regie = parse_date(request.POST.get("date_envoi_regie") or "")
+    decision.date_delivrance = parse_date(request.POST.get("date_delivrance") or "")
+    try:
+        montant = (request.POST.get("montant_delivre") or "").replace(",", ".").strip()
+        decision.montant_delivre = Decimal(montant) if montant else None
+    except InvalidOperation:
+        messages.error(request, "Montant délivré invalide.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+    if decision.date_delivrance and decision.montant_delivre is None:
+        decision.montant_delivre = decision.montant_accorde   # par défaut : le montant accordé
+    decision.save(update_fields=["date_envoi_regie", "date_delivrance", "montant_delivre"])
+    messages.success(request, "Suivi du paiement enregistré.")
+    return redirect("AidFi:afase_detail", demande_id=demande.id)
 
 
 # =============================================================================

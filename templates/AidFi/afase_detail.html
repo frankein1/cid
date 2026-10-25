@@ -121,6 +121,35 @@
                     </ul>
                 </div>
 
+                {% if decision and decision.type_decision == "ACCORD" %}
+                <!-- SUIVI DU PAIEMENT (statistiques mois par mois) -->
+                <div class="bg-white rounded-3xl shadow p-6">
+                    <h3 class="font-bold text-gray-800 mb-3">💶 Suivi du paiement</h3>
+                    <p class="text-sm text-gray-600 mb-3">Accordé : <b>{{ decision.montant_accorde|floatformat:2 }} €</b>
+                        {% if decision.duree_accordee > 1 %}sur {{ decision.duree_accordee }} mois{% endif %}</p>
+                    {% if can_paiement %}
+                    <form method="post" action="{% url 'AidFi:afase_paiement' demande.id %}" class="space-y-3 text-sm">
+                        {% csrf_token %}
+                        <label class="block">Envoyé à la régie le
+                            <input type="date" name="date_envoi_regie" value="{{ decision.date_envoi_regie|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1 mt-1"></label>
+                        <label class="block">Délivré le
+                            <input type="date" name="date_delivrance" value="{{ decision.date_delivrance|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1 mt-1"></label>
+                        <label class="block">Montant délivré (€)
+                            <input type="text" inputmode="decimal" name="montant_delivre" value="{{ decision.montant_delivre|default_if_none:''|floatformat:2 }}"
+                                   placeholder="{{ decision.montant_accorde|floatformat:2 }}" class="w-full border rounded px-2 py-1 mt-1"></label>
+                        <p class="text-xs text-gray-500">Vide : le montant accordé est repris à la délivrance.</p>
+                        <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 hover:bg-indigo-700">Enregistrer</button>
+                    </form>
+                    {% else %}
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        <li>Envoyé à la régie : {{ decision.date_envoi_regie|date:"d/m/Y"|default:"–" }}</li>
+                        <li>Délivré : {{ decision.date_delivrance|date:"d/m/Y"|default:"–" }}
+                            {% if decision.montant_delivre is not None %}({{ decision.montant_delivre|floatformat:2 }} €){% endif %}</li>
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
+
                 {% if demande.decision %}
                     <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
                         <a href="{% url 'AidFi:afase_pdf' demande.id %}"
