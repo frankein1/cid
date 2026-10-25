@@ -31,7 +31,7 @@ def _decision(demande, afase=None):
         return 'AJO', None
     if demande.statut in STATUTS_ACCORD:
         # Le montant accordé est sur la demande spécialisée (ex. DemandeCAP), pas sur le socle commun
-        detail = getattr(demande, "demandecap", None) or demande
+        detail = getattr(demande, "demandecap", None) or getattr(demande, "demanderegie", None) or demande
         return 'ACCORD', getattr(detail, "montant_accorde", None)
     return None, None
 
@@ -53,7 +53,7 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
     actions = {
         "can_create_afase": request.user.a_la_capacite("peut_creer"),
         "can_create_cap": request.user.peut_agir_sur_objet(beneficiaire, "peut_instruire"),
-        "can_create_regie": request.user.a_la_capacite("peut_gerer_finance"),
+        "can_create_regie": request.user.peut_agir_sur_objet(beneficiaire, "peut_instruire"),
     }
 
     # 📦 Récupérer toutes les demandes (socle commun)
@@ -123,11 +123,14 @@ def dashboard_aidfi_beneficiaire(request, beneficiaire_id):
                 aide["urls"]["pdf"] = "AidFi:cap_feuille_pdf"
 
         # ==========================
-        # 🔹 CAS RÉGIE (partiel)
+        # 🔹 CAS RÉGIE D'URGENCE
         # ==========================
         elif type_code == "REGIE":
             aide["urls"]["detail"] = "AidFi:regie_detail"
             aide["urls"]["detail_args"] = [demande.id]
+            if demande.statut == "DEPOSEE" and request.user.peut_agir_sur_objet(demande, "peut_valider_cheque_aidfi"):
+                aide["can"]["decider"] = True
+                aide["urls"]["decision"] = "AidFi:regie_detail"   # la décision se prend sur la fiche
 
         # Décision (accordé / refusé / ajourné), en plus du statut
         code, montant_accorde = _decision(demande, afase if type_code == "AFASE" else None)

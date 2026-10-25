@@ -50,7 +50,7 @@ CAPACITES = [
     # --- SPÉCIFIQUES AIDFI (Ajoutés ici pour centralisation) ---
     ('peut_gestion_aides_aidfi', 'Gestion des aides AidFi'),
     ('peut_valider_cheque_aidfi', 'CAP – Décider et remettre les chèques service (MDS)'),
-    ('cap_regie_centrale', 'CAP – Régie centrale (remises par la paierie départementale)'),
+    ('cap_regie_centrale', "Régie centrale : CAP remis en paierie et régies d'urgence"),
     ('afase_controle', 'AFASE – Service de contrôle (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
     ('peut_inscrire_aidfi', 'Inscription AidFi'),
     ('peut_consulter_dossiers_aidfi', 'Consulter dossiers AidFi'),

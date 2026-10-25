@@ -82,6 +82,19 @@ def _est_cap(demande):
     return isinstance(demande, DemandeCAP)
 
 
+def _est_regie(demande):
+    from AidFi.models.m_regie import DemandeRegie
+    return isinstance(demande, DemandeRegie)
+
+
+def _versement_regie(demande):
+    """« 150 € en espèces » ou « 150 € versés à Hôtel X (facture F-12) »."""
+    if demande.mode_paiement == 'TIERS':
+        ref = f" (facture {demande.tiers_reference})" if demande.tiers_reference else ""
+        return f"{demande.montant_accorde} € versés à {demande.tiers_nom}{ref}"
+    return f"{demande.montant_accorde} € en espèces"
+
+
 def _envoyer(expediteur, destinataire, demande, objet, contenu, motif, priorite=None):
     from messagerie.models import Message, StatutLecture
     from django.contrib.contenttypes.models import ContentType
@@ -92,7 +105,7 @@ def _envoyer(expediteur, destinataire, demande, objet, contenu, motif, priorite=
         objet=objet,
         contenu=contenu,
         motif=motif,
-        priorite=priorite or ('urgente' if _est_cap(demande) else 'importante'),
+        priorite=priorite or ('urgente' if _est_cap(demande) or _est_regie(demande) else 'importante'),
         content_type=ContentType.objects.get_for_model(demande),
         object_id=demande.pk,
         reference=f"AIDE-{demande.pk}",
@@ -117,6 +130,10 @@ def prevenir_reponse_cadre(demande, cadre):
     if _est_cap(demande) and demande.statut == "ACCORDEE":
         resultat = (f"ACCORDÉE : {demande.montant_accorde} € en chèques service, "
                     f"à retirer auprès de {cadre.get_full_name() or cadre.username}")
+    elif _est_regie(demande) and demande.statut == "TRANSMISE_PAIERIE":
+        resultat = (f"ACCORDÉE : {_versement_regie(demande)}, "
+                    f"transmise à la régie centrale (versement sous 24 h)")
+        prevenir_regie_centrale(demande, cadre)
     elif demande.statut == "TRANSMISE_PAIERIE":
         resultat = (f"ACCORDÉE : {demande.montant_accorde} € en chèques service, "
                     f"remise par la paierie départementale (dossier transmis au régisseur central)")
@@ -137,7 +154,7 @@ def prevenir_reponse_cadre(demande, cadre):
     motivation = ""
     if decision and decision.motivation and demande.statut in ("ACCORDEE", "REFUSEE", "AJO"):
         motivation = f"\nMotivation : {decision.motivation}\n"
-    if _est_cap(demande) and demande.statut == "REFUSEE" and demande.motif_refus:
+    if (_est_cap(demande) or _est_regie(demande)) and demande.statut == "REFUSEE" and demande.motif_refus:
         motivation = f"\nMotif : {demande.motif_refus}\n"
 
     _envoyer(
@@ -177,11 +194,26 @@ def prevenir_depot(demande, acteur):
 
 
 def prevenir_regie_centrale(demande, cadre):
-    """CAP remis par la paierie : message à chaque régisseur central."""
+    """CAP remis par la paierie, ou régie d'urgence accordée : message à chaque régisseur central."""
     from core.models import User
     benef = demande.beneficiaire
     for regisseur in User.objects.filter(is_active=True, profils__code='REGISSEUR_CENTRAL',
                                          profils__actif=True).distinct():
+        if _est_regie(demande):
+            _envoyer(
+                cadre, regisseur, demande,
+                objet=f"Régie d'urgence à verser sous 24 h : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
+                contenu=(
+                    f"Une régie d'urgence a été accordée par {demande.mds} "
+                    f"pour {benef.prenom} {benef.nom.upper()} : {_versement_regie(demande)}.\n"
+                    + ("La facture et le RIB du tiers sont joints au dossier.\n" if demande.mode_paiement == 'TIERS' else "")
+                    + f"Le versement doit intervenir dans les 24 heures.\n\n"
+                    f"Décision de : {cadre.get_full_name() or cadre.username}.\n"
+                    f"Message automatique de CID."
+                ),
+                motif='validation_cadre',
+            )
+            continue
         _envoyer(
             cadre, regisseur, demande,
             objet=f"CAP à remettre en paierie : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
@@ -195,3 +227,25 @@ def prevenir_regie_centrale(demande, cadre):
             motif='validation_cadre',
         )
 
+
+
+def prevenir_versement_regie(demande, regisseur):
+    """Régie d'urgence versée : message à l'AS qui a déposé la demande et au cadre qui l'a accordée."""
+    from django.utils import timezone
+    depot = SuiviDemande.objects.filter(demande_id=demande.pk, statut_nouveau="DEPOSEE").order_by('-id').first()
+    agent = (depot.agent if depot and depot.agent else None) or demande.cree_par
+    benef = demande.beneficiaire
+    qui = regisseur.get_full_name() or regisseur.username
+    comment = f"à {demande.tiers_nom}" if demande.mode_paiement == 'TIERS' else "en espèces"
+    partiel = (f" (sur {demande.montant_accorde} € accordés)" if demande.montant_verse != demande.montant_accorde else "")
+    for destinataire in {u for u in (agent, demande.decide_par) if u and u.pk != regisseur.pk}:
+        _envoyer(
+            regisseur, destinataire, demande,
+            objet=f"Régie d'urgence versée : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
+            contenu=(f"La régie d'urgence pour {benef.prenom} {benef.nom.upper()} a été versée {comment} le "
+                     f"{timezone.localtime(demande.date_versement):%d/%m/%Y à %H:%M} : "
+                     f"{demande.montant_verse} €{partiel}.\n"
+                     + (f"N° d'enregistrement comptable : {demande.reference_comptable}.\n" if demande.reference_comptable else "")
+                     + f"Le dossier n° {demande.pk} est clôturé par {qui}.\n\nMessage automatique de CID."),
+            motif='suivi_dossier',
+        )
