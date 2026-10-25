@@ -13,12 +13,12 @@ from .legacy_models import aide_piece_upload_path as legacy_upload_path  # Migra
 from .m_generique import (
     TypeAide, MotifDemande, DemandeAide, SuiviDemande, PieceJustificative
 )
-from .m_regie import RegieUrgence, DemandeRegie
+from .m_regie import DemandeRegie
 from .m_cap import ReceptionCAP, TitreCAP, DemandeCAP, InventaireCAP
 from .m_afase import (
     DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE
 )
 
 __all__ = [
-    'TypeAide', 'DemandeAide', 'RegieUrgence', 'DemandeRegie', 'DemandeAFASE', 'DemandeCAP'
+    'TypeAide', 'DemandeAide', 'DemandeRegie', 'DemandeAFASE', 'DemandeCAP'
 ]

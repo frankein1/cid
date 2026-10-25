@@ -80,12 +80,6 @@ def dossiers(mds, annee, agent=None):
                          envoi_regie=_jour(r.date_decision) if r.statut != 'REFUSEE' else None)
             if r.date_versement:
                 l.update(delivrance=_jour(r.date_versement), montant_delivre=r.montant_verse)
-        elif code == 'REGIE':
-            regie = getattr(d, 'regie_urgence', None)      # anciennes fiches (modèle RegieUrgence)
-            if regie:
-                l.update(decision=l['depot'], accord=True, montant_accorde=regie.montant_urgence)
-                if regie.date_versement:
-                    l.update(delivrance=_jour(regie.date_versement), montant_delivre=regie.montant_urgence)
         if l['delivrance'] and l['depot']:
             l['delai_jours'] = (l['delivrance'] - l['depot']).days
         if any(x and x.year == annee for x in (l['depot'], l['decision'], l['transmission'], l['envoi_regie'], l['delivrance'])):
