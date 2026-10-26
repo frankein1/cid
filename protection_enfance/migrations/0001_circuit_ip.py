@@ -739,7 +739,7 @@ class Migration(migrations.Migration):
                     "saisie_directe",
                     models.BooleanField(
                         default=False,
-                        verbose_name="Saisine directe par le cadre (urgence, inspecteur informé)",
+                        verbose_name="Saisine directe par le cadre (danger grave et imminent)",
                     ),
                 ),
                 (

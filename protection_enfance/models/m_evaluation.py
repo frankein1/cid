@@ -113,7 +113,7 @@ class SaisineIP(models.Model):
     date_saisine = models.DateTimeField("Date de la saisine du procureur", null=True, blank=True)
     reference_parquet = models.CharField("Référence / mode d'envoi", max_length=100, blank=True)
     saisie_directe = models.BooleanField(
-        "Saisine directe par le cadre (urgence, inspecteur informé)", default=False)
+        "Saisine directe par le cadre (danger grave et imminent)", default=False)
 
     class Meta:
         ordering = ('-date_proposition',)

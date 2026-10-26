@@ -41,7 +41,7 @@ def avis_rapport(request, ip_id):
     else:
         try:
             circuit.avis_inspecteur(ip, request.user, avis, decision if avis != 'COMPLEMENT' else '', commentaire)
-            messages.success(request, "Avis enregistré : la MDS est prévenue.")
+            messages.success(request, "Avis enregistré." + (" Le binôme est prévenu." if avis == "COMPLEMENT" else ""))
         except CircuitError as e:
             messages.error(request, str(e))
     return redirect('protection_enfance:rapport', ip_id=ip.numero)

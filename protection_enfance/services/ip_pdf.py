@@ -234,7 +234,7 @@ def saisine_pdf(s):
         Paragraph(f"Proposée par {escape(_nom(s.propose_par))} le {_date(s.date_proposition)} ; "
                   f"décision du cadre : {escape(_nom(s.cadre))} le {_date(s.date_decision_cadre)}"
                   + (f" ; validée par l'inspecteur enfance famille {escape(_nom(s.inspecteur))} le {_date(s.date_decision_pief)}"
-                     if s.inspecteur else " ; saisine directe (urgence), inspecteur informé")
+                     if s.inspecteur else " ; saisine directe par le cadre (danger grave et imminent)")
                   + ".", st["Normal"]),
     ]
     if hasattr(ip, 'rapport') and ip.rapport.date_soumission:

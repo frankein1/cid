@@ -5,9 +5,10 @@
 # =============================================================================
 # protection_enfance/services/ip_circuit.py
 """
-Circuit d'une IP : chaque étape est journalisée et les personnes concernées reçoivent un message CID
-(copies : binôme, cadre de la MDS, inspecteur, CRIP). Les messages ne sont PAS rattachés au dossier
-de la famille, pour que seules les personnes habilitées sachent qu'une IP existe.
+Circuit d'une IP : chaque étape est journalisée dans l'IP. Un message CID part UNIQUEMENT à la personne
+qui doit agir à l'étape suivante (jamais de copie pour information : chacun consulte l'IP elle-même).
+Les messages ne sont PAS rattachés au dossier de la famille, pour que seules les personnes habilitées
+sachent qu'une IP existe.
 """
 from datetime import datetime, timedelta
 
@@ -72,11 +73,9 @@ def agents_crip():
     return list(User.objects.filter(is_active=True, profils__code='CRIP', profils__actif=True).distinct())
 
 
-def equipe(ip):
-    """Binôme + cadre de la MDS en charge (+ cadres des MDS associées)."""
-    gens = list(ip.binome) + [cadre_ip(ip.mds)]
-    gens += [cadre_ip(m) for m in ip.mds_partage.all()]
-    return gens
+def cadre(ip):
+    """Le cadre qui pilote l'IP dans la MDS en charge (destinataire quand c'est à lui d'agir)."""
+    return [cadre_ip(ip.mds)]
 
 
 def _entete(ip):
@@ -99,7 +98,7 @@ def transmettre_mds(ip, user):
     ip.save(update_fields=['statut', 'date_transmission_mds', 'date_modification'])
     journal(ip, user, "Transmise à la MDS", str(ip.mds))
     urgent = ip.niveau_urgence == 'IMMEDIATE'
-    diffuser(user, [cadre_ip(ip.mds)] + [cadre_ip(m) for m in ip.mds_partage.all()], ip,
+    diffuser(user, cadre(ip), ip,
              ("URGENT – " if urgent else "") + f"Nouvelle IP à évaluer : {_entete(ip)}",
              f"La CRIP a transmis l'information préoccupante {ip.numero} à {ip.mds}.\n"
              f"Reçue par la CRIP le {ip.date_reception_crip:%d/%m/%Y} – urgence : {ip.get_niveau_urgence_display()}.\n"
@@ -248,7 +247,7 @@ def soumettre_rapport(ip, user):
     ip.statut = 'SYNTHESE'
     ip.save(update_fields=['statut', 'date_modification'])
     journal(ip, user, "Rapport soumis en synthèse", rapport.get_preconisation_display())
-    diffuser(user, equipe(ip), ip, f"Rapport prêt pour la synthèse : {_entete(ip)}",
+    diffuser(user, cadre(ip), ip, f"Rapport prêt pour la synthèse : {_entete(ip)}",
              f"{nom(user)} a soumis le rapport de l'IP {ip.numero} (préconisation : "
              f"{rapport.get_preconisation_display()}).\nÀ voir en réunion de synthèse, puis visas du cadre et de l'AS.")
 
@@ -265,7 +264,7 @@ def renvoyer_en_redaction(ip, user, motif):
     ip.statut = 'EN_EVALUATION'
     ip.save(update_fields=['statut', 'date_modification'])
     journal(ip, user, "Rapport renvoyé en rédaction", motif)
-    diffuser(user, equipe(ip), ip, f"Rapport à reprendre : {_entete(ip)}", f"Motif : {motif}")
+    diffuser(user, ip.binome, ip, f"Rapport à reprendre : {_entete(ip)}", f"Motif : {motif}")
 
 
 @transaction.atomic
@@ -302,7 +301,7 @@ def transmettre_pief(ip, user):
     journal(ip, user, "Rapport transmis à l'inspecteur enfance famille",
             "Dans le délai de 3 mois" if not retard else f"Hors délai : {retard} jour(s) de dépassement")
     rapport = rapport_de(ip)
-    diffuser(user, inspecteurs() + equipe(ip), ip, f"Rapport d'évaluation à viser : {_entete(ip)}",
+    diffuser(user, inspecteurs(), ip, f"Rapport d'évaluation à viser : {_entete(ip)}",
              f"Le rapport de l'IP {ip.numero}, vu en synthèse le {rapport.date_synthese:%d/%m/%Y}, est transmis à "
              f"l'inspecteur enfance famille.\nPréconisation : {rapport.get_preconisation_display()}.\n"
              f"Visas : {nom(rapport.visa_cadre_par)} (cadre), {nom(rapport.visa_as_par)} (AS).\n"
@@ -330,17 +329,14 @@ def avis_inspecteur(ip, user, avis, decision, commentaire):
         ip.statut, ip.date_transmission_pief = 'EN_EVALUATION', None
         ip.save()
         journal(ip, user, "Complément d'évaluation demandé par l'inspecteur", commentaire)
-        objet = f"Complément d'évaluation demandé : {_entete(ip)}"
+        diffuser(user, ip.binome, ip, f"Complément d'évaluation demandé : {_entete(ip)}",
+                 f"{nom(user)} (inspecteur enfance famille) demande un complément d'évaluation.\n"
+                 f"Commentaire : {commentaire}")
     else:
         ip.decision_finale, ip.decision_commentaire = decision, commentaire
         ip.statut, ip.date_cloture = 'CLOTUREE', timezone.now()
         ip.save()
         journal(ip, user, f"Décision de l'inspecteur : {ip.get_decision_finale_display()}", commentaire)
-        objet = f"Décision de l'inspecteur : {_entete(ip)}"
-    diffuser(user, equipe(ip) + [ip.recue_par], ip, objet,
-             f"{nom(user)} (inspecteur enfance famille) : {rapport.get_avis_pief_display()}.\n"
-             + (f"Décision : {ip.get_decision_finale_display()}.\n" if ip.decision_finale else "")
-             + (f"Commentaire : {commentaire}\n" if commentaire else ""))
 
 
 # =============================================================================
@@ -353,7 +349,7 @@ def proposer_saisine(ip, user, motif, danger_imminent):
         raise CircuitError("La saisine se propose pendant l'évaluation.")
     s = SaisineIP.objects.create(ip=ip, motif=motif, danger_imminent=danger_imminent, propose_par=user)
     journal(ip, user, "Saisine du procureur proposée au cadre", motif[:500])
-    diffuser(user, equipe(ip), ip, ("URGENT – " if danger_imminent else "") + f"Saisine du procureur proposée : {_entete(ip)}",
+    diffuser(user, cadre(ip), ip, ("URGENT – " if danger_imminent else "") + f"Saisine du procureur proposée : {_entete(ip)}",
              f"{nom(user)} propose de saisir le procureur.\nMotif : {motif}",
              'urgente' if danger_imminent else 'importante')
     return s
@@ -361,7 +357,7 @@ def proposer_saisine(ip, user, motif, danger_imminent):
 
 @transaction.atomic
 def decision_cadre_saisine(s, user, choix, commentaire):
-    """choix : 'REFUSER', 'DEMANDER_PIEF' ou 'SAISIR' (danger imminent : saisine directe, inspecteur informé)."""
+    """choix : 'REFUSER', 'DEMANDER_PIEF' ou 'SAISIR' (danger imminent : saisine directe, tracée dans l'IP)."""
     if s.statut != 'PROPOSEE':
         raise CircuitError("Cette proposition a déjà été traitée.")
     s.cadre, s.date_decision_cadre, s.commentaire_cadre = user, timezone.now(), commentaire
@@ -369,20 +365,20 @@ def decision_cadre_saisine(s, user, choix, commentaire):
     if choix == 'REFUSER':
         s.statut = 'REFUSEE_CADRE'
         texte = "n'est pas retenue par le cadre"
-        dest = equipe(ip)
+        dest = []
     elif choix == 'DEMANDER_PIEF':
         s.statut = 'TRANSMISE_PIEF'
         texte = "est demandée à l'inspecteur enfance famille"
-        dest = inspecteurs() + equipe(ip)
+        dest = inspecteurs()    # seule étape qui demande d'agir : l'inspecteur valide ou non
     elif choix == 'SAISIR':
         s.statut, s.saisie_directe, s.date_saisine = 'EFFECTUEE', True, timezone.now()
-        texte = "est faite directement par le cadre (danger grave et imminent) ; l'inspecteur en est informé"
-        dest = inspecteurs() + equipe(ip) + [ip.recue_par]
+        texte = "est faite directement par le cadre (danger grave et imminent)"
+        dest = []
     else:
         raise CircuitError("Choix inconnu.")
     s.save()
     journal(ip, user, f"Saisine du procureur : {s.get_statut_display()}", commentaire)
-    diffuser(user, dest, ip, f"Saisine du procureur – {s.get_statut_display()} : {_entete(ip)}",
+    diffuser(user, dest, ip, f"Saisine du procureur à valider : {_entete(ip)}",
              f"La saisine du procureur proposée par {nom(s.propose_par)} {texte}.\nMotif : {s.motif}\n"
              + (f"Commentaire : {commentaire}\n" if commentaire else ""),
              'urgente' if s.danger_imminent or choix == 'SAISIR' else 'importante')
@@ -396,11 +392,12 @@ def decision_pief_saisine(s, user, valide, commentaire):
     s.statut = 'VALIDEE_PIEF' if valide else 'REFUSEE_PIEF'
     s.save()
     journal(s.ip, user, f"Saisine du procureur : {s.get_statut_display()}", commentaire)
-    diffuser(user, equipe(s.ip), s.ip, f"Saisine du procureur – {s.get_statut_display()} : {_entete(s.ip)}",
-             f"{nom(user)} (inspecteur) : {s.get_statut_display().lower()}.\n"
-             + (f"Commentaire : {commentaire}\n" if commentaire else "")
-             + ("Le courrier de saisine peut être imprimé depuis la fiche IP ; enregistrez ensuite la date d'envoi."
-                if valide else ""))
+    if valide:   # au cadre d'imprimer et d'envoyer le courrier
+        diffuser(user, cadre(s.ip), s.ip, f"Saisine du procureur validée, à envoyer : {_entete(s.ip)}",
+                 f"{nom(user)} (inspecteur) a validé la saisine du procureur.\n"
+                 + (f"Commentaire : {commentaire}\n" if commentaire else "")
+                 + "Le courrier de saisine s'imprime depuis la fiche IP ; enregistrez ensuite la date d'envoi.",
+                 'urgente')
 
 
 @transaction.atomic
@@ -410,9 +407,6 @@ def saisine_effectuee(s, user, date, reference):
     s.statut, s.date_saisine, s.reference_parquet = 'EFFECTUEE', date or timezone.now(), reference
     s.save()
     journal(s.ip, user, "Procureur saisi", reference)
-    diffuser(user, inspecteurs() + equipe(s.ip) + [s.ip.recue_par], s.ip, f"Procureur saisi : {_entete(s.ip)}",
-             f"Le procureur a été saisi le {timezone.localtime(s.date_saisine):%d/%m/%Y}."
-             + (f" Référence : {reference}." if reference else ""))
 
 
 # =============================================================================
@@ -427,7 +421,7 @@ def _expediteur_rappel(ip):
 def envoyer_rappels(qs=None):
     """
     Appelé à l'ouverture des listes IP (et par la commande « rappels_ip ») : prévient une seule fois
-    le cadre et le binôme au point intermédiaire, puis à l'échéance dépassée.
+    le cadre au point intermédiaire (à lui de relancer le binôme), puis à l'échéance dépassée.
     """
     aujourdhui = timezone.localdate()
     qs = (qs if qs is not None else InformationPreoccupante.objects.all()).filter(
@@ -436,7 +430,7 @@ def envoyer_rappels(qs=None):
     for ip in qs.filter(rappel_intermediaire_envoye=False, date_intermediaire__lte=aujourdhui):
         ip.rappel_intermediaire_envoye = True
         ip.save(update_fields=['rappel_intermediaire_envoye'])
-        diffuser(_expediteur_rappel(ip), equipe(ip), ip, f"Point intermédiaire atteint : {_entete(ip)}",
+        diffuser(_expediteur_rappel(ip), cadre(ip), ip, f"Point intermédiaire atteint : {_entete(ip)}",
                  f"Le point intermédiaire de l'IP {ip.numero} est atteint : il reste {ip.jours_restants} jour(s) "
                  f"avant l'échéance du {ip.date_echeance:%d/%m/%Y}.\n"
                  f"Une réunion de point d'étape peut être programmée depuis la fiche IP (faire le point, entendre "
@@ -445,7 +439,7 @@ def envoyer_rappels(qs=None):
     for ip in qs.filter(rappel_echeance_envoye=False, date_echeance__lt=aujourdhui):
         ip.rappel_echeance_envoye = True
         ip.save(update_fields=['rappel_echeance_envoye'])
-        diffuser(_expediteur_rappel(ip), equipe(ip), ip, f"Échéance dépassée : {_entete(ip)}",
+        diffuser(_expediteur_rappel(ip), cadre(ip), ip, f"Échéance dépassée : {_entete(ip)}",
                  f"Le délai de 3 mois de l'IP {ip.numero} est dépassé depuis le {ip.date_echeance:%d/%m/%Y}.",
                  'urgente')
         n += 1

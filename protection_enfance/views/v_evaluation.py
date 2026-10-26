@@ -113,7 +113,7 @@ def rapport(request, ip_id):
             if request.POST.get('soumettre'):
                 try:
                     circuit.soumettre_rapport(ip, user)
-                    messages.success(request, "Rapport soumis : le cadre et le binôme sont prévenus pour la synthèse.")
+                    messages.success(request, "Rapport soumis : le cadre est prévenu pour organiser la synthèse.")
                     return _retour(ip, "#rapport")
                 except CircuitError as e:
                     messages.error(request, str(e))
