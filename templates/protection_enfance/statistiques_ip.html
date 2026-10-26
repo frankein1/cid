@@ -1,0 +1,79 @@
+<!-- templates/protection_enfance/statistiques_ip.html -->
+{% extends "base.html" %}
+{% block title %}Statistiques IP{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    {% include "includes/onglets_stats.html" with onglet="ip" %}
+    <div class="flex flex-wrap justify-between items-end gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">⚠️ Informations préoccupantes – {{ annee }}</h1>
+            <p class="text-sm text-gray-500">{{ mds.nom|default:"Tout le département" }} · {% if agent %}évaluations de {{ agent.get_full_name|default:agent.username }}{% else %}tous les agents{% endif %} · IP reçues par la CRIP dans l'année</p>
+        </div>
+        <div class="flex flex-wrap gap-2 items-end">
+            <form method="get" class="flex flex-wrap gap-2 items-end">
+                <select name="annee" class="px-3 py-2 border border-gray-300 rounded-md text-sm">{% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
+                {% if toutes_mds %}<select name="mds" class="px-3 py-2 border border-gray-300 rounded-md text-sm"><option value="">Tout le département</option>{% for m in toutes_mds %}<option value="{{ m.pk }}" {% if mds and mds.pk == m.pk %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select>{% endif %}
+                {% if agents %}<select name="agent" class="px-3 py-2 border border-gray-300 rounded-md text-sm"><option value="">Tous les agents</option>{% for a in agents %}<option value="{{ a.pk }}" {% if agent and agent.pk == a.pk %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>{% endfor %}</select>{% endif %}
+                <button class="px-4 py-2 bg-slate-700 text-white rounded-md text-sm">Afficher</button>
+            </form>
+            <a href="?{{ query }}{% if query %}&{% endif %}format=csv" class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">📥 Exporter (Excel)</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+        {% with t=r.total %}
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">IP reçues</p><p class="text-2xl font-bold">{{ t.recues }}</p><p class="text-xs text-gray-500">{{ t.enfants }} enfant{{ t.enfants|pluralize }}</p></div>
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">En cours</p><p class="text-2xl font-bold">{{ t.en_cours }}</p>{% if t.en_retard %}<p class="text-xs text-red-700">{{ t.en_retard }} en retard</p>{% endif %}</div>
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">Terminées (envoyées à l'inspecteur)</p><p class="text-2xl font-bold">{{ t.terminees }}</p></div>
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">Dans le délai</p><p class="text-2xl font-bold text-emerald-700">{{ t.dans_delai }}</p>{% if t.taux_delai is not None %}<p class="text-xs text-gray-500">{{ t.taux_delai }} %</p>{% endif %}</div>
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">Hors délai</p><p class="text-2xl font-bold text-red-700">{{ t.hors_delai }}</p></div>
+        <div class="bg-white rounded-lg border p-4"><p class="text-xs text-gray-500">Dépassement moyen</p><p class="text-2xl font-bold">{{ t.depassement_moyen }} j</p></div>
+        {% endwith %}
+    </div>
+
+    <div class="bg-white rounded-lg border overflow-x-auto">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">Mois par mois</h2>
+        <table class="min-w-full text-sm mt-3">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">Mois</th><th class="px-3 py-2 text-right">Reçues</th><th class="px-3 py-2 text-right">Terminées</th>
+                <th class="px-3 py-2 text-right">Dans le délai</th><th class="px-3 py-2 text-right">Hors délai</th><th class="px-3 py-2 text-right bg-blue-50">Cumul reçues</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for m in r.mois %}<tr><td class="px-3 py-1.5">{{ m.nom }}</td><td class="px-3 py-1.5 text-right">{{ m.recues|default:"" }}</td><td class="px-3 py-1.5 text-right">{{ m.terminees|default:"" }}</td>
+                    <td class="px-3 py-1.5 text-right text-emerald-700">{{ m.dans_delai|default:"" }}</td><td class="px-3 py-1.5 text-right text-red-700">{{ m.hors_delai|default:"" }}</td><td class="px-3 py-1.5 text-right bg-blue-50">{{ m.cumul_recues }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-white rounded-lg border overflow-x-auto">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">Par agent (binôme)</h2>
+        <table class="min-w-full text-sm mt-3">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">Agent</th><th class="px-3 py-2 text-right">IP</th><th class="px-3 py-2 text-right">En cours</th><th class="px-3 py-2 text-right">Terminées</th>
+                <th class="px-3 py-2 text-right">Dans le délai</th><th class="px-3 py-2 text-right">Hors délai</th><th class="px-3 py-2 text-right">Dépassement moyen</th><th class="px-3 py-2 text-right">Démarches</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for a in r.agents %}<tr><td class="px-3 py-1.5">{{ a.agent.get_full_name|default:a.agent.username }}</td><td class="px-3 py-1.5 text-right">{{ a.ip }}</td><td class="px-3 py-1.5 text-right">{{ a.en_cours }}</td><td class="px-3 py-1.5 text-right">{{ a.terminees }}</td>
+                    <td class="px-3 py-1.5 text-right text-emerald-700">{{ a.dans_delai }}</td><td class="px-3 py-1.5 text-right text-red-700">{{ a.hors_delai }}</td><td class="px-3 py-1.5 text-right">{{ a.depassement_moyen }} j</td><td class="px-3 py-1.5 text-right">{{ a.actions }}</td></tr>
+                {% empty %}<tr><td colspan="8" class="px-3 py-4 text-center text-gray-400 italic">Aucun binôme sur la période.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-white rounded-lg border overflow-x-auto">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">Dossiers</h2>
+        <table class="min-w-full text-sm mt-3">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">Référence</th><th class="px-3 py-2 text-left">Binôme</th><th class="px-3 py-2">Début</th><th class="px-3 py-2">Intermédiaire</th>
+                <th class="px-3 py-2">Fin prévue</th><th class="px-3 py-2">Fin réelle</th><th class="px-3 py-2">Délai</th><th class="px-3 py-2 text-right">Démarches</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for l in r.lignes %}<tr>
+                    <td class="px-3 py-1.5 font-mono"><a href="{% url 'protection_enfance:ip_detail' l.ip.numero %}" class="text-blue-700 hover:underline">{{ l.ip.numero }}</a></td>
+                    <td class="px-3 py-1.5">{{ l.binome }}</td><td class="px-3 py-1.5 text-center">{{ l.debut|date:"d/m/Y" }}</td><td class="px-3 py-1.5 text-center">{{ l.intermediaire|date:"d/m/Y" }}</td>
+                    <td class="px-3 py-1.5 text-center">{{ l.fin_prevue|date:"d/m/Y" }}</td><td class="px-3 py-1.5 text-center">{{ l.fin_reelle|date:"d/m/Y"|default:"—" }}</td>
+                    <td class="px-3 py-1.5 text-center">{% if l.respecte is None %}<span class="text-gray-500">en cours{% if l.depassement %} (+{{ l.depassement }} j){% endif %}</span>{% elif l.respecte %}<span class="text-emerald-700">oui</span>{% else %}<span class="text-red-700">non, +{{ l.depassement }} j</span>{% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{{ l.actions }}</td></tr>
+                {% empty %}<tr><td colspan="8" class="px-3 py-4 text-center text-gray-400 italic">Aucune IP reçue sur la période.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

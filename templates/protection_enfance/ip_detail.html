@@ -1,0 +1,316 @@
+<!-- templates/protection_enfance/ip_detail.html -->
+{% extends "base.html" %}
+{% block title %}IP {{ ip.numero }}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <a href="{% url 'protection_enfance:ip_liste' %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Informations préoccupantes</a>
+
+    <!-- EN-TÊTE -->
+    <div class="flex flex-wrap justify-between items-start gap-3 mt-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-triangle-exclamation text-red-600 mr-2"></i>IP {{ ip.numero }}</h1>
+            <p class="text-gray-600">
+                {% if ip.famille %}<a href="{% url 'beneficiaire:detail_beneficiaire' ip.famille.code_interne %}" class="hover:underline">{{ ip.libelle_famille }}</a>{% else %}{{ ip.libelle_famille }}{% endif %}
+                — {{ ip.mds.nom|default:"MDS à désigner" }}{% for m in ip.mds_partage.all %} + {{ m.nom }}{% endfor %}
+            </p>
+            {% if ip.autre_departement %}<p class="text-sm text-purple-700"><i class="fas fa-map mr-1"></i>{{ ip.autre_departement }}</p>{% endif %}
+        </div>
+        <div class="text-right space-y-1">
+            <span class="px-3 py-1 rounded-full text-sm font-semibold {{ ip.badge }}">{{ ip.get_statut_display }}</span>
+            <p class="text-xs text-gray-500">Urgence : <b class="{% if ip.niveau_urgence == 'IMMEDIATE' %}text-red-700{% endif %}">{{ ip.get_niveau_urgence_display }}</b></p>
+        </div>
+    </div>
+
+    <!-- CIRCUIT -->
+    <ol class="grid grid-cols-3 md:grid-cols-6 gap-1 text-xs mb-4">
+        {% for code, libelle, etat in etapes %}
+        <li class="px-2 py-2 rounded text-center {% if etat == 'fait' %}bg-emerald-100 text-emerald-800{% elif etat == 'actuel' %}bg-red-600 text-white font-semibold{% else %}bg-gray-100 text-gray-500{% endif %}">{{ forloop.counter }}. {{ libelle }}</li>
+        {% endfor %}
+    </ol>
+
+    <!-- DÉLAIS -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-xs text-gray-500">Reçue par la CRIP (début)</p><p class="font-bold">{{ ip.date_reception_crip|date:"d/m/Y" }}</p></div>
+        <div class="bg-white rounded-xl border p-4 {% if ip.alerte == 'proche' %}border-amber-300 bg-amber-50{% else %}border-gray-200{% endif %}"><p class="text-xs text-gray-500">Point intermédiaire</p><p class="font-bold">{{ ip.date_intermediaire|date:"d/m/Y" }}</p></div>
+        <div class="bg-white rounded-xl border p-4 {% if ip.alerte == 'retard' %}border-red-300 bg-red-50{% else %}border-gray-200{% endif %}"><p class="text-xs text-gray-500">Échéance (3 mois)</p><p class="font-bold">{{ ip.date_echeance|date:"d/m/Y" }}</p>
+            {% if ip.jours_restants is not None %}<p class="text-xs {% if ip.jours_restants < 0 %}text-red-700 font-semibold{% else %}text-gray-600{% endif %}">{% if ip.jours_restants < 0 %}dépassée de {{ ip.depassement_jours }} jour{{ ip.depassement_jours|pluralize }}{% else %}{{ ip.jours_restants }} jour{{ ip.jours_restants|pluralize }} restant{{ ip.jours_restants|pluralize }}{% endif %}</p>{% endif %}</div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4"><p class="text-xs text-gray-500">Envoi à l'inspecteur (fin réelle)</p><p class="font-bold">{{ ip.date_fin_reelle|date:"d/m/Y"|default:"—" }}</p>
+            {% if ip.delai_respecte is not None %}<p class="text-xs {% if ip.delai_respecte %}text-emerald-700{% else %}text-red-700{% endif %}">{% if ip.delai_respecte %}Délai respecté{% else %}Hors délai : +{{ ip.depassement_jours }} j{% endif %}</p>{% endif %}</div>
+    </div>
+
+    <!-- ACTIONS DE L'ÉTAPE EN COURS -->
+    {% if peut_modifier_crip or est_crip and ip.statut == 'RECUE' %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <span class="text-sm text-amber-900 flex-1">{% if ip.statut == 'RECUE' %}IP enregistrée par la CRIP, pas encore transmise.{% else %}Transmise à la MDS : la CRIP peut encore corriger la saisie jusqu'à la désignation du binôme.{% endif %}</span>
+        {% if peut_modifier_crip %}<a href="{% url 'protection_enfance:ip_modifier' ip.numero %}" class="px-4 py-2 rounded-lg border border-amber-400 text-sm">Modifier</a>{% endif %}
+        {% if ip.statut == 'RECUE' %}
+        <form method="post" action="{% url 'protection_enfance:ip_transmettre' ip.numero %}">{% csrf_token %}
+            <button class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold">Transmettre à la MDS</button></form>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% if ip.statut == 'TRANSMISE_PIEF' and est_pief %}
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <span class="text-sm text-indigo-900 flex-1">Le rapport attend votre visa.</span>
+        <a href="{% url 'protection_enfance:rapport' ip.numero %}#avis" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold">Lire et viser le rapport</a>
+    </div>
+    {% endif %}
+    {% if ip.statut == 'CLOTUREE' %}
+    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 text-sm text-emerald-900">
+        <b>Décision de l'inspecteur :</b> {{ ip.get_decision_finale_display }} ({{ ip.inspecteur.get_full_name|default:ip.inspecteur.username }}, {{ ip.date_cloture|date:"d/m/Y" }})
+        {% if ip.decision_commentaire %}<p class="mt-1 whitespace-pre-wrap">{{ ip.decision_commentaire }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- FAITS -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-2">Faits rapportés</h2>
+                <p class="text-xs text-gray-500 mb-3">Origine : {{ ip.get_origine_display }}{% if ip.situation_particuliere %} · <span class="text-pink-700">Situation particulière : {{ ip.situation_particuliere }}</span>{% endif %}</p>
+                <p class="whitespace-pre-wrap text-gray-800">{{ ip.description }}</p>
+                <div class="mt-4 pt-3 border-t text-sm">
+                    {% if voit_declarant %}
+                    <p class="text-amber-800"><i class="fas fa-user-secret mr-1"></i><b>Déclarant</b> (visible CRIP / inspecteurs) :
+                        {{ ip.signalant_nom|default:"non renseigné" }}{% if ip.signalant_qualite %}, {{ ip.signalant_qualite }}{% endif %}{% if ip.signalant_structure %} – {{ ip.signalant_structure }}{% endif %}
+                        {% if ip.signalant_confidentialite %}<span class="ml-1 px-2 py-0.5 rounded bg-amber-100 text-xs">confidentialité demandée</span>{% endif %}</p>
+                    {% if ip.signalant_contact %}<p class="text-xs text-gray-600 whitespace-pre-wrap">{{ ip.signalant_contact }}</p>{% endif %}
+                    {% else %}
+                    <p class="text-gray-500"><i class="fas fa-user-secret mr-1"></i>Identité du déclarant conservée par la CRIP.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- ENFANTS -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">Enfants concernés</h2>
+                <ul class="divide-y text-sm">
+                    {% for e in enfants %}
+                    <li class="py-2 flex flex-wrap justify-between gap-2">
+                        <span>{% if e.beneficiaire %}<a href="{% url 'beneficiaire:detail_beneficiaire' e.beneficiaire.code_interne %}" class="hover:underline">{{ e }}</a>{% else %}{{ e }}{% endif %}
+                            {% if e.date_naissance %}<span class="text-gray-500">– {{ e.date_naissance|date:"d/m/Y" }} ({{ e.age }} an{{ e.age|pluralize }})</span>{% endif %}</span>
+                        <span>{% if e.releve_pmi %}<span class="px-2 py-0.5 rounded bg-pink-100 text-pink-800 text-xs">5 ans ou moins : PMI conseillée</span>{% endif %}
+                            {% with n=e.auditions.count %}<span class="text-xs text-gray-500 ml-2">{{ n }} audition{{ n|pluralize }}</span>{% endwith %}</span>
+                    </li>
+                    {% empty %}<li class="py-2 text-gray-400 italic">Aucun enfant renseigné.</li>{% endfor %}
+                </ul>
+            </section>
+
+            <!-- DÉMARCHES -->
+            <section id="demarches" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                    <h2 class="font-bold text-gray-800">Démarches et réunions</h2>
+                    <span class="text-xs text-gray-500">Tout est daté et compte dans les délais et les statistiques.</span>
+                </div>
+                <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50"><tr>
+                        <th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Démarche</th><th class="px-2 py-2 text-left">Résultat</th><th class="px-2 py-2"></th></tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                    {% for a in actions %}
+                    <tr class="align-top">
+                        <td class="px-2 py-2 whitespace-nowrap">{{ a.date|date:"d/m/Y H:i" }}</td>
+                        <td class="px-2 py-2">
+                            <b>{{ a.get_type_action_display }}</b>{% if a.enfant %} – {{ a.enfant }}{% endif %}
+                            {% if a.numero_lrar %}<span class="text-xs text-gray-600"> · LRAR n° {{ a.numero_lrar }}{% if a.date_accuse_reception %}, AR du {{ a.date_accuse_reception|date:"d/m/Y" }}{% endif %}</span>{% endif %}
+                            {% if a.date_rdv_propose %}<span class="block text-xs text-gray-600">Rendez-vous proposé : {{ a.date_rdv_propose|date:"d/m/Y H:i" }}</span>{% endif %}
+                            {% if a.personnes %}<span class="block text-xs text-gray-600">{{ a.personnes }}</span>{% endif %}
+                            {% if a.participants.all %}<span class="block text-xs text-gray-500">{% for u in a.participants.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+                            {% if a.compte_rendu %}<p class="text-xs text-gray-700 whitespace-pre-wrap mt-1">{{ a.compte_rendu }}</p>{% endif %}
+                            {% if a.creneau %}<span class="text-xs text-blue-600"><i class="fas fa-calendar-check mr-1"></i>dans l'agenda</span>{% endif %}
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap"><span class="px-2 py-0.5 rounded text-xs {% if a.resultat == 'REALISE' %}bg-emerald-100 text-emerald-800{% elif a.resultat == 'PREVU' %}bg-blue-100 text-blue-800{% else %}bg-amber-100 text-amber-800{% endif %}">{{ a.get_resultat_display }}</span></td>
+                        <td class="px-2 py-2 text-right whitespace-nowrap">
+                            {% if a.est_courrier %}<a href="{% url 'protection_enfance:courrier_pdf' a.pk %}" target="_blank" class="text-blue-600 hover:underline text-xs"><i class="fas fa-file-pdf mr-1"></i>PDF</a>{% endif %}
+                            {% if est_binome or peut_piloter %}{% if ip.statut != 'TRANSMISE_PIEF' and ip.statut != 'CLOTUREE' %}
+                            <details class="inline-block text-left ml-2"><summary class="text-xs text-gray-600 cursor-pointer">Mettre à jour</summary>
+                                <form method="post" action="{% url 'protection_enfance:action_suivi' a.pk %}" class="mt-2 space-y-1 w-64">{% csrf_token %}
+                                    <select name="resultat" class="w-full px-2 py-1 border rounded text-xs">
+                                        {% for code, lib in resultats %}<option value="{{ code }}" {% if code == a.resultat %}selected{% endif %}>{{ lib }}</option>{% endfor %}</select>
+                                    <textarea name="compte_rendu" rows="2" class="w-full px-2 py-1 border rounded text-xs" placeholder="Compte rendu">{{ a.compte_rendu }}</textarea>
+                                    {% if a.type_action == 'LRAR' %}<label class="block text-xs">Date de l'AR <input type="date" name="date_accuse_reception" value="{{ a.date_accuse_reception|date:'Y-m-d' }}" class="border rounded px-1"></label>{% endif %}
+                                    <button class="px-2 py-1 bg-slate-700 text-white rounded text-xs">Enregistrer</button>
+                                </form></details>
+                            {% endif %}{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4" class="px-2 py-6 text-center text-gray-400 italic">Aucune démarche enregistrée.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+                </div>
+
+                {% if peut_evaluer or peut_piloter and ip.statut == 'TRANSMISE_MDS' %}
+                <details id="nouvelle-demarche" class="mt-4 border-t pt-4" {% if not actions %}open{% endif %}>
+                    <summary class="cursor-pointer font-semibold text-red-700"><i class="fas fa-plus mr-1"></i>{% if peut_evaluer %}Enregistrer une démarche (courrier, LRAR, appel, rendez-vous, audition, VAD, réunion…){% else %}Programmer la réunion IP{% endif %}</summary>
+                    <div class="flex flex-wrap gap-2 mt-3 text-xs">
+                        {% if peut_piloter %}<button type="button" data-type="REUNION_IP" class="raccourci px-2 py-1 rounded border">Réunion IP</button>
+                        <button type="button" data-type="POINT_ETAPE" class="raccourci px-2 py-1 rounded border">Point d'étape</button>{% endif %}
+                        {% if peut_evaluer %}
+                        <button type="button" data-type="CONVOCATION" class="raccourci px-2 py-1 rounded border">Convocation</button>
+                        <button type="button" data-type="LRAR" class="raccourci px-2 py-1 rounded border">LRAR</button>
+                        <button type="button" data-type="APPEL" class="raccourci px-2 py-1 rounded border">Appel</button>
+                        <button type="button" data-type="AUDITION_ENFANT" class="raccourci px-2 py-1 rounded border">Audition enfant</button>
+                        <button type="button" data-type="AUDITION_PARENTS" class="raccourci px-2 py-1 rounded border">Audition parents</button>
+                        <button type="button" data-type="VAD" class="raccourci px-2 py-1 rounded border">VAD</button>
+                        <button type="button" data-type="REUNION_SYNTHESE" class="raccourci px-2 py-1 rounded border">Synthèse</button>{% endif %}
+                    </div>
+                    <form method="post" action="{% url 'protection_enfance:action_ajouter' ip.numero %}" class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {% csrf_token %}
+                        {% with f=action_form %}
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.type_action.label }}</label>{{ f.type_action }}</div>
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.date.label }}</label>{{ f.date }}</div>
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.resultat.label }}</label>{{ f.resultat }}</div>
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.duree_minutes.label }}</label>{{ f.duree_minutes }}</div>
+                        <div class="champ champ-AUDITION_ENFANT"><label class="block text-xs font-bold text-gray-700">{{ f.enfant.label }}</label>{{ f.enfant }}</div>
+                        <div class="champ champ-CONVOCATION champ-LRAR"><label class="block text-xs font-bold text-gray-700">{{ f.date_rdv_propose.label }}</label>{{ f.date_rdv_propose }}</div>
+                        <div class="champ champ-LRAR"><label class="block text-xs font-bold text-gray-700">{{ f.numero_lrar.label }}</label>{{ f.numero_lrar }}</div>
+                        <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-700">{{ f.personnes.label }}</label>{{ f.personnes }}</div>
+                        <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-700 mb-1">{{ f.participants.label }}</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-1 text-sm max-h-40 overflow-y-auto border rounded p-2">{% for c in f.participants %}<label class="flex items-center gap-1">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>
+                        <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-700">{{ f.compte_rendu.label }}</label>{{ f.compte_rendu }}</div>
+                        <label class="flex items-center gap-2 text-sm md:col-span-2">{{ f.ajouter_agenda }} {{ f.ajouter_agenda.label }} <span class="text-xs text-gray-400">(réunions, rendez-vous, auditions, VAD – domaine IP)</span></label>
+                        {% endwith %}
+                        <div class="md:col-span-2"><button class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold">Enregistrer</button></div>
+                    </form>
+                </details>
+                {% endif %}
+            </section>
+
+            <!-- SAISINE DU PROCUREUR -->
+            <section id="saisines" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-1">Saisine du procureur</h2>
+                <p class="text-xs text-gray-500 mb-3">À tout moment : proposition du TS → décision du cadre → validation de l'inspecteur. En cas de danger grave et imminent, le cadre peut saisir directement (la saisine est tracée dans l'IP).</p>
+                {% for s in saisines %}
+                <div class="border rounded-lg p-3 mb-3 text-sm {% if s.danger_imminent %}border-red-300{% endif %}">
+                    <div class="flex flex-wrap justify-between gap-2"><b>{{ s.get_statut_display }}</b>
+                        <span class="text-xs text-gray-500">proposée le {{ s.date_proposition|date:"d/m/Y H:i" }} par {{ s.propose_par.get_full_name|default:s.propose_par.username }}</span></div>
+                    {% if s.danger_imminent %}<span class="px-2 py-0.5 rounded bg-red-600 text-white text-xs">danger grave et imminent</span>{% endif %}
+                    <p class="whitespace-pre-wrap mt-1">{{ s.motif }}</p>
+                    {% if s.cadre %}<p class="text-xs text-gray-600 mt-1">Cadre : {{ s.cadre.get_full_name|default:s.cadre.username }}, {{ s.date_decision_cadre|date:"d/m/Y" }}{% if s.commentaire_cadre %} – {{ s.commentaire_cadre }}{% endif %}</p>{% endif %}
+                    {% if s.inspecteur %}<p class="text-xs text-gray-600">Inspecteur : {{ s.inspecteur.get_full_name|default:s.inspecteur.username }}, {{ s.date_decision_pief|date:"d/m/Y" }}{% if s.commentaire_pief %} – {{ s.commentaire_pief }}{% endif %}</p>{% endif %}
+                    {% if s.date_saisine %}<p class="text-xs text-emerald-700 font-semibold">Procureur saisi le {{ s.date_saisine|date:"d/m/Y" }}{% if s.reference_parquet %} – {{ s.reference_parquet }}{% endif %}</p>{% endif %}
+
+                    {% if s.statut == 'PROPOSEE' and peut_piloter %}
+                    <form method="post" action="{% url 'protection_enfance:saisine_cadre' s.pk %}" class="mt-2 flex flex-wrap gap-2 items-center">{% csrf_token %}
+                        <input type="text" name="commentaire" placeholder="Commentaire" class="px-2 py-1 border rounded text-xs flex-1 min-w-[10rem]">
+                        <button name="choix" value="DEMANDER_PIEF" class="px-2 py-1 rounded bg-indigo-600 text-white text-xs">Demander à l'inspecteur</button>
+                        <button name="choix" value="SAISIR" class="px-2 py-1 rounded bg-red-700 text-white text-xs">Urgence : saisir directement</button>
+                        <button name="choix" value="REFUSER" class="px-2 py-1 rounded border text-xs">Ne pas retenir</button>
+                    </form>{% endif %}
+                    {% if s.statut == 'TRANSMISE_PIEF' and est_pief %}
+                    <form method="post" action="{% url 'protection_enfance:saisine_pief' s.pk %}" class="mt-2 flex flex-wrap gap-2 items-center">{% csrf_token %}
+                        <input type="text" name="commentaire" placeholder="Commentaire" class="px-2 py-1 border rounded text-xs flex-1 min-w-[10rem]">
+                        <button name="valide" value="oui" class="px-2 py-1 rounded bg-indigo-600 text-white text-xs">Valider la saisine</button>
+                        <button name="valide" value="non" class="px-2 py-1 rounded border text-xs">Ne pas valider</button>
+                    </form>{% endif %}
+                    {% if s.statut == 'VALIDEE_PIEF' or s.statut == 'EFFECTUEE' %}
+                    <a href="{% url 'protection_enfance:saisine_pdf' s.pk %}" target="_blank" class="inline-block mt-2 text-xs text-blue-600 hover:underline"><i class="fas fa-print mr-1"></i>Imprimer le courrier de saisine</a>{% endif %}
+                    {% if s.statut == 'VALIDEE_PIEF' and peut_piloter or s.statut == 'VALIDEE_PIEF' and est_pief %}
+                    <form method="post" action="{% url 'protection_enfance:saisine_effectuee' s.pk %}" class="mt-2 flex flex-wrap gap-2 items-center">{% csrf_token %}
+                        <input type="datetime-local" name="date" class="px-2 py-1 border rounded text-xs">
+                        <input type="text" name="reference" placeholder="Référence / mode d'envoi" class="px-2 py-1 border rounded text-xs">
+                        <button class="px-2 py-1 rounded bg-emerald-600 text-white text-xs">Saisine envoyée</button>
+                    </form>{% endif %}
+                </div>
+                {% empty %}<p class="text-sm text-gray-400 italic mb-3">Aucune saisine.</p>{% endfor %}
+                {% if peut_proposer_saisine %}
+                <details><summary class="cursor-pointer text-sm font-semibold text-red-700">Proposer une saisine du procureur</summary>
+                    <form method="post" action="{% url 'protection_enfance:saisine_proposer' ip.numero %}" class="mt-3 space-y-2">{% csrf_token %}
+                        {{ saisine_form.motif }}
+                        <label class="flex items-center gap-2 text-sm">{{ saisine_form.danger_imminent }} {{ saisine_form.danger_imminent.label }}</label>
+                        <button class="px-4 py-2 rounded-lg bg-red-700 text-white text-sm">Proposer au cadre</button>
+                    </form></details>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- COLONNE LATÉRALE -->
+        <div class="space-y-6">
+            <!-- BINÔME -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3"><i class="fas fa-user-group mr-2 text-gray-500"></i>Binôme</h2>
+                {% for u in ip.binome %}<p class="text-sm">{{ u.get_full_name|default:u.username }}</p>{% empty %}<p class="text-sm text-gray-400 italic">À désigner par le cadre.</p>{% endfor %}
+                {% if ip.binome_valide_par %}<p class="text-xs text-gray-500 mt-1">Validé par {{ ip.binome_valide_par.get_full_name }} le {{ ip.date_binome|date:"d/m/Y" }}</p>{% endif %}
+                {% if binome_form %}
+                <div class="mt-3 pt-3 border-t">
+                    <p class="text-xs text-gray-600 mb-2">Proposition de CID (le moins chargé d'abord){% if proposition.pmi_conseillee %} – <b class="text-pink-700">PMI conseillée</b>{% endif %} :</p>
+                    <ul class="text-xs text-gray-600 mb-2 max-h-32 overflow-y-auto">
+                        {% for u, n in proposition.ts %}<li>{{ u.get_full_name|default:u.username }} (TS) – {{ n }} IP en cours</li>{% endfor %}
+                        {% for u, n in proposition.pmi %}<li class="text-pink-700">{{ u.get_full_name|default:u.username }} (PMI) – {{ n }} IP en cours</li>{% endfor %}
+                    </ul>
+                    <form method="post" action="{% url 'protection_enfance:ip_binome' ip.numero %}" class="space-y-2">{% csrf_token %}
+                        {{ binome_form.referent_1 }} {{ binome_form.referent_2 }}
+                        <button class="w-full px-3 py-2 rounded-lg bg-slate-800 text-white text-sm">{% if ip.binome %}Modifier le binôme{% else %}Valider le binôme{% endif %}</button>
+                    </form>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- RAPPORT -->
+            <section id="rapport" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-2"><i class="fas fa-file-lines mr-2 text-gray-500"></i>Rapport</h2>
+                {% if rapport and rapport.date_soumission %}
+                <p class="text-sm">Soumis le {{ rapport.date_soumission|date:"d/m/Y" }} – {{ rapport.get_preconisation_display }}</p>
+                <p class="text-xs text-gray-600 mt-1">Visa cadre : {% if rapport.visa_cadre_par %}✔ {{ rapport.visa_cadre_par.get_full_name }}{% else %}en attente{% endif %}<br>
+                    Visa AS : {% if rapport.visa_as_par %}✔ {{ rapport.visa_as_par.get_full_name }}{% else %}en attente{% endif %}<br>
+                    Inspecteur : {% if rapport.visa_pief_par %}✔ {{ rapport.get_avis_pief_display }}{% else %}en attente{% endif %}</p>
+                {% elif rapport %}<p class="text-sm text-gray-600">Brouillon en cours.</p>
+                {% else %}<p class="text-sm text-gray-400 italic">Pas encore commencé.</p>{% endif %}
+                {% if ip.statut != 'RECUE' and ip.statut != 'TRANSMISE_MDS' %}
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <a href="{% url 'protection_enfance:rapport' ip.numero %}" class="px-3 py-2 rounded-lg bg-slate-800 text-white text-sm">{% if peut_evaluer %}Rédiger / ouvrir{% else %}Ouvrir{% endif %}</a>
+                    {% if rapport %}<a href="{% url 'protection_enfance:rapport_pdf' ip.numero %}" target="_blank" class="px-3 py-2 rounded-lg border text-sm"><i class="fas fa-print mr-1"></i>PDF</a>{% endif %}
+                </div>{% endif %}
+            </section>
+
+            <!-- PIÈCES -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3"><i class="fas fa-paperclip mr-2 text-gray-500"></i>Pièces</h2>
+                <ul class="text-sm space-y-1">
+                    {% for d in pieces %}<li class="flex justify-between gap-2"><span>{{ d.titre }}</span><a href="{% url 'ged:download_document' d.pk %}" class="text-blue-600 hover:underline text-xs">télécharger</a></li>
+                    {% empty %}<li class="text-gray-400 italic">Aucune pièce.</li>{% endfor %}
+                </ul>
+                {% if est_binome or peut_piloter or est_crip or est_pief %}
+                <form method="post" enctype="multipart/form-data" action="{% url 'protection_enfance:ip_piece' ip.numero %}" class="mt-3 pt-3 border-t space-y-2">{% csrf_token %}
+                    <input type="text" name="titre" placeholder="Titre (AR de la LRAR, écrit d'un partenaire…)" class="w-full px-2 py-1 border rounded text-sm">
+                    <input type="file" name="fichier" accept=".pdf,.jpg,.jpeg,.png" class="text-xs">
+                    <button class="px-3 py-1 rounded bg-slate-700 text-white text-xs">Ajouter</button>
+                </form>{% endif %}
+            </section>
+
+            <!-- JOURNAL -->
+            <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="font-bold text-gray-800 mb-3">🕓 Journal</h2>
+                <ul class="space-y-2 text-xs max-h-96 overflow-y-auto">
+                    {% for h in historique %}
+                    <li class="border-l-4 border-red-200 pl-2"><span class="font-medium text-gray-800">{{ h.action }}</span>
+                        <span class="block text-gray-500">{{ h.date|date:"d/m/Y H:i" }}{% if h.user %} · {{ h.user.get_full_name|default:h.user.username }}{% endif %}</span>
+                        {% if h.commentaire %}<span class="block text-gray-600">{{ h.commentaire|truncatechars:160 }}</span>{% endif %}</li>
+                    {% empty %}<li class="text-gray-400 italic">Vide.</li>{% endfor %}
+                </ul>
+            </section>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    const select = document.getElementById('id_type_action');
+    if (!select) return;
+    function maj() {
+        document.querySelectorAll('.champ').forEach(el => {
+            el.style.display = el.classList.contains('champ-' + select.value) ? '' : 'none';
+        });
+    }
+    select.addEventListener('change', maj);
+    document.querySelectorAll('.raccourci').forEach(b => b.addEventListener('click', () => {
+        select.value = b.dataset.type; maj();
+        const res = document.getElementById('id_resultat');
+        if (res && ['REUNION_IP', 'POINT_ETAPE', 'REUNION_SYNTHESE', 'VAD', 'AUDITION_ENFANT', 'AUDITION_PARENTS'].includes(b.dataset.type)) res.value = 'PREVU';
+        if (res && ['CONVOCATION', 'LRAR', 'APPEL'].includes(b.dataset.type)) res.value = 'REALISE';
+    }));
+    {% if peut_piloter and not peut_evaluer %}select.value = 'REUNION_IP'; document.getElementById('id_resultat').value = 'PREVU';{% endif %}
+    maj();
+})();
+</script>
+{% endblock %}

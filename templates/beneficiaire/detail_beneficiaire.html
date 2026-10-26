@@ -114,6 +114,13 @@
            class="inline-flex items-center px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
             <i class="fas fa-file-contract mr-2"></i>CER
         </a>
+        {% for ip in ips_famille %}
+        <a href="{% url 'protection_enfance:ip_detail' ip.numero %}"
+           class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+           title="Accès restreint">
+            <i class="fas fa-triangle-exclamation mr-2"></i>IP {{ ip.numero }} · {{ ip.get_statut_display }}
+        </a>
+        {% endfor %}
     </div>
 
     {% endif %}{# fin des bandeaux réservés à la MDS de l'usager #}

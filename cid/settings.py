@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'AidFi',
     'connecteurs',
     'partenaires',
+    'protection_enfance',
 ]
 
 # ============================================================

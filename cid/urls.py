@@ -49,7 +49,7 @@ urlpatterns = [
     path('messagerie/', include('messagerie.urls')),
     path('connecteurs/', include('connecteurs.urls')),
     path('partenaires/', include('partenaires.urls')),
-    #    path('protection-enfance/', include('protection_enfance.urls')),
+    path('protection-enfance/', include('protection_enfance.urls')),
 ]
 
 # Servir les fichiers media en développement

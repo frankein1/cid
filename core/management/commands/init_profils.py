@@ -24,6 +24,7 @@ class Command(BaseCommand):
             'planning_generer', 'planning_bloquer', 'planning_exporter', 'planning_convoquer',
             'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi',
             'peut_consulter_tous_usagers',
+            'ip_piloter',
         ]
 
         PROFILS = [
@@ -42,7 +43,7 @@ class Command(BaseCommand):
                 "capacites": [
                     'peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier',
                     'peut_instruire', 'ged_televerser', 'peut_gestion_aides_aidfi',
-                    'peut_consulter_tous_usagers',
+                    'peut_consulter_tous_usagers', 'ip_evaluer',
                 ]
             },
             {
@@ -80,6 +81,15 @@ class Command(BaseCommand):
             # ---------------- PAIERIE DÉPARTEMENTALE ----------------
             {"code": "REGISSEUR_CENTRAL", "nom": "Régisseur central (paierie)", "capacites": ['cap_regie_centrale']},
             # ---------------- SERVICE DE CONTRÔLE (AFASE) ----------------
+            # ---------------- PROTECTION DE L'ENFANCE ----------------
+            {"code": "CRIP", "nom": "CRIP (cellule de recueil des informations préoccupantes)",
+             "capacites": ['ip_crip', 'peut_consulter_tous_usagers']},
+            {"code": "PIEF", "nom": "Inspecteur enfance famille (PIEF)",
+             "capacites": ['ip_pief', 'peut_voir_stats', 'peut_consulter_tous_usagers']},
+            {"code": "MDS_PMI_INFANTILE", "nom": "Protection infantile (PMI)",
+             "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
+            {"code": "MDS_PMI_MATERNELLE", "nom": "Protection maternelle (PMI)",
+             "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
             {"code": "SERVICE_CONTROLE_AFASE", "nom": "Service de contrôle AFASE", "capacites": ['afase_controle']},
 
             {
