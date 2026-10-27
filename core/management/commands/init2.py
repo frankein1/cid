@@ -176,7 +176,7 @@ class Command(BaseCommand):
         mere2 = create_beneficiaire("RECOMP", "Sophie", "mere", mds, "FAM2", 40)
         enfant_paul1 = create_beneficiaire("RECOMP", "Tom", "enfant", mds, "FAM2", 14)
         enfant_paul2 = create_beneficiaire("RECOMP", "Lea", "enfant", mds, "FAM2", 10)
-        enfant_commun = create_beneficiaire("RECOMP", "Leo", "enfant", mds, "FAM2", 5)
+        enfant_commun = create_beneficiaire("RECOMP", "Sacha", "enfant", mds, "FAM2", 5)
         nouvelle_compagne = create_beneficiaire("RECOMP", "Julie", "conjointe", mds, "FAM2", 38)
 
         # Liens parents → enfants
