@@ -47,3 +47,22 @@ class HistoriqueAction(models.Model):
 
     def __str__(self):
         return f"{self.information.numero} - {self.action} - {self.date:%d/%m/%Y}"
+
+
+class TypeDanger(models.Model):
+    """
+    Référentiel des types de danger (modifiable dans l'administration, sans toucher au code).
+    Désactiver un type plutôt que le supprimer : les IP qui l'utilisent le gardent.
+    """
+    code = models.SlugField(max_length=40, unique=True)
+    libelle = models.CharField("Libellé", max_length=150)
+    ordre = models.PositiveSmallIntegerField(default=100)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('ordre', 'libelle')
+        verbose_name = "Type de danger"
+        verbose_name_plural = "Types de danger"
+
+    def __str__(self):
+        return self.libelle

@@ -15,12 +15,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from protection_enfance.forms.f_evaluation import ActionForm, SaisineForm
-from protection_enfance.forms.f_ip import BinomeForm, EnfantFormSet, IPForm
-from protection_enfance.models import EnfantIP, InformationPreoccupante
-from protection_enfance.models.m_evaluation import RESULTATS
+from protection_enfance.forms.f_evaluation import ActionForm, AuditionForm, SaisineForm
+from protection_enfance.forms.f_ip import (AdulteFormSet, BinomeForm, EnfantFamilleFormSet, EnfantFormSet,
+                                          IPForm)
+from protection_enfance.models import InformationPreoccupante
+from protection_enfance.models.m_evaluation import PRESENCES, RESULTATS
 from protection_enfance.models.m_ip import CAP_CRIP, CAP_EVALUER, CAP_PIEF, CAP_PILOTER, STATUTS
 from protection_enfance.services import ip_circuit as circuit
+from protection_enfance.services import ip_convocations as convocations
+from protection_enfance.services import ip_famille as famille
 from protection_enfance.services.ip_circuit import CircuitError
 
 
@@ -70,18 +73,6 @@ def ip_liste(request):
     })
 
 
-def _enfants_du_dossier(ip):
-    """Pré-remplit les enfants à partir du réseau familial du dossier CID (mineurs)."""
-    if not ip.famille_id or ip.enfants.exists():
-        return
-    from dateutil.relativedelta import relativedelta
-    for m in ip.famille.reseau_familial():
-        p = m['personne']
-        if m['type_lien'] == 'ENFANT' and p.date_naissance and \
-                relativedelta(timezone.localdate(), p.date_naissance).years < 18:
-            EnfantIP.objects.create(ip=ip, beneficiaire=p, nom=p.nom, prenom=p.prenom, date_naissance=p.date_naissance)
-
-
 @login_required
 def ip_saisie(request, ip_id=None):
     """Création (ou correction avant évaluation) d'une IP par la CRIP."""
@@ -104,10 +95,12 @@ def ip_saisie(request, ip_id=None):
             form.save_m2m()
             formset.instance = ip
             formset.save()
-            _enfants_du_dossier(ip)
+            famille.completer_depuis_dossier(ip)
             circuit.journal(ip, user, "IP enregistrée par la CRIP" if nouvelle else "IP modifiée par la CRIP")
-        messages.success(request, f"IP {ip.numero} enregistrée.")
-        return redirect('protection_enfance:ip_detail', ip_id=ip.numero)
+            for c in famille.synchroniser_territoires(ip, user):
+                messages.info(request, c)
+        messages.success(request, f"IP {ip.numero} enregistrée. Vérifiez la composition familiale (adultes, « vit chez »).")
+        return redirect('protection_enfance:ip_famille', ip_id=ip.numero)
     return render(request, 'protection_enfance/ip_form.html', {'form': form, 'formset': formset, 'ip': ip})
 
 
@@ -119,14 +112,23 @@ def ip_detail(request, ip_id):
         return _refus()
     rapport = getattr(ip, 'rapport', None)
     professionnels = _professionnels(ip)
+    actions = list(ip.actions.select_related('enfant', 'auteur', 'creneau', 'destinataire')
+                   .prefetch_related('participants', 'convoques__adulte', 'convoques__enfant', 'enfants_concernes'))
+    for a in actions:
+        a.relances = convocations.a_relancer(a) if a.est_audition and a.convoques.all() else []
     codes = [c for c, _ in STATUTS]
     rang = codes.index(ip.statut)
     etapes = [(c, l, 'fait' if i < rang or ip.statut == 'CLOTUREE' else 'actuel' if i == rang else 'avenir')
               for i, (c, l) in enumerate(STATUTS)]
     ctx = {
         'ip': ip, 'rapport': rapport, 'etapes': etapes, 'resultats': RESULTATS,
-        'enfants': ip.enfants.select_related('beneficiaire'),
-        'actions': ip.actions.select_related('enfant', 'auteur', 'creneau').prefetch_related('participants'),
+        'enfants': ip.enfants.select_related('beneficiaire', 'heberge_par').prefetch_related('dangers_constates'),
+        'actions': actions,
+        'adultes': ip.adultes.select_related('mds', 'beneficiaire'),
+        'peut_composer': peut_composer(ip, user),
+        'presences': PRESENCES,
+        'audition_form': AuditionForm(ip=ip, professionnels=professionnels, prefix='aud',
+                                      initial={'participants': [u.pk for u in ip.binome] or [user.pk]}),
         'saisines': ip.saisines.select_related('propose_par', 'cadre', 'inspecteur'),
         'historique': ip.historique_actions.select_related('user')[:40],
         'pieces': _pieces(ip),
@@ -231,3 +233,39 @@ def ip_piece(request, ip_id):
         except Exception:
             messages.error(request, "La pièce n'a pas pu être enregistrée. Réessayez plus tard.")
     return redirect('protection_enfance:ip_detail', ip_id=ip.numero)
+
+
+def peut_composer(ip, user):
+    """Composition familiale : la CRIP avant l'évaluation, puis le cadre et le binôme jusqu'au rapport."""
+    return ip.peut_modifier_crip(user) or (
+        ip.statut in ('TRANSMISE_MDS', 'EN_EVALUATION') and (ip.est_binome(user) or ip.peut_piloter(user)))
+
+
+@login_required
+def ip_famille(request, ip_id):
+    """Adultes concernés (parents séparés, autre MDS, autre département…) et « vit chez » de chaque enfant."""
+    ip = get_ip(request, ip_id)
+    user = request.user
+    if not peut_composer(ip, user):
+        return _refus()
+    adultes_fs = AdulteFormSet(request.POST or None, instance=ip, prefix='adultes')
+    enfants_fs = EnfantFamilleFormSet(request.POST or None, instance=ip, prefix='enfants',
+                                      adultes=ip.adultes.all())
+    if request.method == 'POST' and adultes_fs.is_valid() and enfants_fs.is_valid():
+        with transaction.atomic():
+            adultes_fs.save()
+            enfants_fs.save()
+            # Un seul adulte qui héberge : les enfants sans « vit chez » vivent chez lui
+            hebergeants = list(ip.adultes.filter(heberge_enfants=True))
+            if len(hebergeants) == 1:
+                ip.enfants.filter(heberge_par__isnull=True).update(heberge_par=hebergeants[0])
+            circuit.journal(ip, user, "Composition familiale mise à jour",
+                            "; ".join(str(a) for a in ip.adultes.all()))
+            for c in famille.synchroniser_territoires(ip, user):
+                messages.info(request, c)
+        messages.success(request, "Composition familiale enregistrée.")
+        if request.POST.get('continuer'):
+            return redirect('protection_enfance:ip_famille', ip_id=ip.numero)
+        return redirect('protection_enfance:ip_detail', ip_id=ip.numero)
+    return render(request, 'protection_enfance/ip_famille.html', {
+        'ip': ip, 'adultes_fs': adultes_fs, 'enfants_fs': enfants_fs})

@@ -13,9 +13,11 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.http import require_POST
 
-from protection_enfance.forms.f_evaluation import ActionForm, RapportForm, SaisineForm, SuiviActionForm
-from protection_enfance.models import ActionIP, SaisineIP
+from protection_enfance.forms.f_evaluation import (ActionForm, AuditionForm, ConclusionEnfantForm, RapportForm,
+                                                  SaisineForm, SuiviActionForm)
+from protection_enfance.models import ActionIP, ConvoqueIP, SaisineIP
 from protection_enfance.services import ip_circuit as circuit
+from protection_enfance.services import ip_convocations as convocations
 from protection_enfance.services import ip_pdf
 from protection_enfance.services.ip_circuit import CircuitError
 from protection_enfance.views.v_ip import _professionnels, _refus, get_ip
@@ -62,6 +64,77 @@ def action_ajouter(request, ip_id):
     return _retour(ip, "#demarches")
 
 
+# =============================================================================
+# AUDITIONS : une case par personne, convocations produites aussitôt
+# =============================================================================
+
+@login_required
+@require_POST
+def audition_programmer(request, ip_id):
+    ip = get_ip(request, ip_id)
+    if not ip.peut_evaluer(request.user):
+        return _refus()
+    form = AuditionForm(request.POST, ip=ip, professionnels=_professionnels(ip), prefix='aud')
+    if not form.is_valid():
+        _erreurs(request, form)
+        return _retour(ip, "#demarches")
+    cd = form.cleaned_data
+    try:
+        action, courriers = convocations.programmer_audition(
+            ip, request.user, cd['type_action'], cd['date'], cd['duree_minutes'],
+            cd['adultes'] if cd['type_action'] == 'AUDITION_PARENTS' else [],
+            cd['enfants'] if cd['type_action'] == 'AUDITION_ENFANT' else [],
+            cd['participants'], agenda=cd['ajouter_agenda'])
+        messages.success(request, f"{action.get_type_action_display()} programmée : {len(courriers)} courrier(s) "
+                                  f"de convocation prêt(s) à imprimer (bouton « PDF » de chaque courrier).")
+    except CircuitError as e:
+        messages.error(request, str(e))
+    return _retour(ip, "#demarches")
+
+
+@login_required
+@require_POST
+def audition_presences(request, action_id):
+    action = get_object_or_404(ActionIP.objects.select_related('ip'), pk=action_id)
+    ip = action.ip
+    if not (ip.est_binome(request.user) or ip.peut_piloter(request.user)) or ip.statut in ('TRANSMISE_PIEF', 'CLOTUREE'):
+        return _refus()
+    presences = {cv: (request.POST.get(f'presence_{cv.pk}', cv.presence),
+                      (request.POST.get(f'motif_{cv.pk}') or '').strip())
+                 for cv in action.convoques.all()}
+    convocations.noter_presences(action, request.user, presences)
+    messages.success(request, "Présences enregistrées.")
+    return _retour(ip, "#demarches")
+
+
+@login_required
+@require_POST
+def audition_relance(request, action_id):
+    """Report à l'amiable (date convenue) ou LRAR, pour les personnes cochées d'un même foyer."""
+    action = get_object_or_404(ActionIP.objects.select_related('ip'), pk=action_id)
+    ip = action.ip
+    if not ip.peut_evaluer(request.user):
+        return _refus()
+    ids = [int(i) for i in request.POST.getlist('convoques') if i.isdigit()]
+    convoques = list(ConvoqueIP.objects.filter(action=action, pk__in=ids, suite__isnull=True))
+    quand = parse_datetime(request.POST.get('date') or '')
+    if quand and timezone.is_naive(quand):
+        quand = timezone.make_aware(quand)
+    if not quand:
+        messages.error(request, "Indiquez la nouvelle date et l'heure.")
+        return _retour(ip, "#demarches")
+    try:
+        if request.POST.get('mode') == 'lrar':
+            convocations.relancer_lrar(convoques, request.user, quand, request.POST.get('numero_lrar'))
+            messages.success(request, "LRAR enregistrée et nouvelle audition programmée : le courrier est prêt.")
+        else:
+            convocations.reporter(convoques, request.user, quand, request.POST.get('motif'))
+            messages.success(request, "Report convenu enregistré : le nouveau courrier de convocation est prêt.")
+    except CircuitError as e:
+        messages.error(request, str(e))
+    return _retour(ip, "#demarches")
+
+
 @login_required
 @require_POST
 def action_suivi(request, action_id):
@@ -102,13 +175,18 @@ def rapport(request, ip_id):
     r = circuit.rapport_de(ip)
     modifiable = ip.peut_evaluer(user) and not r.verrouille
     form = RapportForm(request.POST or None, instance=r)
+    enfants = list(ip.enfants.prefetch_related('dangers_constates'))
+    conclusions = [(e, ConclusionEnfantForm(request.POST or None, instance=e, prefix=f'enfant{e.pk}'))
+                   for e in enfants]
     if request.method == 'POST':
         if not modifiable:
             return _refus()
-        if form.is_valid():
+        if form.is_valid() and all(f.is_valid() for _, f in conclusions):
             r = form.save(commit=False)
             r.redige_par = user
             r.save()
+            for _, f in conclusions:
+                f.save()
             circuit.journal(ip, user, "Rapport enregistré (brouillon)")
             if request.POST.get('soumettre'):
                 try:
@@ -121,7 +199,8 @@ def rapport(request, ip_id):
                 messages.success(request, "Brouillon enregistré.")
             return redirect('protection_enfance:rapport', ip_id=ip.numero)
     return render(request, 'protection_enfance/ip_rapport.html', {
-        'ip': ip, 'rapport': r, 'form': form, 'modifiable': modifiable,
+        'ip': ip, 'rapport': r, 'form': form, 'modifiable': modifiable, 'conclusions': conclusions,
+        'enfants': enfants, 'non_cooperants': convocations.non_cooperants(ip),
         'actions': ip.actions.select_related('enfant').order_by('date'),
         'peut_piloter': ip.peut_piloter(user), 'est_binome': ip.est_binome(user),
         'est_pief': user.a_la_capacite('ip_pief'),

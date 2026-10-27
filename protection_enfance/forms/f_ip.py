@@ -7,7 +7,7 @@
 from django import forms
 from django.forms import inlineformset_factory
 
-from protection_enfance.models import EnfantIP, InformationPreoccupante
+from protection_enfance.models import AdulteIP, EnfantIP, InformationPreoccupante, TypeDanger
 
 CSS = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm'
 
@@ -29,13 +29,14 @@ class IPForm(forms.ModelForm):
         fields = ['date_reception_crip', 'origine', 'niveau_urgence', 'description', 'situation_particuliere',
                   'signalant_nom', 'signalant_qualite', 'signalant_structure', 'signalant_contact',
                   'signalant_confidentialite', 'famille_libelle', 'famille_adresse', 'mds', 'mds_partage',
-                  'autre_departement']
+                  'autre_departement', 'dangers_signales']
         widgets = {
             'date_reception_crip': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'description': forms.Textarea(attrs={'rows': 6}),
             'signalant_contact': forms.Textarea(attrs={'rows': 2}),
             'famille_adresse': forms.Textarea(attrs={'rows': 2}),
             'mds_partage': forms.SelectMultiple(attrs={'size': 4}),
+            'dangers_signales': forms.CheckboxSelectMultiple,
         }
 
     def __init__(self, *args, **kwargs):
@@ -44,6 +45,9 @@ class IPForm(forms.ModelForm):
         self.fields['mds'].queryset = MDS.objects.filter(active=True).order_by('nom')
         self.fields['mds_partage'].queryset = MDS.objects.filter(active=True).order_by('nom')
         self.fields['mds'].required = False
+        self.fields['dangers_signales'].queryset = TypeDanger.objects.filter(actif=True) | (
+            self.instance.dangers_signales.all() if self.instance.pk else TypeDanger.objects.none())
+        self.fields['dangers_signales'].queryset = self.fields['dangers_signales'].queryset.distinct()
         if self.instance.pk and self.instance.famille_id:
             self.fields['code_famille'].initial = self.instance.famille.code_interne
         _styler(self)
@@ -91,6 +95,60 @@ class EnfantForm(forms.ModelForm):
 
 EnfantFormSet = inlineformset_factory(InformationPreoccupante, EnfantIP, form=EnfantForm,
                                       extra=2, can_delete=True)
+
+
+class AdulteForm(forms.ModelForm):
+    class Meta:
+        model = AdulteIP
+        fields = ['qualite', 'civilite', 'prenom', 'nom', 'adresse', 'code_postal', 'ville', 'telephone', 'mds',
+                  'autorite_parentale', 'heberge_enfants', 'convoque', 'commentaire']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from mds.models import MDS
+        self.fields['mds'].queryset = MDS.objects.filter(active=True).order_by('nom')
+        self.fields['mds'].required = False
+        self.fields['prenom'].required = False
+        _styler(self)
+
+    def clean(self):
+        cd = super().clean()
+        # À la création, autorité parentale ou hébergement ⇒ convoqué d'office (décochable ensuite)
+        if not self.instance.pk and (cd.get('autorite_parentale') or cd.get('heberge_enfants')):
+            cd['convoque'] = True
+        return cd
+
+
+AdulteFormSet = inlineformset_factory(InformationPreoccupante, AdulteIP, form=AdulteForm, extra=1, can_delete=True)
+
+
+class EnfantFamilleForm(forms.ModelForm):
+    """Enfant dans la composition familiale : identité et « vit chez »."""
+    class Meta:
+        model = EnfantIP
+        fields = ['prenom', 'nom', 'date_naissance', 'heberge_par']
+        widgets = {'date_naissance': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
+
+    def __init__(self, *args, adultes=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['heberge_par'].queryset = adultes if adultes is not None else AdulteIP.objects.none()
+        self.fields['heberge_par'].required = False
+        _styler(self)
+
+
+class _BaseEnfantFamille(forms.BaseInlineFormSet):
+    def __init__(self, *args, adultes=None, **kwargs):
+        self._adultes = adultes
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kw = super().get_form_kwargs(index)
+        kw['adultes'] = self._adultes
+        return kw
+
+
+EnfantFamilleFormSet = inlineformset_factory(InformationPreoccupante, EnfantIP, form=EnfantFamilleForm,
+                                             formset=_BaseEnfantFamille, extra=1, can_delete=True)
 
 
 class BinomeForm(forms.Form):

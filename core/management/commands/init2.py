@@ -289,6 +289,8 @@ class Command(BaseCommand):
             for e in (enfant3a, enfant3b, enfant3c):
                 EnfantIP.objects.create(ip=ip, beneficiaire=e, nom=e.nom, prenom=e.prenom, date_naissance=e.date_naissance)
             HistoriqueAction.objects.create(information=ip, action="IP de démonstration créée (init2)", user=crip)
+            from protection_enfance.services.ip_famille import completer_depuis_dossier
+            completer_depuis_dossier(ip)   # adultes (parents) et « vit chez » repris du dossier
             self.stdout.write(f"   ✅ IP de démonstration {ip.numero} (famille CLASSIC)")
 
         self.stdout.write(self.style.SUCCESS("\n🎉 Données de test créées avec succès"))

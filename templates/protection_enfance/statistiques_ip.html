@@ -58,6 +58,44 @@
         </table>
     </div>
 
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg border overflow-x-auto">
+            <h2 class="font-bold text-gray-800 px-5 pt-5">Enfants : conclusion de l'évaluation</h2>
+            <div class="flex flex-wrap gap-3 px-5 py-4">
+                {% for libelle, n in r.total.conclusions %}<div class="rounded-lg border px-4 py-2"><p class="text-xs text-gray-500">{{ libelle }}</p><p class="text-xl font-bold">{{ n }}</p></div>{% endfor %}
+            </div>
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Âge</th>{% for c in r.colonnes_conclusion %}<th class="px-3 py-2 text-right">{{ c }}</th>{% endfor %}<th class="px-3 py-2 text-right">Total</th></tr></thead>
+                <tbody class="divide-y divide-gray-100 tabular-nums">
+                    {% for a in r.ages %}<tr><td class="px-3 py-1.5">{{ a.tranche }}</td>{% for v in a.valeurs %}<td class="px-3 py-1.5 text-right">{{ v|default:"" }}</td>{% endfor %}<td class="px-3 py-1.5 text-right font-semibold">{{ a.total }}</td></tr>
+                    {% empty %}<tr><td colspan="6" class="px-3 py-4 text-center text-gray-400 italic">Aucun enfant.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="bg-white rounded-lg border overflow-x-auto">
+            <h2 class="font-bold text-gray-800 px-5 pt-5">Types de danger</h2>
+            <p class="text-xs text-gray-500 px-5">Signalé : nombre d'IP où la CRIP l'a relevé · Constaté : nombre d'enfants pour qui l'évaluation le retient.</p>
+            <table class="min-w-full text-sm mt-3">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Type</th><th class="px-3 py-2 text-right">Signalé</th><th class="px-3 py-2 text-right">Constaté</th></tr></thead>
+                <tbody class="divide-y divide-gray-100 tabular-nums">
+                    {% for d in r.dangers %}<tr><td class="px-3 py-1.5">{{ d.type }}</td><td class="px-3 py-1.5 text-right">{{ d.signales|default:"" }}</td><td class="px-3 py-1.5 text-right">{{ d.constates|default:"" }}</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg border overflow-x-auto">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">Suites décidées par l'inspecteur</h2>
+        <p class="text-xs text-gray-500 px-5">Selon la situation la plus grave relevée parmi les enfants de l'IP.</p>
+        <table class="min-w-full text-sm mt-3">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2 text-left">Suite</th>{% for c in r.colonnes_conclusion %}<th class="px-3 py-2 text-right">{{ c }}</th>{% endfor %}<th class="px-3 py-2 text-right">Total</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for x in r.suites %}<tr><td class="px-3 py-1.5">{{ x.decision }}</td>{% for v in x.valeurs %}<td class="px-3 py-1.5 text-right">{{ v|default:"" }}</td>{% endfor %}<td class="px-3 py-1.5 text-right font-semibold">{{ x.total }}</td></tr>
+                {% empty %}<tr><td colspan="6" class="px-3 py-4 text-center text-gray-400 italic">Aucune IP clôturée sur la période.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <div class="bg-white rounded-lg border overflow-x-auto">
         <h2 class="font-bold text-gray-800 px-5 pt-5">Dossiers</h2>
         <table class="min-w-full text-sm mt-3">

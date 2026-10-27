@@ -17,6 +17,7 @@ urlpatterns = [
     path('ip/statistiques/', v_stats.statistiques_ip, name='statistiques_ip'),
     path('ip/<str:ip_id>/', v_ip.ip_detail, name='ip_detail'),
     path('ip/<str:ip_id>/modifier/', v_ip.ip_saisie, name='ip_modifier'),
+    path('ip/<str:ip_id>/famille/', v_ip.ip_famille, name='ip_famille'),
     path('ip/<str:ip_id>/transmettre/', v_ip.ip_transmettre, name='ip_transmettre'),
     path('ip/<str:ip_id>/binome/', v_ip.ip_binome, name='ip_binome'),
     path('ip/<str:ip_id>/piece/', v_ip.ip_piece, name='ip_piece'),
@@ -24,6 +25,9 @@ urlpatterns = [
     # Évaluation
     path('ip/<str:ip_id>/demarche/', v_evaluation.action_ajouter, name='action_ajouter'),
     path('demarche/<int:action_id>/suivi/', v_evaluation.action_suivi, name='action_suivi'),
+    path('ip/<str:ip_id>/audition/', v_evaluation.audition_programmer, name='audition_programmer'),
+    path('audition/<int:action_id>/presences/', v_evaluation.audition_presences, name='audition_presences'),
+    path('audition/<int:action_id>/relance/', v_evaluation.audition_relance, name='audition_relance'),
     path('demarche/<int:action_id>/courrier.pdf', v_evaluation.courrier_pdf, name='courrier_pdf'),
     path('ip/<str:ip_id>/rapport/', v_evaluation.rapport, name='rapport'),
     path('ip/<str:ip_id>/rapport/viser/', v_evaluation.rapport_viser, name='rapport_viser'),

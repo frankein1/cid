@@ -7,6 +7,7 @@
 """
 Évaluation d'une IP :
   - ActionIP   : chaque courrier, LRAR, appel, rendez-vous, audition, VAD, réunion… (dates, stats, preuve)
+  - ConvoqueIP : chaque personne convoquée à une audition (une case par adulte, une par enfant) et sa présence
   - SaisineIP  : proposition du TS → décision du cadre → validation de l'inspecteur → saisine du procureur
   - RapportIP  : trame du rapport (reprise de l'ébauche d'enquête sociale de l'embryon), visas, avis de l'inspecteur
 """
@@ -25,7 +26,7 @@ TYPES_ACTION = [
     ('APPEL', "Appel téléphonique"),
     ('MAIL', "Courriel"),
     ('RDV_MDS', "Rendez-vous en MDS"),
-    ('AUDITION_ENFANT', "Audition d'un enfant (sans les parents)"),
+    ('AUDITION_ENFANT', "Audition des enfants (reçus un par un, sans les parents)"),
     ('AUDITION_PARENTS', "Audition des parents"),
     ('VAD', "Visite à domicile"),
     ('PARTENAIRE', "Échange avec un partenaire"),
@@ -38,6 +39,7 @@ TYPES_AGENDA = {
     'VAD': 'VAD',
 }
 TYPES_COURRIER = ('CONVOCATION', 'LRAR')
+TYPES_AUDITION = ('AUDITION_PARENTS', 'AUDITION_ENFANT')
 RESULTATS = [
     ('PREVU', "Prévu"),
     ('REALISE', "Réalisé"),
@@ -64,6 +66,14 @@ class ActionIP(models.Model):
     date_rdv_propose = models.DateTimeField("Rendez-vous proposé dans le courrier", null=True, blank=True)
     numero_lrar = models.CharField("N° de la LRAR", max_length=40, blank=True)
     date_accuse_reception = models.DateField("Date de l'accusé de réception", null=True, blank=True)
+    # Convocations aux auditions : un courrier par destinataire, rattaché à l'audition
+    rdv = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='courriers',
+                            verbose_name="Audition concernée")
+    destinataire = models.ForeignKey('protection_enfance.AdulteIP', on_delete=models.SET_NULL, null=True,
+                                     blank=True, related_name='courriers_recus')
+    adultes_concernes = models.ManyToManyField('protection_enfance.AdulteIP', blank=True, related_name='+')
+    enfants_concernes = models.ManyToManyField('protection_enfance.EnfantIP', blank=True, related_name='+')
+    report_convenu = models.BooleanField("Nouvelle date convenue avec la famille", default=False)
     # Lien avec l'agenda
     creneau = models.ForeignKey('planning.CreneauRdv', on_delete=models.SET_NULL, null=True, blank=True,
                                 related_name='actions_ip')
@@ -81,6 +91,53 @@ class ActionIP(models.Model):
     @property
     def est_courrier(self):
         return self.type_action in TYPES_COURRIER
+
+    @property
+    def est_audition(self):
+        return self.type_action in TYPES_AUDITION
+
+
+PRESENCES = [
+    ('ATTENDU', "Attendu(e)"),
+    ('PRESENT', "Présent(e)"),
+    ('ABSENT', "Absent(e)"),
+    ('REPORTE', "Absence justifiée – report convenu"),
+]
+PRESENCE_BADGES = {'ATTENDU': 'bg-blue-100 text-blue-800', 'PRESENT': 'bg-emerald-100 text-emerald-800',
+                   'ABSENT': 'bg-red-100 text-red-800', 'REPORTE': 'bg-amber-100 text-amber-800'}
+
+
+class ConvoqueIP(models.Model):
+    """Une personne convoquée à une audition : adulte OU enfant, avec sa présence."""
+    action = models.ForeignKey(ActionIP, on_delete=models.CASCADE, related_name='convoques')
+    adulte = models.ForeignKey('protection_enfance.AdulteIP', on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='convocations')
+    enfant = models.ForeignKey('protection_enfance.EnfantIP', on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='convocations')
+    presence = models.CharField(max_length=10, choices=PRESENCES, default='ATTENDU')
+    motif = models.CharField("Motif / précision", max_length=255, blank=True)
+    suite = models.ForeignKey(ActionIP, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+                              help_text="Nouvelle audition (report convenu ou LRAR)")
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = "Personne convoquée"
+
+    def __str__(self):
+        return f"{self.personne} – {self.get_presence_display()}"
+
+    @property
+    def personne(self):
+        return self.adulte or self.enfant
+
+    @property
+    def badge(self):
+        return PRESENCE_BADGES.get(self.presence, '')
+
+    @property
+    def destinataire_courrier(self):
+        """Adulte qui reçoit le courrier : lui-même, ou l'adulte chez qui vit l'enfant."""
+        return self.adulte if self.adulte_id else (self.enfant.heberge_par if self.enfant_id else None)
 
 
 STATUTS_SAISINE = [
