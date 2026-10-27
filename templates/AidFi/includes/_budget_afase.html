@@ -1,0 +1,104 @@
+<!-- templates/AidFi/includes/_budget_afase.html -->
+{# Budget mensuel du ménage : rubriques du formulaire officiel de demande d'AFASE #}
+{% load budget_afase %}
+<div class="space-y-8" id="budgetAfase">
+    {% if ancien_budget %}
+    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+        <p class="font-semibold mb-1">Budget saisi avec l'ancien formulaire (lignes libres) : reportez-le dans les rubriques ci-dessous.</p>
+        <p>Ressources : {% for lib, m in ancien_budget.ressources %}{{ lib }} {{ m }} €{% if not forloop.last %} · {% endif %}{% empty %}–{% endfor %}</p>
+        <p>Charges : {% for lib, m in ancien_budget.charges %}{{ lib }} {{ m }} €{% if not forloop.last %} · {% endif %}{% empty %}–{% endfor %}</p>
+    </div>
+    {% endif %}
+    <p class="text-sm text-gray-500">Ressources du dernier mois connu (ressources fluctuantes : moyenne des 3 derniers mois). Charges réglées le dernier mois connu, mensualisées le cas échéant.
+        Le reste à vivre ne compte que les charges <b>payées</b>.</p>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border">
+            <thead class="bg-green-50 text-xs uppercase text-green-900"><tr>
+                <th class="px-3 py-2 text-left">Ressources mensuelles</th>
+                {% for col, lib in colonnes_ressources %}<th class="px-3 py-2 text-right w-32">{{ lib }}</th>{% endfor %}
+            </tr></thead>
+            <tbody>
+            {% for titre, lignes in rubriques_ressources %}
+                <tr class="bg-gray-50"><td colspan="4" class="px-3 py-1 font-semibold text-gray-700">{{ titre }}</td></tr>
+                {% for code, libelle in lignes %}
+                <tr class="border-t">
+                    <td class="px-3 py-1">{{ libelle }}{% if code in a_preciser %}<input type="text" name="r__{{ code }}__precision" value="{% valeur_budget grille 'r' code 'precision' %}" placeholder="préciser" class="ml-2 px-2 py-0.5 border rounded text-xs w-40">{% endif %}</td>
+                    {% for col, lib in colonnes_ressources %}
+                    <td class="px-2 py-1"><input type="number" step="0.01" min="0" name="r__{{ code }}__{{ col }}" value="{% valeur_budget grille 'r' code col %}" data-ressource="{{ col }}" class="budget-num w-full px-2 py-1 border rounded text-right"></td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            {% endfor %}
+            <tr class="border-t-2 font-bold bg-green-50"><td class="px-3 py-2">Total des ressources mensuelles (1)</td>
+                {% for col, lib in colonnes_ressources %}<td class="px-3 py-2 text-right" id="totalR_{{ col }}">0,00</td>{% endfor %}</tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border">
+            <thead class="bg-red-50 text-xs uppercase text-red-900"><tr>
+                <th class="px-3 py-2 text-left">Charges mensuelles</th>
+                {% for col, lib in colonnes_charges %}<th class="px-3 py-2 text-right w-32">{{ lib }}</th>{% endfor %}
+            </tr></thead>
+            <tbody>
+            {% for titre, lignes in rubriques_charges %}
+                <tr class="bg-gray-50"><td colspan="3" class="px-3 py-1 font-semibold text-gray-700">{{ titre }}</td></tr>
+                {% for code, libelle in lignes %}
+                <tr class="border-t">
+                    <td class="px-3 py-1">{{ libelle }}{% if code in a_preciser %}<input type="text" name="c__{{ code }}__precision" value="{% valeur_budget grille 'c' code 'precision' %}" placeholder="préciser" class="ml-2 px-2 py-0.5 border rounded text-xs w-40">{% endif %}</td>
+                    {% for col, lib in colonnes_charges %}
+                    <td class="px-2 py-1"><input type="number" step="0.01" min="0" name="c__{{ code }}__{{ col }}" value="{% valeur_budget grille 'c' code col %}" data-charge="{{ col }}" class="budget-num w-full px-2 py-1 border rounded text-right"></td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            {% endfor %}
+            <tr class="border-t-2 font-bold bg-red-50"><td class="px-3 py-2">Total des charges (logement (2) + autres (3))</td>
+                <td class="px-3 py-2 text-right" id="totalC_payee">0,00</td><td class="px-3 py-2 text-right" id="totalC_non_payee">0,00</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <h3 class="font-semibold text-gray-700 mb-2">Dettes du ménage</h3>
+        <table class="text-sm border"><thead class="bg-gray-50 text-xs uppercase"><tr><th class="px-3 py-2 text-left">Créanciers</th><th class="px-3 py-2 text-right">Montant</th></tr></thead>
+            <tbody>{% for d in dettes %}<tr class="border-t">
+                <td class="px-2 py-1"><input type="text" name="d__{{ forloop.counter0 }}__creancier" value="{{ d.creancier }}" class="w-64 px-2 py-1 border rounded"></td>
+                <td class="px-2 py-1"><input type="number" step="0.01" min="0" name="d__{{ forloop.counter0 }}__montant" value="{{ d.montant }}" class="w-32 px-2 py-1 border rounded text-right"></td></tr>{% endfor %}
+            </tbody></table>
+    </div>
+
+    <div class="p-6 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-300">
+        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-calculator mr-2"></i>Bilan budgétaire du ménage</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div class="p-4 bg-white rounded-lg shadow-sm"><div class="text-xs text-gray-500">Total des ressources (1)</div><div id="bilanR" class="text-xl font-bold text-green-700">0,00 €</div></div>
+            <div class="p-4 bg-white rounded-lg shadow-sm"><div class="text-xs text-gray-500">Total des charges payées (2 + 3)</div><div id="bilanC" class="text-xl font-bold text-red-700">0,00 €</div></div>
+            <div class="p-4 bg-white rounded-lg shadow-sm"><div class="text-xs text-gray-500">Personnes vivant au foyer</div>{{ form.nb_personnes_foyer }}</div>
+            <div class="p-4 bg-white rounded-lg shadow-sm"><div class="text-xs text-gray-500">Reste à vivre (par jour et par personne)</div><div id="bilanRAV" class="text-xl font-bold text-blue-700">0,00 €</div></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">Reste à vivre = (ressources mensuelles − charges payées) / nombre de personnes / 30.</p>
+    </div>
+</div>
+<script>
+(function () {
+    const racine = document.getElementById('budgetAfase');
+    if (!racine) return;
+    const nb = document.getElementById('id_nb_personnes_foyer');
+    const f = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+    function calculer() {
+        const r = {demandeur: 0, conjoint: 0, autres: 0}, c = {payee: 0, non_payee: 0};
+        racine.querySelectorAll('input[data-ressource]').forEach(i => r[i.dataset.ressource] += parseFloat(i.value) || 0);
+        racine.querySelectorAll('input[data-charge]').forEach(i => c[i.dataset.charge] += parseFloat(i.value) || 0);
+        Object.keys(r).forEach(k => document.getElementById('totalR_' + k).textContent = f(r[k]));
+        Object.keys(c).forEach(k => document.getElementById('totalC_' + k).textContent = f(c[k]));
+        const totalR = r.demandeur + r.conjoint + r.autres;
+        const n = Math.max(parseInt(nb && nb.value) || 1, 1);
+        document.getElementById('bilanR').textContent = f(totalR) + ' €';
+        document.getElementById('bilanC').textContent = f(c.payee) + ' €';
+        document.getElementById('bilanRAV').textContent = f((totalR - c.payee) / n / 30) + ' €';
+    }
+    racine.addEventListener('input', calculer);
+    calculer();
+})();
+</script>

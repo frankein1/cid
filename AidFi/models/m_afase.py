@@ -29,34 +29,35 @@ CODES_INSTRUCTION_AFASE = {
     "6": "Catastrophes naturelles / crise externe à la famille",
     "7": "Aucun droit en attente et sans revenus connus",
 }
+# NB (annexe 4) : les codes 4 et 7 ne peuvent pas être inversés, pour des raisons statistiques.
 
-# ✅ CORRIGÉ : Listes de tuples au lieu de dictionnaires
+# Codification des aides financières ASE (annexe 4 de la note de service)
 ACCORD_AFASE_CHOICES = [
     ("1", "Soutien alimentaire"),
-    ("2", "Modes de garde"),
-    ("3", "Colonies"),
-    ("4", "Scolarité / vêture"),
-    ("5", "Cantine"),
-    ("6", "Activités"),
-    ("7", "Santé"),
-    ("8", "Logement"),
-    ("9", "Équipement"),
-    ("10", "Crise familiale"),
+    ("2", "Modes de garde (CLSH, crèche…)"),
+    ("3", "Participation aux frais de colonies"),
+    ("4", "Scolarité, périscolarité, vêture"),
+    ("5", "Frais de cantine"),
+    ("6", "Activités sportives ou culturelles"),
+    ("7", "Santé (mutuelle, soins enfants)"),
+    ("8", "Logement (loyers, fluides, charges exceptionnelles, assurance habitation)"),
+    ("9", "Équipement mobilier (électroménager, literie)"),
+    ("10", "Soutien budgétaire / crise familiale"),
+    # Code 11 « habillement » supprimé : englobé au code 4
     ("12", "Transport"),
-    ("13", "Catastrophes"),
+    ("13", "Catastrophes naturelles / crise externe à la famille"),
 ]
 
 REFUS_AFASE_CHOICES = [
-    ("1", "Absence de justificatifs"),
+    ("1", "Absence de justificatifs permettant d'évaluer les ressources et les charges"),
     ("2", "Ressources suffisantes"),
-    ("3", "Autre dispositif"),
-    ("4", "Motif non recevable"),
-    ("5", "Absence d'adhésion"),
-    ("6", "Droits rétablis"),
+    ("3", "La demande relève d'un autre dispositif"),
+    ("4", "Motif non lié aux besoins élémentaires de l'enfant"),
+    ("5", "Absence d'adhésion de l'usager au projet défini avec le travailleur social"),
+    ("6", "Droits rétablis et versés"),
     ("7", "Aide déjà versée"),
-    ("8", "Récurrence"),
+    ("8", "Récurrence des aides / maintien de revenu"),
 ]
-
 
 # ==========================================================
 # DEMANDE AFASE
@@ -77,6 +78,32 @@ class DemandeAFASE(DemandeAide):
         ("DEFAVORABLE", "Défavorable"),
     ]
     avis_ts = models.CharField(max_length=15, choices=AVIS_TS_CHOICES)
+
+    # Formulaire de demande (annexe 1 de la note de service)
+    LIENS_DEMANDEUR = [
+        ("MERE", "Mère"), ("PERE", "Père"), ("TUTEUR", "Tuteur"),
+        ("CHARGE_EFFECTIVE", "Personne qui assume la charge effective de l'enfant"),
+        ("FEMME_ENCEINTE", "Femme enceinte"), ("MINEUR_EMANCIPE", "Mineur émancipé"),
+        ("JEUNE_MAJEUR", "Jeune majeur de moins de 21 ans"),
+    ]
+    QUALITES_TS = [
+        ("AS", "Assistant(e) social(e)"), ("ES", "Éducateur(trice) spécialisé(e)"),
+        ("CESF", "Conseiller(e) en économie sociale et familiale"), ("EJE", "Éducateur(trice) de jeunes enfants"),
+    ]
+    lien_demandeur = models.CharField("Lien du demandeur avec l'enfant", max_length=20, choices=LIENS_DEMANDEUR,
+                                      blank=True)
+    date_signature_demandeur = models.DateField(
+        "Date de signature du demandeur", null=True, blank=True,
+        help_text="Indispensable : le délai de traitement de 2 mois court à partir de cette date.")
+    allocataire_caf = models.BooleanField("Allocataire CAF", null=True, blank=True)
+    situation_pro_demandeur = models.CharField("Situation professionnelle du demandeur", max_length=200, blank=True)
+    situation_pro_conjoint = models.CharField("Âge et situation professionnelle du conjoint", max_length=200,
+                                              blank=True)
+    historique_aides = models.TextField("Historique des aides ASE des 12 derniers mois", blank=True,
+                                        help_text="Dates, décisions, montants (les AFASE de CID sont reprises).")
+    autres_aides_sollicitees = models.TextField("Autres aides sollicitées", blank=True,
+                                                help_text="Dates, organismes, décisions, montants.")
+    qualite_ts = models.CharField("Qualité du travailleur social", max_length=5, choices=QUALITES_TS, blank=True)
 
     class Meta:
         verbose_name = "Demande AFASE"
@@ -151,6 +178,15 @@ class EvaluationSocialeAFASE(AuditedMixin):
     analyse_problematique = models.TextField(blank=True)
     justification_demande = models.TextField()
     commentaire_familial = models.TextField(blank=True)
+    # Éléments de contenu attendus (annexe 2 de la note de service)
+    ADHESIONS = [("FORTE", "Forte"), ("PARTIELLE", "Partielle"), ("FAIBLE", "Faible"), ("AUCUNE", "Aucune")]
+    plan_action = models.TextField("Plan d'action élaboré avec la famille", blank=True,
+                                   help_text="En cohérence avec les autres dispositifs sollicités.")
+    adhesion_famille = models.CharField("Degré d'adhésion de la famille au plan d'aide", max_length=10,
+                                        choices=ADHESIONS, blank=True)
+    affectation_aide = models.CharField("Affectation ciblée de l'aide", max_length=255, blank=True)
+    parcours_insertion = models.TextField("Parcours d'insertion (jeunes de 16 à 21 ans sans scolarité ni stage)",
+                                          blank=True)
 
     class Meta:
         verbose_name = "Évaluation sociale AFASE"
@@ -173,10 +209,9 @@ class BudgetAFASE(AuditedMixin):
 
     ressources = models.JSONField(default=dict)
     charges = models.JSONField(default=dict)
+    dettes = models.JSONField(default=list, blank=True)
 
-    nb_personnes_foyer = models.PositiveSmallIntegerField(
-        default=1, editable=False
-    )
+    nb_personnes_foyer = models.PositiveSmallIntegerField("Nombre de personnes vivant au foyer", default=1)
     reste_a_vivre = models.DecimalField(
         max_digits=10, decimal_places=2, default=0, editable=False
     )
@@ -189,34 +224,70 @@ class BudgetAFASE(AuditedMixin):
         return f"Budget AFASE – demande {self.demande.id}"
 
     def save(self, *args, **kwargs):
-        beneficiaire = self.demande.beneficiaire
+        """
+        Reste à vivre = (ressources − charges PAYÉES) / personnes au foyer / 30 (formulaire de la note).
+        Le nombre de personnes est celui saisi sur le formulaire (proposé d'après le réseau familial).
+        """
+        from AidFi.services.budget_afase import totaux
+        if not self.nb_personnes_foyer:
+            self.nb_personnes_foyer = nb_personnes_au_foyer(self.demande.beneficiaire)
+        self.reste_a_vivre = max(totaux(self.ressources, self.charges, self.nb_personnes_foyer)['reste_a_vivre'], 0)
+        super().save(*args, **kwargs)
 
-        # Calcul du nombre de personnes au foyer
-        nb = 1
-        liens = (
-            LienFamilial.objects.filter(personne_a=beneficiaire)
-            | LienFamilial.objects.filter(personne_b=beneficiaire)
-        )
+    @property
+    def totaux(self):
+        from AidFi.services.budget_afase import totaux
+        return totaux(self.ressources, self.charges, self.nb_personnes_foyer)
 
-        for lien in liens:
-            if lien.vit_au_foyer:
-                nb += 1
+    @property
+    def affichage(self):
+        from AidFi.services.budget_afase import lignes_affichage
+        return lignes_affichage(self.ressources, self.charges)
 
-        self.nb_personnes_foyer = max(nb, 1)
+    @property
+    def total_dettes(self):
+        from AidFi.services.budget_afase import _d
+        return sum((_d(d.get('montant')) for d in (self.dettes or [])), 0)
 
-        # Calcul du reste à vivre
-        total_ressources = sum(
-            float(v) for v in (self.ressources or {}).values() if v
-        )
-        total_charges = sum(
-            float(v) for v in (self.charges or {}).values() if v
-        )
 
-        solde_mensuel = total_ressources - total_charges
-        self.reste_a_vivre = round(
-            max(solde_mensuel / self.nb_personnes_foyer / 30, 0), 2
-        )
+def nb_personnes_au_foyer(beneficiaire):
+    """Demandeur + personnes liées qui vivent au foyer (proposition, modifiable sur le formulaire)."""
+    nb = 1 + sum(1 for lien in (LienFamilial.objects.filter(personne_a=beneficiaire)
+                                | LienFamilial.objects.filter(personne_b=beneficiaire)) if lien.vit_au_foyer)
+    return max(nb, 1)
 
+
+# ==========================================================
+# ENFANTS CONCERNÉS (cadre A du formulaire)
+# ==========================================================
+
+class EnfantAFASE(models.Model):
+    """
+    Enfant mineur ou jeune majeur de moins de 21 ans, coché s'il est concerné par la demande.
+    Enfant à naître : nom « XXX » et date d'accouchement prévue (règle de la note de service).
+    """
+    SEXES = [("F", "F"), ("M", "M")]
+    demande = models.ForeignKey(DemandeAFASE, on_delete=models.CASCADE, related_name="enfants")
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='+')
+    nom = models.CharField(max_length=60)
+    prenom = models.CharField("Prénom", max_length=60, blank=True)
+    date_naissance = models.DateField("Date de naissance (ou d'accouchement prévue)", null=True, blank=True)
+    sexe = models.CharField(max_length=1, choices=SEXES, blank=True)
+    situation = models.CharField("Situation (scolarité, formation, emploi…)", max_length=150, blank=True)
+    a_naitre = models.BooleanField("Enfant à naître", default=False)
+    concerne = models.BooleanField("Concerné par la demande", default=True)
+
+    class Meta:
+        ordering = ("date_naissance", "id")
+        verbose_name = "Enfant (demande AFASE)"
+
+    def __str__(self):
+        return "Enfant à naître" if self.a_naitre else f"{self.prenom} {self.nom.upper()}"
+
+    def save(self, *args, **kwargs):
+        if self.a_naitre:
+            self.nom, self.prenom = "XXX", ""
         super().save(*args, **kwargs)
 
 

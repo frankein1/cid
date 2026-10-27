@@ -55,7 +55,7 @@ CAPACITES = [
     ('ip_pief', "IP – Inspecteur enfance famille : visa des rapports, validation des saisines du procureur"),
     ('ip_piloter', "IP – Piloter les IP de sa MDS (réunions, binôme, visas, saisines)"),
     ('ip_evaluer', "IP – Peut faire partie d'un binôme d'évaluation"),
-    ('afase_controle', 'AFASE – Service de contrôle (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
+    ('afase_controle', 'AFASE – UAGAF, unité administrative de gestion des aides financières (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
     ('peut_inscrire_aidfi', 'Inscription AidFi'),
     ('peut_consulter_dossiers_aidfi', 'Consulter dossiers AidFi'),
 ]

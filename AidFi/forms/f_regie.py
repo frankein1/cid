@@ -17,6 +17,7 @@ TAILLE_MAX = 10 * 1024 * 1024
 
 class DemandeRegieForm(forms.Form):
     montant = forms.DecimalField(label="Montant demandé (€)", min_value=1, max_digits=8, decimal_places=2,
+                                 help_text="Se conformer au montant maximum prévu par la note de service en vigueur.",
                                  widget=forms.NumberInput(attrs={'class': CSS, 'step': '0.01', 'min': 1}))
     motivation = forms.CharField(label="Situation et motif de l'urgence",
                                  widget=forms.Textarea(attrs={'class': CSS, 'rows': 5}))
@@ -51,6 +52,7 @@ class DecisionRegieForm(forms.Form):
     decision = forms.ChoiceField(choices=[('ACCORD', 'Accorder'), ('REFUS', 'Refuser')], widget=forms.RadioSelect)
     montant_accorde = forms.DecimalField(label="Montant accordé (€)", required=False, min_value=1, max_digits=8,
                                          decimal_places=2,
+                                         help_text="Se conformer au montant maximum prévu par la note de service en vigueur.",
                                          widget=forms.NumberInput(attrs={'class': CSS, 'step': '0.01'}))
     motif_refus = forms.CharField(label="Motif du refus", required=False,
                                   widget=forms.Textarea(attrs={'class': CSS, 'rows': 3}))

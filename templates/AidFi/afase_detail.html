@@ -17,7 +17,7 @@
                 </p>
             </div>
             <span class="px-6 py-3 bg-white/20 rounded-2xl font-bold">
-                {{ demande.get_statut_metier_display }}
+                {{ demande.get_statut_display }}
             </span>
         </div>
     </div>
@@ -27,6 +27,15 @@
             Accès refusé
         </div>
     {% else %}
+
+        {% if alertes %}
+        <div class="mb-8 space-y-2">
+            {% for niveau, texte in alertes %}
+            <p class="px-4 py-3 rounded-xl text-sm {% if niveau == 'attention' %}bg-amber-50 border border-amber-300 text-amber-900{% else %}bg-blue-50 border border-blue-200 text-blue-900{% endif %}">
+                <i class="fas {% if niveau == 'attention' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %} mr-2"></i>{{ texte }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
@@ -39,6 +48,15 @@
                     <p><strong>Montant :</strong> {{ demande.montant_sollicite }} €</p>
                     <p><strong>Durée :</strong> {{ demande.duree_demande }} mois</p>
                     <p><strong>Créée le :</strong> {{ demande.date_creation|date:"d/m/Y H:i" }}</p>
+                    {% if demande.date_signature_demandeur %}<p><strong>Signée par le demandeur le :</strong> {{ demande.date_signature_demandeur|date:"d/m/Y" }}</p>{% endif %}
+                    {% if demande.lien_demandeur %}<p><strong>Demandeur :</strong> {{ demande.demandeur.prenom }} {{ demande.demandeur.nom|upper }} ({{ demande.get_lien_demandeur_display|lower }})</p>{% endif %}
+                    {% with enfants=demande.enfants.all %}{% if enfants %}
+                    <p class="mt-2"><strong>Enfants concernés :</strong> {% for e in enfants %}{% if e.concerne %}{{ e }}{% if e.a_naitre %} (naissance prévue le {{ e.date_naissance|date:"d/m/Y" }}){% endif %}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}</p>
+                    {% endif %}{% endwith %}
+                    {% if demande.budget %}{% with t=demande.budget.totaux %}
+                    <p class="mt-2"><strong>Reste à vivre :</strong> {{ demande.budget.reste_a_vivre }} € par jour et par personne
+                        <span class="text-xs text-gray-500">({{ t.nb_personnes }} personne{{ t.nb_personnes|pluralize }} ; ressources {{ t.ressources }} €, charges payées {{ t.charges_payees }} €{% if t.charges_non_payees %}, non payées {{ t.charges_non_payees }} €{% endif %})</span></p>
+                    {% endwith %}{% endif %}
                 </div>
 
                 {% if user|a_la_capacite:"peut_instruire" %}
@@ -133,7 +151,7 @@
 
                     <ol class="text-sm space-y-1">
                         <li>✅ Accordée le {{ decision.date_decision|date:"d/m/Y" }}{% if decision.decide_par %} par {{ decision.decide_par.get_full_name|default:decision.decide_par.username }}{% endif %}</li>
-                        <li>{% if decision.date_transmission_controle %}✅ Transmise au contrôle le {{ decision.date_transmission_controle|date:"d/m/Y" }}{% if decision.transmis_par %} par {{ decision.transmis_par.get_full_name|default:decision.transmis_par.username }}{% endif %}{% else %}⬜ Transmission au service de contrôle{% endif %}</li>
+                        <li>{% if decision.date_transmission_controle %}✅ Transmise à l'UAGAF le {{ decision.date_transmission_controle|date:"d/m/Y" }}{% if decision.transmis_par %} par {{ decision.transmis_par.get_full_name|default:decision.transmis_par.username }}{% endif %}{% else %}⬜ Transmission au service de contrôle{% endif %}</li>
                         <li>{% if decision.date_demande_paiement %}✅ Paiement demandé le {{ decision.date_demande_paiement|date:"d/m/Y" }}{% if decision.reference_comptable %} – n° d'enregistrement {{ decision.reference_comptable }}{% endif %}{% else %}⬜ Demande de paiement (comptabilité){% endif %}</li>
                         <li>{% if decision.date_delivrance %}✅ Payée le {{ decision.date_delivrance|date:"d/m/Y" }} : {{ decision.montant_delivre|floatformat:2 }} €{% else %}⬜ Paiement par la paierie{% endif %}</li>
                     </ol>
@@ -165,7 +183,7 @@
                             <span>Je confirme que les pièces d'identité du bénéficiaire et des enfants ou majeurs à charge concernés sont jointes.</span></label>
                         <button type="submit" {% if pieces_manquantes %}disabled title="Dossier incomplet"{% endif %}
                                 class="w-full rounded-lg py-2 text-white {% if pieces_manquantes %}bg-gray-300 cursor-not-allowed{% else %}bg-indigo-600 hover:bg-indigo-700{% endif %}">
-                            📤 Transmettre au service de contrôle
+                            📤 Transmettre à l'UAGAF
                         </button>
                         {% if pieces_manquantes %}<p class="text-xs text-red-600">Transmission impossible : dossier incomplet.</p>{% endif %}
                     </form>
@@ -175,7 +193,7 @@
                     {% if vue_controle and demande.statut == "TRANSMISE_CONTROLE" %}
                     <form method="post" action="{% url 'AidFi:afase_controle_action' demande.id 'paiement-demande' %}" class="space-y-2 text-sm border-t pt-3">
                         {% csrf_token %}
-                        <p class="font-semibold">Service de contrôle : demande de paiement saisie dans le logiciel comptable</p>
+                        <p class="font-semibold">UAGAF : demande de paiement saisie dans le logiciel comptable</p>
                         <label class="block">Date <input type="date" name="date" class="w-full border rounded px-2 py-1"></label>
                         <label class="block">N° d'enregistrement comptable (facultatif) <input type="text" name="reference" class="w-full border rounded px-2 py-1"></label>
                         <button type="submit" class="w-full bg-cyan-600 text-white rounded-lg py-2 hover:bg-cyan-700">Paiement demandé</button>
@@ -191,7 +209,7 @@
                     {% if vue_controle and demande.statut == "PAIEMENT_DEMANDE" %}
                     <form method="post" action="{% url 'AidFi:afase_controle_action' demande.id 'paiement-effectue' %}" class="space-y-2 text-sm border-t pt-3">
                         {% csrf_token %}
-                        <p class="font-semibold">Service de contrôle : paiement effectué par la paierie</p>
+                        <p class="font-semibold">UAGAF : paiement effectué par la paierie</p>
                         <label class="block">Payé le <input type="date" name="date" class="w-full border rounded px-2 py-1"></label>
                         <label class="block">Montant payé (€) <input type="text" inputmode="decimal" name="montant" placeholder="{{ decision.montant_accorde|floatformat:2 }}" class="w-full border rounded px-2 py-1"></label>
                         <p class="text-xs text-gray-500">Vide : le montant accordé. Un paiement partiel est possible.</p>

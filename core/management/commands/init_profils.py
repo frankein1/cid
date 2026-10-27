@@ -90,7 +90,7 @@ class Command(BaseCommand):
              "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
             {"code": "MDS_PMI_MATERNELLE", "nom": "Protection maternelle (PMI)",
              "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
-            {"code": "SERVICE_CONTROLE_AFASE", "nom": "Service de contrôle AFASE", "capacites": ['afase_controle']},
+            {"code": "SERVICE_CONTROLE_AFASE", "nom": "UAGAF (unité administrative de gestion des aides financières)", "capacites": ['afase_controle']},
 
             {
                 "code": "SUPER_ADMIN",
