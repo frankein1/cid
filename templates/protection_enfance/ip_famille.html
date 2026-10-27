@@ -1,0 +1,67 @@
+<!-- templates/protection_enfance/ip_famille.html -->
+{% extends "base.html" %}
+{% block title %}Composition familiale – IP {{ ip.numero }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <a href="{% url 'protection_enfance:ip_detail' ip.numero %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>IP {{ ip.numero }}</a>
+    <h1 class="text-2xl font-bold text-gray-800 mt-3 mb-1"><i class="fas fa-people-roof text-red-600 mr-2"></i>Composition familiale</h1>
+    <p class="text-sm text-gray-500 mb-6">Parents séparés, autre MDS, autre département : chaque adulte a son adresse et reçoit ses propres courriers.
+        Sont convoqués d'office les titulaires de l'autorité parentale et l'adulte qui héberge les enfants (décochable au cas par cas).</p>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+            <h2 class="font-bold text-gray-800">Adultes concernés</h2>
+            {{ adultes_fs.management_form }}
+            {% for e in adultes_fs.non_form_errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+            {% for f in adultes_fs %}
+            <div class="border rounded-lg p-4 {% if f.instance.hors_departement %}border-purple-300 bg-purple-50{% elif f.instance.pk %}border-gray-200{% else %}border-dashed border-gray-300{% endif %}">
+                {{ f.id }}
+                {% if not f.instance.pk %}<p class="text-xs font-semibold text-gray-500 mb-2">Ajouter un adulte</p>{% endif %}
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    <div class="col-span-2"><label class="block text-xs text-gray-500">{{ f.qualite.label }}</label>{{ f.qualite }}</div>
+                    <div><label class="block text-xs text-gray-500">Civilité</label>{{ f.civilite }}</div>
+                    <div class="col-span-1 md:col-span-1"><label class="block text-xs text-gray-500">{{ f.prenom.label }}</label>{{ f.prenom }}</div>
+                    <div class="col-span-2"><label class="block text-xs text-gray-500">{{ f.nom.label|capfirst }}</label>{{ f.nom }}{% for e in f.nom.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+                    <div class="col-span-2 md:col-span-3"><label class="block text-xs text-gray-500">{{ f.adresse.label|capfirst }}</label>{{ f.adresse }}</div>
+                    <div><label class="block text-xs text-gray-500">{{ f.code_postal.label }}</label>{{ f.code_postal }}</div>
+                    <div class="col-span-1 md:col-span-2"><label class="block text-xs text-gray-500">{{ f.ville.label|capfirst }}</label>{{ f.ville }}</div>
+                    <div class="col-span-2"><label class="block text-xs text-gray-500">{{ f.telephone.label }}</label>{{ f.telephone }}</div>
+                    <div class="col-span-2"><label class="block text-xs text-gray-500">{{ f.mds.label }}</label>{{ f.mds }}</div>
+                    <div class="col-span-2"><label class="block text-xs text-gray-500">{{ f.commentaire.label|capfirst }}</label>{{ f.commentaire }}</div>
+                </div>
+                <div class="flex flex-wrap gap-5 mt-3 text-sm">
+                    <label class="flex items-center gap-2">{{ f.autorite_parentale }} {{ f.autorite_parentale.label }}</label>
+                    <label class="flex items-center gap-2">{{ f.heberge_enfants }} {{ f.heberge_enfants.label }}</label>
+                    <label class="flex items-center gap-2 font-semibold">{{ f.convoque }} {{ f.convoque.label }}</label>
+                    {% if f.instance.pk %}<label class="flex items-center gap-2 text-red-700 ml-auto">{{ f.DELETE }} Retirer</label>{% endif %}
+                </div>
+                {% if f.instance.hors_departement %}<p class="text-xs text-purple-700 mt-2"><i class="fas fa-map mr-1"></i>Hors du département ({{ f.instance.departement }}) : enquête conjointe.</p>{% endif %}
+                {% if f.instance.beneficiaire %}<p class="text-xs text-gray-500 mt-1">Dossier CID : {{ f.instance.beneficiaire.code_interne }}</p>{% endif %}
+            </div>
+            {% endfor %}
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
+            <h2 class="font-bold text-gray-800">Enfants : chez qui vivent-ils ?</h2>
+            <p class="text-xs text-gray-500">Le courrier de convocation des enfants est adressé à l'adulte chez qui ils vivent. Un nouvel adulte apparaît dans la liste après « Enregistrer et continuer ».</p>
+            {{ enfants_fs.management_form }}
+            {% for f in enfants_fs %}
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+                {{ f.id }}
+                <div><label class="block text-xs text-gray-500">Prénom</label>{{ f.prenom }}</div>
+                <div><label class="block text-xs text-gray-500">Nom</label>{{ f.nom }}</div>
+                <div><label class="block text-xs text-gray-500">Date de naissance</label>{{ f.date_naissance }}</div>
+                <div><label class="block text-xs text-gray-500">Vit chez</label>{{ f.heberge_par }}</div>
+                <div class="text-sm">{% if f.instance.pk %}<label class="flex items-center gap-2 text-red-700">{{ f.DELETE }} Retirer</label>{% endif %}</div>
+            </div>
+            {% endfor %}
+        </section>
+
+        <div class="flex flex-wrap justify-end gap-3">
+            <button name="continuer" value="1" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Enregistrer et continuer</button>
+            <button class="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold">Enregistrer</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

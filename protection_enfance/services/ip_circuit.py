@@ -94,6 +94,8 @@ def transmettre_mds(ip, user):
         raise CircuitError("Choisissez la MDS en charge avant de transmettre.")
     if not ip.enfants.exists():
         raise CircuitError("Indiquez au moins un enfant concerné.")
+    if not ip.adultes.exists():
+        raise CircuitError("Indiquez au moins un adulte concerné (composition familiale).")
     ip.statut, ip.date_transmission_mds = 'TRANSMISE_MDS', timezone.now()
     ip.save(update_fields=['statut', 'date_transmission_mds', 'date_modification'])
     journal(ip, user, "Transmise à la MDS", str(ip.mds))
@@ -242,6 +244,11 @@ def soumettre_rapport(ip, user):
         raise CircuitError("Le rapport se soumet pendant l'évaluation.")
     if not rapport.complet:
         raise CircuitError("Renseignez au moins l'analyse et la préconisation avant de soumettre le rapport.")
+    for e in ip.enfants.all():
+        if not e.conclusion:
+            raise CircuitError(f"Indiquez la conclusion pour {e.prenom} (en danger, en risque, pas en danger).")
+        if e.conclusion in ('DANGER', 'RISQUE') and not e.dangers_constates.exists():
+            raise CircuitError(f"Précisez le ou les types de danger pour {e.prenom}.")
     rapport.date_soumission, rapport.redige_par = timezone.now(), user
     rapport.save()
     ip.statut = 'SYNTHESE'

@@ -25,6 +25,7 @@ from .m_generique import generate_numero
 DELAI_MOIS = 3                    # l'évaluation doit être terminée dans les 3 mois suivant la réception par la CRIP
 DELAI_INTERMEDIAIRE_JOURS = 60    # point de rappel : le cadre relance le binôme, réunion de point si besoin
 AGE_PMI = 5                       # enfant de 5 ans ou moins : CID propose un professionnel de PMI dans le binôme
+DEPARTEMENT = '13'                # au-delà : enquête conjointe avec l'autre département
 
 # Capacités
 CAP_CRIP = 'ip_crip'              # CRIP : réception et transmission aux MDS (voit toutes les IP)
@@ -96,6 +97,8 @@ class InformationPreoccupante(models.Model):
     origine = models.CharField(max_length=32, choices=ORIGINES, default='AUTRE')
     niveau_urgence = models.CharField("Urgence", max_length=12, choices=URGENCES, default='COURANTE')
     description = models.TextField("Faits rapportés")
+    dangers_signales = models.ManyToManyField('protection_enfance.TypeDanger', blank=True,
+                                              related_name='ip_signalees', verbose_name="Dangers signalés")
     situation_particuliere = models.CharField(
         "Situation particulière", max_length=200, blank=True,
         help_text="Grossesse, handicap… : CID proposera un professionnel de PMI dans le binôme.")
@@ -268,6 +271,80 @@ class InformationPreoccupante(models.Model):
         return qs.filter(filtre).distinct()
 
 
+QUALITES = [
+    ('PERE', "Père"),
+    ('MERE', "Mère"),
+    ('BEAU_PARENT', "Beau-parent / conjoint(e) du parent"),
+    ('GRAND_PARENT', "Grand-parent"),
+    ('TUTEUR', "Tuteur"),
+    ('TIERS', "Tiers qui héberge (famille, ami…)"),
+    ('AUTRE', "Autre"),
+]
+
+
+class AdulteIP(models.Model):
+    """
+    Adulte concerné par l'IP : parents (même séparés, sur deux MDS ou deux départements),
+    beau-parent, grand-parent qui a la garde… Convoqués d'office : titulaires de l'autorité
+    parentale et adulte qui héberge les enfants (décochable au cas par cas).
+    """
+    ip = models.ForeignKey(InformationPreoccupante, on_delete=models.CASCADE, related_name='adultes')
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True,
+                                     blank=True, related_name='ip_adulte', verbose_name="Dossier CID")
+    qualite = models.CharField("Qualité", max_length=15, choices=QUALITES, default='AUTRE')
+    civilite = models.CharField(max_length=5, choices=[('M.', 'M.'), ('MME', 'Mme')], default='MME')
+    nom = models.CharField(max_length=60)
+    prenom = models.CharField("Prénom", max_length=60)
+    adresse = models.CharField(max_length=255, blank=True)
+    code_postal = models.CharField("Code postal", max_length=10, blank=True)
+    ville = models.CharField(max_length=100, blank=True)
+    telephone = models.CharField("Téléphone", max_length=30, blank=True)
+    mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+                            verbose_name="MDS de rattachement")
+    autorite_parentale = models.BooleanField("Autorité parentale", default=False)
+    heberge_enfants = models.BooleanField("Héberge les enfants", default=False)
+    convoque = models.BooleanField("Convoqué(e) aux auditions", default=True,
+                                   help_text="Coché d'office si autorité parentale ou hébergement ; décochable.")
+    commentaire = models.CharField(max_length=255, blank=True,
+                                   help_text="Ex. : en détention, adresse inconnue, mesure de protection…")
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = "Adulte concerné"
+
+    def __str__(self):
+        return f"{self.get_qualite_display()} – {self.prenom} {self.nom.upper()}"
+
+    @property
+    def nom_complet(self):
+        return f"{self.get_civilite_display()} {self.prenom} {self.nom.upper()}"
+
+    @property
+    def departement(self):
+        cp = (self.code_postal or '').strip()
+        if not cp:
+            return ''
+        return cp[:3] if cp[:2] in ('97', '98') else cp[:2]
+
+    @property
+    def hors_departement(self):
+        return bool(self.departement) and self.departement != DEPARTEMENT
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and (self.autorite_parentale or self.heberge_enfants):
+            self.convoque = True
+        super().save(*args, **kwargs)
+
+
+CONCLUSIONS = [
+    ('DANGER', "En danger"),
+    ('RISQUE', "En risque de danger"),
+    ('PAS_DANGER', "Pas en danger"),
+]
+CONCLUSION_BADGES = {'DANGER': 'bg-red-100 text-red-800', 'RISQUE': 'bg-amber-100 text-amber-800',
+                     'PAS_DANGER': 'bg-emerald-100 text-emerald-800'}
+
+
 class EnfantIP(models.Model):
     """Enfant concerné par l'IP (souvent une fratrie). Relié au dossier CID quand il existe."""
     ip = models.ForeignKey(InformationPreoccupante, on_delete=models.CASCADE, related_name='enfants')
@@ -276,6 +353,13 @@ class EnfantIP(models.Model):
     nom = models.CharField(max_length=60)
     prenom = models.CharField(max_length=60)
     date_naissance = models.DateField(null=True, blank=True)
+    heberge_par = models.ForeignKey(AdulteIP, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='enfants_heberges', verbose_name="Vit chez")
+    # Conclusion de l'évaluation, enfant par enfant (rapport)
+    conclusion = models.CharField(max_length=12, choices=CONCLUSIONS, blank=True)
+    dangers_constates = models.ManyToManyField('protection_enfance.TypeDanger', blank=True,
+                                               related_name='enfants_constates', verbose_name="Dangers constatés")
+    conclusion_commentaire = models.TextField("Précisions", blank=True)
 
     class Meta:
         ordering = ('date_naissance', 'id')
@@ -293,3 +377,13 @@ class EnfantIP(models.Model):
     @property
     def releve_pmi(self):
         return self.age is not None and self.age <= AGE_PMI
+
+    @property
+    def conclusion_badge(self):
+        return CONCLUSION_BADGES.get(self.conclusion, 'bg-gray-100 text-gray-600')
+
+    @property
+    def nb_auditions(self):
+        """Auditions où l'enfant était présent (+ anciennes auditions saisies avant les cases par enfant)."""
+        return (self.convocations.filter(presence='PRESENT').count()
+                + self.auditions.filter(resultat='REALISE').count())

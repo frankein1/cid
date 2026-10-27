@@ -84,6 +84,86 @@ def _signatures_binome(ip, st):
 # =============================================================================
 
 def courrier_pdf(action: ActionIP):
+    """Courrier d'une convocation à une audition (un par destinataire) ; anciens courriers : modèle d'origine."""
+    if action.destinataire_id:
+        return _convocation_audition_pdf(action)
+    return _courrier_ancien_pdf(action)
+
+
+def _salutation(adultes):
+    civ = {a.civilite for a in adultes}
+    return "Madame, Monsieur," if len(civ) > 1 else ("Monsieur," if civ == {'M.'} else "Madame,")
+
+
+def _convocation_audition_pdf(action):
+    from protection_enfance.models import ConvoqueIP
+    from protection_enfance.services.ip_famille import hebergeants_meme_adresse
+    ip, dest = action.ip, action.destinataire
+    enfants = list(action.enfants_concernes.all())
+    pour_enfants = bool(enfants)
+    lrar = action.type_action == 'LRAR'
+    adultes_entete = hebergeants_meme_adresse(dest) if pour_enfants else [dest]
+    buffer = BytesIO()
+    doc = _doc(buffer, f"{'LRAR' if lrar else 'Convocation'} {ip.numero} – {dest.nom}")
+    st = get_ditas_styles()
+    el = _bloc_mds(ip, st)
+    lignes = " et ".join(escape(a.nom_complet) for a in adultes_entete)
+    lignes += f"<br/>{escape(dest.adresse)}<br/>{escape(dest.code_postal)} {escape(dest.ville)}"
+    el += [Table([["", Paragraph(lignes, st["Normal"])]], colWidths=[9 * cm, 8 * cm]), Spacer(1, 0.8 * cm),
+           Paragraph(f"{escape(ip.mds.ville) if ip.mds else ''}, le {_date(action.date)}", st["Normal"]),
+           Spacer(1, 0.4 * cm)]
+    if lrar:
+        el.append(Paragraph(f"<b>Lettre recommandée avec accusé de réception"
+                            f"{' n° ' + escape(action.numero_lrar) if action.numero_lrar else ''}</b>", st["Normal"]))
+    el += [Paragraph(f"<b>Objet :</b> convocation – information préoccupante réf. {ip.numero}", st["Normal"]),
+           Spacer(1, 0.5 * cm)]
+
+    quand = f"le <b>{_date(action.date_rdv_propose, heure=True)}</b>"
+    lieu = (f"{escape(ip.mds.nom)}, {_txt(ip.mds.adresse)}, {escape(ip.mds.code_postal)} {escape(ip.mds.ville)}"
+            if ip.mds else "la Maison départementale de la solidarité")
+    noms_enfants = ", ".join(f"{e.prenom} {e.nom.upper()}" for e in enfants)
+    pluriel = len(enfants) > 1
+    # Date de la convocation précédente, pour une LRAR ou un report
+    precedent = ConvoqueIP.objects.filter(suite=action.rdv).select_related('action').first() if action.rdv_id else None
+    date_prec = _date(precedent.action.date_rdv_propose or precedent.action.date, heure=True) if precedent else None
+
+    corps = [_salutation(adultes_entete)]
+    if pour_enfants:
+        sujet = f"{'vos enfants' if pluriel else 'votre enfant'} {escape(noms_enfants)}"
+        if lrar:
+            corps.append(f"{sujet[0].upper()}{sujet[1:]} {'ne se sont pas présentés' if pluriel else 'ne s’est pas présenté(e)'}"
+                         + (f" à la convocation du {date_prec}" if date_prec else " à la précédente convocation") + ".")
+        elif action.report_convenu:
+            corps.append("Comme convenu avec vous, nous vous adressons la nouvelle date de convocation.")
+        corps.append(f"Dans le cadre de l'information préoccupante, {sujet} {'sont convoqués' if pluriel else 'est convoqué(e)'} "
+                     f"{quand}, à {lieu}.")
+        corps.append("Les enfants sont reçus un par un par les professionnels ; merci de les accompagner. "
+                     "Les adultes qui les accompagnent patientent en salle d'attente." if pluriel else
+                     "L'enfant est reçu seul par les professionnels ; merci de l'accompagner. "
+                     "L'adulte qui l'accompagne patiente en salle d'attente.")
+    else:
+        if lrar:
+            corps.append("Vous ne vous êtes pas présenté(e)"
+                         + (f" à la convocation du {date_prec}" if date_prec else " à la précédente convocation") + ".")
+        elif action.report_convenu:
+            corps.append("Comme convenu avec vous, nous vous adressons la nouvelle date de convocation.")
+        corps.append(f"Dans le cadre de l'information préoccupante concernant {escape(_enfants(ip))}, "
+                     f"vous êtes convoqué(e) {quand}, à {lieu}.")
+    if lrar:
+        corps.append("Nous vous rappelons que cette évaluation est obligatoire. À défaut de pouvoir la mener avec vous, "
+                     "le rapport sera établi avec les seuls éléments recueillis et transmis à l'inspecteur enfance "
+                     "famille du Département, qui pourra décider de saisir l'autorité judiciaire.")
+    corps += ["En cas d'empêchement, merci de nous contacter au plus vite pour convenir d'une autre date.",
+              "Nous vous prions d'agréer, " + _salutation(adultes_entete).rstrip(',') + ", nos salutations distinguées."]
+    for p in corps:
+        el += [Paragraph(p, st["Normal"]), Spacer(1, 0.3 * cm)]
+    el += _signatures_binome(ip, st)
+    doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
+    buffer.seek(0)
+    return buffer
+
+
+def _courrier_ancien_pdf(action: ActionIP):
     ip = action.ip
     buffer = BytesIO()
     lrar = action.type_action == 'LRAR'
@@ -162,10 +242,15 @@ def rapport_pdf(ip):
 
     el.append(Paragraph("Déroulé de l'évaluation", st["SectionHeader"]))
     lignes = [["Date", "Démarche", "Résultat"]]
-    for a in ip.actions.select_related('enfant').order_by('date'):
+    for a in ip.actions.select_related('enfant', 'destinataire').prefetch_related('convoques').order_by('date'):
         libelle = a.get_type_action_display() + (f" – {a.enfant}" if a.enfant_id else "")
+        if a.destinataire_id:
+            libelle += f" à {a.destinataire.nom_complet}"
         if a.numero_lrar:
             libelle += f" (n° {a.numero_lrar})"
+        if a.convoques.all():
+            libelle += " – " + "; ".join(f"{cv.personne.prenom} {cv.personne.nom.upper()} : "
+                                         f"{cv.get_presence_display().lower()}" for cv in a.convoques.all())
         lignes.append([_date(a.date, heure=True), Paragraph(escape(libelle), st["Normal"]), a.get_resultat_display()])
     if len(lignes) == 1:
         lignes.append(["-", "Aucune démarche enregistrée", ""])
@@ -183,6 +268,16 @@ def rapport_pdf(ip):
 
     for _, titre, texte in rapport.rubriques:
         el += [Paragraph(escape(titre), st["SectionHeader"]), Paragraph(_txt(texte) or "-", st["Normal"])]
+
+    el.append(Paragraph("Conclusion pour chaque enfant", st["SectionHeader"]))
+    for e in ip.enfants.prefetch_related('dangers_constates'):
+        dangers = ", ".join(str(d) for d in e.dangers_constates.all())
+        el.append(Paragraph(f"<b>{escape(str(e))}</b>{' (' + str(e.age) + ' ans)' if e.age is not None else ''} : "
+                            f"<b>{escape(e.get_conclusion_display() or 'non renseignée')}</b>"
+                            + (f" – {escape(dangers)}" if dangers else ""), st["Normal"]))
+        if e.conclusion_commentaire:
+            el.append(Paragraph(_txt(e.conclusion_commentaire), st["Normal"]))
+        el.append(Spacer(1, 0.2 * cm))
     el += [Paragraph("Préconisations", st["SectionHeader"]),
            Paragraph(f"<b>{escape(rapport.get_preconisation_display() or '-')}</b>", st["Normal"]),
            Paragraph(_txt(rapport.preconisation_detail), st["Normal"]), Spacer(1, 0.6 * cm)]

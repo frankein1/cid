@@ -27,7 +27,27 @@
     {% if modifiable %}
     <form method="post" class="space-y-4">
         {% csrf_token %}
+        {% if non_cooperants %}
+        <p class="text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">Absent(e)s malgré la LRAR :
+            {% for cv in non_cooperants %}<b>{{ cv.personne.prenom }} {{ cv.personne.nom|upper }}</b>{% if not forloop.last %}, {% endif %}{% endfor %}.
+            Si la famille n'a pas coopéré, cochez la case ci-dessous.</p>
+        {% endif %}
         {% for f in form %}
+        {% if f.name == 'preconisation' %}
+        <div class="bg-white rounded-xl shadow-sm border-2 border-red-200 p-4 space-y-4">
+            <h3 class="font-bold text-red-800">Conclusion pour chaque enfant</h3>
+            {% for enfant, cf in conclusions %}
+            <div class="border rounded-lg p-3">
+                <p class="font-semibold text-gray-800 mb-2">{{ enfant }}{% if enfant.age is not None %} <span class="font-normal text-gray-500">({{ enfant.age }} an{{ enfant.age|pluralize }})</span>{% endif %}</p>
+                <div class="flex flex-wrap gap-4 text-sm mb-2">{% for r in cf.conclusion %}<label class="flex items-center gap-1">{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div>
+                <p class="text-xs text-gray-500 mb-1">Types de danger constatés :</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-1 text-sm">{% for c in cf.dangers_constates %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>
+                <div class="mt-2">{{ cf.conclusion_commentaire }}</div>
+                {% for e in cf.non_field_errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% if f.name == 'non_cooperation' %}
         <label class="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3">{{ f }} {{ f.label }}</label>
         {% else %}
@@ -50,6 +70,12 @@
         {% for code, titre, texte in rapport.rubriques %}
         <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4"><h3 class="font-bold text-gray-800 mb-1">{{ titre }}</h3><p class="whitespace-pre-wrap text-sm text-gray-800">{{ texte|default:"—" }}</p></section>
         {% endfor %}
+        <section class="bg-white rounded-xl shadow-sm border-2 border-red-200 p-4">
+            <h3 class="font-bold text-red-800 mb-2">Conclusion pour chaque enfant</h3>
+            <ul class="text-sm space-y-2">{% for e in enfants %}<li><b>{{ e }}</b> : <span class="px-2 py-0.5 rounded text-xs {{ e.conclusion_badge }}">{{ e.get_conclusion_display|default:"non renseignée" }}</span>
+                {% for d in e.dangers_constates.all %}<span class="px-2 py-0.5 rounded bg-gray-100 text-xs">{{ d }}</span> {% endfor %}
+                {% if e.conclusion_commentaire %}<p class="text-gray-700 whitespace-pre-wrap mt-1">{{ e.conclusion_commentaire }}</p>{% endif %}</li>{% endfor %}</ul>
+        </section>
         <section class="bg-white rounded-xl shadow-sm border-2 border-red-200 p-4"><h3 class="font-bold text-red-800 mb-1">Préconisation : {{ rapport.get_preconisation_display|default:"—" }}</h3><p class="whitespace-pre-wrap text-sm">{{ rapport.preconisation_detail }}</p></section>
     </div>
     {% endif %}

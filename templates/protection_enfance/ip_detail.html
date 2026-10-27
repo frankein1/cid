@@ -70,6 +70,7 @@
                 <h2 class="font-bold text-gray-800 mb-2">Faits rapportés</h2>
                 <p class="text-xs text-gray-500 mb-3">Origine : {{ ip.get_origine_display }}{% if ip.situation_particuliere %} · <span class="text-pink-700">Situation particulière : {{ ip.situation_particuliere }}</span>{% endif %}</p>
                 <p class="whitespace-pre-wrap text-gray-800">{{ ip.description }}</p>
+                {% if ip.dangers_signales.all %}<p class="mt-3 text-sm"><span class="text-gray-500">Dangers signalés :</span> {% for d in ip.dangers_signales.all %}<span class="px-2 py-0.5 rounded bg-red-50 text-red-800 text-xs">{{ d }}</span> {% endfor %}</p>{% endif %}
                 <div class="mt-4 pt-3 border-t text-sm">
                     {% if voit_declarant %}
                     <p class="text-amber-800"><i class="fas fa-user-secret mr-1"></i><b>Déclarant</b> (visible CRIP / inspecteurs) :
@@ -82,16 +83,42 @@
                 </div>
             </section>
 
-            <!-- ENFANTS -->
+            <!-- FAMILLE -->
             <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 class="font-bold text-gray-800 mb-3">Enfants concernés</h2>
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                    <h2 class="font-bold text-gray-800">Famille</h2>
+                    {% if peut_composer %}<a href="{% url 'protection_enfance:ip_famille' ip.numero %}" class="text-sm text-blue-600 hover:underline"><i class="fas fa-pen mr-1"></i>Composition familiale</a>{% endif %}
+                </div>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-1">Adultes</h3>
+                <ul class="divide-y text-sm mb-4">
+                    {% for a in adultes %}
+                    <li class="py-2">
+                        <div class="flex flex-wrap justify-between gap-2">
+                            <span>{% if a.beneficiaire %}<a href="{% url 'beneficiaire:detail_beneficiaire' a.beneficiaire.code_interne %}" class="hover:underline">{{ a }}</a>{% else %}{{ a }}{% endif %}</span>
+                            <span class="flex flex-wrap gap-1 text-xs">
+                                {% if a.autorite_parentale %}<span class="px-2 py-0.5 rounded bg-slate-100">autorité parentale</span>{% endif %}
+                                {% if a.heberge_enfants %}<span class="px-2 py-0.5 rounded bg-slate-100">héberge les enfants</span>{% endif %}
+                                {% if a.convoque %}<span class="px-2 py-0.5 rounded bg-red-100 text-red-800">convoqué(e)</span>{% else %}<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-500">non convoqué(e)</span>{% endif %}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-500">{{ a.adresse }} {{ a.code_postal }} {{ a.ville }}{% if a.mds %} · {{ a.mds.nom }}{% endif %}{% if a.telephone %} · {{ a.telephone }}{% endif %}
+                            {% if a.hors_departement %}<span class="text-purple-700 font-semibold"> · hors département ({{ a.departement }})</span>{% endif %}</p>
+                        {% if a.commentaire %}<p class="text-xs text-amber-700">{{ a.commentaire }}</p>{% endif %}
+                    </li>
+                    {% empty %}<li class="py-2 text-gray-400 italic">Aucun adulte renseigné{% if peut_composer %} : complétez la composition familiale{% endif %}.</li>{% endfor %}
+                </ul>
+                <h3 class="text-xs font-semibold text-gray-500 uppercase mb-1">Enfants</h3>
                 <ul class="divide-y text-sm">
                     {% for e in enfants %}
                     <li class="py-2 flex flex-wrap justify-between gap-2">
                         <span>{% if e.beneficiaire %}<a href="{% url 'beneficiaire:detail_beneficiaire' e.beneficiaire.code_interne %}" class="hover:underline">{{ e }}</a>{% else %}{{ e }}{% endif %}
-                            {% if e.date_naissance %}<span class="text-gray-500">– {{ e.date_naissance|date:"d/m/Y" }} ({{ e.age }} an{{ e.age|pluralize }})</span>{% endif %}</span>
-                        <span>{% if e.releve_pmi %}<span class="px-2 py-0.5 rounded bg-pink-100 text-pink-800 text-xs">5 ans ou moins : PMI conseillée</span>{% endif %}
-                            {% with n=e.auditions.count %}<span class="text-xs text-gray-500 ml-2">{{ n }} audition{{ n|pluralize }}</span>{% endwith %}</span>
+                            {% if e.date_naissance %}<span class="text-gray-500">– {{ e.date_naissance|date:"d/m/Y" }} ({{ e.age }} an{{ e.age|pluralize }})</span>{% endif %}
+                            <span class="block text-xs {% if e.heberge_par %}text-gray-500{% else %}text-amber-700{% endif %}">{% if e.heberge_par %}vit chez {{ e.heberge_par.prenom }} {{ e.heberge_par.nom|upper }}{% else %}« vit chez » à renseigner{% endif %}</span></span>
+                        <span class="flex flex-wrap gap-1 items-start text-xs">
+                            {% if e.releve_pmi %}<span class="px-2 py-0.5 rounded bg-pink-100 text-pink-800">5 ans ou moins : PMI conseillée</span>{% endif %}
+                            {% if e.conclusion %}<span class="px-2 py-0.5 rounded {{ e.conclusion_badge }}" title="{% for d in e.dangers_constates.all %}{{ d }}{% if not forloop.last %}, {% endif %}{% endfor %}">{{ e.get_conclusion_display }}</span>{% endif %}
+                            {% with n=e.nb_auditions %}<span class="text-gray-500 ml-1">{{ n }} audition{{ n|pluralize }}</span>{% endwith %}
+                        </span>
                     </li>
                     {% empty %}<li class="py-2 text-gray-400 italic">Aucun enfant renseigné.</li>{% endfor %}
                 </ul>
@@ -112,10 +139,37 @@
                     <tr class="align-top">
                         <td class="px-2 py-2 whitespace-nowrap">{{ a.date|date:"d/m/Y H:i" }}</td>
                         <td class="px-2 py-2">
-                            <b>{{ a.get_type_action_display }}</b>{% if a.enfant %} – {{ a.enfant }}{% endif %}
+                            <b>{{ a.get_type_action_display }}</b>{% if a.enfant %} – {{ a.enfant }}{% endif %}{% if a.destinataire %} à {{ a.destinataire.nom_complet }}{% if a.report_convenu %} <span class="text-xs text-amber-700">(date convenue)</span>{% endif %}{% endif %}
+                            {% if a.enfants_concernes.all and a.est_courrier %}<span class="block text-xs text-gray-600">Pour : {% for e in a.enfants_concernes.all %}{{ e.prenom }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
                             {% if a.numero_lrar %}<span class="text-xs text-gray-600"> · LRAR n° {{ a.numero_lrar }}{% if a.date_accuse_reception %}, AR du {{ a.date_accuse_reception|date:"d/m/Y" }}{% endif %}</span>{% endif %}
                             {% if a.date_rdv_propose %}<span class="block text-xs text-gray-600">Rendez-vous proposé : {{ a.date_rdv_propose|date:"d/m/Y H:i" }}</span>{% endif %}
-                            {% if a.personnes %}<span class="block text-xs text-gray-600">{{ a.personnes }}</span>{% endif %}
+                            {% if a.personnes and not a.est_audition and not a.destinataire %}<span class="block text-xs text-gray-600">{{ a.personnes }}</span>{% endif %}
+                            {% if a.est_audition and a.convoques.all %}
+                            <ul class="mt-1 space-y-0.5">{% for cv in a.convoques.all %}<li class="text-xs"><span class="px-1.5 py-0.5 rounded {{ cv.badge }}">{{ cv.get_presence_display }}</span> {{ cv.personne.prenom }} {{ cv.personne.nom|upper }}{% if cv.motif %} <span class="text-gray-500">– {{ cv.motif }}</span>{% endif %}{% if cv.suite %} <span class="text-gray-500">→ reconvoqué(e) le {{ cv.suite.date|date:"d/m/Y H:i" }}</span>{% endif %}</li>{% endfor %}</ul>
+                            {% if est_binome or peut_piloter %}{% if ip.statut != 'TRANSMISE_PIEF' and ip.statut != 'CLOTUREE' %}
+                            <details class="mt-1"><summary class="text-xs text-blue-700 cursor-pointer">Noter les présences</summary>
+                                <form method="post" action="{% url 'protection_enfance:audition_presences' a.pk %}" class="mt-1 space-y-1">{% csrf_token %}
+                                    {% for cv in a.convoques.all %}
+                                    <div class="flex flex-wrap gap-1 items-center text-xs"><span class="w-32 truncate">{{ cv.personne.prenom }} {{ cv.personne.nom|upper }}</span>
+                                        <select name="presence_{{ cv.pk }}" class="px-1 py-0.5 border rounded text-xs">{% for code, lib in presences %}<option value="{{ code }}" {% if code == cv.presence %}selected{% endif %}>{{ lib }}</option>{% endfor %}</select>
+                                        <input type="text" name="motif_{{ cv.pk }}" value="{{ cv.motif }}" placeholder="précision" class="px-1 py-0.5 border rounded text-xs flex-1 min-w-[6rem]"></div>
+                                    {% endfor %}
+                                    <button class="px-2 py-1 bg-slate-700 text-white rounded text-xs">Enregistrer</button>
+                                </form></details>
+                            {% for g in a.relances %}
+                            <details class="mt-1"><summary class="text-xs text-red-700 cursor-pointer">Reconvoquer : {% for cv in g.convoques %}{{ cv.personne.prenom }}{% if not forloop.last %}, {% endif %}{% endfor %} (courrier à {{ g.destinataire.nom_complet|default:"?" }})</summary>
+                                <form method="post" action="{% url 'protection_enfance:audition_relance' a.pk %}" class="mt-1 space-y-1 text-xs border rounded p-2">{% csrf_token %}
+                                    {% for cv in g.convoques %}<label class="flex items-center gap-1"><input type="checkbox" name="convoques" value="{{ cv.pk }}" checked> {{ cv.personne.prenom }} {{ cv.personne.nom|upper }} ({{ cv.get_presence_display|lower }})</label>{% endfor %}
+                                    <label class="block">Nouvelle date et heure <input type="datetime-local" name="date" class="border rounded px-1" required></label>
+                                    <label class="flex items-center gap-1"><input type="radio" name="mode" value="report" checked> Absence justifiée : date convenue avec la famille</label>
+                                    <input type="text" name="motif" placeholder="Motif et accord trouvé (obligatoire pour un report)" class="w-full px-1 py-0.5 border rounded">
+                                    {% if g.lrar_possible %}<label class="flex items-center gap-1"><input type="radio" name="mode" value="lrar"> Absence non justifiée : LRAR</label>
+                                    <input type="text" name="numero_lrar" placeholder="N° de la LRAR" class="w-full px-1 py-0.5 border rounded">{% endif %}
+                                    <button class="px-2 py-1 bg-red-700 text-white rounded">Enregistrer et préparer le courrier</button>
+                                </form></details>
+                            {% endfor %}
+                            {% endif %}{% endif %}
+                            {% endif %}
                             {% if a.participants.all %}<span class="block text-xs text-gray-500">{% for u in a.participants.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
                             {% if a.compte_rendu %}<p class="text-xs text-gray-700 whitespace-pre-wrap mt-1">{{ a.compte_rendu }}</p>{% endif %}
                             {% if a.creneau %}<span class="text-xs text-blue-600"><i class="fas fa-calendar-check mr-1"></i>dans l'agenda</span>{% endif %}
@@ -140,18 +194,35 @@
                 </table>
                 </div>
 
+                {% if peut_evaluer %}
+                <details id="nouvelle-audition" class="mt-4 border-t pt-4">
+                    <summary class="cursor-pointer font-semibold text-red-700"><i class="fas fa-envelope-open-text mr-1"></i>Programmer une audition (les convocations sont produites aussitôt)</summary>
+                    <form method="post" action="{% url 'protection_enfance:audition_programmer' ip.numero %}" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {% csrf_token %}
+                        {% with f=audition_form %}
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.type_action.label }}</label>{{ f.type_action }}</div>
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.date.label }}</label>{{ f.date }}</div>
+                        <div><label class="block text-xs font-bold text-gray-700">{{ f.duree_minutes.label }}</label>{{ f.duree_minutes }}</div>
+                        <div class="md:col-span-3 aud aud-AUDITION_PARENTS"><label class="block text-xs font-bold text-gray-700 mb-1">{{ f.adultes.label }} <span class="font-normal text-gray-500">(un courrier chacun, à son adresse)</span></label>
+                            <div class="space-y-1 text-sm border rounded p-2">{% for c in f.adultes %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% empty %}<p class="text-gray-400 italic">Aucun adulte : complétez la composition familiale.</p>{% endfor %}</div></div>
+                        <div class="md:col-span-3 aud aud-AUDITION_ENFANT"><label class="block text-xs font-bold text-gray-700 mb-1">{{ f.enfants.label }} <span class="font-normal text-gray-500">(même heure ; un courrier par foyer, à l'adulte qui les héberge)</span></label>
+                            <div class="space-y-1 text-sm border rounded p-2">{% for c in f.enfants %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>
+                        <div class="md:col-span-3"><label class="block text-xs font-bold text-gray-700 mb-1">{{ f.participants.label }}</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-1 text-sm max-h-32 overflow-y-auto border rounded p-2">{% for c in f.participants %}<label class="flex items-center gap-1">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>
+                        <label class="flex items-center gap-2 text-sm md:col-span-3">{{ f.ajouter_agenda }} {{ f.ajouter_agenda.label }}</label>
+                        {% endwith %}
+                        <div class="md:col-span-3"><button class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold">Programmer et préparer les convocations</button></div>
+                    </form>
+                </details>
+                {% endif %}
                 {% if peut_evaluer or peut_piloter and ip.statut == 'TRANSMISE_MDS' %}
                 <details id="nouvelle-demarche" class="mt-4 border-t pt-4" {% if not actions %}open{% endif %}>
-                    <summary class="cursor-pointer font-semibold text-red-700"><i class="fas fa-plus mr-1"></i>{% if peut_evaluer %}Enregistrer une démarche (courrier, LRAR, appel, rendez-vous, audition, VAD, réunion…){% else %}Programmer la réunion IP{% endif %}</summary>
+                    <summary class="cursor-pointer font-semibold text-red-700"><i class="fas fa-plus mr-1"></i>{% if peut_evaluer %}Enregistrer une autre démarche (appel, courriel, rendez-vous, VAD, partenaire, réunion…){% else %}Programmer la réunion IP{% endif %}</summary>
                     <div class="flex flex-wrap gap-2 mt-3 text-xs">
                         {% if peut_piloter %}<button type="button" data-type="REUNION_IP" class="raccourci px-2 py-1 rounded border">Réunion IP</button>
                         <button type="button" data-type="POINT_ETAPE" class="raccourci px-2 py-1 rounded border">Point d'étape</button>{% endif %}
                         {% if peut_evaluer %}
-                        <button type="button" data-type="CONVOCATION" class="raccourci px-2 py-1 rounded border">Convocation</button>
-                        <button type="button" data-type="LRAR" class="raccourci px-2 py-1 rounded border">LRAR</button>
                         <button type="button" data-type="APPEL" class="raccourci px-2 py-1 rounded border">Appel</button>
-                        <button type="button" data-type="AUDITION_ENFANT" class="raccourci px-2 py-1 rounded border">Audition enfant</button>
-                        <button type="button" data-type="AUDITION_PARENTS" class="raccourci px-2 py-1 rounded border">Audition parents</button>
                         <button type="button" data-type="VAD" class="raccourci px-2 py-1 rounded border">VAD</button>
                         <button type="button" data-type="REUNION_SYNTHESE" class="raccourci px-2 py-1 rounded border">Synthèse</button>{% endif %}
                     </div>
@@ -295,7 +366,14 @@
 </div>
 <script>
 (function () {
-    const select = document.getElementById('id_type_action');
+    const form = document.querySelector('#nouvelle-audition form');
+    if (!form) return;
+    const sel = form.querySelector('select[name=aud-type_action]');
+    function maj() { form.querySelectorAll('.aud').forEach(el => el.style.display = el.classList.contains('aud-' + sel.value) ? '' : 'none'); }
+    sel.addEventListener('change', maj); maj();
+})();
+(function () {
+    const select = document.querySelector('#nouvelle-demarche select[name=type_action]');
     if (!select) return;
     function maj() {
         document.querySelectorAll('.champ').forEach(el => {
