@@ -77,6 +77,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             form.fields["numero_genesis"].initial = beneficiaire.numero_genesis
 
     from AidFi.forms.afase_workflow_form import enfants_proposes
+    from AidFi.services.aide_decision import referentiel as referentiel_afase
     from AidFi.services import budget_afase
     if request.method == "POST":
         # Formulaire réaffiché après une erreur : on garde ce qui a été saisi
@@ -111,6 +112,9 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "colonnes_charges": budget_afase.COLONNES_CHARGES,
             "a_preciser": budget_afase.A_PRECISER,
             "ancien_budget": budget.affichage if ancien_budget else None,
+            "referentiel": referentiel_afase(),
+            "aides_cochees": (request.POST.getlist("aides_prealables") if request.method == "POST"
+                              else (demande.aides_prealables_sollicitees if demande else [])),
         },
     )
 
@@ -123,12 +127,13 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
 def afase_detail(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    vue_controle = circuit.controle_peut_voir(request.user, demande)
+    vue_controle = circuit.controle_peut_voir(request.user, demande) or circuit.inspecteur_peut_voir(request.user, demande)
     if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or vue_controle):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
     from AidFi.services.afase_alertes import alertes
+    from AidFi.services.aide_decision import analyse as analyse_decision
 
     return render(
         request,
@@ -136,10 +141,11 @@ def afase_detail(request, demande_id):
         {
             "demande": demande,
             "decision": decision,
-            "alertes": alertes(demande) if not decision else [],
+            "alertes": (alertes(demande) + [('attention', a) for a in analyse_decision(demande)['alertes']])
+                       if not decision else [],
             "beneficiaire": demande.beneficiaire,
             "can_modifier": demande.est_modifiable and request.user.peut_agir_sur_objet(demande, "peut_modifier"),
-            "can_decider": request.user.peut_agir_sur_objet(demande, "peut_decider"),
+            "can_decider": demande.peut_etre_decidee_par(request.user),
             "can_instruire": request.user.peut_agir_sur_objet(demande, "peut_instruire"),
             "can_paiement": _peut_suivre_paiement(request.user, demande, decision),
             # Circuit du paiement (contrôle → comptabilité → paierie)
@@ -296,8 +302,9 @@ def afase_evaluation(request, demande_id):
 def afase_decision(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.peut_agir_sur_objet(demande, "peut_decider"):
-        return HttpResponseForbidden("Accès refusé")
+    if not demande.peut_etre_decidee_par(request.user):
+        return HttpResponseForbidden("Accès refusé" + (" : la décision revient à l'inspecteur enfance-famille "
+                                                        "(mesure ASE en cours)." if demande.decision_inspecteur else ""))
 
     if demande.statut != "DEPOSEE":
         messages.error(request, "Cette demande n'est pas en attente de décision.")
@@ -337,8 +344,11 @@ def afase_decision(request, demande_id):
                 messages.success(request, "Décision enregistrée.")
                 return redirect("AidFi:afase_detail", demande_id=demande.id)
     else:
-        form = DecisionAFASEForm(instance=decision)
+        form = DecisionAFASEForm(instance=decision, initial=None if decision else {
+            "type_decision": "ACCORD", "code_decision": demande.motif_envisage,
+            "montant_accorde": demande.montant_sollicite, "duree_accordee": demande.duree_demande})
 
+    from AidFi.services import aide_decision
     return render(
         request,
         "AidFi/afase_decision.html",
@@ -346,6 +356,8 @@ def afase_decision(request, demande_id):
             "demande": demande,
             "beneficiaire": demande.beneficiaire,
             "form": form,
+            "aide": aide_decision.analyse(demande),
+            "referentiel": aide_decision.referentiel(),
         },
     )
 
@@ -358,7 +370,7 @@ def afase_decision(request, demande_id):
 def afase_previsualisation(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not request.user.peut_agir_sur_objet(demande, "peut_voir"):
+    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or circuit.inspecteur_peut_voir(request.user, demande)):
         return HttpResponseForbidden()
 
     buffer = generer_pdf_afase(demande)
@@ -437,7 +449,8 @@ def ajouter_document_afase(request, demande_id):
 def afase_pdf(request, demande_id):
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
 
-    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or circuit.controle_peut_voir(request.user, demande)):
+    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or circuit.controle_peut_voir(request.user, demande)
+            or circuit.inspecteur_peut_voir(request.user, demande)):
         return HttpResponseForbidden("Accès refusé")
 
     buffer = generer_pdf_afase(demande)
@@ -450,3 +463,56 @@ def afase_pdf(request, demande_id):
 
 # Alias pour compatibilité
 afase_creer = afase_creer_ou_modifier
+
+
+# =============================================================================
+# INSPECTEUR ENFANCE-FAMILLE : AFASE des familles avec une mesure ASE
+# =============================================================================
+
+@login_required
+def afase_inspecteur(request):
+    if not request.user.a_la_capacite("ip_pief"):
+        return HttpResponseForbidden("Accès réservé aux inspecteurs enfance-famille.")
+    qs = (DemandeAFASE.objects.filter(mesure_ase__in=("ENFANT_CONFIE", "ASSISTANCE_EDUCATIVE"))
+          .exclude(statut="BROUILLON").select_related("beneficiaire", "beneficiaire__mds").order_by("-date_creation"))
+    return render(request, "AidFi/afase_inspecteur.html", {
+        "a_decider": [d for d in qs if d.statut == "DEPOSEE"],
+        "traitees": [d for d in qs if d.statut != "DEPOSEE"][:50],
+    })
+
+
+# =============================================================================
+# RÉFÉRENTIEL D'AIDE À LA DÉCISION (import / export JSON)
+# =============================================================================
+
+@login_required
+def referentiel_afase(request):
+    """Consultation par les cadres ; import et export par l'administration."""
+    import json
+    from django.http import HttpResponse
+    from AidFi.services import aide_decision
+    from AidFi.models.m_referentiel import ParametresAides, ReferentielMotifAFASE
+    user = request.user
+    admin = user.is_superuser or user.a_la_capacite("peut_administrer")
+    if not (admin or user.a_la_capacite("peut_decider") or user.a_la_capacite("ip_pief")):
+        return HttpResponseForbidden("Accès refusé")
+    if request.GET.get("export") and admin:
+        r = HttpResponse(json.dumps(aide_decision.exporter(), ensure_ascii=False, indent=2),
+                         content_type="application/json; charset=utf-8")
+        r["Content-Disposition"] = 'attachment; filename="referentiel_afase.json"'
+        return r
+    if request.method == "POST":
+        if not admin:
+            return HttpResponseForbidden("Import réservé à l'administration.")
+        fichier = request.FILES.get("fichier")
+        try:
+            if not fichier or fichier.size > 512 * 1024:
+                raise ValueError("Choisissez un fichier JSON (512 Ko au maximum).")
+            messages.success(request, aide_decision.importer(json.loads(fichier.read().decode("utf-8"))))
+        except (ValueError, UnicodeDecodeError) as e:
+            messages.error(request, f"Import impossible : {e}")
+        return redirect("AidFi:referentiel_afase")
+    return render(request, "AidFi/referentiel_afase.html", {
+        "parametres": ParametresAides.actuels(), "admin": admin,
+        "motifs": ReferentielMotifAFASE.objects.prefetch_related("montants"),
+    })

@@ -65,6 +65,10 @@ class AFASEWorkflowForm(forms.Form):
     qualite_ts = forms.ChoiceField(choices=[("", "---------")] + DemandeAFASE.QUALITES_TS, required=False,
                                    label="Qualité du travailleur social")
     nb_personnes_foyer = forms.IntegerField(min_value=1, max_value=30, label="Nombre de personnes vivant au foyer")
+    motif_envisage = forms.ChoiceField(choices=[("", "---------")] + list(DemandeAFASE._meta.get_field("motif_envisage").choices),
+                                       required=False, label="Objet de la demande")
+    mesure_ase = forms.ChoiceField(choices=[("", "Aucune")] + DemandeAFASE.MESURES_ASE, required=False,
+                                   label="Mesure ASE en cours dans la fratrie")
 
     documents_ged = forms.ModelMultipleChoiceField(queryset=DocumentGED.objects.none(), required=False, widget=forms.CheckboxSelectMultiple, label="Documents GED à joindre à la demande")
     
@@ -111,6 +115,8 @@ class AFASEWorkflowForm(forms.Form):
                 "historique_aides": demande.historique_aides,
                 "autres_aides_sollicitees": demande.autres_aides_sollicitees,
                 "qualite_ts": demande.qualite_ts,
+                "motif_envisage": demande.motif_envisage,
+                "mesure_ase": demande.mesure_ase,
             })
             if hasattr(demande, "evaluation_afase"):
                 eval_obj = demande.evaluation_afase
@@ -150,6 +156,8 @@ class AFASEWorkflowForm(forms.Form):
         cleaned["total_charges"] = t["charges_payees"]
         cleaned["reste_a_vivre"] = t["reste_a_vivre"]
         cleaned["enfants"] = self._enfants_post()
+        cleaned["aides_prealables"] = [a.strip()[:150] for a in self.data.getlist("aides_prealables") if a.strip()] \
+            if hasattr(self.data, "getlist") else []
         if not any(e["concerne"] for e in cleaned["enfants"]):
             self.add_error(None, "Cochez au moins un enfant concerné par la demande (ou un enfant à naître).")
         return cleaned
@@ -217,6 +225,9 @@ class AFASEWorkflowForm(forms.Form):
                       "autres_aides_sollicitees", "qualite_ts"):
             setattr(demande, champ, self.cleaned_data.get(champ) or "")
         demande.date_signature_demandeur = self.cleaned_data.get("date_signature_demandeur")
+        demande.motif_envisage = self.cleaned_data.get("motif_envisage") or ""
+        demande.mesure_ase = self.cleaned_data.get("mesure_ase") or ""
+        demande.aides_prealables_sollicitees = self.cleaned_data.get("aides_prealables", [])
         demande.allocataire_caf = self.cleaned_data.get("allocataire_caf")
         demande.save()
         demande.enfants.all().delete()

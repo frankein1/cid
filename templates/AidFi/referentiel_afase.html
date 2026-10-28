@@ -1,0 +1,47 @@
+<!-- templates/AidFi/referentiel_afase.html -->
+{% extends "base.html" %}
+{% block title %}Référentiel AFASE{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div class="flex flex-wrap justify-between items-end gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">🧭 Référentiel d'aide à la décision AFASE</h1>
+            <p class="text-sm text-gray-500">{{ parametres.reference_note|default:"Note de service en vigueur : non renseignée" }}.
+                Les valeurs viennent de la note de service : elles se modifient ici (import) ou dans l'administration, jamais dans le code.</p>
+        </div>
+        {% if admin %}<a href="?export=1" class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">📥 Exporter (JSON)</a>{% endif %}
+    </div>
+
+    {% if admin %}
+    <form method="post" enctype="multipart/form-data" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-wrap gap-3 items-center text-sm">
+        {% csrf_token %}
+        <span class="font-semibold text-indigo-900">Importer un référentiel (fichier JSON) :</span>
+        <input type="file" name="fichier" accept=".json,application/json" required>
+        <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white">Importer</button>
+        <span class="text-xs text-indigo-800">L'import remplace les paramètres et les motifs. Exportez d'abord pour garder une copie.</span>
+    </form>
+    {% endif %}
+
+    <section class="bg-white rounded-xl border p-5">
+        <h2 class="font-bold text-gray-800 mb-3">Paramètres</h2>
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <dt class="text-gray-500">Contrôle UAGAF renforcé au-delà de</dt><dd>{% if parametres.seuil_montant_controle is not None %}{{ parametres.seuil_montant_controle }} €{% else %}–{% endif %}</dd>
+            <dt class="text-gray-500">… ou à partir de (AFASE accordées sur 12 mois)</dt><dd>{{ parametres.seuil_nb_aides_12_mois|default:"–" }}</dd>
+            <dt class="text-gray-500">Soutien alimentaire : accord possible si reste à vivre inférieur à</dt><dd>{% if parametres.rav_seuil_accord is not None %}{{ parametres.rav_seuil_accord }} €{% else %}–{% endif %}</dd>
+            <dt class="text-gray-500">… soutien à la parentalité seulement au-dessus de</dt><dd>{% if parametres.rav_seuil_parentalite is not None %}{{ parametres.rav_seuil_parentalite }} €{% else %}–{% endif %}</dd>
+            <dt class="text-gray-500">Participation minimale de la famille</dt><dd>{% if parametres.participation_famille_pct %}{{ parametres.participation_famille_pct }} %{% else %}–{% endif %}</dd>
+            <dt class="text-gray-500">Régie d'urgence : montant maximum</dt><dd>{% if parametres.regie_montant_max is not None %}{{ parametres.regie_montant_max }} €{% else %}non renseigné (rappel seulement){% endif %}</dd>
+        </dl>
+    </section>
+
+    {% for m in motifs %}
+    <section class="bg-white rounded-xl border p-5 {% if not m.actif %}opacity-50{% endif %}">
+        <h2 class="font-bold text-gray-800">{{ m.code }}. {{ m.libelle }}</h2>
+        {% if m.conditions %}<p class="text-sm whitespace-pre-wrap mt-2">{{ m.conditions }}</p>{% endif %}
+        {% if m.liste_aides %}<p class="text-xs text-gray-600 mt-2"><b>Aides mobilisables au préalable :</b> {{ m.liste_aides|join:", " }}</p>{% endif %}
+        {% if m.montants.all %}<table class="mt-2 text-xs border"><tbody>{% for x in m.montants.all %}<tr><td class="px-2 py-1 border">{{ x.critere }}</td><td class="px-2 py-1 border text-right">{{ x.montant }} €{% if x.par_mois %} / mois{% endif %}</td></tr>{% endfor %}</tbody></table>{% endif %}
+        {% if not m.conditions and not m.liste_aides and not m.montants.all %}<p class="text-xs text-gray-400 italic mt-1">À compléter.</p>{% endif %}
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

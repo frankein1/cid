@@ -50,6 +50,8 @@ path("afase/<int:demande_id>/ajouter-document/", v_afase.ajouter_document_afase,
     path("afase/<int:demande_id>/transmettre/", v_afase.afase_transmettre, name="afase_transmettre",),
     path("afase/<int:demande_id>/controle/<slug:action>/", v_afase.afase_controle_action, name="afase_controle_action",),
     path("afase/controle/", v_afase.afase_controle, name="afase_controle",),
+    path("afase/inspecteur/", v_afase.afase_inspecteur, name="afase_inspecteur",),
+    path("afase/referentiel/", v_afase.referentiel_afase, name="referentiel_afase",),
 
     # ==========================================================
     # RÉGIE D'URGENCE

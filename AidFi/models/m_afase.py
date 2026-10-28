@@ -105,6 +105,30 @@ class DemandeAFASE(DemandeAide):
                                                 help_text="Dates, organismes, décisions, montants.")
     qualite_ts = models.CharField("Qualité du travailleur social", max_length=5, choices=QUALITES_TS, blank=True)
 
+    # Objet de la demande et décideur compétent
+    motif_envisage = models.CharField("Objet de la demande", max_length=2, choices=ACCORD_AFASE_CHOICES, blank=True)
+    aides_prealables_sollicitees = models.JSONField("Aides de droit commun sollicitées au préalable",
+                                                    default=list, blank=True)
+    MESURES_ASE = [
+        ("ENFANT_CONFIE", "Enfant confié à l'ASE"),
+        ("ASSISTANCE_EDUCATIVE", "Mesure d'assistance éducative (AEMO, AED…)"),
+        ("TISF_SEUL", "Seulement une mesure de TISF financée par le Département"),
+    ]
+    mesure_ase = models.CharField(
+        "Mesure ASE en cours dans la fratrie", max_length=25, choices=MESURES_ASE, blank=True,
+        help_text="Enfant confié ou assistance éducative : la décision revient à l'inspecteur enfance-famille, "
+                  "pour toute la fratrie. TISF seule : décision en MDS.")
+
+    @property
+    def decision_inspecteur(self):
+        """Note de service : l'inspecteur enfance-famille décide pour les familles avec une mesure ASE."""
+        return self.mesure_ase in ("ENFANT_CONFIE", "ASSISTANCE_EDUCATIVE")
+
+    def peut_etre_decidee_par(self, user):
+        if self.decision_inspecteur:
+            return user.is_superuser or user.a_la_capacite('ip_pief')
+        return user.peut_agir_sur_objet(self, "peut_decider")
+
     class Meta:
         verbose_name = "Demande AFASE"
         verbose_name_plural = "Demandes AFASE"

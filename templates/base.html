@@ -119,6 +119,11 @@
                             <i class="fas fa-vault mr-2"></i>Coffre CAP
                         </a>
                         {% endif %}
+                        {% if user|a_la_capacite:'ip_pief' and not user.is_superuser %}
+                        <a href="{% url 'AidFi:afase_inspecteur' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <i class="fas fa-user-tie mr-2"></i>AFASE (inspecteur)
+                        </a>
+                        {% endif %}
                         {% if user|a_la_capacite:'afase_controle' %}
                         <a href="{% url 'AidFi:afase_controle' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                             <i class="fas fa-clipboard-check mr-2"></i>UAGAF (AFASE)
@@ -165,6 +170,10 @@
             📊 Statistiques
         </a>
         {% endif %}
+        <a href="{% url 'AidFi:referentiel_afase' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            🧭 Référentiel AFASE
+        </a>
 
         {# Placeholder futur #}
         <a href="#"
@@ -256,6 +265,9 @@
                 {% if user.mds_regies.exists and not user|a_la_capacite:'peut_valider_cheque_aidfi' %}
                 <a href="{% url 'AidFi:cap_coffres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-vault mr-2 w-4"></i>Coffre CAP</a>
                 {% endif %}
+                {% if user|a_la_capacite:'ip_pief' %}
+                <a href="{% url 'AidFi:afase_inspecteur' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-tie mr-2 w-4"></i>AFASE (inspecteur)</a>
+                {% endif %}
                 {% if user|a_la_capacite:'afase_controle' %}
                 <a href="{% url 'AidFi:afase_controle' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-clipboard-check mr-2 w-4"></i>UAGAF (AFASE)</a>
                 {% endif %}
@@ -272,6 +284,7 @@
                 {% if user|a_la_capacite:'peut_valider' %}
                 <a href="{% url 'planning:statistiques' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">📊 Statistiques</a>
                 {% endif %}
+                <a href="{% url 'AidFi:referentiel_afase' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">🧭 Référentiel AFASE</a>
                 {% endif %}
             </div>
             {% endif %}

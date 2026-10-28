@@ -21,6 +21,39 @@
         <p><strong>Montant sollicité :</strong> {{ demande.montant_sollicite }} € × {{ demande.duree_demande }} mois</p>
     </div>
 
+    <!-- AIDE À LA DÉCISION (référentiel saisi dans l'administration) -->
+    <div class="bg-white border-2 border-indigo-200 rounded-xl p-5 mb-6 space-y-4">
+        <h2 class="text-lg font-bold text-indigo-900"><i class="fas fa-compass mr-2"></i>Aide à la décision
+            {% if aide.parametres.reference_note %}<span class="text-xs font-normal text-gray-500">– {{ aide.parametres.reference_note }}</span>{% endif %}</h2>
+        {% if demande.decision_inspecteur %}<p class="p-3 rounded bg-indigo-50 text-indigo-900 text-sm"><i class="fas fa-user-tie mr-1"></i>{{ demande.get_mesure_ase_display }} : la décision revient à l'inspecteur enfance-famille, pour toute la fratrie.</p>{% endif %}
+        {% for a in aide.alertes %}<p class="p-3 rounded bg-amber-50 border border-amber-300 text-amber-900 text-sm"><i class="fas fa-triangle-exclamation mr-1"></i>{{ a }}</p>{% endfor %}
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+            <div class="p-3 rounded-lg border {% if aide.zone_rav == 'accord' %}bg-emerald-50 border-emerald-300{% elif aide.zone_rav == 'evaluer' %}bg-amber-50 border-amber-300{% elif aide.zone_rav == 'parentalite' %}bg-red-50 border-red-300{% endif %}">
+                <p class="text-xs text-gray-500">Reste à vivre</p>
+                <p class="text-xl font-bold">{% if aide.rav is not None %}{{ aide.rav }} €{% else %}–{% endif %}</p>
+                <p class="text-xs">par jour et par personne</p>
+                {% if aide.zone_rav %}<p class="text-xs mt-1 font-semibold">Soutien alimentaire :
+                    {% if aide.zone_rav == 'accord' %}l'aide peut être accordée{% elif aide.zone_rav == 'evaluer' %}à évaluer en fonction de l'intérêt de l'enfant{% else %}accordée uniquement dans le cadre du soutien à la parentalité{% endif %}</p>{% endif %}
+            </div>
+            <div class="p-3 rounded-lg border"><p class="text-xs text-gray-500">Demandé</p><p class="text-xl font-bold">{{ aide.total_demande }} €</p>
+                <p class="text-xs">{{ demande.montant_sollicite }} € × {{ demande.duree_demande }} mois</p></div>
+            <div class="p-3 rounded-lg border"><p class="text-xs text-gray-500">Enfants concernés</p><p class="text-xl font-bold">{{ aide.nb_enfants }}</p></div>
+            <div class="p-3 rounded-lg border"><p class="text-xs text-gray-500">AFASE accordées (12 mois)</p><p class="text-xl font-bold">{{ aide.historique.nombre }}</p>
+                <p class="text-xs">{{ aide.historique.total }} € au total</p></div>
+        </div>
+        {% if aide.historique.decisions %}<ul class="text-xs text-gray-600 list-disc ml-5">{% for d in aide.historique.decisions %}<li>{{ d.date_decision|date:"d/m/Y" }} – AFASE n° {{ d.demande_id }} : {{ d.montant_accorde }} € × {{ d.duree_accordee }} mois</li>{% endfor %}</ul>{% endif %}
+
+        <div class="text-sm">
+            <p><b>Objet de la demande (travailleur social) :</b> {{ demande.get_motif_envisage_display|default:"non renseigné" }}</p>
+            {% if demande.aides_prealables_sollicitees %}<p><b>Aides de droit commun sollicitées :</b> {{ demande.aides_prealables_sollicitees|join:", " }}</p>{% endif %}
+            {% if demande.autres_aides_sollicitees %}<p class="whitespace-pre-wrap"><b>Autres aides sollicitées :</b> {{ demande.autres_aides_sollicitees }}</p>{% endif %}
+        </div>
+        <div id="referentiel-motif" class="text-sm border-t pt-3"></div>
+        {% if aide.parametres.participation_famille_pct %}<p class="text-sm"><i class="fas fa-hand-holding-dollar mr-1 text-gray-500"></i>Dans la mesure du possible, prévoir une participation de la famille d'au moins {{ aide.parametres.participation_famille_pct }} % (sauf versement à un tiers : montant exact, au centime près).</p>{% endif %}
+        {% if not referentiel %}<p class="text-xs text-gray-500">Référentiel non renseigné : à saisir ou importer (Administration → Référentiel AFASE).</p>{% endif %}
+    </div>
+    {{ referentiel|json_script:"referentiel-afase" }}
+
     <h2 class="text-xl font-semibold mb-4">Décision</h2>
     
     <form method="post" class="space-y-6">
@@ -142,7 +175,32 @@
     typeRefus.addEventListener('change', updateVisibility);
     typeAjo.addEventListener('change', updateVisibility);
     
+    // Référentiel du motif d'accord choisi : conditions, aides préalables, montant indicatif
+    const REF = JSON.parse(document.getElementById('referentiel-afase').textContent || '{}');
+    const NB_ENFANTS = {{ aide.nb_enfants|default:0 }};
+    const zoneRef = document.getElementById('referentiel-motif');
+    function afficherReferentiel() {
+        const m = typeAccord.checked ? REF[motifSelect.value] : null;
+        if (!m) { zoneRef.innerHTML = ''; return; }
+        const echap = t => (t || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+        let html = '<p class="font-semibold text-indigo-900 mb-1">Référentiel – ' + echap(m.libelle) + '</p>';
+        if (m.conditions) html += '<p class="whitespace-pre-wrap text-gray-700 mb-2">' + echap(m.conditions) + '</p>';
+        if (m.aides.length) html += '<p class="text-xs text-gray-500">Aides mobilisables au préalable : ' + m.aides.map(echap).join(', ') + '</p>';
+        const parEnfants = m.montants.filter(x => x.nb_enfants !== null).sort((a, b) => a.nb_enfants - b.nb_enfants);
+        const retenu = parEnfants.filter(x => x.nb_enfants <= NB_ENFANTS).pop() || null;
+        if (m.montants.length) {
+            html += '<table class="mt-2 text-xs border"><tbody>' + m.montants.map(x =>
+                '<tr class="' + (retenu && x === retenu ? 'bg-emerald-100 font-semibold' : '') + '"><td class="px-2 py-1 border">' + echap(x.critere)
+                + '</td><td class="px-2 py-1 border text-right">' + x.montant + ' €' + (x.par_mois ? ' / mois' : '') + '</td></tr>').join('') + '</tbody></table>';
+            if (retenu) html += '<p class="text-xs text-emerald-800 mt-1">Montant indicatif pour ' + NB_ENFANTS + ' enfant(s) concerné(s) : <b>' + retenu.montant + ' €</b> (à nuancer selon l\'évaluation sociale).</p>';
+        }
+        zoneRef.innerHTML = html;
+    }
+    motifSelect.addEventListener('change', afficherReferentiel);
+    [typeAccord, typeRefus, typeAjo].forEach(r => r.addEventListener('change', afficherReferentiel));
+
     // Initialisation
     updateVisibility();
+    afficherReferentiel();
 </script>
 {% endblock %}

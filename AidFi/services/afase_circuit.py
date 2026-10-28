@@ -46,10 +46,18 @@ def controle_peut_voir(user, demande):
             and decision is not None and decision.date_transmission_controle is not None)
 
 
+def inspecteur_peut_voir(user, demande):
+    """Famille avec une mesure ASE : l'inspecteur enfance-famille décide, il voit donc le dossier déposé."""
+    return (user.is_authenticated and user.a_la_capacite('ip_pief')
+            and getattr(demande, 'decision_inspecteur', False) and demande.statut != 'BROUILLON')
+
+
 def peut_transmettre(user, demande):
     decision = getattr(demande, 'decision', None)
     if demande.statut != 'ACCORDEE' or not decision or decision.type_decision != 'ACCORD':
         return False
+    if inspecteur_peut_voir(user, demande):
+        return True
     return any(user.peut_agir_sur_objet(demande, cap) for cap in ('peut_decider', 'peut_valider_cheque_aidfi'))
 
 

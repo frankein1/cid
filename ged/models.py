@@ -252,6 +252,15 @@ class DocumentGED(models.Model):
                     demande__demandeafase__decision__date_transmission_controle__isnull=False).exists():
                 return True
 
+        # 0 ter. Inspecteur enfance-famille : pièces des AFASE des familles avec une mesure ASE
+        if user.a_la_capacite("ip_pief"):
+            from AidFi.models.m_generique import PieceJustificative
+            if PieceJustificative.objects.filter(
+                    document_ged=self,
+                    demande__demandeafase__mesure_ase__in=('ENFANT_CONFIE', 'ASSISTANCE_EDUCATIVE')).exclude(
+                    demande__statut='BROUILLON').exists():
+                return True
+
         # 0 bis. Régie centrale : facture et RIB du tiers des régies d'urgence accordées
         if user.a_la_capacite("cap_regie_centrale"):
             from AidFi.models.m_generique import PieceJustificative
