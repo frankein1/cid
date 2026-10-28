@@ -161,41 +161,68 @@ def generer_pdf_afase(demande: DemandeAFASE):
     ]))
     elements.append(t_identite)
 
+    enfants = list(demande.enfants.all()) if hasattr(demande, 'enfants') else []
+    if enfants:
+        elements.append(Paragraph("Enfants concernés par la demande", styles["SectionHeader"]))
+        elements.append(Paragraph("<br/>".join(
+            f"{'☒' if e.concerne else '☐'} {e}" + (f" – {e.date_naissance:%d/%m/%Y}" if e.date_naissance else "")
+            + (" (date d'accouchement prévue)" if e.a_naitre else "") + (f" – {e.sexe}" if e.sexe else "")
+            + (f" – {e.situation}" if e.situation else "") for e in enfants), styles["Normal"]))
+
     elements.append(Paragraph("II. CONTEXTE ET ÉVALUATION", styles["SectionHeader"]))
     elements.append(Paragraph(f"<b>Avis du travailleur social :</b> {demande.get_avis_ts_display()}", styles["Normal"]))
     elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Code instruction :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "code_instruction", "") or "Non renseigné", styles["Normal"]))
     elements.append(Spacer(1, 5))
+    if getattr(evaluation, "situation_sociale", ""):
+        elements.append(Paragraph("<b>Situation familiale et problématique budgétaire :</b>", styles["DataLabel"]))
+        elements.append(Paragraph(evaluation.situation_sociale, styles["Normal"]))
+        elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Analyse de la situation :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "analyse_problematique", "") or "Aucune analyse détaillée fournie.", styles["Normal"]))
     elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Justification de la demande :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "justification_demande", "") or "Néant.", styles["Normal"]))
     elements.append(Spacer(1, 5))
+    for libelle, attr in (("Plan d'action élaboré avec la famille", "plan_action"),
+                          ("Affectation ciblée de l'aide", "affectation_aide"),
+                          ("Parcours d'insertion (16-21 ans)", "parcours_insertion")):
+        if getattr(evaluation, attr, ""):
+            elements.append(Paragraph(f"<b>{libelle} :</b>", styles["DataLabel"]))
+            elements.append(Paragraph(getattr(evaluation, attr), styles["Normal"]))
+            elements.append(Spacer(1, 5))
+    if getattr(evaluation, "adhesion_famille", ""):
+        elements.append(Paragraph(f"<b>Adhésion de la famille au plan d'aide :</b> {evaluation.get_adhesion_famille_display()}", styles["Normal"]))
+        elements.append(Spacer(1, 5))
     elements.append(Paragraph("<b>Commentaire familial :</b>", styles["DataLabel"]))
     elements.append(Paragraph(getattr(evaluation, "commentaire_familial", "") or "Aucun commentaire.", styles["Normal"]))
 
     elements.append(Paragraph("III. ÉLÉMENTS BUDGÉTAIRES (MENSUELS)", styles["SectionHeader"]))
 
-    def format_budget_table(data_dict):
-        if not data_dict:
+    def bloc_budget(blocs, colonnes):
+        if not blocs:
             return Paragraph("Aucune donnée.", styles["Normal"])
         rows = []
-        for k, v in data_dict.items():
-            try:
-                val = f"{float(v):.2f} €"
-            except Exception:
-                val = str(v)
-            rows.append(f"• {k} : {val}")
+        for titre, lignes in blocs:
+            rows.append(f"<b>{titre}</b>")
+            for libelle, valeurs in lignes:
+                montants = " / ".join(f"{lib.lower()} {float(valeurs.get(col) or 0):.2f} €" for col, lib in colonnes
+                                      if valeurs.get(col))
+                rows.append(f"• {libelle} : {montants}")
         return Paragraph("<br/>".join(rows), styles["Normal"])
 
+    from AidFi.services import budget_afase
+    affichage = budget.affichage if budget else {'ancien': True, 'ressources': [], 'charges': []}
+    if affichage['ancien']:
+        cell_r = Paragraph("<br/>".join(f"• {k} : {float(v):.2f} €" for k, v in affichage['ressources']) or "Aucune donnée.", styles["Normal"])
+        cell_c = Paragraph("<br/>".join(f"• {k} : {float(v):.2f} €" for k, v in affichage['charges']) or "Aucune donnée.", styles["Normal"])
+    else:
+        cell_r = bloc_budget(affichage['ressources'], budget_afase.COLONNES_RESSOURCES)
+        cell_c = bloc_budget(affichage['charges'], budget_afase.COLONNES_CHARGES)
     data_budget = [
         [Paragraph("<b>RESSOURCES</b>", styles["Normal"]), Paragraph("<b>CHARGES</b>", styles["Normal"])],
-        [
-            format_budget_table(getattr(budget, "ressources", None)),
-            format_budget_table(getattr(budget, "charges", None)),
-        ],
+        [cell_r, cell_c],
     ]
     t_budget = Table(data_budget, colWidths=[9 * cm, 9 * cm])
     t_budget.setStyle(TableStyle([
@@ -208,7 +235,16 @@ def generer_pdf_afase(demande: DemandeAFASE):
     ]))
     elements.append(t_budget)
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph(f"<b>Reste à vivre journalier :</b> {_money(getattr(budget, 'reste_a_vivre', 0))} / jour", styles["Normal"]))
+    if budget:
+        t = budget.totaux
+        elements.append(Paragraph(
+            f"<b>Total des ressources :</b> {_money(t['ressources'])} &nbsp; <b>Charges payées :</b> {_money(t['charges_payees'])}"
+            f" &nbsp; <b>Charges non payées :</b> {_money(t['charges_non_payees'])} &nbsp; "
+            f"<b>Personnes au foyer :</b> {t['nb_personnes']}", styles["Normal"]))
+        if budget.dettes:
+            elements.append(Paragraph("<b>Dettes du ménage :</b> " + ", ".join(
+                f"{d.get('creancier') or '?'} {float(d.get('montant') or 0):.2f} €" for d in budget.dettes), styles["Normal"]))
+    elements.append(Paragraph(f"<b>Reste à vivre journalier :</b> {_money(getattr(budget, 'reste_a_vivre', 0))} / jour / personne", styles["Normal"]))
 
     elements.append(Paragraph("IV. DEMANDE FINANCIÈRE", styles["SectionHeader"]))
     elements.append(Paragraph(f"Montant sollicité : <b>{_money(demande.montant_sollicite)}</b>", styles["Normal"]))

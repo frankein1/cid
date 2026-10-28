@@ -76,15 +76,23 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         if not demande and beneficiaire.numero_genesis:
             form.fields["numero_genesis"].initial = beneficiaire.numero_genesis
 
-    context_budget = {
-        "ressources": budget.ressources,
-        "charges": budget.charges,
-    } if budget else {"ressources": {}, "charges": {}}
-
-    nb_personnes_foyer = 1
-    for lien in beneficiaire.liens_familiaux.all():
-        if lien.vit_au_foyer:
-            nb_personnes_foyer += 1
+    from AidFi.forms.afase_workflow_form import enfants_proposes
+    from AidFi.services import budget_afase
+    if request.method == "POST":
+        # Formulaire réaffiché après une erreur : on garde ce qui a été saisi
+        ressources, charges, dettes = budget_afase.depuis_post(request.POST)
+        enfants_lignes = form._enfants_post() if hasattr(form, "_enfants_post") else []
+    else:
+        ressources = budget.ressources if budget else {}
+        charges = budget.charges if budget else {}
+        dettes = list(budget.dettes or []) if budget else []
+        enfants_lignes = enfants_proposes(beneficiaire, demande)
+    enfants_lignes = list(enfants_lignes) + [
+        {"nom": "", "prenom": "", "date_naissance": None, "sexe": "", "situation": "", "a_naitre": False,
+         "concerne": False, "beneficiaire_id": None} for _ in range(2)]
+    dettes = dettes + [{"creancier": "", "montant": ""} for _ in range(max(3 - len(dettes), 1))]
+    ancien_budget = bool(budget) and not (budget_afase.est_nouveau(budget.ressources)
+                                          or budget_afase.est_nouveau(budget.charges)) and bool(budget.ressources or budget.charges)
 
     return render(
         request,
@@ -94,8 +102,15 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "beneficiaire": beneficiaire,
             "demande": demande,
             "action": action,
-            "context_budget": context_budget,
-            "nb_personnes_foyer": nb_personnes_foyer,
+            "enfants_lignes": enfants_lignes,
+            "grille": budget_afase.grille(ressources, charges),
+            "dettes": dettes,
+            "rubriques_ressources": budget_afase.RESSOURCES,
+            "rubriques_charges": budget_afase.CHARGES,
+            "colonnes_ressources": budget_afase.COLONNES_RESSOURCES,
+            "colonnes_charges": budget_afase.COLONNES_CHARGES,
+            "a_preciser": budget_afase.A_PRECISER,
+            "ancien_budget": budget.affichage if ancien_budget else None,
         },
     )
 
@@ -113,6 +128,7 @@ def afase_detail(request, demande_id):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
+    from AidFi.services.afase_alertes import alertes
 
     return render(
         request,
@@ -120,6 +136,7 @@ def afase_detail(request, demande_id):
         {
             "demande": demande,
             "decision": decision,
+            "alertes": alertes(demande) if not decision else [],
             "beneficiaire": demande.beneficiaire,
             "can_modifier": demande.est_modifiable and request.user.peut_agir_sur_objet(demande, "peut_modifier"),
             "can_decider": request.user.peut_agir_sur_objet(demande, "peut_decider"),
@@ -152,7 +169,7 @@ def afase_transmettre(request, demande_id):
     try:
         circuit.transmettre(demande, request.user, request.POST.get("paiement_a"),
                             request.POST.get("organisme_paiement", ""), request.POST.get("identites") == "on")
-        messages.success(request, "Dossier transmis au service de contrôle.")
+        messages.success(request, "Dossier transmis à l'UAGAF.")
     except circuit.CircuitErreur as e:
         messages.error(request, str(e))
     return redirect("AidFi:afase_detail", demande_id=demande.id)
@@ -165,7 +182,7 @@ def afase_controle_action(request, demande_id, action):
     from decimal import InvalidOperation
     demande = get_object_or_404(DemandeAFASE, pk=demande_id)
     if request.method != "POST" or not circuit.controle_peut_voir(request.user, demande):
-        return HttpResponseForbidden("Accès réservé au service de contrôle.")
+        return HttpResponseForbidden("Accès réservé à l'UAGAF.")
     try:
         if action == "paiement-demande":
             circuit.demander_paiement(demande, request.user, parse_date(request.POST.get("date") or ""),
@@ -190,7 +207,7 @@ def afase_controle_action(request, demande_id, action):
 def afase_controle(request):
     """File du service de contrôle : dossiers AFASE transmis par toutes les MDS."""
     if not circuit.est_controle(request.user):
-        return HttpResponseForbidden("Accès réservé au service de contrôle.")
+        return HttpResponseForbidden("Accès réservé à l'UAGAF.")
     demandes = (DemandeAFASE.objects.filter(statut__in=('TRANSMISE_CONTROLE', 'PAIEMENT_DEMANDE'))
                 .select_related('beneficiaire__mds', 'decision').order_by('decision__date_transmission_controle'))
     return render(request, "AidFi/afase_controle.html", {"demandes": demandes, "maintenant": timezone.now()})

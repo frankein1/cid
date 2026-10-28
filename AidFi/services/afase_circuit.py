@@ -22,7 +22,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from AidFi.models.m_generique import PIECES_REQUISES_AFASE, PieceJustificative
+from AidFi.models.m_generique import PIECES_EQUIVALENTES, PIECES_REQUISES_AFASE, PieceJustificative
 
 STATUTS_CONTROLE = ('TRANSMISE_CONTROLE', 'PAIEMENT_DEMANDE', 'CLOTUREE')
 
@@ -60,7 +60,8 @@ def peut_transmettre(user, demande):
 def etat_pieces(demande):
     """[(code, libellé, nombre de pièces jointes)] pour les pièces exigées."""
     pieces = PieceJustificative.objects.filter(demande_id=demande.pk, document_ged__isnull=False)
-    return [(code, libelle, pieces.filter(type_piece=code).count()) for code, libelle in PIECES_REQUISES_AFASE]
+    return [(code, libelle, pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,))).count())
+            for code, libelle in PIECES_REQUISES_AFASE]
 
 
 def pieces_manquantes(demande):
@@ -126,7 +127,7 @@ def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
 @transaction.atomic
 def demander_paiement(demande, user, date, reference):
     if not est_controle(user) or demande.statut != 'TRANSMISE_CONTROLE':
-        raise CircuitErreur("Action réservée au service de contrôle, sur un dossier transmis.")
+        raise CircuitErreur("Action réservée à l'UAGAF, sur un dossier transmis.")
     d = demande.decision
     d.date_demande_paiement = date or timezone.localdate()
     d.reference_comptable, d.controle_par = (reference or "").strip()[:60], user
@@ -138,7 +139,7 @@ def demander_paiement(demande, user, date, reference):
 @transaction.atomic
 def enregistrer_paiement(demande, user, date, montant):
     if not est_controle(user) or demande.statut != 'PAIEMENT_DEMANDE':
-        raise CircuitErreur("Action réservée au service de contrôle, après la demande de paiement.")
+        raise CircuitErreur("Action réservée à l'UAGAF, après la demande de paiement.")
     d = demande.decision
     d.date_delivrance = date or timezone.localdate()
     d.montant_delivre = montant if montant is not None else d.montant_accorde
@@ -169,7 +170,7 @@ def renvoyer(demande, user, motif):
     demande.save(update_fields=['statut'])
     _prevenir(user, [d.transmis_par, d.decide_par, _agent_depot(demande)], demande,
               f"AFASE renvoyée par le contrôle : {_titre(demande)}",
-              f"Le service de contrôle renvoie l'AFASE n° {demande.pk} à la MDS.\nMotif : {motif.strip()}\n"
+              f"L'UAGAF renvoie l'AFASE n° {demande.pk} à la MDS.\nMotif : {motif.strip()}\n"
               f"Complétez le dossier puis transmettez-le à nouveau.")
 
 

@@ -23,25 +23,33 @@ STATUT_DEMANDE = [
     # Circuit CAP (chèques service)
     ('TRANSMISE_PAIERIE', 'Transmise à la paierie'),
     ('REMISE', 'Remise, en attente de clôture'),
-    # Circuit AFASE : cadre → service de contrôle → logiciel comptable (finances) → paierie
-    ('TRANSMISE_CONTROLE', 'Transmise au service de contrôle'),
+    # Circuit AFASE : cadre → UAGAF (contrôle de conformité) → logiciel comptable (finances) → paierie
+    ('TRANSMISE_CONTROLE', "Transmise à l'UAGAF"),
     ('PAIEMENT_DEMANDE', 'Paiement demandé (comptabilité)'),
     ('CLOTUREE', 'Clôturée'),
 ]
 
-# Pièces exigées avant l'envoi d'une AFASE au service de contrôle
+# Pièces justificatives obligatoires comptables, exigées avant l'envoi d'une AFASE à l'UAGAF
+# (note de service et formulaire de demande)
 PIECES_REQUISES_AFASE = [
-    ('IDENTITE', "Pièce(s) d'identité du bénéficiaire et des enfants ou majeurs à charge"),
-    ('LIVRET_FAMILLE', "Livret de famille complet"),
-    ('RIB', "RIB du destinataire du paiement (famille ou organisme)"),
-    ('FACTURE_DEVIS', "Facture ou devis (cantine, dentiste, club, CLSH, colonie…)"),
+    ('IDENTITE', "Pièces d'identité du demandeur et des enfants concernés"),
+    ('LIVRET_FAMILLE', "Livret de famille ou autre justificatif du lien de filiation (à défaut : attestation CAF ou MSA)"),
+    ('RIB', "RIB domicilié en France (FR…) au nom du destinataire de l'aide (demandeur ou tiers)"),
+    ('DOMICILE', "Justificatif de domicile de moins de 3 mois (ou attestation d'hébergement + CNI de l'hébergeant)"),
+    ('FACTURE_DEVIS', "Justificatif lié à l'objet de la demande (facture, devis : cantine, soins, loisirs…)"),
 ]
+# Pièces acceptées à la place d'une pièce exigée
+PIECES_EQUIVALENTES = {
+    'LIVRET_FAMILLE': ('LIVRET_FAMILLE', 'ATTESTATION_CAF', 'FILIATION'),
+}
 
 # Statuts dans lesquels le travailleur social peut encore modifier la demande
 STATUTS_MODIFIABLES = ('BROUILLON', 'EN_INSTRUCTION', 'AJO')
 
 TYPE_PIECE_CHOICES = [
     ('IDENTITE', "Pièce d'identité"), ('LIVRET_FAMILLE', 'Livret de famille'),
+    ('ATTESTATION_CAF', 'Attestation CAF ou MSA'),
+    ('FILIATION', "Justificatif du lien de filiation / de la charge effective de l'enfant"),
     ('RIB', 'RIB'), ('FACTURE_DEVIS', 'Facture ou devis'), ('DOMICILE', 'Justificatif de domicile'),
     ('RESSOURCES', 'Justificatif de ressources'), ('CHARGES', 'Justificatif de charges'), ('AUTRE', 'Autre document'),
     ('DECISION', 'Decision'),
@@ -181,7 +189,7 @@ LIBELLES_STATUT_FR = {
     'DEPOSEE': 'Déposée au cadre', 'VALIDE': 'Validée', 'ACCORDEE': 'Accordée',
     'REFUSEE': 'Refusée', 'AJO': 'Ajournée', 'ANNULEE': 'Annulée',
     'TRANSMISE_PAIERIE': 'Transmise à la paierie', 'REMISE': 'Chèques remis (attente de clôture)',
-    'TRANSMISE_CONTROLE': 'Transmise au service de contrôle', 'PAIEMENT_DEMANDE': 'Paiement demandé (comptabilité)',
+    'TRANSMISE_CONTROLE': "Transmise à l'UAGAF", 'PAIEMENT_DEMANDE': 'Paiement demandé (comptabilité)',
     'CLOTUREE': 'Clôturée',
 }
 

@@ -16,7 +16,7 @@ from .m_generique import (
 from .m_regie import DemandeRegie
 from .m_cap import ReceptionCAP, TitreCAP, DemandeCAP, InventaireCAP
 from .m_afase import (
-    DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE
+    DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE, EnfantAFASE
 )
 
 __all__ = [
