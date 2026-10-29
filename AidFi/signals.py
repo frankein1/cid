@@ -174,6 +174,9 @@ def prevenir_depot(demande, acteur):
     """Message CID au responsable de la MDS : une demande attend sa décision."""
     from beneficiaire.transfert import responsable_mds
 
+    if getattr(demande, 'decision_inspecteur', False):
+        prevenir_inspecteurs(demande, acteur)
+        return
     responsable = responsable_mds(demande.mds)
     if not responsable or not acteur or responsable == acteur:
         return
@@ -191,6 +194,26 @@ def prevenir_depot(demande, acteur):
         ),
         motif='validation_cadre',
     )
+
+
+def prevenir_inspecteurs(demande, acteur):
+    """AFASE d'une famille avec une mesure ASE : la décision revient à l'inspecteur enfance-famille."""
+    from core.models import User
+    benef = demande.beneficiaire
+    for inspecteur in User.objects.filter(is_active=True, profils__code='PIEF', profils__actif=True).distinct():
+        if acteur and inspecteur.pk == acteur.pk:
+            continue
+        _envoyer(
+            acteur, inspecteur, demande,
+            objet=f"AFASE à décider (mesure ASE) : {benef.prenom} {benef.nom.upper()} (dossier {demande.pk})",
+            contenu=(
+                f"La demande d'AFASE n° {demande.pk} pour {benef.prenom} {benef.nom.upper()} ({demande.mds}) "
+                f"concerne une famille avec une mesure ASE ({demande.get_mesure_ase_display().lower()}) : "
+                f"elle attend votre décision.\n\nDéposée par : {acteur.get_full_name() or acteur.username}.\n"
+                f"Message automatique de CID."
+            ),
+            motif='validation_cadre',
+        )
 
 
 def prevenir_regie_centrale(demande, cadre):

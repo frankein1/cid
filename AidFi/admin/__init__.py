@@ -7,3 +7,5 @@
 # AidFi/admin/__init__.py
 
 from .a_afase import *
+
+from .a_referentiel import *

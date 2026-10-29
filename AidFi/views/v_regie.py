@@ -28,6 +28,12 @@ DECIDER = 'peut_valider_cheque_aidfi'      # cadre, adjoints, secrétaire géné
 REGIE_CENTRALE = 'cap_regie_centrale'
 
 
+def _regie_max():
+    """Maximum de la régie s'il a été saisi dans les paramètres (sinon : rappel seulement)."""
+    from AidFi.models.m_referentiel import ParametresAides
+    return ParametresAides.actuels().regie_montant_max
+
+
 def _peut_voir(user, d):
     return (user.peut_agir_sur_objet(d, 'peut_voir') or user.peut_agir_sur_objet(d, DECIDER)
             or (user.a_la_capacite(REGIE_CENTRALE) and d.statut in ('TRANSMISE_PAIERIE', 'CLOTUREE')))
@@ -94,6 +100,7 @@ def regie_detail(request, demande_id):
         "can_verser": d.statut == 'TRANSMISE_PAIERIE' and request.user.a_la_capacite(REGIE_CENTRALE),
         "decision_form": DecisionRegieForm(initial={'decision': 'ACCORD', 'montant_accorde': d.montant_sollicite}),
         "delai": DELAI_VERSEMENT_HEURES,
+        "regie_max": _regie_max(),
     })
 
 
@@ -118,6 +125,10 @@ def regie_decision(request, demande_id):
         d.statut = 'REFUSEE'
     d._acteur = request.user                    # journal + message à l'AS (+ régie centrale)
     d.save()
+    plafond = _regie_max()
+    if plafond is not None and d.montant_accorde and d.montant_accorde > plafond:
+        messages.warning(request, f"Montant supérieur au maximum renseigné pour la régie ({plafond} €) : "
+                                  "vérifiez la note de service en vigueur.")
     messages.success(request, f"Décision enregistrée : {d.get_statut_display()}.")
     return redirect("AidFi:regie_detail", demande_id=d.pk)
 

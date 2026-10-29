@@ -1,0 +1,34 @@
+<!-- templates/AidFi/afase_inspecteur.html -->
+{% extends "base.html" %}
+{% block title %}AFASE – inspecteur enfance-famille{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-user-tie text-indigo-600 mr-2"></i>AFASE des familles avec une mesure ASE</h1>
+        <p class="text-sm text-gray-500">Enfant confié ou mesure d'assistance éducative : la décision revient à l'inspecteur enfance-famille, pour toute la fratrie.</p>
+    </div>
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">À décider</h2>
+        <div class="divide-y mt-3">
+            {% for d in a_decider %}
+            <a href="{% url 'AidFi:afase_detail' d.pk %}" class="flex flex-wrap justify-between gap-2 px-5 py-3 hover:bg-gray-50">
+                <span><b>AFASE n° {{ d.pk }}</b> – {{ d.beneficiaire.prenom }} {{ d.beneficiaire.nom|upper }} ({{ d.beneficiaire.mds.nom }})
+                    <span class="block text-xs text-gray-500">{{ d.get_mesure_ase_display }} · déposée le {{ d.date_creation|date:"d/m/Y" }}</span></span>
+                <span class="text-sm"><b>{{ d.montant_sollicite }} €</b> × {{ d.duree_demande }} mois</span>
+            </a>
+            {% empty %}<p class="px-5 py-6 text-gray-400 italic">Aucune demande en attente.</p>{% endfor %}
+        </div>
+    </section>
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <h2 class="font-bold text-gray-800 px-5 pt-5">Déjà traitées</h2>
+        <div class="divide-y mt-3">
+            {% for d in traitees %}
+            <a href="{% url 'AidFi:afase_detail' d.pk %}" class="flex flex-wrap justify-between gap-2 px-5 py-2 text-sm hover:bg-gray-50">
+                <span>AFASE n° {{ d.pk }} – {{ d.beneficiaire.prenom }} {{ d.beneficiaire.nom|upper }}</span>
+                <span class="px-2 py-0.5 rounded text-xs {{ d.statut_badge_classes }}">{{ d.get_statut_display }}</span>
+            </a>
+            {% empty %}<p class="px-5 py-6 text-gray-400 italic">Aucune.</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

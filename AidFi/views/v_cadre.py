@@ -34,7 +34,9 @@ def dashboard_cadre(request):
 
     demandes = DemandeAFASE.objects.none()
     if decide_afase:
+        # Les familles avec une mesure ASE relèvent de l'inspecteur enfance-famille
         demandes = mes_mds(DemandeAFASE.objects.filter(statut="DEPOSEE")) \
+            .exclude(mesure_ase__in=("ENFANT_CONFIE", "ASSISTANCE_EDUCATIVE")) \
             .select_related("beneficiaire").order_by("date_creation")
 
     caps = DemandeCAP.objects.none()
