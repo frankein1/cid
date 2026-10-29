@@ -55,6 +55,7 @@ class DecisionAFASEForm(forms.ModelForm):
             "montant_accorde",
             "duree_accordee",
             "motivation",
+            "precision_notification",
         )
 
     def __init__(self, *args, **kwargs):
@@ -66,7 +67,9 @@ class DecisionAFASEForm(forms.ModelForm):
         
         # Construction de la liste déroulante avec les deux groupes
         self.fields["code_decision"].widget = forms.Select(
-            choices=[("", "--- Sélectionner un motif ---")] + accord_choices + refus_choices
+            # Groupes : les codes d'accord et de refus partagent les mêmes valeurs (1 à 8) ;
+            # la page n'affiche que le groupe du type de décision choisi.
+            choices=[("", "--- Sélectionner un motif ---"), ("Accord", accord_choices), ("Refus", refus_choices)]
         )
         
         # Rendre la motivation obligatoire

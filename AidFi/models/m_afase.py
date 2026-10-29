@@ -119,6 +119,10 @@ class DemandeAFASE(DemandeAide):
         help_text="Enfant confié ou assistance éducative : la décision revient à l'inspecteur enfance-famille, "
                   "pour toute la fratrie. TISF seule : décision en MDS.")
 
+    # Délais (note de service) : ajournement sans réponse sous 15 jours, demande réputée refusée à 2 mois
+    date_ajournement = models.DateTimeField("Ajournée le", null=True, blank=True)
+    rappels_envoyes = models.JSONField(default=list, blank=True, editable=False)
+
     @property
     def decision_inspecteur(self):
         """Note de service : l'inspecteur enfance-famille décide pour les familles avec une mesure ASE."""
@@ -342,6 +346,9 @@ class DecisionAFASE(AuditedMixin):
     )
     duree_accordee = models.PositiveSmallIntegerField(default=1)
     motivation = models.TextField(blank=True)
+    precision_notification = models.CharField(
+        "Précision pour le courrier", max_length=200, blank=True,
+        help_text="Reprise dans le courrier à l'usager. Refus 3 : dispositif à solliciter ; refus 7 : date de l'aide déjà attribuée.")
 
     date_decision = models.DateTimeField(default=timezone.now)
     decide_par = models.ForeignKey(

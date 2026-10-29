@@ -38,6 +38,17 @@ def dashboard_cadre(request):
         demandes = mes_mds(DemandeAFASE.objects.filter(statut="DEPOSEE")) \
             .exclude(mesure_ase__in=("ENFANT_CONFIE", "ASSISTANCE_EDUCATIVE")) \
             .select_related("beneficiaire").order_by("date_creation")
+    ajournees = mes_mds(DemandeAFASE.objects.filter(statut="AJO")) \
+        .exclude(mesure_ase__in=("ENFANT_CONFIE", "ASSISTANCE_EDUCATIVE")) \
+        .select_related("beneficiaire").order_by("date_ajournement") if decide_afase else []
+    from AidFi.services import afase_delais
+    demandes = list(demandes)
+    for d in demandes + list(ajournees):
+        try:
+            afase_delais.envoyer_rappels(d)   # rappels de délais dus (une seule fois chacun)
+        except Exception:
+            pass
+        d.delais = afase_delais.etat(d)
 
     caps = DemandeCAP.objects.none()
     if decide_cap:
@@ -49,6 +60,7 @@ def dashboard_cadre(request):
         "AidFi/dashboard_cadre.html",
         {
             "demandes": demandes,
+            "ajournees": ajournees,
             "caps_a_decider": [c for c in caps if c.statut == "DEPOSEE"],
             "caps_a_remettre": [c for c in caps if c.statut == "ACCORDEE"],
             "decide_afase": decide_afase,

@@ -1,0 +1,21 @@
+{# templates/AidFi/includes/_delais_afase.html – échéances réglementaires d'une AFASE en attente #}
+{% if delais %}
+<div class="mb-6 space-y-2 text-sm">
+    {% if delais.echeance_ajournement %}
+    <p class="px-4 py-3 rounded-xl border {% if delais.ajournement_echu %}bg-red-50 border-red-300 text-red-900{% else %}bg-amber-50 border-amber-300 text-amber-900{% endif %}">
+        <i class="fas fa-hourglass-half mr-2"></i><b>Ajournement :</b>
+        {% if delais.ajournement_echu %}le délai de 15 jours est dépassé depuis le {{ delais.echeance_ajournement|date:"d/m/Y" }} – la demande est à refuser pour absence de justificatifs (code refus 1).
+        {% else %}le travailleur social a jusqu'au {{ delais.echeance_ajournement|date:"d/m/Y" }} pour compléter ({{ delais.jours_ajournement }} jour{{ delais.jours_ajournement|pluralize }}).{% endif %}
+    </p>
+    {% endif %}
+    {% if delais.echeance_2_mois %}
+    <p class="px-4 py-3 rounded-xl border {% if delais.reputee_refusee %}bg-red-50 border-red-300 text-red-900{% elif delais.alerte %}bg-amber-50 border-amber-300 text-amber-900{% else %}bg-gray-50 border-gray-200 text-gray-700{% endif %}">
+        <i class="fas fa-calendar-xmark mr-2"></i><b>Délai de décision :</b>
+        {% if delais.reputee_refusee %}la demande est <b>réputée refusée</b> depuis le {{ delais.echeance_2_mois|date:"d/m/Y" }} (2 mois après la signature du demandeur). Une décision expresse reste à prendre et à notifier.
+        {% else %}décision à prendre avant le {{ delais.echeance_2_mois|date:"d/m/Y" }} ({{ delais.jours_2_mois }} jour{{ delais.jours_2_mois|pluralize }}), sinon la demande sera réputée refusée.{% endif %}
+    </p>
+    {% else %}
+    <p class="px-4 py-3 rounded-xl border bg-gray-50 border-gray-200 text-gray-600"><i class="fas fa-calendar mr-2"></i>Date de signature du demandeur non renseignée : le délai de 2 mois ne peut pas être calculé.</p>
+    {% endif %}
+</div>
+{% endif %}

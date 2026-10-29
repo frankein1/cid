@@ -15,7 +15,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 
-from AidFi.models.m_referentiel import MontantIndicatifAFASE, ParametresAides, ReferentielMotifAFASE
+from AidFi.models.m_referentiel import MontantIndicatifAFASE, MotifRefusAFASE, ParametresAides, ReferentielMotifAFASE
 
 
 def referentiel():
@@ -87,7 +87,9 @@ def analyse(demande):
 # -----------------------------------------------------------------------------
 
 CHAMPS_PARAMETRES = ('reference_note', 'seuil_montant_controle', 'seuil_nb_aides_12_mois', 'rav_seuil_accord',
-                     'rav_seuil_parentalite', 'participation_famille_pct', 'regie_montant_max')
+                     'rav_seuil_parentalite', 'participation_famille_pct', 'regie_montant_max',
+                     'fondement_juridique', 'texte_voies_recours')
+CHAMPS_TEXTE = ('reference_note', 'fondement_juridique', 'texte_voies_recours')
 
 
 def exporter():
@@ -100,6 +102,8 @@ def exporter():
                     'montants': [{'critere': x.critere, 'nb_enfants': x.nb_enfants, 'montant': str(x.montant),
                                   'par_mois': x.par_mois} for x in m.montants.all()]}
                    for m in ReferentielMotifAFASE.objects.prefetch_related('montants')],
+        'refus': [{'code': r.code, 'libelle': r.libelle, 'texte_notification': r.texte_notification}
+                  for r in MotifRefusAFASE.objects.all()],
     }
 
 
@@ -121,8 +125,8 @@ def importer(data):
     for c in CHAMPS_PARAMETRES:
         if c in (data.get('parametres') or {}):
             v = data['parametres'][c]
-            if c == 'reference_note':
-                p.reference_note = (v or '')[:200]
+            if c in CHAMPS_TEXTE:
+                setattr(p, c, (v or '')[:200] if c == 'reference_note' else (v or ''))
             elif c in ('seuil_nb_aides_12_mois', 'participation_famille_pct'):
                 setattr(p, c, int(v) if v not in (None, '') else None)
             else:
@@ -145,4 +149,14 @@ def importer(data):
                                                  nb_enfants=x.get('nb_enfants'), montant=_decimal(x.get('montant')),
                                                  par_mois=x.get('par_mois', True))
         n += 1
-    return f"{n} motif(s) importé(s), paramètres mis à jour."
+    r = 0
+    for x in data.get('refus') or []:
+        code = str(x.get('code', '')).strip()
+        if not code:
+            continue
+        ref, _ = MotifRefusAFASE.objects.get_or_create(code=code, defaults={'libelle': x.get('libelle') or code})
+        ref.libelle = (x.get('libelle') or ref.libelle)[:150]
+        ref.texte_notification = x.get('texte_notification', '') or ''
+        ref.save()
+        r += 1
+    return f"{n} motif(s) d'accord et {r} motif(s) de refus importés, paramètres mis à jour."

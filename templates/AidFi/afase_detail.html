@@ -31,7 +31,8 @@
         {% if demande.decision_inspecteur %}
         <p class="mb-4 px-4 py-3 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-900"><i class="fas fa-user-tie mr-2"></i>{{ demande.get_mesure_ase_display }} : la décision revient à l'inspecteur enfance-famille.</p>
         {% endif %}
-        {% if can_decider and demande.statut == "DEPOSEE" %}
+        {% include "AidFi/includes/_delais_afase.html" %}
+        {% if can_decider and demande.statut == "DEPOSEE" or can_decider and delais.ajournement_echu %}
         <a href="{% url 'AidFi:afase_decision' demande.id %}" class="inline-block mb-6 px-6 py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700">⚖️ Décider</a>
         {% endif %}
         {% if alertes %}
@@ -249,8 +250,15 @@
                     <div class="bg-green-600 text-white rounded-3xl shadow-xl p-8 text-center">
                         <a href="{% url 'AidFi:afase_pdf' demande.id %}"
                            class="block font-bold text-xl">
-                            📄 Télécharger le PDF
+                            📄 Formulaire de demande (PDF)
                         </a>
+                        {% if can_notifier %}
+                        <a href="{% url 'AidFi:afase_notification' demande.id %}"
+                           class="block mt-4 pt-4 border-t border-green-400 font-bold text-lg">
+                            ✉️ Courrier de notification à l'usager
+                        </a>
+                        <p class="text-xs text-green-100 mt-1">Texte du code de décision, fondement juridique et voies de recours (la motivation interne n'y figure pas).</p>
+                        {% endif %}
                     </div>
                 {% endif %}
 
