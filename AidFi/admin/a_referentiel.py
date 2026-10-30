@@ -7,7 +7,7 @@
 """Référentiel d'aide à la décision AFASE et paramètres : saisis d'après la note de service en vigueur."""
 from django.contrib import admin
 
-from AidFi.models.m_referentiel import MontantIndicatifAFASE, ParametresAides, ReferentielMotifAFASE
+from AidFi.models.m_referentiel import MontantIndicatifAFASE, MotifRefusAFASE, ParametresAides, ReferentielMotifAFASE
 
 
 @admin.register(ParametresAides)
@@ -28,3 +28,8 @@ class ReferentielMotifAdmin(admin.ModelAdmin):
     list_display = ['code', 'libelle', 'actif']
     list_editable = ['actif']
     inlines = [MontantInline]
+
+
+@admin.register(MotifRefusAFASE)
+class MotifRefusAdmin(admin.ModelAdmin):
+    list_display = ['code', 'libelle']

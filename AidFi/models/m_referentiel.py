@@ -32,6 +32,15 @@ class ParametresAides(models.Model):
     participation_famille_pct = models.PositiveSmallIntegerField(
         "Participation minimale de la famille (%)", null=True, blank=True,
         help_text="Rappel affiché au cadre (sauf versement à un tiers, au centime près).")
+    fondement_juridique = models.TextField(
+        "Fondement juridique (courriers de notification)", blank=True,
+        default="Articles L.222-2 à L.222-4 du code de l'action sociale et des familles ; règlement départemental "
+                "d'aide sociale.")
+    texte_voies_recours = models.TextField(
+        "Voies et délais de recours (courriers de notification)", blank=True,
+        default="Vous pouvez contester cette décision dans un délai de deux mois à compter de sa notification : "
+                "par un recours gracieux adressé au Président du Conseil départemental, ou par un recours contentieux "
+                "devant le tribunal administratif territorialement compétent.")
     regie_montant_max = models.DecimalField(
         "Régie d'urgence : montant maximum (€)", max_digits=8, decimal_places=2, null=True, blank=True,
         help_text="Facultatif. Vide : seul le rappel « se conformer au maximum prévu par la note » s'affiche.")
@@ -86,3 +95,20 @@ class MontantIndicatifAFASE(models.Model):
 
     def __str__(self):
         return f"{self.motif.code} – {self.critere} : {self.montant} €"
+
+
+class MotifRefusAFASE(models.Model):
+    """Codes de refus et texte du courrier de notification correspondant (à saisir d'après la note)."""
+    code = models.CharField("Code de refus", max_length=2, unique=True)
+    libelle = models.CharField("Motif", max_length=150)
+    texte_notification = models.TextField(
+        "Texte du courrier de notification", blank=True,
+        help_text="« {precision} » est remplacé par la précision saisie par le cadre (dispositif à solliciter, date…).")
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = "Motif de refus AFASE"
+        verbose_name_plural = "Motifs de refus AFASE (textes de notification)"
+
+    def __str__(self):
+        return f"{self.code} – {self.libelle}"

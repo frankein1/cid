@@ -3,6 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
+# AidFi/services/afase_pdf.py
 
 from io import BytesIO
 import os
@@ -113,6 +114,13 @@ def generer_section_documents(demande, styles):
 
 
 def generer_pdf_afase(demande: DemandeAFASE):
+    """PDF officiel de la demande : formulaire sur le modèle de l'imprimé de la direction enfance-famille."""
+    from AidFi.services.afase_documents import formulaire_pdf
+    return formulaire_pdf(demande)
+
+
+def generer_pdf_afase_v1(demande: DemandeAFASE):
+    """Ancienne mise en page (conservée, plus appelée)."""
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,

@@ -56,6 +56,7 @@
 
     <h2 class="text-xl font-semibold mb-4">Décision</h2>
     
+    {% include "AidFi/includes/_delais_afase.html" %}
     <form method="post" class="space-y-6">
         {% csrf_token %}
         
@@ -99,6 +100,12 @@
                     {{ form.duree_accordee }}
                 </div>
             </div>
+        </div>
+
+        <div class="mb-4" id="precision-container">
+            <label class="block font-bold mb-2 text-gray-700">{{ form.precision_notification.label }} :</label>
+            {{ form.precision_notification }}
+            <p class="text-xs text-gray-500 mt-1">{{ form.precision_notification.help_text }}</p>
         </div>
 
         <!-- Motivation (toujours visible) -->
@@ -152,15 +159,29 @@
     const accordFields = document.getElementById('accord-fields');
     const motifSelect = document.querySelector('[name="code_decision"]');
     
+    // N'afficher que les motifs du type choisi (accord / refus), en gardant le même code
+    function filtrerMotifs(groupe) {
+        const valeur = motifSelect.value;
+        let garde = null;
+        motifSelect.querySelectorAll('optgroup').forEach(g => {
+            const visible = g.label === groupe;
+            g.hidden = !visible; g.disabled = !visible;
+            if (visible) garde = Array.from(g.querySelectorAll('option')).find(o => o.value === valeur);
+        });
+        if (garde) garde.selected = true; else if (valeur) motifSelect.value = '';
+    }
+
     function updateVisibility() {
         if (typeAccord.checked) {
             motifLabel.innerHTML = '🎯 Motif d\'accord :';
+            filtrerMotifs('Accord');
             motifContainer.style.display = 'block';
             accordFields.style.display = 'grid';
             motifSelect.style.borderColor = '#22c55e';
             motifSelect.style.backgroundColor = '#f0fdf4';
         } else if (typeRefus.checked) {
             motifLabel.innerHTML = '❌ Motif de refus :';
+            filtrerMotifs('Refus');
             motifContainer.style.display = 'block';
             accordFields.style.display = 'none';
             motifSelect.style.borderColor = '#ef4444';

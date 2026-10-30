@@ -14,7 +14,7 @@ from .m_generique import (
     TypeAide, MotifDemande, DemandeAide, SuiviDemande, PieceJustificative
 )
 from .m_regie import DemandeRegie
-from .m_referentiel import ParametresAides, ReferentielMotifAFASE, MontantIndicatifAFASE
+from .m_referentiel import ParametresAides, ReferentielMotifAFASE, MontantIndicatifAFASE, MotifRefusAFASE
 from .m_cap import ReceptionCAP, TitreCAP, DemandeCAP, InventaireCAP
 from .m_afase import (
     DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE, EnfantAFASE

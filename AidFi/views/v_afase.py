@@ -132,6 +132,11 @@ def afase_detail(request, demande_id):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
+    from AidFi.services import afase_delais
+    try:
+        afase_delais.envoyer_rappels(demande)   # rappels de délais dus (une seule fois chacun)
+    except Exception:  # un rappel manqué ne doit jamais bloquer la consultation
+        pass
     from AidFi.services.afase_alertes import alertes
     from AidFi.services.aide_decision import analyse as analyse_decision
 
@@ -154,6 +159,8 @@ def afase_detail(request, demande_id):
             "can_transmettre": circuit.peut_transmettre(request.user, demande),
             "vue_controle": vue_controle,
             "can_ajouter_piece": _peut_ajouter_piece(request.user, demande),
+            "delais": afase_delais.etat(demande),
+            "can_notifier": bool(decision and decision.type_decision in ("ACCORD", "REFUS")),
         },
     )
 
@@ -274,8 +281,9 @@ def afase_evaluation(request, demande_id):
         if form.is_valid():
             form.save()
             demande.statut = "DEPOSEE"
+            demande.date_ajournement = None   # l'ajournement est levé : le délai de 15 jours s'arrête
             demande._acteur = request.user   # journal des statuts
-            demande.save(update_fields=["statut"])
+            demande.save(update_fields=["statut", "date_ajournement"])
             messages.success(request, "Instruction finalisée et demande transmise au cadre.")
             return redirect("AidFi:afase_detail", demande_id=demande.id)
     else:
@@ -306,7 +314,9 @@ def afase_decision(request, demande_id):
         return HttpResponseForbidden("Accès refusé" + (" : la décision revient à l'inspecteur enfance-famille "
                                                         "(mesure ASE en cours)." if demande.decision_inspecteur else ""))
 
-    if demande.statut != "DEPOSEE":
+    # Une demande ajournée peut aussi être tranchée par le cadre (refus pour absence de justificatifs
+    # quand le travailleur social n'a pas répondu dans les 15 jours).
+    if demande.statut not in ("DEPOSEE", "AJO"):
         messages.error(request, "Cette demande n'est pas en attente de décision.")
         return redirect("AidFi:afase_detail", demande_id=demande.id)
 
@@ -335,8 +345,9 @@ def afase_decision(request, demande_id):
                     "REFUS": "REFUSEE",
                     "AJO": "AJO",   # retour au travailleur social
                 }[decision.type_decision]
+                demande.date_ajournement = timezone.now() if decision.type_decision == "AJO" else None
                 demande._acteur = request.user   # journal des statuts
-                demande.save(update_fields=["statut"])
+                demande.save(update_fields=["statut", "date_ajournement"])
 
                 buffer = generer_pdf_afase(demande)
                 stocker_pdf_afase(demande, buffer, request.user)
@@ -344,15 +355,23 @@ def afase_decision(request, demande_id):
                 messages.success(request, "Décision enregistrée.")
                 return redirect("AidFi:afase_detail", demande_id=demande.id)
     else:
-        form = DecisionAFASEForm(instance=decision, initial=None if decision else {
+        from AidFi.services.afase_delais import etat as _etat
+        if decision and (_etat(demande) or {}).get("ajournement_echu"):
+            # 15 jours sans réponse : refus pour absence de justificatifs proposé par défaut
+            initial = {"type_decision": "REFUS", "code_decision": "1"}
+        else:
+            initial = None
+        form = DecisionAFASEForm(instance=decision, initial=initial if decision else {
             "type_decision": "ACCORD", "code_decision": demande.motif_envisage,
             "montant_accorde": demande.montant_sollicite, "duree_accordee": demande.duree_demande})
 
     from AidFi.services import aide_decision
+    from AidFi.services.afase_delais import etat as etat_delais
     return render(
         request,
         "AidFi/afase_decision.html",
         {
+            "delais": etat_delais(demande),
             "demande": demande,
             "beneficiaire": demande.beneficiaire,
             "form": form,
@@ -459,6 +478,24 @@ def afase_pdf(request, demande_id):
         as_attachment=True, 
         filename=f"afase_{demande.id}.pdf"
     )
+
+
+# =============================================================================
+# COURRIER DE NOTIFICATION DE LA DÉCISION À L'USAGER
+# =============================================================================
+
+@login_required
+def afase_notification(request, demande_id):
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    decision = getattr(demande, "decision", None)
+    if not decision or decision.type_decision not in ("ACCORD", "REFUS"):
+        messages.error(request, "Aucune décision d'accord ou de refus à notifier.")
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+    if not (request.user.peut_agir_sur_objet(demande, "peut_voir") or circuit.inspecteur_peut_voir(request.user, demande)):
+        return HttpResponseForbidden("Accès refusé")
+    from AidFi.services.afase_documents import notification_pdf
+    return FileResponse(notification_pdf(demande), as_attachment=True,
+                        filename=f"notification_afase_{demande.id}.pdf")
 
 
 # Alias pour compatibilité

@@ -50,6 +50,11 @@
                 <p class="text-sm text-gray-500">
                     AFASE #{{ d.id }} — créée le {{ d.date_creation|date:"d/m/Y" }}
                 </p>
+                {% if d.delais.echeance_2_mois %}
+                <p class="text-xs mt-1 {% if d.delais.reputee_refusee %}text-red-700 font-bold{% elif d.delais.alerte %}text-amber-700 font-semibold{% else %}text-gray-500{% endif %}">
+                    <i class="fas fa-calendar-xmark mr-1"></i>{% if d.delais.reputee_refusee %}Réputée refusée depuis le {{ d.delais.echeance_2_mois|date:"d/m/Y" }}{% else %}À décider avant le {{ d.delais.echeance_2_mois|date:"d/m/Y" }}{% endif %}
+                </p>
+                {% endif %}
                 <p class="mt-2">
                     <strong>Montant :</strong> {{ d.montant_sollicite }} €
                     · <strong>Durée :</strong> {{ d.duree_demande }} mois
@@ -75,6 +80,18 @@
     {% else %}
     <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
         ✅ Aucune AFASE en attente de décision.
+    </div>
+    {% endif %}
+    {% if ajournees %}
+    <h2 class="text-xl font-bold mt-10 mb-4">⏸️ AFASE ajournées (en attente du travailleur social)</h2>
+    <div class="space-y-2">
+        {% for d in ajournees %}
+        <a href="{% url 'AidFi:afase_detail' d.id %}" class="flex justify-between items-center bg-white rounded-xl shadow p-4 hover:bg-gray-50">
+            <span><b>{{ d.beneficiaire.nom }} {{ d.beneficiaire.prenom }}</b> <span class="text-sm text-gray-500">– AFASE #{{ d.id }}, ajournée le {{ d.date_ajournement|date:"d/m/Y" }}</span></span>
+            {% if d.delais.ajournement_echu %}<span class="text-sm font-bold text-red-700">15 jours dépassés : à refuser (absence de justificatifs)</span>
+            {% elif d.delais.echeance_ajournement %}<span class="text-sm text-amber-700">réponse attendue avant le {{ d.delais.echeance_ajournement|date:"d/m/Y" }}</span>{% endif %}
+        </a>
+        {% endfor %}
     </div>
     {% endif %}
     {% endif %}{# decide_afase #}
