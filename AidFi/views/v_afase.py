@@ -132,7 +132,7 @@ def afase_detail(request, demande_id):
         return HttpResponseForbidden("Accès refusé")
 
     decision = getattr(demande, "decision", None)
-    from AidFi.services import afase_delais
+    from AidFi.services import afase_delais, afase_recours
     try:
         afase_delais.envoyer_rappels(demande)   # rappels de délais dus (une seule fois chacun)
     except Exception:  # un rappel manqué ne doit jamais bloquer la consultation
@@ -160,6 +160,12 @@ def afase_detail(request, demande_id):
             "vue_controle": vue_controle,
             "can_ajouter_piece": _peut_ajouter_piece(request.user, demande),
             "delais": afase_delais.etat(demande),
+            "recours": getattr(demande, "recours", None),
+            "recours_origine": afase_recours.recours_origine(demande),
+            "can_recours": afase_recours.peut_gerer(request.user, demande),
+            "aujourdhui": timezone.localdate(),
+            "piece_decision_recours": demande.pieces_justificatives.filter(type_piece="DECISION_RECOURS",
+                                                                           document_ged__isnull=False).exists(),
             "can_notifier": bool(decision and decision.type_decision in ("ACCORD", "REFUS")),
         },
     )
@@ -168,6 +174,14 @@ def afase_detail(request, demande_id):
 def _peut_ajouter_piece(user, demande):
     """Avant décision : l'agent ; après un accord et avant transmission : aussi le cadre (compléter le dossier)."""
     if demande.est_modifiable and user.peut_agir_sur_objet(demande, "peut_modifier"):
+        return True
+    # Recours : le décideur joint la décision sur le recours (pièce facultative) à la nouvelle AFASE,
+    # ou à l'AFASE refusée quand le refus est confirmé
+    from AidFi.services import afase_recours
+    if demande.statut in ("DEPOSEE", "ACCORDEE") and afase_recours.recours_origine(demande) \
+            and demande.peut_etre_decidee_par(user):
+        return True
+    if getattr(demande, "recours", None) and afase_recours.peut_gerer(user, demande):
         return True
     return demande.statut == "ACCORDEE" and (
         user.peut_agir_sur_objet(demande, "peut_modifier") or circuit.peut_transmettre(user, demande))
@@ -372,6 +386,7 @@ def afase_decision(request, demande_id):
         "AidFi/afase_decision.html",
         {
             "delais": etat_delais(demande),
+            "recours_origine": __import__("AidFi.services.afase_recours", fromlist=["x"]).recours_origine(demande),
             "demande": demande,
             "beneficiaire": demande.beneficiaire,
             "form": form,
@@ -496,6 +511,64 @@ def afase_notification(request, demande_id):
     from AidFi.services.afase_documents import notification_pdf
     return FileResponse(notification_pdf(demande), as_attachment=True,
                         filename=f"notification_afase_{demande.id}.pdf")
+
+
+# =============================================================================
+# RECOURS CONTRE UN REFUS (procédure externe : CID en garde la trace)
+# =============================================================================
+
+@login_required
+def afase_recours(request, demande_id):
+    from datetime import date as _date
+    from AidFi.models.m_recours import RecoursAFASE
+    from AidFi.services import afase_recours as svc
+    demande = get_object_or_404(DemandeAFASE, pk=demande_id)
+    if request.method != "POST":
+        return redirect("AidFi:afase_detail", demande_id=demande.id)
+    if not svc.peut_gerer(request.user, demande):
+        return HttpResponseForbidden("Accès refusé : réservé au décideur (cadre de la MDS ou inspecteur), "
+                                     "sur une AFASE refusée.")
+
+    def _jour(nom):
+        try:
+            return _date.fromisoformat(request.POST.get(nom, ""))
+        except ValueError:
+            return None
+
+    recours = getattr(demande, "recours", None)
+    action = request.POST.get("action")
+    if action == "enregistrer" and not recours:
+        date_recours = _jour("date_recours")
+        type_recours = request.POST.get("type_recours")
+        if not date_recours or date_recours > timezone.localdate() or type_recours not in dict(RecoursAFASE.TYPES):
+            messages.error(request, "Indiquez le type et la date du recours (pas dans le futur).")
+        else:
+            RecoursAFASE.objects.create(demande=demande, type_recours=type_recours, date_recours=date_recours,
+                                        commentaire=request.POST.get("commentaire", "").strip(),
+                                        enregistre_par=request.user)
+            messages.success(request, "Recours enregistré.")
+    elif action == "issue" and recours and recours.issue == "EN_COURS":
+        issue = request.POST.get("issue")
+        date_issue = _jour("date_issue")
+        if issue not in ("ACCORD", "REJET", "DESISTEMENT") or not date_issue or date_issue < recours.date_recours \
+                or date_issue > timezone.localdate():
+            messages.error(request, "Indiquez l'issue et sa date (postérieure au recours, pas dans le futur).")
+        else:
+            with transaction.atomic():
+                recours.issue, recours.date_issue = issue, date_issue
+                commentaire = request.POST.get("commentaire", "").strip()
+                if commentaire:
+                    recours.commentaire = (recours.commentaire + "\n" if recours.commentaire else "") + commentaire
+                recours.save()
+                if issue == "ACCORD":
+                    nouvelle = svc.creer_nouvelle_demande(recours, request.user)
+                    messages.success(request, f"Recours abouti : la nouvelle AFASE n° {nouvelle.pk} est déposée, "
+                                              "prête pour la décision.")
+                    return redirect("AidFi:afase_detail", demande_id=nouvelle.id)
+            messages.success(request, "Issue du recours enregistrée.")
+    else:
+        messages.error(request, "Action impossible.")
+    return redirect("AidFi:afase_detail", demande_id=demande.id)
 
 
 # Alias pour compatibilité

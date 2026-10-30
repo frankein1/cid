@@ -33,3 +33,14 @@ class ReferentielMotifAdmin(admin.ModelAdmin):
 @admin.register(MotifRefusAFASE)
 class MotifRefusAdmin(admin.ModelAdmin):
     list_display = ['code', 'libelle']
+
+
+from AidFi.models.m_recours import RecoursAFASE   # noqa: E402
+
+
+@admin.register(RecoursAFASE)
+class RecoursAFASEAdmin(admin.ModelAdmin):
+    list_display = ['demande', 'type_recours', 'date_recours', 'issue', 'date_issue', 'nouvelle_demande']
+    list_filter = ['type_recours', 'issue']
+    raw_id_fields = ['demande', 'nouvelle_demande']
+    readonly_fields = ['enregistre_par', 'date_creation', 'date_modification']

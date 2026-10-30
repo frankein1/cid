@@ -54,6 +54,7 @@ TYPE_PIECE_CHOICES = [
     ('RESSOURCES', 'Justificatif de ressources'), ('CHARGES', 'Justificatif de charges'), ('AUTRE', 'Autre document'),
     ('DECISION', 'Decision'),
     ('REMISE_CAP', 'Feuille de remise CAP signée'),
+    ('DECISION_RECOURS', 'Décision sur le recours (courrier du Président du Département ou jugement)'),
 ]
 
 MAX_FILE_MB = getattr(settings, 'AIDFI_MAX_FILE_MB', 5)

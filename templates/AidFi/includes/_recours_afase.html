@@ -1,0 +1,63 @@
+{# templates/AidFi/includes/_recours_afase.html – recours contre un refus (procédure externe : CID en garde la trace) #}
+{% if recours_origine %}
+<div class="mb-6 px-4 py-3 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-900">
+    <p><i class="fas fa-scale-balanced mr-2"></i><b>AFASE refaite suite à un recours</b> –
+        {% if recours_origine.type_recours == "GRACIEUX" %}recours gracieux{% else %}recours contentieux{% endif %} du {{ recours_origine.date_recours|date:"d/m/Y" }}
+        contre le refus de l'<a href="{% url 'AidFi:afase_detail' recours_origine.demande_id %}" class="underline font-semibold">AFASE n° {{ recours_origine.demande_id }}</a>,
+        réformé le {{ recours_origine.date_issue|date:"d/m/Y" }}. La décision du recours s'impose.</p>
+    {% if piece_decision_recours %}
+    <p class="mt-1 text-xs">✅ Décision sur le recours jointe au dossier.</p>
+    {% elif can_ajouter_piece %}
+    <a href="{% url 'AidFi:afase_ajouter_document' demande.id %}?type=DECISION_RECOURS" class="inline-block mt-2 text-xs font-semibold text-indigo-700 hover:underline">📎 Joindre la décision sur le recours (facultatif)</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if demande.statut == "REFUSEE" and recours or demande.statut == "REFUSEE" and can_recours %}
+<div class="mb-6 bg-white rounded-2xl shadow p-5 text-sm">
+    <h2 class="font-bold text-gray-800 mb-1"><i class="fas fa-scale-balanced mr-2 text-gray-500"></i>Recours de l'usager</h2>
+    <p class="text-xs text-gray-500 mb-3">Le recours est adressé par l'usager au Président du Département (ou au tribunal administratif) : CID n'en garde que la trace, pour le suivi et les statistiques. Ce refus et son courrier ne sont pas modifiés.</p>
+    {% if recours %}
+    <p><b>{{ recours.get_type_recours_display }}</b> du {{ recours.date_recours|date:"d/m/Y" }}
+        {% if recours.enregistre_par %}<span class="text-gray-500">– enregistré par {{ recours.enregistre_par.get_full_name|default:recours.enregistre_par.username }}</span>{% endif %}</p>
+    <p class="mt-1">Issue : <b class="{% if recours.issue == 'ACCORD' %}text-emerald-700{% elif recours.issue == 'EN_COURS' %}text-amber-700{% else %}text-gray-800{% endif %}">{{ recours.get_issue_display }}</b>
+        {% if recours.date_issue %}le {{ recours.date_issue|date:"d/m/Y" }} ({{ recours.delai_jours }} jour{{ recours.delai_jours|pluralize }} après le recours){% endif %}</p>
+    {% if recours.commentaire %}<p class="mt-1 text-gray-600 whitespace-pre-line">{{ recours.commentaire }}</p>{% endif %}
+    {% if recours.nouvelle_demande_id %}
+    <a href="{% url 'AidFi:afase_detail' recours.nouvelle_demande_id %}" class="inline-block mt-2 font-semibold text-indigo-700 hover:underline">➡️ Nouvelle AFASE n° {{ recours.nouvelle_demande_id }} ({{ recours.nouvelle_demande.get_statut_display|lower }})</a>
+    {% endif %}
+    {% if can_recours and recours.issue == "EN_COURS" %}
+    <form method="post" action="{% url 'AidFi:afase_recours' demande.id %}" class="mt-4 grid gap-2 sm:grid-cols-3 items-end border-t pt-4">
+        {% csrf_token %}<input type="hidden" name="action" value="issue">
+        <label class="block">Issue du recours
+            <select name="issue" required class="w-full border rounded px-2 py-1 mt-1">
+                <option value="">—</option><option value="ACCORD">Refus réformé : l'aide est à accorder</option>
+                <option value="REJET">Refus confirmé</option><option value="DESISTEMENT">Désistement de l'usager</option>
+            </select></label>
+        <label class="block">Date de la décision sur le recours
+            <input type="date" name="date_issue" required max="{{ aujourdhui|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1 mt-1"></label>
+        <label class="block sm:col-span-3">Commentaire (facultatif)
+            <input type="text" name="commentaire" class="w-full border rounded px-2 py-1 mt-1"></label>
+        <p class="sm:col-span-2 text-xs text-gray-500">« Refus réformé » crée une nouvelle AFASE reprise de celle-ci (enfants, budget, évaluation, pièces), déposée pour décision. Vous pourrez y joindre la décision sur le recours.</p>
+        <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-semibold">Enregistrer l'issue</button>
+    </form>
+    {% elif can_recours and recours.issue != "ACCORD" and not piece_decision_recours %}
+    <a href="{% url 'AidFi:afase_ajouter_document' demande.id %}?type=DECISION_RECOURS" class="inline-block mt-2 text-xs font-semibold text-indigo-700 hover:underline">📎 Joindre la décision sur le recours (facultatif)</a>
+    {% endif %}
+    {% elif can_recours %}
+    <form method="post" action="{% url 'AidFi:afase_recours' demande.id %}" class="grid gap-2 sm:grid-cols-3 items-end">
+        {% csrf_token %}<input type="hidden" name="action" value="enregistrer">
+        <label class="block">Type de recours
+            <select name="type_recours" class="w-full border rounded px-2 py-1 mt-1">
+                <option value="GRACIEUX">Recours gracieux (Président du Département)</option>
+                <option value="CONTENTIEUX">Recours contentieux (tribunal administratif)</option>
+            </select></label>
+        <label class="block">Date du recours
+            <input type="date" name="date_recours" required max="{{ aujourdhui|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1 mt-1"></label>
+        <button class="px-4 py-2 rounded-lg border border-indigo-300 text-indigo-700 font-semibold hover:bg-indigo-50">Enregistrer un recours</button>
+        <label class="block sm:col-span-3">Commentaire (facultatif)
+            <input type="text" name="commentaire" class="w-full border rounded px-2 py-1 mt-1"></label>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
