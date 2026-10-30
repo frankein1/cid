@@ -282,6 +282,10 @@ def notification_pdf(demande):
            _p(f"<b>Objet :</b> votre demande d'allocation financière de l'aide sociale à l'enfance (dossier n° {demande.pk})", st),
            Spacer(1, 0.5 * cm), _p(f"{'Monsieur' if dem.civilite == 'M.' else 'Madame'},", st), Spacer(1, 0.3 * cm)]
     date_demande = _d(demande.date_signature_demandeur or demande.date_creation)
+    from AidFi.services.afase_recours import recours_origine
+    recours = recours_origine(demande)
+    suite = (f"Suite à votre demande du {date_demande} et à votre recours du {_d(recours.date_recours)}"
+             if recours else f"Suite à votre demande du {date_demande}")
     enfants = ", ".join(str(e) for e in demande.enfants.filter(concerne=True)) or "vos enfants"
     if decision.type_decision == 'ACCORD':
         total = (decision.montant_accorde or 0) * (decision.duree_accordee or 1)
@@ -289,14 +293,14 @@ def notification_pdf(demande):
                      if decision.paiement_a == 'ORGANISME' and decision.organisme_paiement
                      else "Elle sera versée sur votre compte bancaire.")
         corps = [
-            f"Suite à votre demande du {date_demande}, j'ai le plaisir de vous informer qu'une allocation financière de "
+            f"{suite}, j'ai le plaisir de vous informer qu'une allocation financière de "
             f"l'aide sociale à l'enfance vous est accordée pour {escape(enfants)} :",
             f"<b>{_fr(decision.montant_accorde)} par mois pendant {decision.duree_accordee} mois</b> (versement mensuel), "
             f"soit {_fr(total)} au total, au titre de : <b>{escape(decision.libelle_decision or '')}</b>.",
             versement,
         ]
     else:
-        corps = [f"Suite à votre demande du {date_demande}, j'ai le regret de vous informer que je ne peux pas y donner "
+        corps = [f"{suite}, j'ai le regret de vous informer que je ne peux pas y donner "
                  f"une suite favorable, pour le motif suivant :",
                  f"<b>{escape(texte_refus(decision))}</b>"]
         # La motivation saisie par le cadre reste interne : seul le texte du code de refus (et sa précision)

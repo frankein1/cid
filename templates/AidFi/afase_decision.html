@@ -57,6 +57,7 @@
     <h2 class="text-xl font-semibold mb-4">Décision</h2>
     
     {% include "AidFi/includes/_delais_afase.html" %}
+    {% if recours_origine %}<p class="mb-4 px-4 py-3 rounded-xl text-sm bg-indigo-50 border border-indigo-200 text-indigo-900"><i class="fas fa-scale-balanced mr-2"></i>Suite au {% if recours_origine.type_recours == "GRACIEUX" %}recours gracieux{% else %}recours contentieux{% endif %} du {{ recours_origine.date_recours|date:"d/m/Y" }} : le refus de l'AFASE n° {{ recours_origine.demande_id }} a été réformé le {{ recours_origine.date_issue|date:"d/m/Y" }}. Appliquez la décision du recours.</p>{% endif %}
     <form method="post" class="space-y-6">
         {% csrf_token %}
         

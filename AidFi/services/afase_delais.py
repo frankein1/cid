@@ -39,9 +39,12 @@ def etat(demande, aujourd_hui=None):
     if demande.statut not in STATUTS_EN_ATTENTE:
         return None
     jour = aujourd_hui or timezone.localdate()
-    e2 = echeance_deux_mois(demande)
+    # AFASE refaite suite à un recours : la décision du recours s'impose, le délai de 2 mois ne s'applique plus
+    suite_recours = bool(demande.pk and hasattr(demande, "issue_de_recours"))
+    e2 = None if suite_recours else echeance_deux_mois(demande)
     ea = echeance_ajournement(demande)
     res = {
+        "suite_recours": suite_recours,
         "echeance_2_mois": e2,
         "jours_2_mois": (e2 - jour).days if e2 else None,
         "reputee_refusee": bool(e2 and jour >= e2),

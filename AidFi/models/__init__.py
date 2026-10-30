@@ -15,11 +15,12 @@ from .m_generique import (
 )
 from .m_regie import DemandeRegie
 from .m_referentiel import ParametresAides, ReferentielMotifAFASE, MontantIndicatifAFASE, MotifRefusAFASE
+from .m_recours import RecoursAFASE
 from .m_cap import ReceptionCAP, TitreCAP, DemandeCAP, InventaireCAP
 from .m_afase import (
     DemandeAFASE, EvaluationSocialeAFASE, BudgetAFASE, DecisionAFASE, EnfantAFASE
 )
 
 __all__ = [
-    'TypeAide', 'DemandeAide', 'DemandeRegie', 'DemandeAFASE', 'DemandeCAP'
+    'TypeAide', 'DemandeAide', 'DemandeRegie', 'DemandeAFASE', 'DemandeCAP', 'RecoursAFASE'
 ]

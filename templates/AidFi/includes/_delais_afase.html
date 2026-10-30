@@ -14,6 +14,8 @@
         {% if delais.reputee_refusee %}la demande est <b>réputée refusée</b> depuis le {{ delais.echeance_2_mois|date:"d/m/Y" }} (2 mois après la signature du demandeur). Une décision expresse reste à prendre et à notifier.
         {% else %}décision à prendre avant le {{ delais.echeance_2_mois|date:"d/m/Y" }} ({{ delais.jours_2_mois }} jour{{ delais.jours_2_mois|pluralize }}), sinon la demande sera réputée refusée.{% endif %}
     </p>
+    {% elif delais.suite_recours %}
+    <p class="px-4 py-3 rounded-xl border bg-gray-50 border-gray-200 text-gray-600"><i class="fas fa-scale-balanced mr-2"></i>AFASE refaite suite à un recours : la décision du recours s'impose, le délai de 2 mois ne s'applique pas.</p>
     {% else %}
     <p class="px-4 py-3 rounded-xl border bg-gray-50 border-gray-200 text-gray-600"><i class="fas fa-calendar mr-2"></i>Date de signature du demandeur non renseignée : le délai de 2 mois ne peut pas être calculé.</p>
     {% endif %}

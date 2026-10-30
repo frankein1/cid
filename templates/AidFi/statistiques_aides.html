@@ -81,6 +81,43 @@
     </div>
     {% endfor %}
 
+    {% with rc=r.recours %}
+    <div class="bg-white rounded-lg border p-5">
+        <div class="flex flex-wrap justify-between items-baseline gap-2">
+            <h2 class="font-bold text-gray-800">⚖️ Recours contre les refus d'AFASE</h2>
+            <p class="text-sm text-gray-600">{{ rc.nombre }} recours ({{ rc.gracieux }} gracieux, {{ rc.contentieux }} contentieux) · {{ rc.refus }} refus dans l'année</p>
+        </div>
+        {% if rc.nombre %}
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-sm">
+            <div class="p-3 rounded-lg bg-gray-50"><p class="text-xs text-gray-500">Taux de recours</p><p class="text-xl font-bold">{% if rc.taux_recours is not None %}{{ rc.taux_recours }} %{% else %}–{% endif %}</p><p class="text-xs text-gray-500">recours / refus de l'année</p></div>
+            <div class="p-3 rounded-lg bg-gray-50"><p class="text-xs text-gray-500">Refus réformés</p><p class="text-xl font-bold">{% if rc.taux_reformation is not None %}{{ rc.taux_reformation }} %{% else %}–{% endif %}</p><p class="text-xs text-gray-500">parmi les recours clos</p></div>
+            <div class="p-3 rounded-lg bg-gray-50"><p class="text-xs text-gray-500">Délai moyen</p><p class="text-xl font-bold">{% if rc.delai_moyen is not None %}{{ rc.delai_moyen }} j{% else %}–{% endif %}</p><p class="text-xs text-gray-500">du recours à son issue</p></div>
+            <div class="p-3 rounded-lg bg-gray-50"><p class="text-xs text-gray-500">Issues</p>
+                <p class="text-xs mt-1">En cours : <b>{{ rc.par_issue.EN_COURS }}</b> · réformés : <b>{{ rc.par_issue.ACCORD }}</b><br>confirmés : <b>{{ rc.par_issue.REJET }}</b> · désistements : <b>{{ rc.par_issue.DESISTEMENT }}</b></p></div>
+        </div>
+        <table class="min-w-full text-sm mt-4">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">AFASE refusée</th><th class="px-3 py-2 text-left">Type</th><th class="px-3 py-2 text-left">Recours le</th>
+                <th class="px-3 py-2 text-left">Issue</th><th class="px-3 py-2 text-right">Délai</th><th class="px-3 py-2 text-left">Nouvelle AFASE</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 tabular-nums">
+                {% for x in rc.liste %}
+                <tr>
+                    <td class="px-3 py-1.5"><a href="{% url 'AidFi:afase_detail' x.demande_id %}" class="text-blue-700 hover:underline">n° {{ x.demande_id }}</a> · {{ x.demande.beneficiaire.code_interne }}</td>
+                    <td class="px-3 py-1.5">{% if x.type_recours == 'GRACIEUX' %}Gracieux{% else %}Contentieux{% endif %}</td>
+                    <td class="px-3 py-1.5">{{ x.date_recours|date:"d/m/Y" }}</td>
+                    <td class="px-3 py-1.5">{{ x.get_issue_display }}{% if x.date_issue %} ({{ x.date_issue|date:"d/m/Y" }}){% endif %}</td>
+                    <td class="px-3 py-1.5 text-right">{% if x.delai_jours is not None %}{{ x.delai_jours }} j{% else %}–{% endif %}</td>
+                    <td class="px-3 py-1.5">{% if x.nouvelle_demande_id %}<a href="{% url 'AidFi:afase_detail' x.nouvelle_demande_id %}" class="text-blue-700 hover:underline">n° {{ x.nouvelle_demande_id }}</a>{% else %}–{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="mt-2 text-sm text-gray-400 italic">Aucun recours enregistré sur l'année.</p>
+        {% endif %}
+    </div>
+    {% endwith %}
+
     <details class="bg-white rounded-lg border">
         <summary class="cursor-pointer px-5 py-4 font-bold text-gray-800">Détail des dossiers ({{ r.dossiers|length }})</summary>
         <div class="overflow-x-auto">

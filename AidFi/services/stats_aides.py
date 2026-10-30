@@ -13,6 +13,7 @@ Pour chaque aide (AFASE, chèques service, régie d'urgence) :
   - AFASE : transmissions au contrôle, demandes de paiement au logiciel comptable (mois de chaque étape)
   - délivrances (mois de délivrance)         : nombre, montant délivré
   - cumuls de l'année : demandé, accordé, délivré
+  - AFASE : recours contre les refus (année du recours), issues, taux et délais
 Les brouillons ne comptent pas. Montants en euros.
 """
 from collections import defaultdict
@@ -124,7 +125,34 @@ def calculer(mds, annee, agent=None):
                                 'cumul_accorde': cumul['accorde'], 'cumul_delivre': cumul['delivre']})
         aides.append({'code': code, 'libelle': libelles.get(code, code), 'mois': lignes_mois,
                       'total': dict(cumul), 'a_des_donnees': any(v for v in cumul.values())})
-    return {'aides': aides, 'dossiers': lignes, 'annee': annee}
+    return {'aides': aides, 'dossiers': lignes, 'annee': annee, 'recours': recours(mds, annee, agent)}
+
+
+def recours(mds, annee, agent=None):
+    """Recours contre les refus d'AFASE de la MDS : recours de l'année (date du recours), issues, délais."""
+    from AidFi.models.m_recours import RecoursAFASE
+    from AidFi.models.m_afase import DecisionAFASE
+    qs = RecoursAFASE.objects.filter(demande__beneficiaire__mds=mds, date_recours__year=annee)\
+        .select_related('demande__beneficiaire', 'nouvelle_demande__decision')
+    refus = DecisionAFASE.objects.filter(demande__beneficiaire__mds=mds, type_decision='REFUS',
+                                         date_decision__year=annee)
+    if agent is not None:
+        qs = qs.filter(demande__cree_par=agent)
+        refus = refus.filter(demande__cree_par=agent)
+    liste = list(qs)
+    par_issue = {code: sum(1 for r in liste if r.issue == code) for code, _ in RecoursAFASE.ISSUES}
+    clos = [r for r in liste if r.issue != 'EN_COURS']
+    delais = [r.delai_jours for r in clos if r.delai_jours is not None]
+    nb_refus = refus.count()
+    return {
+        'liste': liste, 'nombre': len(liste), 'refus': nb_refus,
+        'gracieux': sum(1 for r in liste if r.type_recours == 'GRACIEUX'),
+        'contentieux': sum(1 for r in liste if r.type_recours == 'CONTENTIEUX'),
+        'par_issue': par_issue, 'libelles_issue': dict(RecoursAFASE.ISSUES),
+        'taux_recours': round(100 * len(liste) / nb_refus) if nb_refus else None,
+        'taux_reformation': round(100 * par_issue['ACCORD'] / len(clos)) if clos else None,
+        'delai_moyen': round(sum(delais) / len(delais)) if delais else None,
+    }
 
 
 def euros(v):
@@ -141,6 +169,22 @@ def lignes_csv(resultat):
             yield [a['libelle'], m['mois'], m['deposees'], euros(m['demande']), m['accords'], euros(m['accorde']),
                    m['refus'], m['transmissions'], m['envois_regie'], m['delivrees'], euros(m['delivre']),
                    euros(m['cumul_demande']), euros(m['cumul_accorde']), euros(m['cumul_delivre'])]
+    rc = resultat.get('recours')
+    if rc:
+        yield []
+        yield ["Recours contre les refus d'AFASE", f"{rc['nombre']} recours", f"{rc['refus']} refus dans l'année",
+               f"taux de recours {rc['taux_recours']} %" if rc['taux_recours'] is not None else "",
+               f"refus réformés {rc['taux_reformation']} %" if rc['taux_reformation'] is not None else "",
+               f"délai moyen {rc['delai_moyen']} jours" if rc['delai_moyen'] is not None else ""]
+        yield ["AFASE refusée", "Usager", "Type", "Date du recours", "Issue", "Date de l'issue", "Délai (jours)",
+               "Nouvelle AFASE", "Montant accordé"]
+        fr2 = lambda d: d.strftime('%d/%m/%Y') if d else ""
+        for r in rc['liste']:
+            dec = getattr(r.nouvelle_demande, 'decision', None) if r.nouvelle_demande_id else None
+            yield [r.demande_id, r.demande.beneficiaire.code_interne, r.get_type_recours_display(), fr2(r.date_recours),
+                   r.get_issue_display(), fr2(r.date_issue), r.delai_jours if r.delai_jours is not None else "",
+                   r.nouvelle_demande_id or "",
+                   euros(dec.montant_accorde) if dec and dec.type_decision == 'ACCORD' else ""]
     yield []
     yield ["Dossier", "Usager", "Aide", "Déposé le", "Montant demandé", "Décision le", "Décision",
            "Montant accordé", "Transmis au contrôle le", "Paiement demandé le", "Délivré le", "Montant délivré", "Délai (jours)", "Agent"]
