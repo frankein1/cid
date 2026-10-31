@@ -1,6 +1,6 @@
 # requirements.txt
 # Versions figées (==) : chaque déploiement installe exactement les mêmes paquets.
-# Mise à jour de sécurité d'octobre 2026 : Django 6.1.2, gunicorn 26 (django-wkhtmltopdf retiré : inutilisé). reportlab : à monter séparément.
+# Mise à jour de sécurité d'octobre 2026 : Django 6.1.2, gunicorn 26, reportlab 5 (django-wkhtmltopdf retiré : inutilisé).
 
 asgiref==3.13.0
 certifi==2026.10.23
@@ -28,7 +28,7 @@ urllib3==2.8.0
 icalendar==5.0.13
 
 # Génération de PDF
-reportlab==4.0.9
+reportlab==5.1.0
 
 # Future: Microsoft Graph API (quand vous aurez les accès)
 # msal==1.28.0
