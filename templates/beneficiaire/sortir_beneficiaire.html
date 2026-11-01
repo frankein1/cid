@@ -37,13 +37,25 @@
                     Le bénéficiaire sera marqué comme "Sorti". 
                 </p>
                 <p class="text-xs text-amber-700 mt-1">
-                    Ses prestations en cours seront clôturées à la date indiquée. Il restera consultable dans les archives.
+                    Il restera consultable dans les archives. CID ne clôture pas ses prestations : vérifiez les suivis encore ouverts ci-dessous
+                    (et, s'il est concerné, signalez la fin de droits RSA par le circuit habituel).
                 </p>
             </div>
         </div>
     </div>
 
     <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        {% if en_cours.aides or en_cours.rdv or en_cours.ip %}
+        <div class="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-sm">
+            <p class="font-semibold mb-2"><i class="fas fa-triangle-exclamation mr-1"></i>Suivis encore ouverts pour cet usager</p>
+            <ul class="list-disc ml-5 space-y-1">
+                {% for a in en_cours.aides %}<li>{{ a.type_aide.nom|default:"Aide" }} n° {{ a.pk }} – {{ a.get_statut_display }}{% if a.montant_sollicite %} ({{ a.montant_sollicite|floatformat:2 }} €){% endif %}</li>{% endfor %}
+                {% for r in en_cours.rdv %}<li>Rendez-vous le {{ r.date|date:"d/m/Y" }} à {{ r.heure_debut|time:"H:i" }}{% if r.agent %} avec {{ r.agent.get_full_name }}{% endif %}</li>{% endfor %}
+                {% for i in en_cours.ip %}<li>Information préoccupante {{ i.numero }} – {{ i.get_statut_display }}</li>{% endfor %}
+            </ul>
+            <p class="mt-2">La sortie ne les annule pas : prévenez les collègues concernés ou traitez-les avant de confirmer.</p>
+        </div>
+        {% endif %}
         <form method="post" class="space-y-6">
             {% csrf_token %}
             

@@ -1,0 +1,33 @@
+<!-- templates/core/mon_profil.html -->
+{% extends 'base.html' %}
+{% block title %}Mon profil{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-user-circle text-blue-600 mr-2"></i>Mon profil</h1>
+
+    <div class="bg-white rounded-xl shadow p-6 text-sm text-gray-700 grid sm:grid-cols-2 gap-3">
+        <p><span class="text-gray-500">Identifiant</span><br><b>{{ utilisateur.username }}</b></p>
+        <p><span class="text-gray-500">Matricule</span><br><b>{{ utilisateur.matricule }}</b></p>
+        <p><span class="text-gray-500">Profil(s)</span><br><b>{% for p in utilisateur.profils.all %}{{ p.nom }}{% if not forloop.last %}, {% endif %}{% empty %}–{% endfor %}</b></p>
+        <p><span class="text-gray-500">MDS</span><br><b>{% for m in utilisateur.profils_mds.all %}{% if m.actif %}{{ m.mds.nom }}{% if not forloop.last %}, {% endif %}{% endif %}{% empty %}–{% endfor %}</b></p>
+    </div>
+
+    <form method="post" class="bg-white rounded-xl shadow p-6 space-y-4">
+        {% csrf_token %}
+        <h2 class="font-semibold text-gray-800">Mes coordonnées</h2>
+        {% for field in form %}
+        <label class="block text-sm font-medium text-gray-700">{{ field.label }}
+            <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" name="{{ field.html_name }}" value="{{ field.value|default_if_none:'' }}"
+                   class="mt-1 w-full px-3 py-2 border {% if field.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-md">
+        </label>
+        {% for e in field.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+        {% endfor %}
+        <button type="submit" class="px-5 py-2 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700">Enregistrer</button>
+    </form>
+
+    <div class="bg-white rounded-xl shadow p-6 flex items-center justify-between gap-4">
+        <div class="text-sm text-gray-700"><b>Mot de passe</b>{% if utilisateur.date_dernier_changement_mdp %}<br><span class="text-gray-500">Changé le {{ utilisateur.date_dernier_changement_mdp|date:"d/m/Y" }}</span>{% endif %}</div>
+        <a href="{% url 'core:changer_mot_de_passe' %}" class="px-4 py-2 rounded-md border border-blue-300 text-blue-700 hover:bg-blue-50 text-sm font-semibold">Changer mon mot de passe</a>
+    </div>
+</div>
+{% endblock %}

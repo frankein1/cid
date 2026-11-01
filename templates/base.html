@@ -206,8 +206,8 @@
         <span id="msg-badge-mobile" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold"></span>
     </button>
     <span class="text-blue-100 text-sm mr-4 hidden sm:block">
-        <i class="fas fa-user-circle mr-1"></i>
-        {{ user.get_full_name|default:user.username }}
+        <a href="{% url 'core:mon_profil' %}" class="hover:text-white hover:underline" title="Mon profil et mon mot de passe"><i class="fas fa-user-circle mr-1"></i>
+        {{ user.get_full_name|default:user.username }}</a>
         {% if user.groups.all %}
             <br>
             <span class="text-xs text-blue-200">
@@ -233,9 +233,9 @@
 
             {% if user.is_authenticated %}
             <div id="mobile-menu" class="hidden md:hidden border-t border-blue-700 py-2 max-h-[80vh] overflow-y-auto">
-                <p class="px-3 pb-2 text-xs text-blue-200 sm:hidden">
+                <a href="{% url 'core:mon_profil' %}" class="block px-3 pb-2 text-xs text-blue-200 sm:hidden">
                     <i class="fas fa-user-circle mr-1"></i>{{ user.get_full_name|default:user.username }}
-                </p>
+                </a>
 
                 {% if user|a_la_capacite:'peut_gerer_acces' %}
                 <a href="{% url 'mds:liste_mds' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-shield mr-2 w-4"></i>Comptes & droits</a>

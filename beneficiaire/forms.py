@@ -92,7 +92,19 @@ class BeneficiaireForm(forms.ModelForm):
             instance.save()
         return instance
 
-class SortieBeneficiaireForm(forms.ModelForm):
+class HistoriqueSortieMixin:
+    """« Détails ou observations » repart vide : la saisie s'ajoute à l'historique au lieu de le remplacer."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._historique = (self.instance.detail_sortie or "") if self.instance.pk else ""
+        self.initial["detail_sortie"] = ""
+
+    def _ajouter_historique(self, beneficiaire):
+        nouveau = (self.cleaned_data.get("detail_sortie") or "").strip()
+        beneficiaire.detail_sortie = "\n".join(x for x in (self._historique.strip(), nouveau) if x) or None
+
+
+class SortieBeneficiaireForm(HistoriqueSortieMixin, forms.ModelForm):
     date_sortie = DateSimplifieeField(label="Date de sortie", required=True)
 
     class Meta:
@@ -102,6 +114,7 @@ class SortieBeneficiaireForm(forms.ModelForm):
     def save(self, commit=True):
         """La sortie change le statut (la page l'annonce) : Sorti, ou Décédé si le motif est le décès."""
         beneficiaire = super().save(commit=False)
+        self._ajouter_historique(beneficiaire)
         if beneficiaire.motif_sortie == "DECES":
             beneficiaire.statut, beneficiaire.est_decede = "DECEDE", True
             beneficiaire.date_deces = beneficiaire.date_deces or beneficiaire.date_sortie
@@ -111,7 +124,7 @@ class SortieBeneficiaireForm(forms.ModelForm):
             beneficiaire.save()
         return beneficiaire
 
-class DecesBeneficiaireForm(forms.ModelForm):
+class DecesBeneficiaireForm(HistoriqueSortieMixin, forms.ModelForm):
     date_deces = DateSimplifieeField(label="Date de décès", required=True)
 
     class Meta:
@@ -120,6 +133,7 @@ class DecesBeneficiaireForm(forms.ModelForm):
 
     def save(self, commit=True):
         beneficiaire = super().save(commit=False)
+        self._ajouter_historique(beneficiaire)
         beneficiaire.est_decede = True
         beneficiaire.statut = "DECEDE"
         beneficiaire.date_sortie = beneficiaire.date_deces

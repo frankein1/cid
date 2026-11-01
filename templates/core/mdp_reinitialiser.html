@@ -1,0 +1,25 @@
+<!-- templates/core/mdp_reinitialiser.html -->
+{% extends 'base.html' %}
+{% block title %}Réinitialiser un mot de passe{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-xl shadow p-8 space-y-5">
+        <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-key text-red-600 mr-2"></i>Réinitialiser un mot de passe</h1>
+        <p class="text-gray-700">Agent : <b>{{ cible.get_full_name|default:cible.username }}</b> <span class="text-gray-500">(identifiant « {{ cible.username }} »)</span></p>
+        {% if provisoire %}
+        <div class="p-4 rounded-lg bg-green-50 border border-green-200 text-green-900">
+            <p class="text-sm">Mot de passe provisoire à lui communiquer :</p>
+            <p class="text-2xl font-mono font-bold tracking-wider my-2">{{ provisoire }}</p>
+            <p class="text-sm">Il devra le changer dès sa connexion : CID l'y oblige.</p>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-600">Le mot de passe actuel sera remplacé par un mot de passe provisoire : les initiales du prénom et du nom en majuscules, suivies de la date du jour (jjmmaaaa) — ici <b class="font-mono">{{ exemple }}</b>. L'agent devra le changer dès sa connexion.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="px-5 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700">Réinitialiser le mot de passe</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'messagerie:boite_reception' %}" class="inline-block text-blue-700 hover:underline text-sm">← Messagerie</a>
+    </div>
+</div>
+{% endblock %}
