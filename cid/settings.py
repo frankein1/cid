@@ -20,12 +20,32 @@ print("✅ .env chargé :", os.getenv('ALWAYSDATA_NAME'))
 # ============================================================
 # CRÉATION AUTOMATIQUE DU SCHÉMA PUBLIC
 # ============================================================
+_schema_verifie = False
+
+
 def create_schema_if_needed(sender, connection, **kwargs):
-    with connection.cursor() as cursor:
-        cursor.execute("CREATE SCHEMA IF NOT EXISTS public;")
-        cursor.execute("GRANT ALL ON SCHEMA public TO cid;")
-        cursor.execute("ALTER USER cid SET search_path TO public;")
-        cursor.execute("ALTER DATABASE cid_cd13 SET search_path TO public;")
+    """
+    Une seule fois par processus (et non à chaque connexion) : deux connexions simultanées
+    (workers gunicorn, requêtes parallèles) faisaient échouer GRANT / ALTER avec
+    « tuple concurrently updated », d'où des erreurs 500 aléatoires. Une erreur ici ne bloque plus rien.
+    L'utilisateur et la base sont ceux de la configuration (ils étaient écrits en dur : cid, cid_cd13).
+    """
+    global _schema_verifie
+    if _schema_verifie:
+        return
+    _schema_verifie = True
+    from psycopg import sql
+    utilisateur = connection.settings_dict.get("USER") or "cid"
+    base = connection.settings_dict.get("NAME") or "cid_cd13"
+    for requete in (sql.SQL("CREATE SCHEMA IF NOT EXISTS public"),
+                    sql.SQL("GRANT ALL ON SCHEMA public TO {}").format(sql.Identifier(utilisateur)),
+                    sql.SQL("ALTER USER {} SET search_path TO public").format(sql.Identifier(utilisateur)),
+                    sql.SQL("ALTER DATABASE {} SET search_path TO public").format(sql.Identifier(base))):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(requete.as_string(connection.connection))
+        except Exception as e:  # droits insuffisants, accès concurrent… : sans conséquence pour l'application
+            print(f"⚠️  Préparation du schéma ignorée ({e.__class__.__name__}) : {e}")
 
 connection_created.connect(create_schema_if_needed)
 
