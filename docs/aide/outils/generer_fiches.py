@@ -12,12 +12,15 @@ OUT = str(Path(__file__).resolve().parent.parent)
 ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
          'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie',
          'afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre', 'afase-uagaf',
-         'afase-recours', 'afase-inspecteur']
+         'afase-recours', 'afase-inspecteur',
+         'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
              ("Aides financières – AFASE", ['afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre',
-                                            'afase-uagaf', 'afase-recours', 'afase-inspecteur'])]
+                                            'afase-uagaf', 'afase-recours', 'afase-inspecteur']),
+             ("Chèques service (CAP) et régie d'urgence", ['cap-demander', 'cap-decider', 'cap-coffre',
+                                                           'regie-demander', 'regie-decider'])]
 
 
 def rubrique(slug):
@@ -37,6 +40,11 @@ TITRES = {
     'afase-uagaf': ("Contrôler et payer une AFASE", "UAGAF : contrôle, renvoi, paiement"),
     'afase-recours': ("Enregistrer un recours", "Cadre : recours contre un refus"),
     'afase-inspecteur': ("AFASE des familles avec une mesure ASE", "Inspecteur enfance-famille"),
+    'cap-demander': ("Demander des chèques service", "Travailleur social : alimentation, hygiène"),
+    'cap-decider': ("Décider et remettre des chèques service", "Cadre : décision, remise, feuille signée"),
+    'cap-coffre': ("Gérer le coffre de chèques service", "Régisseur de la MDS : réception, incidents, inventaire"),
+    'regie-demander': ("Demander une régie d'urgence", "Travailleur social : espèces ou paiement à un tiers"),
+    'regie-decider': ("Décider et verser une régie d'urgence", "Cadre, puis régie centrale sous 24 heures"),
 }
 
 
@@ -426,11 +434,108 @@ page('afase-inspecteur', qui="Inspecteur enfance-famille", ou="Menu « AFASE (in
              "Une mesure de TISF seule ne suffit pas : la décision reste à la MDS."],
      ensuite=['afase-decider', 'afase-transmettre'])
 
+
+# =============================================================================
+# CHÈQUES SERVICE ET RÉGIE
+page('cap-demander', qui="Travailleur social", ou="Fiche de l'usager → Aides financières", duree="2 minutes",
+     intro="Les chèques d'accompagnement personnalisé (CAP) répondent à un besoin immédiat d'alimentation ou d'hygiène.",
+     etapes=[
+         ("Ouvrir la demande", [fig('cap-demander', '01', "Les aides de l'usager : « Chèques service (CAP) ».")],
+          ["Fiche de l'usager → <b>Aides financières</b> → <span class=\"clic\">Chèques service (CAP)</span>."], []),
+         ("Remplir et transmettre", [fig('cap-demander', '02', "Montant et motivation."),
+                                    fig('cap-demander', '03', "La demande est transmise au cadre.")],
+          ["Indiquez le <b>montant demandé</b> et la <b>situation</b> qui le motive.",
+           "Cochez la <b>remise exceptionnelle par la paierie départementale</b> seulement dans un cas exceptionnel : le dossier ira au régisseur central après la décision.",
+           "Cliquez sur <b>Transmettre au cadre</b> : la demande est « Déposée au cadre »."],
+          [("attention", "Les CAP couvrent uniquement l'alimentation et l'hygiène (nourriture, couches, protections périodiques, savon…). Pour un autre besoin, faites une <a href=\"afase-demander.html\">AFASE</a>.")]),
+     ],
+     savoir=["Les chèques existent en 10, 20 et 30 € : demandez un montant qui se compose avec ces valeurs.",
+             "Après l'accord, le cadre vous remet les chèques pour l'usager : vous signez tous les trois la feuille de remise."],
+     ensuite=['cap-decider', 'regie-demander'])
+
+page('cap-decider', qui="Cadre de la MDS", ou="Menu « Cadre » → AFASE et CAP à traiter", duree="5 minutes",
+     intro="Décidez la demande, remettez les chèques sortis du coffre, puis archivez la feuille de remise signée.",
+     etapes=[
+         ("Décider", [fig('cap-decider', '01', "Le tableau du cadre : CAP à décider et à remettre."),
+                     fig('cap-decider', '02', "La décision.")],
+          ["Menu <b>Cadre</b> → <b>AFASE et CAP à traiter</b> : la partie <b>Chèques service (CAP)</b> liste les demandes à décider et celles accordées, à remettre.",
+           "Ouvrez la demande, choisissez <b>Accorder</b> (montant accordé) ou <b>Refuser</b> (motif), puis <b>Enregistrer la décision</b>.",
+           "Le cadre de droite montre le contenu du coffre : ce qui est disponible, par valeur."], []),
+         ("Remettre les chèques", [fig('cap-decider', '03', "Les numéros des chèques remis.")],
+          ["Sortez les chèques du coffre et <b>scannez-les à la douchette</b> (un numéro par ligne), ou cliquez sur <b>Utiliser cette proposition</b> : CID propose des chèques disponibles pour le montant.",
+           "Choisissez l'agent à qui les chèques sont <b>remis</b>, puis <b>Enregistrer la remise</b>."],
+          [("attention", "Si le coffre ne permet pas de composer le montant, CID l'indique : prévenez le régisseur.")]),
+         ("Faire signer et clôturer", [fig('cap-decider', '04', "« Imprimer la feuille à signer »."),
+                                      fig('cap-decider', '05', "La feuille de remise.", petite=True),
+                                      fig('cap-decider', '06', "Déposer la feuille signée, puis clôturer."),
+                                      fig('cap-decider', '07', "Le dossier est clôturé.")],
+          ["Cliquez sur <span class=\"clic\">Imprimer la feuille à signer</span> : cadre, travailleur social et usager la signent.",
+           "Scannez ou photographiez la feuille signée, déposez-la (PDF ou photo) et cliquez sur <b>Archiver et clôturer le dossier</b>.",
+           "La feuille est rangée dans la GED et le dossier est <b>Clôturé</b>."], []),
+     ],
+     savoir=["Chaque chèque garde sa traçabilité : qui l'a remis, à qui, pour quelle demande.",
+             "Remise exceptionnelle par la paierie : après votre accord, le dossier part au régisseur central, qui saisit les numéros remis."],
+     ensuite=['cap-coffre', 'cap-demander'])
+
+page('cap-coffre', qui="Régisseur de la MDS (désigné par la direction)", ou="Menu « Coffre CAP »", duree="Variable",
+     intro="Enregistrez les chèques reçus, signalez les incidents et faites l'inventaire du coffre.",
+     etapes=[
+         ("Le coffre", [fig('cap-coffre', '01', "Le coffre : stock par valeur, chèques, réceptions, inventaires.")],
+          ["Menu <span class=\"clic\">Coffre CAP</span> : le nombre de chèques par valeur et le montant disponible, la liste des chèques avec leur statut, les CAP accordées à remettre, les réceptions et les inventaires.",
+           "Recherchez un chèque par son numéro ou filtrez par statut (au coffre, remis, perdu, volé, retourné)."], []),
+         ("Enregistrer une réception", [fig('cap-coffre', '02', "Nouvelle réception : validité et bordereau."),
+                                       fig('cap-coffre', '03', "Saisie à la douchette.")],
+          ["Cliquez sur <b>Nouvelle réception</b> : date de réception, <b>date de fin de validité</b> imprimée sur les titres, n° du bordereau.",
+           "<b>Commencer la saisie à la douchette</b> : choisissez la valeur (10, 20 ou 30 €), puis scannez chaque chèque ; la liste et le total se mettent à jour.",
+           "Cliquez sur <b>Terminer la saisie</b> : plus aucun chèque ne pourra être ajouté à cette réception. Le bordereau est disponible en PDF."], []),
+         ("Signaler un incident", [fig('cap-coffre', '04', "« Signaler… » sur la ligne du chèque.")],
+          ["Sur la ligne du chèque, <b>Signaler…</b> : perdu, volé, ou retourné (périmé, annulé), avec un commentaire."], []),
+         ("Faire l'inventaire", [fig('cap-coffre', '05', "L'inventaire : scans et écarts.")],
+          ["Cliquez sur <b>Inventaire</b>, puis scannez tous les chèques présents dans le coffre.",
+           "CID compare au stock théorique (reçus − remis − perdus/volés − retournés) et affiche les écarts par valeur.",
+           "<b>Terminer l'inventaire</b> : le procès-verbal est disponible en PDF."], []),
+     ],
+     savoir=["Le régisseur est désigné sur la page du coffre (« Régisseur (délégation de la direction) »)."],
+     ensuite=['cap-decider'])
+
+page('regie-demander', qui="Travailleur social", ou="Fiche de l'usager → Aides financières", duree="3 minutes",
+     intro="Une aide d'urgence versée par la régie centrale dans les 24 heures après l'accord du cadre : en espèces, ou directement à un tiers (hôtel, fournisseur…).",
+     etapes=[
+         ("Ouvrir la demande", [fig('regie-demander', '01', "Les aides de l'usager : « Régie urgence ».")],
+          ["Fiche de l'usager → <b>Aides financières</b> → <span class=\"clic\">Régie urgence</span>."], []),
+         ("Remplir et transmettre", [fig('regie-demander', '02', "Montant, motif, mode de paiement, pièces du tiers."),
+                                    fig('regie-demander', '03', "La demande est transmise au cadre.")],
+          ["Indiquez le <b>montant</b> et le <b>motif de l'urgence</b>.",
+           "<b>En espèces</b> : l'usager viendra avec une pièce d'identité avec photo en cours de validité. <b>À un tiers</b> : nom du tiers, référence de la facture, et joignez la <b>facture</b> et le <b>RIB du tiers</b>.",
+           "Cliquez sur <b>Transmettre au cadre</b>."],
+          [("attention", "Montant : se conformer au maximum prévu par la note de service en vigueur. Pour une urgence alimentaire, privilégiez les <a href=\"cap-demander.html\">chèques service</a>.")]),
+     ],
+     savoir=["L'aide d'urgence n'est pas déduite d'une AFASE à venir.",
+             "Absence totale de ressources ou baisse importante et soudaine : joignez un avis motivé et un justificatif (attestation CAF…)."],
+     ensuite=['regie-decider', 'cap-demander'])
+
+page('regie-decider', qui="Cadre de la MDS, puis régisseur central", ou="Fiche de la régie ; menu « Régie centrale »", duree="2 minutes",
+     intro="Le cadre décide ; en cas d'accord, le dossier part aussitôt à la régie centrale, qui verse dans les 24 heures.",
+     etapes=[
+         ("Décider (cadre)", [fig('regie-decider', '01', "La décision du cadre."),
+                             fig('regie-decider', '02', "Accordée : transmise à la paierie.")],
+          ["Ouvrez la demande (tableau du cadre ou message CID) : <b>Accorder</b> avec le montant, ou <b>Refuser</b> avec le motif, puis <b>Enregistrer la décision</b>.",
+           "En cas d'accord, le dossier est <b>transmis à la paierie</b> : le régisseur central est prévenu."],
+          [("attention", "Se conformer au montant maximum prévu par la note de service en vigueur : CID avertit s'il est dépassé.")]),
+         ("Verser (régisseur central)", [fig('regie-decider', '03', "Régie centrale : les régies à verser, avec le délai."),
+                                        fig('regie-decider', '04', "Le versement."),
+                                        fig('regie-decider', '05', "Versement enregistré : dossier clôturé.")],
+          ["Menu <span class=\"clic\">Régie centrale</span> : les régies à verser, avec le temps écoulé depuis l'accord (24 heures au plus), et les chèques service à remettre en paierie.",
+           "Ouvrez la régie : facture et RIB du tiers sont à droite. Indiquez la date et l'heure du versement (vide : maintenant), le <b>montant versé</b> (partiel possible, jamais supérieur à l'accord) et le n° d'enregistrement comptable.",
+           "Cliquez sur <b>Versement fait : clôturer le dossier</b> : le travailleur social et le cadre sont prévenus par message CID."], []),
+     ],
+     savoir=["Les étapes (décision, versement) alimentent les statistiques des aides de la MDS."],
+     ensuite=['regie-demander', 'cap-decider'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["Chèques service (CAP)", "Régie d'urgence",
-                   "Saisir une IP (CRIP)", "Évaluer une IP (binôme)", "Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
+                  [                   "Saisir une IP (CRIP)", "Évaluer une IP (binôme)", "Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

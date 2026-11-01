@@ -92,11 +92,13 @@ Les textes de refus des codes 1 à 3 sont remplis avec des **textes d'exemple**,
 | Famille | Aide | État | Compte |
 |---|---|---|---|
 | AUBERT Aurélie | Chèques service | Déposée | `kchef` (décider) |
-| VIDAL Nolan | Chèques service | Accordée, à remettre | `kchef` (remise, coffre) |
+| VIDAL Nolan | Chèques service (40 €) | Accordée, à remettre | `kchef` (remise depuis le coffre) |
 | LEGRAND Thomas | Chèques service | Refusée | `kchef` (consultation) |
 | AMRANI Sarah | Régie (espèces) | Déposée | `kchef` (décider) |
 | GARNIER Céline | Régie (**paiement à un tiers** : pharmacie) | Accordée, transmise à la paierie | `regie1` (verser) |
 | CHERIF Yasmine | Régie (espèces) | Versée, clôturée | `regie1`, statistiques |
+
+**Coffre CAP de la MDS TEST 01** : régisseur **Agent Admin 1** (`MarioB`), 26 chèques fictifs au coffre (10 de 10 €, 10 de 20 €, 6 de 30 € : 480 €), numérotés `DEMO-10-0001`, `DEMO-20-0001`… Ils sont recréés à chaque réinitialisation.
 
 ## Informations préoccupantes (IP)
 

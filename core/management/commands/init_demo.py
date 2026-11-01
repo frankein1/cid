@@ -144,6 +144,9 @@ class Command(BaseCommand):
         ips.delete()
         CreneauRdv.objects.filter(pk__in=creneaux).delete()
         CreneauRdv.objects.filter(notes_internes__startswith="[démo]").delete()
+        from AidFi.models.m_cap import ReceptionCAP, TitreCAP
+        TitreCAP.objects.filter(reception__reference="BORD-DEMO").delete()
+        ReceptionCAP.objects.filter(reference="BORD-DEMO").delete()
         self.stdout.write(f"🧹 Dossiers de démonstration supprimés ({len(aides)} demandes d'aide).")
 
     # ------------------------------------------------------------------ comptes et MDS
@@ -349,6 +352,7 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ CAP et régie
     def cap_regie(self):
         from AidFi.models import DemandeCAP, DemandeRegie
+        self.coffre_cap()
         def base(model, code, statut, il_y_a, montant, **extra):
             b = self.b[code]
             obj = model(beneficiaire=b, demandeur=b, type_aide=type_aide("CAP" if model is DemandeCAP else "REGIE"),
@@ -360,8 +364,8 @@ class Command(BaseCommand):
             obj.refresh_from_db()
             return obj
         base(DemandeCAP, "FAM12-AUR", "DEPOSEE", 1, "60")
-        c = base(DemandeCAP, "FAM4-NOL", "ACCORDEE", 4, "45")
-        c.statut, c.montant_accorde, c.decide_par, c.date_decision = "ACCORDEE", 45, self.cadre, timezone.now() - timedelta(days=3)
+        c = base(DemandeCAP, "FAM4-NOL", "ACCORDEE", 4, "40")
+        c.statut, c.montant_accorde, c.decide_par, c.date_decision = "ACCORDEE", 40, self.cadre, timezone.now() - timedelta(days=3)
         c._acteur = self.cadre; c.save()
         c = base(DemandeCAP, "FAM11-THO", "REFUSEE", 20, "80")
         c.statut, c.decide_par, c.date_decision, c.motif_refus = "REFUSEE", self.cadre, timezone.now() - timedelta(days=19), "Aide déjà accordée ce mois-ci (fictif)."
@@ -376,6 +380,22 @@ class Command(BaseCommand):
         r.date_versement, r.montant_verse, r.verse_par = timezone.now() - timedelta(days=13), Decimal("40"), self.regie
         r._acteur = self.regie; r.save()
         self.stdout.write("✅ Chèques service (3) et régie d'urgence (3)")
+
+    def coffre_cap(self):
+        """Régisseur (Agent Admin 1) et stock fictif de chèques au coffre de la MDS TEST 01 : 480 €."""
+        from AidFi.models.m_cap import ReceptionCAP, TitreCAP
+        if not self.mds1.regisseur_id:
+            self.mds1.regisseur = self.u("MarioB")
+            self.mds1.save(update_fields=["regisseur"])
+        reception = ReceptionCAP.objects.create(
+            mds=self.mds1, regisseur=self.mds1.regisseur, date_reception=self.j - timedelta(days=20),
+            date_validite=self.j + relativedelta(years=1), reference="BORD-DEMO", saisie_terminee=True,
+            commentaire="Réception fictive de démonstration (init_demo).")
+        for valeur, nombre in ((10, 10), (20, 10), (30, 6)):
+            for i in range(1, nombre + 1):
+                TitreCAP.objects.create(numero=f"DEMO-{valeur}-{i:04d}", valeur=valeur, reception=reception,
+                                        mds=self.mds1, date_validite=reception.date_validite)
+        self.stdout.write("✅ Coffre CAP : régisseur Agent Admin 1, 26 chèques fictifs (480 €)")
 
     # ------------------------------------------------------------------ IP
     def ip(self):
