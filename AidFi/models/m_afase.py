@@ -280,9 +280,14 @@ class BudgetAFASE(AuditedMixin):
 
 def nb_personnes_au_foyer(beneficiaire):
     """Demandeur + personnes liées qui vivent au foyer (proposition, modifiable sur le formulaire)."""
-    nb = 1 + sum(1 for lien in (LienFamilial.objects.filter(personne_a=beneficiaire)
-                                | LienFamilial.objects.filter(personne_b=beneficiaire)) if lien.vit_au_foyer)
-    return max(nb, 1)
+    # Un lien familial est souvent enregistré dans les deux sens (enfant de / parent de) :
+    # on compte chaque personne une seule fois.
+    autres = set()
+    for lien in (LienFamilial.objects.filter(personne_a=beneficiaire)
+                 | LienFamilial.objects.filter(personne_b=beneficiaire)):
+        if lien.vit_au_foyer:
+            autres.add(lien.personne_b_id if lien.personne_a_id == beneficiaire.pk else lien.personne_a_id)
+    return 1 + len(autres)
 
 
 # ==========================================================
