@@ -52,4 +52,6 @@ urlpatterns = [
     # ============================================================================
     path('87904676/', trigger_test_user, name='testouil'),
     path('administration/donnees-demo/', views.demo_reinitialiser, name='demo_reinitialiser'),
+    path('aide/', views.aide, name='aide'),
+    path('aide/<path:chemin>', views.aide, name='aide_fichier'),
 ]

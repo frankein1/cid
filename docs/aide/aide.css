@@ -1,0 +1,50 @@
+/* docs/aide/aide.css – mise en forme commune des fiches d'aide CID */
+:root { --bleu:#1e40af; --bleu-clair:#eff6ff; --texte:#1f2937; --gris:#6b7280; --bord:#e5e7eb; --rouge:#dc2626; --vert:#15803d; --fond:#f8fafc; --carte:#fff; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color:var(--texte); background:var(--fond); line-height:1.55; }
+a { color:var(--bleu); }
+header { background:var(--bleu); color:#fff; padding:22px 16px 26px; }
+header .in, main, nav.pied { max-width:980px; margin:0 auto; }
+.fil { font-size:.85rem; margin-bottom:10px; }
+.fil a { color:#dbeafe; text-decoration:none; }
+.fil a:hover { text-decoration:underline; }
+h1 { margin:0; font-size:1.7rem; }
+header p { margin:4px 0 0; opacity:.9; }
+.meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.meta span { background:rgba(255,255,255,.15); border-radius:999px; padding:3px 12px; font-size:.85rem; }
+main { padding:24px 16px 32px; }
+.bloc { background:var(--carte); border:1px solid var(--bord); border-radius:14px; padding:16px 20px; margin-bottom:20px; }
+.bloc h2 { margin:0 0 8px; font-size:1.05rem; }
+.bloc ul, .bloc ol { margin:6px 0 0; padding-left:20px; }
+.note { font-size:.85rem; color:var(--gris); margin:8px 0 0; }
+section.etape { background:var(--carte); border:1px solid var(--bord); border-radius:14px; padding:20px; margin-bottom:20px; }
+.etape h2 { display:flex; align-items:center; gap:12px; margin:0 0 14px; font-size:1.2rem; }
+.num { flex:none; width:34px; height:34px; border-radius:50%; background:var(--bleu); color:#fff; display:grid; place-items:center; font-weight:700; }
+.vignettes { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; align-items:start; margin-bottom:14px; }
+.vignettes.une { grid-template-columns:1fr; }
+figure { margin:0; }
+figure img { width:100%; border:1px solid var(--bord); border-radius:10px; cursor:zoom-in; display:block; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+figure.petite img { max-width:420px; }
+figcaption { font-size:.85rem; color:var(--gris); margin-top:6px; }
+ol.pas { margin:0; padding-left:22px; }
+ol.pas li { margin-bottom:8px; }
+.clic { color:var(--rouge); font-weight:600; }
+kbd, code { background:#f1f5f9; border:1px solid var(--bord); border-radius:5px; padding:0 6px; font-size:.9em; }
+.encart { border-left:4px solid; border-radius:8px; padding:10px 14px; margin-top:14px; font-size:.95rem; }
+.astuce { background:var(--bleu-clair); border-color:var(--bleu); }
+.attention { background:#fff7ed; border-color:#ea580c; }
+.ok { background:#f0fdf4; border-color:var(--vert); }
+.liens { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:8px; }
+.liens a { display:block; border:1px solid var(--bord); border-radius:10px; padding:10px 14px; text-decoration:none; background:#fff; }
+.liens a:hover { border-color:var(--bleu); background:var(--bleu-clair); }
+.liens a b { display:block; }
+.liens a span { font-size:.85rem; color:var(--gris); }
+.liens a.avenir { pointer-events:none; opacity:.55; }
+nav.pied { display:flex; justify-content:space-between; gap:12px; padding:0 16px 24px; }
+nav.pied a { text-decoration:none; font-weight:600; }
+footer { text-align:center; color:var(--gris); font-size:.8rem; padding:0 16px 32px; }
+#zoom { position:fixed; inset:0; background:rgba(15,23,42,.88); display:none; align-items:center; justify-content:center; padding:20px; z-index:10; cursor:zoom-out; }
+#zoom img { max-width:100%; max-height:100%; border-radius:8px; }
+#zoom.ouvert { display:flex; }
+@media (max-width:720px) { h1 { font-size:1.35rem; } section.etape { padding:14px; } }
+@media print { body { background:#fff; } header { background:none; color:#000; border-bottom:2px solid #000; } .fil a { color:#000; } #zoom, nav.pied { display:none; } section.etape, .bloc { break-inside:avoid; } }
