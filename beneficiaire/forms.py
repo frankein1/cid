@@ -99,6 +99,18 @@ class SortieBeneficiaireForm(forms.ModelForm):
         model = Beneficiaire
         fields = ["date_sortie", "motif_sortie", "detail_sortie"]
 
+    def save(self, commit=True):
+        """La sortie change le statut (la page l'annonce) : Sorti, ou Décédé si le motif est le décès."""
+        beneficiaire = super().save(commit=False)
+        if beneficiaire.motif_sortie == "DECES":
+            beneficiaire.statut, beneficiaire.est_decede = "DECEDE", True
+            beneficiaire.date_deces = beneficiaire.date_deces or beneficiaire.date_sortie
+        else:
+            beneficiaire.statut = "SORTI"
+        if commit:
+            beneficiaire.save()
+        return beneficiaire
+
 class DecesBeneficiaireForm(forms.ModelForm):
     date_deces = DateSimplifieeField(label="Date de décès", required=True)
 
