@@ -10,7 +10,7 @@ Vues pour l'application bénéficiaire - VERSION CORE INTÉGRALE
 FICHIER 100% CORRIGÉ - a_la_capacite() partout
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -19,6 +19,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 
 from messagerie.models import Message
