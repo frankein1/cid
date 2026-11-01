@@ -3,7 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
-
+# render_start.py
 #!/usr/bin/env python
 """
 Script de démarrage pour Render - VERSION AVEC MIGRATIONS GLOBALES
@@ -35,6 +35,13 @@ call_command('install', '--no-input')
 # ============================================================
 print("📦 [Render] Création des données de test (init2)...")
 call_command('init2')   # ← À COMMENTER ou SUPPRIMER après le premier déploiement
+
+# Jeu de données fictives complet (docs/DONNEES_FICTIVES.md) : créé une seule fois, ne bloque jamais le démarrage
+print("📦 [Render] Jeu de données fictives (init_demo)...")
+try:
+    call_command('init_demo')
+except Exception as e:
+    print(f"⚠️  init_demo non exécuté (le démarrage continue) : {e}")
 
 # ============================================================
 # Étape 1 : Migrations (au cas où install ne les aurait pas faites)
