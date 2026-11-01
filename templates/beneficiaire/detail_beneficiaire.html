@@ -80,11 +80,25 @@
             </a>
             {% endif %}
             
+            {% if peut_modifier %}
             {% if beneficiaire.statut == 'ACTIF' %}
             <a href="{% url 'beneficiaire:sortir_beneficiaire' code_interne=beneficiaire.code_interne %}" 
                class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
                 <i class="fas fa-sign-out-alt mr-2"></i>Sortie
             </a>
+            {% endif %}
+            {% if beneficiaire.statut != 'DECEDE' %}
+            <a href="{% url 'beneficiaire:declarer_deces' code_interne=beneficiaire.code_interne %}"
+               class="inline-flex items-center px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition text-sm">
+                <i class="fas fa-cross mr-2"></i>Déclarer un décès
+            </a>
+            {% endif %}
+            {% if beneficiaire.statut != 'ACTIF' %}
+            <a href="{% url 'beneficiaire:reactiver_beneficiaire' code_interne=beneficiaire.code_interne %}"
+               class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm">
+                <i class="fas fa-rotate-left mr-2"></i>Remettre actif
+            </a>
+            {% endif %}
             {% endif %}
         </div>
 

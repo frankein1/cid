@@ -80,13 +80,12 @@ class UserAdmin(DjangoUserAdmin):
     actions = ["reset_password_action"]
 
     def reset_password_action(self, request, queryset):
-        for user in queryset:
-            user.force_change_password = True
-            user.set_password("ChangeMe123!")
-            user.save()
+        """Règle CID : initiales en majuscules + date du jour (jjmmaaaa), à changer dès la connexion."""
+        from core.mot_de_passe import reinitialiser
+        provisoires = [f"{user.username} : {reinitialiser(user)}" for user in queryset]
         self.message_user(
             request,
-            "Mot de passe réinitialisé pour les utilisateurs sélectionnés."
+            "Mots de passe provisoires (à changer dès la connexion) – " + " ; ".join(provisoires)
         )
 
     reset_password_action.short_description = (

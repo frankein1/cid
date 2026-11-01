@@ -49,28 +49,31 @@
         </div>
     </div>
 
-    <!-- Statistiques rapides -->
+    <!-- Statistiques rapides (agents connectés, limitées à leurs MDS) -->
+    {% if stats %}
     <div class="bg-white rounded-lg shadow-md p-6 mt-8">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Aperçu du système</h2>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Aperçu du système <span class="text-sm font-normal text-gray-500">– {{ stats.perimetre }}</span></h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div class="text-center p-4 bg-gray-50 rounded-lg">
-                <div class="text-3xl font-bold text-blue-600">{% if stats.total_beneficiaires %}{{ stats.total_beneficiaires }}{% else %}0{% endif %}</div>
-                <div class="text-sm text-gray-600">Bénéficiaires</div>
+                <div class="text-3xl font-bold text-blue-600">{{ stats.total_beneficiaires }}</div>
+                <div class="text-sm text-gray-600">Bénéficiaires actifs</div>
             </div>
             <div class="text-center p-4 bg-gray-50 rounded-lg">
-                <div class="text-3xl font-bold text-green-600">{% if stats.total_mds %}{{ stats.total_mds }}{% else %}0{% endif %}</div>
+                <div class="text-3xl font-bold text-green-600">{{ stats.total_mds }}</div>
                 <div class="text-sm text-gray-600">MDS</div>
             </div>
             <div class="text-center p-4 bg-gray-50 rounded-lg">
-                <div class="text-3xl font-bold text-orange-600">{% if stats.rdv_aujourdhui %}{{ stats.rdv_aujourdhui }}{% else %}0{% endif %}</div>
+                <div class="text-3xl font-bold text-orange-600">{{ stats.rdv_aujourdhui }}</div>
                 <div class="text-sm text-gray-600">RDV aujourd'hui</div>
             </div>
             <div class="text-center p-4 bg-gray-50 rounded-lg">
-                <div class="text-3xl font-bold text-purple-600">{% if stats.utilisateurs_actifs %}{{ stats.utilisateurs_actifs }}{% else %}1{% endif %}</div>
+                <div class="text-3xl font-bold text-purple-600">{{ stats.utilisateurs_actifs }}</div>
                 <div class="text-sm text-gray-600">Utilisateurs actifs</div>
             </div>
         </div>
     </div>
+
+    {% endif %}
 
     <!-- Informations système -->
     <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">

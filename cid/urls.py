@@ -15,6 +15,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.contrib.auth import views as auth_views
 from core.views.vins import run_install
+from core import views as core_views
 
 urlpatterns = [
     # ----------------------------------------------------
@@ -39,7 +40,7 @@ urlpatterns = [
     # URLS PRINCIPALES
     # ----------------------------------------------------
     path('admin/', admin.site.urls),
-    path('', TemplateView.as_view(template_name='accueil.html'), name='accueil'),
+    path('', core_views.accueil, name='accueil'),
     path('beneficiaire/', include('beneficiaire.urls')),
     path('', include('core.urls')),
     path('ged/', include('ged.urls')),

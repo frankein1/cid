@@ -434,15 +434,62 @@ def sortir_beneficiaire(request, code_interne):
     if not user_peut_agir_sur_beneficiaire(request.user, beneficiaire):
         raise PermissionDenied
 
+    en_cours = suivis_en_cours(beneficiaire)
     if request.method == "POST":
         form = SortieBeneficiaireForm(request.POST, instance=beneficiaire)
         if form.is_valid():
             form.save()
             messages.success(request, "Sortie enregistrée.")
+            if any(en_cours.values()):
+                messages.warning(request, "Pensez aux suivis encore ouverts (aides, rendez-vous, IP, droits RSA) : "
+                                          "CID ne les clôture pas automatiquement.")
             return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
     else:
         form = SortieBeneficiaireForm(instance=beneficiaire)
-    return render(request, "beneficiaire/sortir_beneficiaire.html", {"form": form, "beneficiaire": beneficiaire})
+    return render(request, "beneficiaire/sortir_beneficiaire.html",
+                  {"form": form, "beneficiaire": beneficiaire, "en_cours": en_cours})
+
+
+def suivis_en_cours(beneficiaire):
+    """Ce qui reste ouvert pour l'usager : à signaler à l'agent qui ferme la fiche (CID ne clôture rien)."""
+    from django.db.models import Q
+    from django.utils import timezone
+    from AidFi.models.m_generique import DemandeAide
+    from planning.models import CreneauRdv
+    from protection_enfance.models import InformationPreoccupante
+    return {
+        "aides": list(DemandeAide.objects.filter(beneficiaire=beneficiaire).exclude(
+            statut__in=("BROUILLON", "REFUSEE", "ANNULEE", "CLOTUREE", "REMISE", "VALIDE")).select_related("type_aide")),
+        "rdv": list(CreneauRdv.objects.filter(beneficiaire=beneficiaire, date__gte=timezone.localdate(),
+                                              statut="RESERVE").order_by("date", "heure_debut")[:5]),
+        "ip": list(InformationPreoccupante.objects.filter(
+            Q(famille=beneficiaire) | Q(enfants__beneficiaire=beneficiaire)).exclude(statut="CLOTUREE").distinct()),
+    }
+
+
+@login_required
+def reactiver_beneficiaire(request, code_interne):
+    """Remet « Actif » un usager sorti ou déclaré décédé par erreur (ou qui revient)."""
+    beneficiaire = get_object_or_404(Beneficiaire, code_interne=code_interne)
+    if not user_peut_agir_sur_beneficiaire(request.user, beneficiaire):
+        raise PermissionDenied
+    if beneficiaire.statut == "ACTIF":
+        return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+    if request.method == "POST":
+        ancien = beneficiaire.get_statut_display()
+        trace = (f"Remis actif le {timezone.localdate():%d/%m/%Y} par {request.user.get_full_name() or request.user.username} "
+                 f"(était : {ancien}"
+                 f"{', sortie du ' + beneficiaire.date_sortie.strftime('%d/%m/%Y') if beneficiaire.date_sortie else ''}"
+                 f"{', motif : ' + beneficiaire.get_motif_sortie_display() if beneficiaire.motif_sortie else ''}). "
+                 f"{(request.POST.get('commentaire') or '').strip()}").strip()
+        beneficiaire.statut = "ACTIF"
+        beneficiaire.date_sortie, beneficiaire.motif_sortie = None, None
+        beneficiaire.est_decede, beneficiaire.date_deces = False, None
+        beneficiaire.detail_sortie = ((beneficiaire.detail_sortie or "") + "\n" + trace).strip()
+        beneficiaire.save()
+        messages.success(request, "Le bénéficiaire est de nouveau actif.")
+        return redirect("beneficiaire:detail_beneficiaire", code_interne=code_interne)
+    return render(request, "beneficiaire/reactiver_beneficiaire.html", {"beneficiaire": beneficiaire})
 
 @login_required
 def declarer_deces(request, code_interne):

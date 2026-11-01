@@ -52,6 +52,9 @@ urlpatterns = [
     # ============================================================================
     path('87904676/', trigger_test_user, name='testouil'),
     path('administration/donnees-demo/', views.demo_reinitialiser, name='demo_reinitialiser'),
+    path('mot-de-passe-oublie/', views.mot_de_passe_oublie, name='mot_de_passe_oublie'),
+    path('mon-mot-de-passe/', views.changer_mot_de_passe, name='changer_mot_de_passe'),
+    path('comptes/<int:user_id>/mot-de-passe/', views.reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe'),
     path('aide/', views.aide, name='aide'),
     path('aide/<path:chemin>', views.aide, name='aide_fichier'),
 ]
