@@ -4,7 +4,13 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 
-# ged/tasks.py
+# ged/task.py
+from datetime import timedelta
+
+from django.utils import timezone
+
+from ged.models import DocumentGED
+
 
 def check_expiration_documents():
     """Marque les documents qui arrivent à expiration sous 30 jours."""
