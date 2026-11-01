@@ -51,4 +51,5 @@ urlpatterns = [
     # urls de tests (a commenter en prod)
     # ============================================================================
     path('87904676/', trigger_test_user, name='testouil'),
+    path('administration/donnees-demo/', views.demo_reinitialiser, name='demo_reinitialiser'),
 ]
