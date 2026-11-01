@@ -13,14 +13,16 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie',
          'afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre', 'afase-uagaf',
          'afase-recours', 'afase-inspecteur',
-         'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider']
+         'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider',
+         'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
              ("Aides financières – AFASE", ['afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre',
                                             'afase-uagaf', 'afase-recours', 'afase-inspecteur']),
              ("Chèques service (CAP) et régie d'urgence", ['cap-demander', 'cap-decider', 'cap-coffre',
-                                                           'regie-demander', 'regie-decider'])]
+                                                           'regie-demander', 'regie-decider']),
+             ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine'])]
 
 
 def rubrique(slug):
@@ -45,6 +47,12 @@ TITRES = {
     'cap-coffre': ("Gérer le coffre de chèques service", "Régisseur de la MDS : réception, incidents, inventaire"),
     'regie-demander': ("Demander une régie d'urgence", "Travailleur social : espèces ou paiement à un tiers"),
     'regie-decider': ("Décider et verser une régie d'urgence", "Cadre, puis régie centrale sous 24 heures"),
+    'ip-saisir': ("Enregistrer et transmettre une IP", "CRIP"),
+    'ip-binome': ("Réunion IP et désignation du binôme", "Cadre de la MDS"),
+    'ip-evaluer': ("Évaluer une IP", "Binôme : convocations, démarches, rapport"),
+    'ip-synthese': ("Synthèse et visas du rapport", "Cadre et binôme"),
+    'ip-inspecteur': ("Avis de l'inspecteur sur une IP", "Inspecteur enfance-famille"),
+    'ip-saisine': ("Saisine du procureur", "Binôme, cadre, inspecteur"),
 }
 
 
@@ -532,10 +540,132 @@ page('regie-decider', qui="Cadre de la MDS, puis régisseur central", ou="Fiche 
      savoir=["Les étapes (décision, versement) alimentent les statistiques des aides de la MDS."],
      ensuite=['regie-demander', 'cap-decider'])
 
+
+# =============================================================================
+# INFORMATIONS PRÉOCCUPANTES
+DELAIS_IP = ("L'évaluation dure <b>3 mois</b> à compter de la réception par la CRIP, avec un <b>point intermédiaire</b> : "
+             "les dates s'affichent en haut de l'IP, et CID envoie des rappels au cadre.")
+ACCES_IP = ("Une IP n'est visible que par la CRIP, les inspecteurs, les cadres de la MDS en charge et le binôme d'évaluation. "
+            "L'identité du déclarant n'est visible que par la CRIP et les inspecteurs.")
+
+page('ip-saisir', qui="Agents de la CRIP", ou="Menu « Accompagnement » → Informations préoccupantes", duree="10 minutes",
+     intro="Enregistrez l'information préoccupante reçue, vérifiez la composition familiale, puis transmettez-la à la MDS en charge.",
+     etapes=[
+         ("Ouvrir une nouvelle IP", [fig('ip-saisir', '01', "La liste des IP : « Enregistrer une IP ».")],
+          ["Ouvrez la liste des <b>informations préoccupantes</b> et cliquez sur <span class=\"clic\">Enregistrer une IP</span>.",
+           "La liste se filtre par statut ; les IP dont le point intermédiaire est passé sont en orange, celles qui ont dépassé 3 mois en rouge."], []),
+         ("Décrire l'information reçue", [fig('ip-saisir', '02', "Réception, origine, urgence, faits et dangers signalés."),
+                                         fig('ip-saisir', '03', "Déclarant, famille et MDS en charge.")],
+          ["<b>Réception</b> : la date de réception par la CRIP (le délai de 3 mois court à partir de cette date), l'origine et le niveau d'urgence.",
+           "<b>Faits rapportés</b> et <b>dangers signalés</b> ; une <b>situation particulière</b> (grossesse, handicap…) conduira CID à proposer un professionnel de PMI dans le binôme.",
+           "<b>Déclarant</b> : nom, qualité, structure, coordonnées, confidentialité demandée.",
+           "<b>Famille</b> : saisissez le <b>code du dossier famille</b> dans CID (les enfants sont repris automatiquement) ; sinon le nom et l'adresse de la famille. Choisissez la <b>MDS en charge</b> (et les MDS associées en cas d'enquête conjointe).",
+           "Enregistrez."],
+          [("attention", "Le déclarant n'apparaît jamais à la MDS, ni dans les courriers, ni dans le rapport.")]),
+         ("Vérifier la composition familiale", [fig('ip-saisir', '04', "Adultes concernés et enfants.")],
+          ["CID ouvre la <b>composition familiale</b> : pour chaque adulte, sa qualité, son adresse, sa MDS, l'autorité parentale et s'il héberge les enfants.",
+           "Les titulaires de l'autorité parentale et l'adulte qui héberge les enfants sont <b>convoqués d'office</b> (décochable). Parents séparés, autre MDS, autre département : chacun reçoit ses propres courriers.",
+           "Indiquez <b>chez qui vivent les enfants</b> : leur convocation sera adressée à cet adulte."], []),
+         ("Transmettre à la MDS", [fig('ip-saisir', '05', "« Transmettre à la MDS »."),
+                                  fig('ip-saisir', '06', "IP transmise : le cadre est prévenu.")],
+          ["Sur l'IP, cliquez sur <span class=\"clic\">Transmettre à la MDS</span> : le cadre de la MDS reçoit un message CID.",
+           "La CRIP peut encore corriger la saisie (<b>Modifier</b>) jusqu'à la désignation du binôme."], []),
+     ],
+     savoir=[DELAIS_IP, ACCES_IP],
+     ensuite=['ip-binome'])
+
+page('ip-binome', qui="Cadre de la MDS", ou="IP transmise à la MDS", duree="5 minutes",
+     intro="Présentez l'IP en réunion, puis désignez les deux professionnels qui l'évalueront.",
+     etapes=[
+         ("Enregistrer la réunion IP", [fig('ip-binome', '01', "Programmer la réunion IP.")],
+          ["Ouvrez l'IP (message CID ou liste des IP). Dans <b>Démarches et réunions</b>, cliquez sur <span class=\"clic\">Réunion IP</span>.",
+           "Indiquez la date, le résultat, les personnes et professionnels présents et le compte rendu, puis enregistrez. La réunion peut s'inscrire dans l'agenda.",
+           "Tout est daté et compte dans les délais et les statistiques."], []),
+         ("Désigner le binôme", [fig('ip-binome', '02', "La proposition de CID et le choix du binôme."),
+                                fig('ip-binome', '03', "Le binôme est désigné.")],
+          ["CID propose un binôme : les travailleurs sociaux les moins chargés d'abord, et un professionnel de <b>PMI</b> quand il est conseillé (enfant de 5 ans ou moins, situation particulière).",
+           "Choisissez les deux professionnels et cliquez sur <span class=\"clic\">Valider le binôme</span>.",
+           "Les deux professionnels reçoivent un message ; l'IP passe en <b>Évaluation en cours</b>. Le binôme reste modifiable."], []),
+     ],
+     savoir=[DELAIS_IP,
+             "Le cadre peut aussi enregistrer les points d'étape et les réunions de synthèse dans les démarches."],
+     ensuite=['ip-evaluer', 'ip-synthese'])
+
+page('ip-evaluer', qui="Binôme d'évaluation (travailleur social, PMI)", ou="IP en évaluation", duree="Tout au long de l'évaluation",
+     intro="Convoquez la famille, enregistrez chaque démarche, puis rédigez le rapport et soumettez-le pour la synthèse.",
+     etapes=[
+         ("Programmer une audition", [fig('ip-evaluer', '01', "Programmer une audition."),
+                                     fig('ip-evaluer', '02', "La démarche et le courrier de convocation."),
+                                     fig('ip-evaluer', '03', "Le courrier de convocation.", petite=True)],
+          ["Ouvrez <span class=\"clic\">Programmer une audition</span> : audition des parents, ou des enfants (même heure, reçus un par un).",
+           "Choisissez la date, la durée, les <b>adultes convoqués</b> (un courrier chacun, à son adresse), les enfants (un courrier par foyer, à l'adulte qui les héberge) et les professionnels.",
+           "Cliquez sur <b>Programmer et préparer les convocations</b> : les courriers sont produits aussitôt (lien <b>PDF</b> dans les démarches) et l'audition s'inscrit dans l'agenda."], []),
+         ("Noter les présences et relancer", [fig('ip-evaluer', '04', "Noter les présences.")],
+          ["Après l'audition, notez pour chacun : présent, absent, ou <b>absence justifiée – report convenu</b>.",
+           "<b>Reconvoquer</b> : nouvelle date, à l'amiable (date convenue avec la famille) ou par lettre recommandée (le n° de LRAR est demandé)."],
+          [("astuce", "Une famille qui ne vient pas malgré la LRAR peut être déclarée « non coopérante » dans le rapport.")]),
+         ("Enregistrer les autres démarches", [fig('ip-evaluer', '05', "Appel, VAD, courriel, partenaire…")],
+          ["Ouvrez <b>Enregistrer une autre démarche</b> (boutons rapides : Appel, VAD, Synthèse…) : type, date, résultat, personnes contactées, compte rendu.",
+           "<b>Mettre à jour</b> sur une démarche prévue permet d'en noter le résultat (réalisé, absent, sans réponse…)."], []),
+         ("Rédiger et soumettre le rapport", [fig('ip-evaluer', '06', "Le rapport : déroulé repris automatiquement, puis les rubriques."),
+                                             fig('ip-evaluer', '07', "Conclusion pour chaque enfant, préconisation."),
+                                             fig('ip-evaluer', '08', "Rapport soumis : le cadre est prévenu.")],
+          ["Bouton <b>Rédiger / ouvrir</b> du cadre Rapport : le <b>déroulé de l'évaluation</b> est repris des démarches enregistrées.",
+           "Complétez les rubriques (composition familiale, situation et parole des enfants, parole des parents, conditions de vie, partenaires, analyse).",
+           "Pour <b>chaque enfant</b> : en danger, en risque de danger ou pas en danger, avec les types de danger constatés.",
+           "Choisissez la <b>préconisation</b> et détaillez-la. <b>Enregistrer le brouillon</b> pour y revenir ; <b>Soumettre pour la synthèse</b> quand le rapport est prêt."], []),
+     ],
+     savoir=[DELAIS_IP, "Une fois soumis, le rapport n'est plus modifiable (sauf renvoi par le cadre ou l'inspecteur)."],
+     ensuite=['ip-synthese', 'ip-saisine'])
+
+page('ip-synthese', qui="Cadre de la MDS et binôme", ou="Rapport de l'IP", duree="2 minutes",
+     intro="Après la réunion de synthèse, le cadre et un membre du binôme visent le rapport : il part alors à l'inspecteur enfance-famille.",
+     etapes=[
+         ("Visa du cadre", [fig('ip-synthese', '01', "Date de la réunion de synthèse, « Viser (cadre) ».")],
+          ["Ouvrez le rapport soumis. Indiquez la <b>date de la réunion de synthèse</b> et cliquez sur <span class=\"clic\">Viser (cadre)</span>.",
+           "Le rapport doit être repris ? Écrivez ce qu'il faut reprendre et cliquez sur <b>Renvoyer au binôme</b>."], []),
+         ("Visa du binôme", [fig('ip-synthese', '02', "« Viser (AS) »."),
+                            fig('ip-synthese', '03', "IP transmise à l'inspecteur.")],
+          ["Un membre du binôme ouvre le rapport et clique sur <span class=\"clic\">Viser (AS)</span>.",
+           "Dès que les deux visas sont posés, l'IP est <b>transmise à l'inspecteur</b>, qui est prévenu. La date d'envoi est la fin réelle de l'évaluation (délai respecté ou dépassé)."], []),
+     ],
+     savoir=["Le rapport s'imprime à tout moment (bouton <b>Imprimer (PDF)</b>)."],
+     ensuite=['ip-inspecteur'])
+
+page('ip-inspecteur', qui="Inspecteur enfance-famille", ou="Liste des informations préoccupantes", duree="5 minutes",
+     intro="Donnez votre avis sur le rapport : contresigner la préconisation, décider d'une autre suite ou demander un complément.",
+     etapes=[
+         ("Ouvrir l'IP transmise", [fig('ip-inspecteur', '01', "La liste des IP : statut « Transmise à l'inspecteur ».")],
+          ["Vous êtes prévenu par message CID ; dans la liste, l'IP est au statut <b>Transmise à l'inspecteur</b>. Ouvrez son rapport."], []),
+         ("Donner son avis", [fig('ip-inspecteur', '02', "« Votre avis »."),
+                             fig('ip-inspecteur', '03', "L'IP est clôturée avec votre décision.")],
+          ["<b>D'accord avec la préconisation</b> : vous la contresignez.",
+           "<b>Autre suite</b> : choisissez la décision (classement, droit commun, AED, saisine du procureur…) et motivez-la.",
+           "<b>Complément d'évaluation</b> : le dossier revient au binôme, avec votre commentaire.",
+           "Cliquez sur <b>Enregistrer mon avis</b> : en cas d'accord ou d'autre suite, l'IP est <b>clôturée</b> avec votre décision."], []),
+     ],
+     savoir=[ACCES_IP],
+     ensuite=['ip-saisine'])
+
+page('ip-saisine', qui="Binôme, cadre, inspecteur", ou="IP, cadre « Saisine du procureur »", duree="5 minutes",
+     intro="À tout moment de l'évaluation : le binôme propose, le cadre décide, l'inspecteur valide. En cas de danger grave et imminent, le cadre peut saisir directement.",
+     etapes=[
+         ("Proposer (binôme)", [fig('ip-saisine', '01', "Proposer une saisine au cadre.")],
+          ["Dans le cadre <b>Saisine du procureur</b>, ouvrez <b>Proposer une saisine du procureur</b> : décrivez le motif, cochez <b>danger grave et imminent</b> si c'est le cas, puis <span class=\"clic\">Proposer au cadre</span>."], []),
+         ("Décider (cadre)", [fig('ip-saisine', '02', "Le choix du cadre.")],
+          ["Le cadre choisit : <b>Demander à l'inspecteur</b>, <b>Urgence : saisir directement</b>, ou <b>Ne pas retenir</b> (avec un commentaire)."], []),
+         ("Valider (inspecteur) et envoyer", [fig('ip-saisine', '03', "La validation de l'inspecteur."),
+                                             fig('ip-saisine', '04', "Courrier de saisine et envoi.")],
+          ["L'inspecteur <b>valide</b> ou <b>ne valide pas</b> la saisine.",
+           "Une fois validée, <b>Imprimer le courrier de saisine</b> ; après l'envoi, indiquez la date et la référence ou le mode d'envoi, puis <b>Saisine envoyée</b>."], []),
+     ],
+     savoir=["Chaque étape est datée et tracée dans l'IP (journal et messages aux personnes concernées)."],
+     ensuite=['ip-evaluer', 'ip-inspecteur'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  [                   "Saisir une IP (CRIP)", "Évaluer une IP (binôme)", "Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
+                  ["Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">
