@@ -10,7 +10,18 @@ from pathlib import Path
 OUT = str(Path(__file__).resolve().parent.parent)
 
 ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
-         'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']
+         'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie',
+         'afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre', 'afase-uagaf',
+         'afase-recours', 'afase-inspecteur']
+RUBRIQUES = [("Premiers pas", ['connexion']),
+             ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
+                                'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
+             ("Aides financières – AFASE", ['afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre',
+                                            'afase-uagaf', 'afase-recours', 'afase-inspecteur'])]
+
+
+def rubrique(slug):
+    return next(r for r, fiches in RUBRIQUES if slug in fiches)
 TITRES = {
     'connexion': ("Se connecter à CID", "Ouvrir sa session"),
     'beneficiaire-chercher': ("Chercher un bénéficiaire", "Retrouver un dossier"),
@@ -18,7 +29,14 @@ TITRES = {
     'beneficiaire-famille': ("Ajouter un membre de la famille", "Relier les personnes d'un foyer"),
     'beneficiaire-modifier': ("Modifier un bénéficiaire", "Mettre à jour l'identité et les coordonnées"),
     'beneficiaire-transferer': ("Transférer un bénéficiaire vers sa MDS", "Quand un usager déménage"),
-    'beneficiaire-sortie': ("Enregistrer la sortie d'un bénéficiaire", "Clore un suivi"),
+    'beneficiaire-sortie': ("Enregistrer la sortie d'un bénéficiaire", "Clore un suivi, décès, remise en activité"),
+    'afase-demander': ("Demander une AFASE", "Travailleur social : saisir et déposer la demande"),
+    'afase-ajournement': ("Répondre à un ajournement", "Travailleur social : compléter et redéposer"),
+    'afase-decider': ("Décider une AFASE", "Cadre : accord, refus ou ajournement"),
+    'afase-transmettre': ("Notifier et transmettre à l'UAGAF", "Cadre : courrier à l'usager, dossier complet"),
+    'afase-uagaf': ("Contrôler et payer une AFASE", "UAGAF : contrôle, renvoi, paiement"),
+    'afase-recours': ("Enregistrer un recours", "Cadre : recours contre un refus"),
+    'afase-inspecteur': ("AFASE des familles avec une mesure ASE", "Inspecteur enfance-famille"),
 }
 
 
@@ -64,7 +82,7 @@ def page(slug, *, qui, ou, duree, intro, avant=(), etapes=(), savoir=(), ensuite
 </head>
 <body>
 <header><div class="in">
-  <div class="fil"><a href="index.html">Aide CID</a> › {"Premiers pas" if slug == "connexion" else "Bénéficiaires"}</div>
+  <div class="fil"><a href="index.html">Aide CID</a> › {rubrique(slug)}</div>
   <h1>{html.escape(titre)}</h1>
   <p>{intro}</p>
   <div class="meta"><span>👤 {qui}</span><span>📍 {ou}</span><span>⏱ {duree}</span></div>
@@ -166,7 +184,7 @@ page('beneficiaire-famille', qui="Tous les agents de la MDS", ou="Fiche du bén�
      savoir=["Le lien est enregistré <b>dans les deux sens</b> : sur la fiche de l'enfant, la mère apparaît comme parent.",
              "Une personne créée ici reprend <b>l'adresse et la MDS</b> du bénéficiaire. Si elle vit ailleurs, corrigez sa fiche avec <a href=\"beneficiaire-modifier.html\">Modifier</a>.",
              "Les personnes cochées <b>Vit au foyer</b> donnent le nombre de personnes au foyer proposé dans une demande d'AFASE."],
-     ensuite=['beneficiaire-modifier', "Demander une AFASE"])
+     ensuite=['beneficiaire-modifier', 'afase-demander'])
 
 page('beneficiaire-modifier', qui="Tous les agents de la MDS", ou="Fiche du bénéficiaire", duree="2 minutes",
      intro="Corrigez l'identité, l'adresse, les téléphones ou les numéros administratifs d'un bénéficiaire.",
@@ -235,11 +253,183 @@ page('beneficiaire-sortie', qui="Tous les agents de la MDS", ou="Fiche du béné
              "Les observations de sortie s'ajoutent les unes aux autres : rien n'est effacé."],
      ensuite=['beneficiaire-chercher'])
 
+
+# =============================================================================
+# AFASE
+DELAIS = ("La demande est réputée refusée <b>2 mois</b> après la date de signature du demandeur : les échéances "
+          "s'affichent sur la fiche et sur le tableau du cadre, et CID envoie des rappels.")
+
+page('afase-demander', qui="Travailleur social", ou="Fiche de l'usager → Aides financières", duree="15 minutes",
+     intro="Saisissez la demande d'allocation financière de l'aide sociale à l'enfance, joignez les pièces, puis déposez-la au cadre.",
+     avant=["Ouvrez la fiche du demandeur (<a href=\"beneficiaire-chercher.html\">Chercher un bénéficiaire</a>) et vérifiez son "
+            "<a href=\"beneficiaire-famille.html\">réseau familial</a> : les enfants et les personnes « au foyer » sont repris automatiquement.",
+            "Ayez sous la main la date de signature du demandeur, son budget et les justificatifs scannés."],
+     etapes=[
+         ("Ouvrir une nouvelle AFASE", [fig('afase-demander', '01', "Fiche de l'usager : « Aides financières »."),
+                                       fig('afase-demander', '02', "Ses aides : « Nouvelle AFASE ».")],
+          ["Sur la fiche, cliquez sur <span class=\"clic\">Aides financières</span> : la liste de ses aides s'affiche.",
+           "Cliquez sur <span class=\"clic\">Nouvelle AFASE</span>. Le formulaire compte quatre onglets : Contexte, Demande, Évaluation, Budget."], []),
+         ("Onglet « Contexte » : le demandeur et les enfants", [fig('afase-demander', '03', "Le demandeur et le contexte."),
+                                                               fig('afase-demander', '04', "Les enfants, repris de la famille.")],
+          ["Choisissez la <b>personne qui fait la demande</b> et son <b>lien avec l'enfant</b> (mère, père, tuteur, femme enceinte, jeune majeur…).",
+           "Saisissez la <b>date de signature du demandeur</b> : elle est indispensable, le délai de 2 mois court à partir de cette date.",
+           "Complétez l'avis du travailleur social, votre qualité, l'allocataire CAF et les situations professionnelles.",
+           "Dans le tableau des <b>enfants</b>, cochez ceux qui sont concernés. Un enfant à naître se déclare avec la case « à naître » et la date prévue d'accouchement."], []),
+         ("Onglet « Demande » : montant et objet", [fig('afase-demander', '05', "Montant, durée, objet de la demande.")],
+          ["Indiquez le <b>montant mensuel</b> et la <b>durée</b> (en mois).",
+           "Choisissez l'<b>objet de la demande</b> : le référentiel de la note de service s'affiche (conditions, aides de droit commun à mobiliser avant).",
+           "Cochez les <b>aides de droit commun déjà sollicitées</b>, et renseignez une éventuelle <b>mesure ASE</b> dans la fratrie : enfant confié ou assistance éducative, la décision revient alors à l'inspecteur enfance-famille.",
+           "L'historique des aides des 12 derniers mois est repris automatiquement de CID ; complétez-le si besoin."], []),
+         ("Onglet « Évaluation » : la situation", [fig('afase-demander', '06', "Le code de la demande et l'évaluation sociale.")],
+          ["Choisissez le <b>code de la demande</b> et décrivez la situation familiale, l'analyse, la justification et le <b>plan d'action</b> élaboré avec la famille.",
+           "Indiquez le degré d'adhésion de la famille et, si besoin, l'affectation ciblée de l'aide."], []),
+         ("Onglet « Budget » : ressources et charges", [fig('afase-demander', '07', "Le budget et le reste à vivre.")],
+          ["Saisissez les <b>ressources mensuelles</b> (demandeur, conjoint, autres) et les <b>charges</b>, en distinguant payées et non payées ; ajoutez les dettes.",
+           "Vérifiez le <b>nombre de personnes au foyer</b> (proposé d'après la famille) : CID calcule le <b>reste à vivre</b> par jour et par personne.",
+           "Cliquez sur <b>Enregistrer la demande</b> : elle est créée en brouillon."], []),
+         ("Joindre les pièces", [fig('afase-demander', '08', "La demande enregistrée : « Ajouter un document »."),
+                                fig('afase-demander', '09', "Le type de pièce, le fichier, puis « Uploader et lier ».")],
+          ["Sur la demande, cliquez sur <span class=\"clic\">Ajouter un document</span>.",
+           "Choisissez le <b>type de pièce</b> (RIB, identité, livret de famille, domicile, facture ou devis…), le type de document, un titre, puis le fichier, et cliquez sur <b>Uploader et lier</b>.",
+           "Recommencez pour chaque pièce : pièces d'identité du demandeur et des enfants, livret de famille (ou attestation CAF/MSA), RIB au nom du destinataire, justificatif de domicile de moins de 3 mois, justificatif lié à l'objet de la demande."],
+          [("astuce", "Pour corriger la demande avant de la déposer : bouton <b>Modifier la demande</b>.")]),
+         ("Finaliser et déposer au cadre", [fig('afase-demander', '10', "« Instruire / Finaliser la demande AFASE »."),
+                                           fig('afase-demander', '11', "Dernière relecture, puis « Finaliser et transmettre au Cadre »."),
+                                           fig('afase-demander', '12', "La demande est déposée au cadre.")],
+          ["Cliquez sur <span class=\"clic\">Instruire / Finaliser la demande AFASE</span>.",
+           "Relisez l'analyse et la justification, ajoutez le commentaire de la famille, puis cliquez sur <b>Finaliser et transmettre au Cadre</b>.",
+           "La demande passe au statut <b>Déposée au cadre</b> ; le cadre (ou l'inspecteur, en cas de mesure ASE) reçoit un message CID."], []),
+     ],
+     savoir=[DELAIS,
+             "Les encadrés bleus et orange de la fiche sont des <b>points de vigilance</b> (autre AFASE ce mois-ci, demandeur hors Bouches-du-Rhône, renouvellement…) : ils n'empêchent rien, le cadre décide.",
+             "La demande est nominative : le RIB doit être au nom du demandeur, sauf versement à un tiers avec son autorisation signée."],
+     ensuite=['afase-ajournement', 'afase-decider'])
+
+page('afase-ajournement', qui="Travailleur social", ou="Messagerie, ou fiche de la demande", duree="5 minutes",
+     intro="Le cadre a ajourné la demande : il manque une pièce ou une information. Vous avez 15 jours pour compléter et redéposer.",
+     etapes=[
+         ("Voir ce qui manque", [fig('afase-ajournement', '01', "L'encadré de l'ajournement, avec ce qu'il faut compléter.")],
+          ["Vous recevez un message CID quand le cadre ajourne. Ouvrez la demande : un encadré orange indique <b>qui</b> a ajourné, <b>quand</b>, et <b>ce qu'il faut compléter</b>.",
+           "En haut de la fiche, l'échéance des 15 jours est rappelée."], []),
+         ("Compléter et redéposer", [fig('afase-ajournement', '02', "« Compléter l'évaluation et redéposer au cadre »."),
+                                    fig('afase-ajournement', '03', "La demande est de nouveau déposée.")],
+          ["Ajoutez les pièces manquantes (<b>Ajouter un document</b>) ou corrigez la demande (<b>Modifier la demande</b>).",
+           "Cliquez sur <span class=\"clic\">Compléter l'évaluation et redéposer au cadre</span>, relisez, puis <b>Finaliser et transmettre au Cadre</b>.",
+           "La demande repasse au statut <b>Déposée au cadre</b> : le délai de 15 jours s'arrête."], []),
+     ],
+     savoir=["CID vous envoie un rappel <b>10 jours</b> après l'ajournement.",
+             "Sans réponse au bout de <b>15 jours</b>, le cadre est prévenu : la demande est à refuser pour absence de justificatifs.",
+             DELAIS],
+     ensuite=['afase-demander', 'afase-decider'])
+
+page('afase-decider', qui="Cadre de la MDS (inspecteur enfance-famille en cas de mesure ASE)", ou="Menu « Cadre » → AFASE et CAP à traiter", duree="5 minutes",
+     intro="Accordez, refusez ou ajournez une demande déposée, avec l'aide à la décision de CID.",
+     etapes=[
+         ("Ouvrir les demandes à traiter", [fig('afase-decider', '01', "Menu Cadre → « AFASE et CAP à traiter »."),
+                                           fig('afase-decider', '02', "Le tableau du cadre : échéances et bouton « Décider ».")],
+          ["Menu <b>Cadre</b> → <span class=\"clic\">AFASE et CAP à traiter</span>.",
+           "Chaque demande indique sa date limite (2 mois après la signature) ; les demandes <b>réputées refusées</b> sont en rouge. Les AFASE ajournées sont listées en bas.",
+           "Cliquez sur <b>Décider</b> (ou <b>Consulter</b> pour lire d'abord le dossier)."], []),
+         ("Lire l'aide à la décision", [fig('afase-decider', '03', "L'aide à la décision.")],
+          ["Le cadre « Aide à la décision » rassemble le <b>reste à vivre</b> (et ce qu'il permet pour un soutien alimentaire), le montant demandé, les enfants concernés et les <b>AFASE accordées sur 12 mois</b>.",
+           "Il rappelle l'objet de la demande, les aides de droit commun sollicitées et le référentiel du motif (conditions, montant indicatif).",
+           "<b>Prévisualiser le dossier</b> ouvre le formulaire complet en PDF."], []),
+         ("Choisir la décision", [fig('afase-decider', '04', "Type de décision, motif, montant et durée."),
+                                 fig('afase-decider', '05', "Refus : le motif et la précision pour le courrier."),
+                                 fig('afase-decider', '06', "Ajournement : le bouton l'indique.")],
+          ["Cochez <b>Accord</b>, <b>Refus</b> ou <b>Ajournement</b> : la liste des motifs s'adapte.",
+           "<b>Accord</b> : choisissez le motif, ajustez le montant mensuel et la durée.",
+           "<b>Refus</b> : choisissez le code de refus. Pour les codes 3 et 7, remplissez la <b>précision pour le courrier</b> (le dispositif à solliciter, la date de l'aide déjà attribuée) : elle est reprise dans la lettre à l'usager.",
+           "<b>Ajournement</b> : écrivez dans le motif ce qu'il faut compléter ; le travailleur social a 15 jours.",
+           "Le <b>motif</b> (zone de texte) est votre motivation interne : il n'apparaît pas dans le courrier à l'usager."], []),
+         ("Enregistrer", [fig('afase-decider', '07', "Le bouton reprend la décision choisie."),
+                         fig('afase-decider', '08', "La décision est enregistrée.")],
+          ["Vérifiez le libellé du bouton (« Enregistrer l'accord », « … le refus », « … l'ajournement ») et cliquez.",
+           "Le travailleur social reçoit un message CID ; le formulaire de la demande est rangé dans la GED.",
+           "Besoin de rendre la main sans décider ? <b>Renvoyer au travailleur social sans décision</b> remet la demande en instruction (sans délai d'ajournement)."], []),
+     ],
+     savoir=[DELAIS,
+             "Une demande ajournée depuis plus de 15 jours peut être tranchée directement : le refus code 1 (absence de justificatifs) est proposé.",
+             "Famille avec un enfant confié ou une mesure d'assistance éducative : la décision revient à l'inspecteur enfance-famille (<a href=\"afase-inspecteur.html\">voir la fiche</a>)."],
+     ensuite=['afase-transmettre', 'afase-recours'])
+
+page('afase-transmettre', qui="Cadre de la MDS", ou="Fiche de l'AFASE accordée", duree="5 minutes",
+     intro="Après la décision : éditez le courrier de notification à l'usager, complétez les pièces et transmettez le dossier à l'UAGAF pour le paiement.",
+     etapes=[
+         ("Éditer le courrier de notification", [fig('afase-transmettre', '01', "Bouton « Courrier de notification à l'usager »."),
+                                                fig('afase-transmettre', '02', "Le courrier (PDF).", petite=True)],
+          ["Sur la fiche de l'AFASE, cliquez sur <span class=\"clic\">Courrier de notification à l'usager</span> : un PDF prêt à signer est téléchargé.",
+           "<b>Accord</b> : montant, durée, total et destinataire du versement. <b>Refus</b> : le texte du code de refus, avec la précision saisie.",
+           "Le courrier comporte le fondement juridique, les voies et délais de recours et la signature « par délégation »."],
+          [("astuce", "Les textes des refus, le fondement juridique et les voies de recours se règlent dans l'administration (référentiel AFASE).")]),
+         ("Compléter le dossier et transmettre", [fig('afase-transmettre', '03', "Pièces exigées, destinataire du paiement, confirmation."),
+                                                 fig('afase-transmettre', '04', "Le dossier est transmis à l'UAGAF.")],
+          ["Dans « Circuit du paiement », la liste des <b>pièces exigées</b> doit être entièrement cochée : le lien <b>ajouter</b> ouvre le dépôt de la pièce manquante.",
+           "Choisissez à qui l'aide est versée : <b>la famille</b> (son RIB) ou <b>un organisme</b> (cantine, centre de loisirs… : son nom et son RIB).",
+           "Cochez la confirmation des pièces d'identité, puis cliquez sur <span class=\"clic\">Transmettre à l'UAGAF</span>.",
+           "Le dossier passe au statut <b>Transmise à l'UAGAF</b>."],
+          [("attention", "Tant qu'une pièce manque, le bouton reste grisé avec la mention « Transmission impossible : dossier incomplet ».")]),
+     ],
+     savoir=["Si l'UAGAF renvoie le dossier (pièce illisible, RIB…), il revient à la MDS avec le motif du renvoi : corrigez puis transmettez à nouveau.",
+             "« Correction manuelle (cadre) » sert uniquement aux anciens dossiers payés hors du circuit."],
+     ensuite=['afase-uagaf', 'afase-recours'])
+
+page('afase-uagaf', qui="Agents de l'UAGAF", ou="Menu « UAGAF (AFASE) »", duree="5 minutes",
+     intro="Contrôlez la conformité des dossiers transmis par les MDS, enregistrez la demande de paiement, puis le paiement.",
+     etapes=[
+         ("Ouvrir les dossiers transmis", [fig('afase-uagaf', '01', "La liste des AFASE transmises.")],
+          ["Menu <span class=\"clic\">UAGAF (AFASE)</span> : les dossiers transmis par les MDS, avec la date, la MDS, le montant, le destinataire du paiement et l'état.",
+           "Cliquez sur <b>Ouvrir</b> : vous voyez le dossier et ses pièces."], []),
+         ("Demander le paiement, ou renvoyer", [fig('afase-uagaf', '02', "Demande de paiement saisie dans le logiciel comptable."),
+                                               fig('afase-uagaf', '03', "Ou renvoi à la MDS, avec le motif.")],
+          ["Après contrôle, saisissez la demande de paiement dans le logiciel comptable (nom, RIB, somme), puis dans CID : la <b>date</b> et, si vous le souhaitez, le <b>n° d'enregistrement comptable</b> → <b>Paiement demandé</b>.",
+           "Dossier non conforme : indiquez le <b>motif</b> (pièce illisible, RIB au mauvais nom…) et cliquez sur <b>Renvoyer à la MDS</b>. Le cadre est prévenu et le dossier revient à la MDS."], []),
+         ("Enregistrer le paiement", [fig('afase-uagaf', '04', "Le paiement effectué par la paierie."),
+                                     fig('afase-uagaf', '05', "Le circuit du paiement est complet.")],
+          ["Quand la paierie a payé : indiquez la <b>date</b> et le <b>montant payé</b> (vide : le montant accordé ; un paiement partiel est possible).",
+           "Cliquez sur <span class=\"clic\">Payé : clôturer le dossier</span>. La MDS est prévenue ; le dossier est <b>Clôturé</b>."], []),
+     ],
+     savoir=["Vous ne voyez que les dossiers transmis à l'UAGAF, et leurs pièces : pas le reste des dossiers des usagers.",
+             "Les étapes (transmission, demande de paiement, paiement) alimentent les statistiques des aides de chaque MDS."],
+     ensuite=['afase-transmettre'])
+
+page('afase-recours', qui="Cadre de la MDS (ou inspecteur)", ou="Fiche de l'AFASE refusée", duree="3 minutes",
+     intro="L'usager conteste un refus auprès du Président du Département ou du tribunal administratif : gardez-en la trace et appliquez la décision du recours.",
+     etapes=[
+         ("Enregistrer le recours", [fig('afase-recours', '01', "Sur l'AFASE refusée : « Enregistrer un recours ».")],
+          ["Ouvrez l'AFASE refusée : le cadre <b>Recours de l'usager</b> s'affiche.",
+           "Choisissez le type (<b>gracieux</b> : Président du Département ; <b>contentieux</b> : tribunal administratif), la date du recours et, si besoin, un commentaire.",
+           "Cliquez sur <span class=\"clic\">Enregistrer un recours</span> : le recours est « en cours »."], []),
+         ("Enregistrer l'issue", [fig('afase-recours', '02', "L'issue et sa date."),
+                                 fig('afase-recours', '03', "Refus réformé : la nouvelle AFASE est déposée.")],
+          ["Quand la décision sur le recours est connue : choisissez l'issue (<b>refus réformé</b>, <b>refus confirmé</b>, <b>désistement</b>) et sa date, puis <b>Enregistrer l'issue</b>.",
+           "<b>Refus réformé</b> : CID crée une <b>nouvelle AFASE</b> reprise de la demande refusée (enfants, budget, évaluation, pièces), déposée pour décision. Le premier refus et son courrier ne changent pas.",
+           "Décidez la nouvelle AFASE comme d'habitude (<a href=\"afase-decider.html\">Décider une AFASE</a>) : le délai de 2 mois ne s'applique pas, et le courrier mentionne le recours.",
+           "Vous pouvez joindre la <b>décision sur le recours</b> (pièce facultative) à la nouvelle AFASE, ou à l'AFASE refusée si le refus est confirmé."], []),
+         ("Suivre les recours", [fig('afase-recours', '04', "Statistiques : recours contre les refus d'AFASE.")],
+          ["La page des <b>statistiques des aides</b> présente les recours de l'année : nombre, gracieux ou contentieux, taux de recours, refus réformés, délai moyen et la liste des dossiers (aussi dans l'export Excel)."], []),
+     ],
+     savoir=["Le recours se traite hors de CID : CID n'en garde que la trace, pour le suivi et la transparence en cas de contrôle."],
+     ensuite=['afase-decider', 'afase-transmettre'])
+
+page('afase-inspecteur', qui="Inspecteur enfance-famille", ou="Menu « AFASE (inspecteur) »", duree="5 minutes",
+     intro="Quand un enfant de la fratrie est confié à l'ASE ou suivi en assistance éducative, la décision sur l'AFASE vous revient.",
+     etapes=[
+         ("Ouvrir les AFASE à décider", [fig('afase-inspecteur', '01', "Les AFASE des familles avec une mesure ASE.")],
+          ["Menu <span class=\"clic\">AFASE (inspecteur)</span> : les demandes à décider, toutes MDS confondues, puis celles déjà traitées.",
+           "Vous recevez aussi un message CID à chaque dépôt."], []),
+         ("Décider", [fig('afase-inspecteur', '02', "La demande : bouton « Décider ».")],
+          ["Ouvrez la demande et cliquez sur <span class=\"clic\">Décider</span> : la page est celle du cadre (<a href=\"afase-decider.html\">Décider une AFASE</a>).",
+           "Après un accord, vous pouvez aussi transmettre le dossier à l'UAGAF (<a href=\"afase-transmettre.html\">Notifier et transmettre</a>)."], []),
+     ],
+     savoir=["Le cadre de la MDS ne peut pas décider ces demandes ; il les voit sans pouvoir les trancher.",
+             "Une mesure de TISF seule ne suffit pas : la décision reste à la MDS."],
+     ensuite=['afase-decider', 'afase-transmettre'])
+
 # =============================================================================
 # Sommaire
-fiches = ''.join(lien(s) for s in ORDRE[1:])
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["Demander une AFASE", "Décider une AFASE (cadre)", "Recours contre un refus", "Chèques service et régie",
+                  ["Chèques service (CAP)", "Régie d'urgence",
                    "Saisir une IP (CRIP)", "Évaluer une IP (binôme)", "Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
@@ -256,8 +446,7 @@ open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
   <p>Les fiches pas à pas pour travailler avec CID au quotidien. Une fiche = une fonction ; chaque fiche renvoie aux fiches voisines.</p>
 </div></header>
 <main>
-  <div class="bloc"><h2>Premiers pas</h2><div class="liens">{lien('connexion')}</div></div>
-  <div class="bloc"><h2>Bénéficiaires</h2><div class="liens">{fiches}</div></div>
+  {''.join(f'<div class="bloc"><h2>{html.escape(r)}</h2><div class="liens">' + ''.join(lien(f) for f in fiches) + '</div></div>' for r, fiches in RUBRIQUES)}
   <div class="bloc"><h2>Prochainement</h2><div class="liens">{a_venir}</div></div>
   <div class="bloc"><h2>Aide-mémoire</h2><p>Pour les habitués : chaque procédure résumée en une page, sans images (fichiers Markdown du dossier <code>memo/</code>).</p>
     <ul>''' + ''.join(f'<li><a href="memo/{s}.md">{html.escape(TITRES[s][0])}</a></li>' for s in ORDRE) + '''</ul></div>
