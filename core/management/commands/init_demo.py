@@ -226,7 +226,6 @@ class Command(BaseCommand):
                lien="MERE", mesure="", avis="FAVORABLE", budget=None, nb=None, enfants_a_naitre=0, tiers_paiement=False):
         from AidFi.models import DemandeAFASE
         from AidFi.models.m_afase import BudgetAFASE, EnfantAFASE, EvaluationSocialeAFASE, nb_personnes_au_foyer
-        from AidFi.models.m_generique import PieceJustificative
         from AidFi.services import budget_afase
         b = self.b[code]
         ts = ts or (self.ts2 if b.mds_id == self.mds2.pk else self.ts)
@@ -262,8 +261,8 @@ class Command(BaseCommand):
                     analyse_problematique="Dépenses imprévues ce mois-ci (données fictives).",
                     justification_demande="Aide ponctuelle pour l'alimentation des enfants (fictif).",
                     plan_action="Rendez-vous budget dans un mois ; dossier CAF à mettre à jour.", adhesion_famille="FORTE")
-            for t in ("IDENTITE", "LIVRET_FAMILLE", "RIB", "DOMICILE"):
-                PieceJustificative.objects.create(demande=d, type_piece=t, obligatoire=True)
+            # Pas de pièces : elles seraient sans fichier (« document supprimé »), et des fichiers fictifs
+            # iraient remplir le stockage GED réel (pCloud sur Render). Les pièces exigées restent à joindre.
         if statut not in ("BROUILLON",):
             d.statut = "EN_INSTRUCTION"
             d.save(update_fields=["statut"])

@@ -123,24 +123,19 @@
             {% endif %}
         </div>
 
-        <!-- Boutons de validation SIMPLES (sans JavaScript) -->
-        <div class="flex gap-4 mt-6">
-            <button type="submit" name="action" value="ACCORD"
-                    class="bg-green-600 text-white px-6 py-3 rounded font-bold hover:bg-green-700">
-                ✅ Valider l'accord
+        <!-- Validation : un seul bouton, dont le libellé suit le type de décision coché
+             (c'est le type coché qui est enregistré). -->
+        <div class="flex flex-wrap gap-4 mt-6 items-center">
+            <button type="submit" name="action" value="DECIDER" id="bouton-decision"
+                    class="bg-green-600 text-white px-6 py-3 rounded font-bold hover:opacity-90">
+                ✅ Enregistrer l'accord
             </button>
-
-            <button type="submit" name="action" value="REFUS"
-                    class="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700">
-                ❌ Valider le refus
-            </button>
-
-            <button type="submit" name="action" value="RETOUR_INSTRUCTION"
-                    class="bg-yellow-500 text-white px-6 py-3 rounded font-bold hover:bg-yellow-600">
-                🔁 Ajourner (retour instruction)
+            <button type="submit" name="action" value="RETOUR_INSTRUCTION" formnovalidate
+                    class="bg-white border border-gray-300 text-gray-700 px-4 py-3 rounded hover:bg-gray-50 text-sm"
+                    title="Remet la demande en instruction, sans décision ni délai d'ajournement">
+                ↩️ Renvoyer au travailleur social sans décision
             </button>
         </div>
-
         <div>
             <a href="{% url 'AidFi:afase_detail' demande.id %}"
                class="inline-block mt-4 text-gray-600 underline">
@@ -172,7 +167,18 @@
         if (garde) garde.selected = true; else if (valeur) motifSelect.value = '';
     }
 
+    const boutonDecision = document.getElementById('bouton-decision');
+    function libelleBouton() {
+        const choix = typeRefus.checked ? ['❌ Enregistrer le refus', 'bg-red-600']
+                    : typeAjo.checked ? ['⏳ Enregistrer l\'ajournement (15 jours pour compléter)', 'bg-yellow-500']
+                    : ['✅ Enregistrer l\'accord', 'bg-green-600'];
+        boutonDecision.textContent = choix[0];
+        boutonDecision.classList.remove('bg-green-600', 'bg-red-600', 'bg-yellow-500');
+        boutonDecision.classList.add(choix[1]);
+    }
+
     function updateVisibility() {
+        libelleBouton();
         if (typeAccord.checked) {
             motifLabel.innerHTML = '🎯 Motif d\'accord :';
             filtrerMotifs('Accord');
