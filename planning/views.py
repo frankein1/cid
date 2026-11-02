@@ -213,7 +213,7 @@ def reserver_rdv(request, creneau_id, beneficiaire_id=None):
                     target_beneficiaire.referent_mds = rdv.agent
                     target_beneficiaire.save(update_fields=['referent_mds'])
                 
-                messages.success(request, f"Rendez-vous confirmé pour le {creneau.date}")
+                messages.success(request, f"Rendez-vous confirmé pour le {creneau.date:%d/%m/%Y} à {creneau.heure_debut:%H:%M}")
                 return redirect('beneficiaire:detail_beneficiaire', code_interne=target_beneficiaire.code_interne)
         else:
             messages.error(request, "Erreur dans le formulaire. Veuillez vérifier les champs.")

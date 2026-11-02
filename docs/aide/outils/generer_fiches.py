@@ -14,7 +14,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'afase-demander', 'afase-ajournement', 'afase-decider', 'afase-transmettre', 'afase-uagaf',
          'afase-recours', 'afase-inspecteur',
          'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider',
-         'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']
+         'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
+         'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -22,7 +23,8 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                             'afase-uagaf', 'afase-recours', 'afase-inspecteur']),
              ("Chèques service (CAP) et régie d'urgence", ['cap-demander', 'cap-decider', 'cap-coffre',
                                                            'regie-demander', 'regie-decider']),
-             ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine'])]
+             ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
+             ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue'])]
 
 
 def rubrique(slug):
@@ -53,6 +55,10 @@ TITRES = {
     'ip-synthese': ("Synthèse et visas du rapport", "Cadre et binôme"),
     'ip-inspecteur': ("Avis de l'inspecteur sur une IP", "Inspecteur enfance-famille"),
     'ip-saisine': ("Saisine du procureur", "Binôme, cadre, inspecteur"),
+    'messagerie': ("Envoyer et lire un message", "La messagerie interne de CID"),
+    'ged-deposer': ("Déposer et consulter un document", "La GED du bénéficiaire"),
+    'rdv-prendre': ("Prendre un rendez-vous", "Permanence, VAD ou autre rendez-vous"),
+    'rdv-issue': ("Noter l'issue d'un rendez-vous", "Venu, absent, annulé, reporté…"),
 }
 
 
@@ -662,10 +668,90 @@ page('ip-saisine', qui="Binôme, cadre, inspecteur", ou="IP, cadre « Saisine du
      savoir=["Chaque étape est datée et tracée dans l'IP (journal et messages aux personnes concernées)."],
      ensuite=['ip-evaluer', 'ip-inspecteur'])
 
+
+# =============================================================================
+# AU QUOTIDIEN
+page('messagerie', qui="Tous les agents", ou="Menu « Messagerie », ou bouton « Message » d'une fiche usager", duree="2 minutes",
+     intro="La messagerie de CID relie les agents entre eux ; un message peut concerner un usager et porter des documents de sa GED.",
+     etapes=[
+         ("Écrire depuis la fiche usager", [fig('messagerie', '01', "Le bouton « Message » de la fiche usager."),
+                                            fig('messagerie', '02', "Destinataire, objet, motif, priorité, message.")],
+          ["Sur la fiche de l'usager, cliquez sur <span class=\"clic\">Message</span> : le message est rattaché à cet usager.",
+           "Choisissez le <b>destinataire</b> (et éventuellement une copie), l'<b>objet</b>, le <b>motif</b> et la <b>priorité</b>, puis écrivez le message.",
+           "Depuis le menu <b>Messagerie → Nouveau message</b>, vous pouvez aussi écrire sans usager, ou rechercher l'usager concerné."], []),
+         ("Joindre des documents", [fig('messagerie', '03', "Documents de la GED à joindre, ou nouveaux fichiers.")],
+          ["Cochez les <b>documents de la GED</b> de l'usager à joindre.",
+           "<b>Ajouter de nouveaux fichiers</b> : ils sont classés automatiquement dans la GED de l'usager, dans la catégorie choisie.",
+           "Cliquez sur <span class=\"clic\">Envoyer</span>."], []),
+         ("Lire et répondre", [fig('messagerie', '04', "La boîte de réception : le nouveau message en tête."),
+                              fig('messagerie', '05', "Le message, ses pièces jointes, « Répondre »."),
+                              fig('messagerie', '06', "La réponse.")],
+          ["Le nombre de messages non lus s'affiche sur le menu <b>Messagerie</b>.",
+           "Ouvrez le message : les pièces jointes se téléchargent d'un clic ; un lien mène au dossier concerné (aide, IP…).",
+           "<span class=\"clic\">Répondre</span> : écrivez la réponse (documents possibles), puis envoyez."], []),
+         ("Trier ses messages", [fig('messagerie', '07', "Filtres : tous, non lus, urgents ; onglet Envoyés.")],
+          ["Filtres <b>Tous</b>, <b>Non lus</b>, <b>Urgents</b> ; l'onglet <b>Envoyés</b> garde vos messages."], []),
+     ],
+     savoir=["Les circuits de CID (aides, IP…) envoient aussi des messages automatiques : décision à prendre, dossier transmis, rappel de délai."],
+     ensuite=['ged-deposer', 'rdv-prendre'])
+
+page('ged-deposer', qui="Agents de la MDS", ou="Fiche usager → bouton « Document »", duree="2 minutes",
+     intro="Archivez les pièces d'un usager dans sa GED, avec un type et un niveau de confidentialité.",
+     etapes=[
+         ("Déposer un document", [fig('ged-deposer', '01', "Le bouton « Document » de la fiche usager."),
+                                 fig('ged-deposer', '02', "Fichier, titre, type, confidentialité."),
+                                 fig('ged-deposer', '03', "Document archivé.")],
+          ["Sur la fiche de l'usager, cliquez sur <span class=\"clic\">Document</span>.",
+           "Choisissez le <b>fichier</b>, donnez un <b>titre</b> et le <b>type de document</b> (une date d'expiration si besoin).",
+           "<b>Confidentialité</b> : Public DITAS, MDS uniquement, ou Nominatif (agents autorisés).",
+           "Cliquez sur <span class=\"clic\">Archiver</span>."],
+          [("attention", "Un document médical ne s'enregistre pas dans CID : il se transmet sous pli scellé au médecin du service.")]),
+         ("Consulter les documents", [fig('ged-deposer', '04', "Les derniers documents sur la fiche, « Voir tout »."),
+                                     fig('ged-deposer', '05', "La GED de l'usager, classée par catégorie."),
+                                     fig('ged-deposer', '06', "Le détail d'un document, « Télécharger ».")],
+          ["La fiche usager affiche les derniers documents ; <b>Voir tout</b> ouvre la GED complète, classée par catégorie.",
+           "Ouvrez un document pour le <b>télécharger</b>, le <b>modifier</b> (titre, type…) ou le supprimer."], []),
+     ],
+     savoir=["Les pièces déposées dans une demande d'aide ou jointes à un message arrivent aussi dans la GED de l'usager."],
+     ensuite=['messagerie'])
+
+page('rdv-prendre', qui="Agents de la MDS", ou="Fiche usager → « Prendre rendez-vous »", duree="2 minutes",
+     intro="Réservez un créneau de permanence pour l'usager, ou notez un autre rendez-vous (VAD, hors permanence…).",
+     etapes=[
+         ("Choisir un créneau de permanence", [fig('rdv-prendre', '01', "« Prendre rendez-vous » sur la fiche usager."),
+                                              fig('rdv-prendre', '02', "Les créneaux libres des 15 prochains jours.")],
+          ["Sur la fiche de l'usager, cliquez sur <span class=\"clic\">Prendre rendez-vous</span>.",
+           "CID liste les créneaux libres des permanences de sa MDS (de J+2 à J+17), ceux du référent en premier. Cliquez sur <span class=\"clic\">Réserver</span>."], []),
+         ("Confirmer la réservation", [fig('rdv-prendre', '03', "Domaine, 1er rendez-vous, description, durée."),
+                                      fig('rdv-prendre', '04', "Rendez-vous confirmé.")],
+          ["Indiquez le <b>domaine</b>, cochez <b>1er rendez-vous</b> s'il y a lieu, décrivez l'objet du rendez-vous (co-intervenants et accompagnant possibles).",
+           "<span class=\"clic\">Confirmer la réservation</span> : le rendez-vous apparaît dans l'agenda."], []),
+         ("Noter un autre rendez-vous", [fig('rdv-prendre', '05', "VAD, hors permanence, partenaire…")],
+          ["Pour une <b>VAD</b> ou un rendez-vous hors permanence : lien <b>noter un autre rendez-vous</b> (ou le bouton « 🏠 VAD, hors permanence… » de la fiche).",
+           "Motif, date et heures, agent, lieu, co-intervenants et partenaires invités, puis <b>Enregistrer le rendez-vous</b>.",
+           "Un partenaire invité peut recevoir une invitation (fichier agenda ou courriel)."], []),
+     ],
+     savoir=["Dans l'agenda, un collègue ne voit que « Occupé » : jamais le motif ni le nom de l'usager."],
+     ensuite=['rdv-issue'])
+
+page('rdv-issue', qui="Agent du rendez-vous, cadre", ou="Menu « Planning » → Calendrier", duree="1 minute",
+     intro="Après le rendez-vous, notez ce qui s'est passé : ces issues alimentent les statistiques de la MDS.",
+     etapes=[
+         ("Ouvrir le rendez-vous", [fig('rdv-issue', '01', "L'agenda de la semaine.")],
+          ["Ouvrez le <b>Calendrier</b> (flèches pour changer de semaine) et cliquez sur le rendez-vous."], []),
+         ("Choisir l'issue", [fig('rdv-issue', '02', "Issue du rendez-vous."),
+                             fig('rdv-issue', '03', "Issue enregistrée.")],
+          ["Choisissez l'<b>issue</b> : réalisé, usager absent, venu non reçu, annulé ou reporté (par l'usager ou la MDS), VAD usager absent…",
+           "Cochez <b>1er rendez-vous</b> si besoin, puis <span class=\"clic\">Enregistrer</span>.",
+           "<b>Libérer le créneau</b> rend une permanence réservée de nouveau disponible."], []),
+     ],
+     savoir=["Seuls l'agent du rendez-vous et le cadre peuvent en noter l'issue."],
+     ensuite=['rdv-prendre'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["Messagerie", "Documents (GED)", "Prendre un rendez-vous"])
+                  ["RSA – CER", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

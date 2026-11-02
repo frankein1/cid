@@ -54,9 +54,9 @@
         </div>
 
         <!-- Liste des messages -->
-        {% if messages %}
+        {% if liste_messages %}
         <div class="space-y-2">
-            {% for msg in messages %}
+            {% for msg in liste_messages %}
             <a href="{% url 'messagerie:voir_message' msg.id %}" 
                class="block p-4 border rounded-lg hover:bg-gray-50 transition {% if not msg.statuts_lecture.first.lu %}bg-blue-50 border-blue-200{% else %}bg-white border-gray-200{% endif %}">
                 <div class="flex items-start justify-between">

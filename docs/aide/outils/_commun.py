@@ -7,7 +7,7 @@
 """
 Outils communs aux scripts de captures des fiches d'aide (Playwright, hors ligne).
 Prérequis : base de démonstration (init_demo), runserver sur 127.0.0.1:8055, et dans TW une compilation
-Tailwind locale (out.css) avec node_modules/@fortawesome/fontawesome-free.
+Tailwind locale (out.css) avec node_modules/@fortawesome/fontawesome-free (et fullcalendar@5.11.3, sweetalert2@11).
 """
 import os
 from pathlib import Path
@@ -34,6 +34,12 @@ def _route(r):
         return r.fulfill(path=str(FA / "webfonts" / u.split("/")[-1].split("?")[0]))
     if "127.0.0.1" in u or "localhost" in u:
         return r.continue_()
+    if "cdn.jsdelivr.net/npm/" in u:  # calendrier, fenêtres : copies locales (npm i fullcalendar@5.11.3 sweetalert2@11)
+        paquet, _, chemin = u.split("/npm/", 1)[1].split("?")[0].partition("/")
+        paquet = paquet.rsplit("@", 1)[0]
+        fichier = TW / "node_modules" / paquet / (chemin or "dist/sweetalert2.all.min.js")
+        if fichier.exists():
+            return r.fulfill(path=str(fichier))
     return r.abort()
 
 

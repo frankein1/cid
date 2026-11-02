@@ -14,7 +14,7 @@
                     Messages envoyés
                 </h1>
                 <p class="text-gray-500 text-sm mt-1">
-                    {{ messages.count }} message{{ messages.count|pluralize }}
+                    {{ liste_messages.count }} message{{ liste_messages.count|pluralize }}
                 </p>
             </div>
             <a href="{% url 'messagerie:nouveau_message' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center">
@@ -38,9 +38,9 @@
         </div>
 
         <!-- Liste des messages -->
-        {% if messages %}
+        {% if liste_messages %}
         <div class="space-y-2">
-            {% for msg in messages %}
+            {% for msg in liste_messages %}
             <a href="{% url 'messagerie:voir_message' msg.id %}" 
                class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
                 <div class="flex items-start justify-between">
