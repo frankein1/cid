@@ -66,3 +66,23 @@ def cleanup_seaweedfs_on_delete(sender, instance, **kwargs):
             f"ERREUR PURGE SeaweedFS fid={instance.seaweedfs_id} : {e}"
         )
 
+
+
+@receiver(post_delete, sender=DocumentGED)
+def cleanup_fichier_v1_on_delete(sender, instance, **kwargs):
+    """
+    Documents créés par create_from_buffer (pièces d'aides, pièces jointes de la messagerie, courriers…) :
+    leur fichier n'est référencé que par DocumentGED.seaweedfs_id, sans DocumentVersion. Sans ce nettoyage,
+    supprimer le document laissait le fichier dans le stockage (pCloud sur Render).
+    Les fichiers des versions sont purgés par cleanup_seaweedfs_on_delete (versions supprimées en cascade).
+    """
+    fid = instance.seaweedfs_id
+    if not fid or DocumentVersion.objects.filter(seaweedfs_id=fid).exists():
+        return
+    try:
+        storage = SeaweedFSStorage()
+        if storage.exists(fid):
+            storage.delete(fid)
+            logger.info(f"Purge du fichier du document supprimé OK fid={fid}")
+    except Exception as e:
+        logger.error(f"ERREUR purge du fichier du document supprimé fid={fid} : {e}")
