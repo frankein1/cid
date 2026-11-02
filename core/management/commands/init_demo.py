@@ -144,6 +144,15 @@ class Command(BaseCommand):
         orphelins = [m.pk for m in Message.objects.filter(beneficiaire__in=benefs, content_type__in=types_aides + [type_ip])
                      if not m.content_type.model_class().objects.filter(pk=m.object_id).exists()]
         Message.objects.filter(pk__in=orphelins).delete()
+        # Documents GED des usagers fictifs et de leurs IP (déposés pendant les essais) : la suppression d'un
+        # document supprime ses versions, et chaque version son fichier dans le stockage (pCloud sur Render).
+        from ged.models import DocumentGED
+        type_benef = ContentType.objects.get_for_model(Beneficiaire)
+        docs = DocumentGED.objects.filter(content_type=type_benef, object_id__in=list(benefs.values_list("pk", flat=True))) | \
+            DocumentGED.objects.filter(content_type=type_ip, object_id__in=list(ips.values_list("pk", flat=True)))
+        nb_docs = docs.count()
+        for doc in docs:
+            doc.delete()
         RecoursAFASE.objects.filter(demande__beneficiaire__in=benefs).delete()
         DemandeAide.objects.filter(pk__in=aides).delete()
         ips.delete()
@@ -152,7 +161,7 @@ class Command(BaseCommand):
         from AidFi.models.m_cap import ReceptionCAP, TitreCAP
         TitreCAP.objects.filter(reception__reference="BORD-DEMO").delete()
         ReceptionCAP.objects.filter(reference="BORD-DEMO").delete()
-        self.stdout.write(f"🧹 Dossiers de démonstration supprimés ({len(aides)} demandes d'aide).")
+        self.stdout.write(f"🧹 Dossiers de démonstration supprimés ({len(aides)} demandes d'aide, {nb_docs} documents).")
 
     # ------------------------------------------------------------------ comptes et MDS
     def u(self, username):

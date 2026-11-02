@@ -25,6 +25,17 @@ except ImportError:
     UserMDSProfile = None
 
 
+def _participe(message, user):
+    """Seuls l'expéditeur, le destinataire et la personne en copie accèdent à un message."""
+    return user in (message.expediteur, message.destinataire, message.copie)
+
+
+def _documents_autorises(ids, user):
+    """Pièces jointes choisies parmi la GED : seulement les documents que l'expéditeur a le droit de voir."""
+    return [d for d in DocumentGED.objects.filter(pk__in=[i for i in ids if str(i).isdigit()])
+            if d.peut_etre_vu_par(user)]
+
+
 @login_required
 def boite_reception(request):
     """Boîte de réception - messages reçus"""
@@ -96,7 +107,7 @@ def voir_message(request, message_id):
     )
     
     # Vérifier que l'utilisateur a accès
-    if message.expediteur != request.user and message.destinataire != request.user and message.copie != request.user:
+    if not _participe(message, request.user):
         django_messages.error(request, "Vous n'avez pas accès à ce message")
         return redirect('messagerie:boite_reception')
     
@@ -160,6 +171,9 @@ def nouveau_message(request, beneficiaire_id=None):
             
             if beneficiaire_id_post:
                 beneficiaire_obj = Beneficiaire.objects.get(pk=beneficiaire_id_post)
+                if not beneficiaire_obj.peut_etre_vu_par(request.user):
+                    django_messages.error(request, "Accès refusé à ce bénéficiaire.")
+                    return redirect('messagerie:nouveau_message')
             
             # Créer le message
             nouveau_msg = Message.objects.create(
@@ -176,7 +190,7 @@ def nouveau_message(request, beneficiaire_id=None):
             
             # Attacher les documents GED existants
             if docs_ged_ids:
-                nouveau_msg.pieces_jointes.set(docs_ged_ids)
+                nouveau_msg.pieces_jointes.set(_documents_autorises(docs_ged_ids, request.user))
             
             # Créer des documents GED pour les nouveaux fichiers
             if fichiers_nouveaux and beneficiaire_obj:
@@ -303,7 +317,10 @@ def nouveau_message(request, beneficiaire_id=None):
 def repondre_message(request, message_id):
     """Répondre à un message"""
     message_original = get_object_or_404(Message, id=message_id)
-    
+    if not _participe(message_original, request.user):
+        django_messages.error(request, "Vous n'avez pas accès à ce message")
+        return redirect('messagerie:boite_reception')
+
     if request.method == 'POST':
         contenu = request.POST.get('contenu')
         docs_ged_ids = request.POST.getlist('documents_ged')
@@ -329,7 +346,7 @@ def repondre_message(request, message_id):
         
         # Documents
         if docs_ged_ids:
-            reponse.pieces_jointes.set(docs_ged_ids)
+            reponse.pieces_jointes.set(_documents_autorises(docs_ged_ids, request.user))
         
         if fichiers_nouveaux:
             if message_original.beneficiaire:
@@ -445,8 +462,10 @@ def rechercher_beneficiaire(request):
         Q(nir__icontains=query),
         est_decede=False,
         date_sortie__isnull=True
-    ).order_by('nom', 'prenom')[:20]
-    
+    ).select_related('mds').order_by('nom', 'prenom')[:200]
+    # Seulement les usagers que l'agent peut voir (sa MDS) : la recherche portait sur tout le département
+    beneficiaires = [b for b in beneficiaires if b.peut_etre_vu_par(request.user)][:20]
+
     results = [
         {
             'id': b.id,
