@@ -111,7 +111,7 @@ Les textes de refus des codes 1 à 3 sont remplis avec des **textes d'exemple**,
 
 ## Planning
 
-Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`asmith`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
+Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`asmith`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. Une semaine plus tard, même permanence avec 5 créneaux libres : de quoi tester « Prendre rendez-vous » depuis une fiche usager (CID propose les créneaux de J+2 à J+17). La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
 
 ## Parcours de test conseillés
 

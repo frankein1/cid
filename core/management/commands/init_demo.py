@@ -139,6 +139,11 @@ class Command(BaseCommand):
         Message.objects.filter(content_type__in=types_aides, object_id__in=aides).delete()
         Message.objects.filter(content_type=ContentType.objects.get_for_model(InformationPreoccupante),
                                object_id__in=list(ips.values_list("pk", flat=True))).delete()
+        # Anciens messages des usagers fictifs dont le dossier n'existe déjà plus (remises à zéro antérieures)
+        type_ip = ContentType.objects.get_for_model(InformationPreoccupante)
+        orphelins = [m.pk for m in Message.objects.filter(beneficiaire__in=benefs, content_type__in=types_aides + [type_ip])
+                     if not m.content_type.model_class().objects.filter(pk=m.object_id).exists()]
+        Message.objects.filter(pk__in=orphelins).delete()
         RecoursAFASE.objects.filter(demande__beneficiaire__in=benefs).delete()
         DemandeAide.objects.filter(pk__in=aides).delete()
         ips.delete()
@@ -459,4 +464,12 @@ class Command(BaseCommand):
                     "nature": "PERMANENCE", "domaine": "SOCIAL", "notes_internes": "[démo] rendez-vous fictif",
                     "cree_par": self.ts, "reserve_par": self.u("MarioB") if code else None,
                     "date_reservation": timezone.now() if code else None})
-        self.stdout.write(f"✅ Planning : permanence d'Agent Social 1 le {jour:%d/%m/%Y}")
+        # Une semaine plus tard : créneaux libres pour « Prendre rendez-vous » (recherche de J+2 à J+17)
+        semaine = jour + timedelta(days=7)
+        for h in (9, 10, 11, 14, 15):
+            CreneauRdv.objects.get_or_create(
+                date=semaine, heure_debut=time(h), agent=self.ts, defaults={
+                    "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
+                    "statut": "DISPONIBLE", "type_rdv": "PERMANENCE", "nature": "PERMANENCE", "domaine": "SOCIAL",
+                    "notes_internes": "[démo] créneau fictif", "cree_par": self.ts})
+        self.stdout.write(f"✅ Planning : permanences d'Agent Social 1 le {jour:%d/%m/%Y} et le {semaine:%d/%m/%Y}")

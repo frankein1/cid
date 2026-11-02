@@ -62,7 +62,7 @@ def boite_reception(request):
     ).count()
     
     context = {
-        'messages': messages_recus,
+        'liste_messages': messages_recus,
         'filtre': filtre,
         'nb_total': nb_total,
         'nb_non_lus': nb_non_lus,
@@ -82,7 +82,7 @@ def messages_envoyes(request):
     ).order_by('-created_at')
     
     context = {
-        'messages': messages_envoyes,
+        'liste_messages': messages_envoyes,
     }
     return render(request, 'messagerie/messages_envoyes.html', context)
 
