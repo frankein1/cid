@@ -36,6 +36,9 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 | `ts2` | Agent Social MDS 2 | Travailleur social | MDS TEST 02 | Idem côté travailleur social |
 | `uagaf1` | Agent UAGAF 1 | Contrôle des AFASE (UAGAF) | (départemental) | Contrôler un dossier, le renvoyer, enregistrer le paiement |
 | `regie1` | Régisseur Central 1 | Régisseur central | (départemental) | Chèques service remis par la paierie, régies d'urgence |
+| `pi_admin` | Agent Pôle insertion | Pôle insertion – administratif | Pôle insertion de démonstration (MDS TEST 01 et 02) | Référentiel des actions d'insertion : saisie, import et export CSV |
+| `pi_cadre` | Cadre Pôle insertion | Pôle insertion – cadre | Pôle insertion de démonstration | Référentiel des actions ; plus tard : commissions de validation et de réorientation |
+| `pi_medecin` | Médecin Pôle insertion | Pôle insertion – médecin | Pôle insertion de démonstration | Consultation du référentiel ; plus tard : contrats santé (certificat reçu, avis) |
 
 Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mot de passe de la variable `ADMIN_PASSWORD`.
 
@@ -109,6 +112,14 @@ Les textes de refus des codes 1 à 3 sont remplis avec des **textes d'exemple**,
 | CLASSIC Marc | Transmise à la MDS (init2) | `kchef` | Désigner le binôme (proposition de CID) |
 | PEREZ Laura | En évaluation : binôme Agent Social 1 + PMI, **convocation des parents dans 6 jours** | `asmith` ou `pmi1` | Courriers de convocation, présences, actions, rédaction du rapport |
 | AUBERT Aurélie | **En synthèse** : rapport soumis | `kchef`, `asmith` | Visas du cadre et du binôme, transmission à l'inspecteur (`pief1`) |
+
+## RSA – Insertion
+
+Menu **Accompagnement → RSA – Insertion**. Un **pôle insertion de démonstration** (`PI-DEMO`) couvre MDS TEST 01 et 02 ; ses trois agents (`pi_admin`, `pi_cadre`, `pi_medecin`) n'ont accès qu'à ce module.
+
+Cinq actions fictives : trois départementales (accompagnement global, plateforme mobilité limitée au pôle de démonstration, parcours santé) et deux locales de MDS TEST 01 (atelier insertion des femmes, atelier bricolage et logement). Les 16 types d'actions sont créés par `python manage.py init_insertion` (lancé par `install`).
+
+À tester : `kchef` crée une action locale (pas d'action départementale) ; `asmith` consulte seulement ; `pi_admin` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les types et les actions départementales.
 
 ## Planning
 

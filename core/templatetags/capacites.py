@@ -51,3 +51,12 @@ def acces_ip(user):
     if not user or not user.is_authenticated:
         return False
     return user.is_superuser or any(user.a_la_capacite(c) for c in ('ip_crip', 'ip_pief', 'ip_piloter', 'ip_evaluer'))
+
+
+@register.filter
+def acces_insertion(user):
+    """Module RSA – Insertion : agents des MDS, et agents des pôles insertion (qui n'ont accès qu'à ce module)."""
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    from insertion.acces import peut_voir_module
+    return peut_voir_module(user)

@@ -25,6 +25,7 @@ class Command(BaseCommand):
             'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi',
             'peut_consulter_tous_usagers',
             'ip_piloter',
+            'rsa_actions_locales',
         ]
 
         PROFILS = [
@@ -90,6 +91,13 @@ class Command(BaseCommand):
              "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
             {"code": "MDS_PMI_MATERNELLE", "nom": "Protection maternelle (PMI)",
              "capacites": ['peut_voir', 'peut_lister', 'peut_creer', 'peut_modifier', 'ged_televerser', 'ip_evaluer']},
+            # ---------------- RSA – INSERTION (pôles insertion : module RSA uniquement) ----------------
+            {"code": "POLE_INSERTION_ADMINISTRATIF", "nom": "Pôle insertion – administratif",
+             "capacites": ['rsa_pole_admin', 'rsa_referentiel']},
+            {"code": "POLE_INSERTION_CADRE", "nom": "Pôle insertion – cadre",
+             "capacites": ['rsa_pole_cadre', 'rsa_referentiel', 'peut_voir_stats']},
+            {"code": "POLE_INSERTION_MEDECIN", "nom": "Pôle insertion – médecin",
+             "capacites": ['rsa_pole_medecin']},
             {"code": "SERVICE_CONTROLE_AFASE", "nom": "UAGAF (unité administrative de gestion des aides financières)", "capacites": ['afase_controle']},
 
             {

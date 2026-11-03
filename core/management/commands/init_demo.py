@@ -17,6 +17,7 @@ de création : une demande « à décider sous 10 jours » le devient réellemen
 Les montants sont des exemples : ils ne reprennent pas la note de service.
 """
 import os
+from io import StringIO
 from datetime import time, timedelta
 from decimal import Decimal
 
@@ -36,6 +37,23 @@ COMPTES = [
     ("ts2", "Agent Social", "MDS 2", "MDS_AGENTS_SOCIAUX", "MDSTEST2"),
     ("uagaf1", "Agent", "UAGAF 1", "SERVICE_CONTROLE_AFASE", None),
     ("regie1", "Régisseur", "Central 1", "REGISSEUR_CENTRAL", None),
+    ("pi_admin", "Agent", "Pôle insertion", "POLE_INSERTION_ADMINISTRATIF", None),
+    ("pi_cadre", "Cadre", "Pôle insertion", "POLE_INSERTION_CADRE", None),
+    ("pi_medecin", "Médecin", "Pôle insertion", "POLE_INSERTION_MEDECIN", None),
+]
+
+# Actions d'insertion fictives : code, libellé, type, niveau, MDS locale (1 ou None), porteur, durée, comité
+ACTIONS_DEMO = [
+    ("DEMO-ACCGLO", "Accompagnement global (fictif)", "accompagnement-global", "DEPARTEMENTAL", None,
+     "Opérateur emploi (fictif)", "12 mois", "trimestriel"),
+    ("DEMO-MOBIL", "Plateforme mobilité (fictif)", "mobilite", "DEPARTEMENTAL", None,
+     "Association Mobilité Exemple (fictif)", "6 mois", ""),
+    ("DEMO-SANTE", "Parcours santé et insertion (fictif)", "sante", "DEPARTEMENTAL", None,
+     "Association Santé Exemple (fictif)", "12 mois, 1 rendez-vous par mois", "semestriel"),
+    ("DEMO-CISF", "Atelier insertion des femmes (fictif)", "remobilisation", "LOCAL", 1,
+     "Association de quartier (fictif)", "12 mois", "semestriel"),
+    ("DEMO-BRICO", "Atelier bricolage et logement (fictif)", "logement", "LOCAL", 1,
+     "Association de développement local (fictif)", "", ""),
 ]
 
 # Familles ajoutées : code, civilité, nom, prénom, âge, MDS (1 ou 2), code postal, ville, situation familiale
@@ -115,6 +133,7 @@ class Command(BaseCommand):
             self.cap_regie()
             self.ip()
             self.planning()
+            self.insertion()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
 
     # ------------------------------------------------------------------ remise à zéro
@@ -455,6 +474,27 @@ class Command(BaseCommand):
         ip_circuit.soumettre_rapport(ip, self.ts)
         self.stdout.write("✅ IP : reçue à la CRIP, en évaluation (convocation prévue), en synthèse "
                           "(+ l'IP d'init2 transmise à la MDS)")
+
+    # ------------------------------------------------------------------ RSA – insertion
+    def insertion(self):
+        from django.core.management import call_command
+        from insertion.models import ActionInsertion, PoleInsertion, TypeActionInsertion
+        call_command("init_insertion", stdout=StringIO())
+        pole, _ = PoleInsertion.objects.get_or_create(code="PI-DEMO", defaults={
+            "nom": "Pôle insertion de démonstration", "adresse": "1 rue de l'Exemple", "code_postal": "13000",
+            "ville": "Exemple", "telephone": "0400000000", "email": "pole.insertion@exemple.fr"})
+        pole.mds.add(self.mds1, self.mds2)
+        pole.membres.add(*[self.u(c) for c in ("pi_admin", "pi_cadre", "pi_medecin")])
+        for code, libelle, type_code, niveau, mds, porteur, duree, rythme in ACTIONS_DEMO:
+            a, _ = ActionInsertion.objects.update_or_create(code=code, mds=self.mds1 if mds else None, defaults={
+                "libelle": libelle, "type_action": TypeActionInsertion.objects.get(code=type_code), "niveau": niveau,
+                "porteur": porteur, "duree": duree, "comite_suivi": bool(rythme), "rythme_comite": rythme,
+                "public_vise": "Bénéficiaires du RSA (fictif)", "destinataires": "prescription@exemple.fr",
+                "pieces_a_joindre": "Attestation CAF de moins d'un mois", "aussi_logement": type_code == "logement",
+                "description": "Action fictive du jeu de démonstration."})
+            if niveau == "DEPARTEMENTAL" and code == "DEMO-MOBIL":
+                a.poles.set([pole])
+        self.stdout.write(f"✅ Insertion : pôle de démonstration (pi_admin, pi_cadre, pi_medecin), {len(ACTIONS_DEMO)} actions fictives")
 
     # ------------------------------------------------------------------ planning
     def planning(self):
