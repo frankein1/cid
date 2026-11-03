@@ -11,6 +11,7 @@ Toutes les personnes, adresses, numéros et montants ci-dessous sont **inventés
 | `python manage.py init_demo` | Tout le reste (voir ci-dessous). Lance `init2` si besoin. Ne fait rien si le jeu existe déjà. |
 | `python manage.py init_demo --reinitialiser` | Supprime les dossiers de démonstration (aides, IP, rendez-vous, messages liés, **documents de la GED des usagers fictifs**, fichiers compris) et les recrée avec des dates recalculées à partir d'aujourd'hui. Les comptes et les familles sont conservés. |
 | Menu **Planning → Administration → Données de démonstration** (super-administrateur) | Même effet que `init_demo --reinitialiser`, depuis CID : pour Render gratuit, qui n'a pas d'accès au shell. |
+| Menu **Planning → Administration → Remise à zéro totale** (super-administrateur, **démonstration seulement**) | Vide **toute** la base (comptes, MDS, usagers, dossiers, fichiers de la GED) puis relance `install`, `init2` et `init_demo`. Conserve les super-administrateurs et le paramétrage saisi en administration (référentiel AFASE, motifs de refus, types de danger, configuration). Inactive tant que la variable d'environnement `CID_REMISE_A_ZERO_TOTALE=1` n'est pas définie. **À supprimer avant la mise en service** (`core/remise_a_zero.py`, vue `remise_a_zero_totale`, gabarit, URL et liens du menu). |
 
 Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrage : le jeu est créé au premier démarrage, puis laissé tel quel.
 

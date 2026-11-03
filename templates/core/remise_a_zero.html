@@ -1,0 +1,56 @@
+<!-- templates/core/remise_a_zero.html -->
+{# DÉMONSTRATION UNIQUEMENT : à supprimer avant la mise en service (voir core/remise_a_zero.py) #}
+{% extends 'base.html' %}
+
+{% block title %}Remise à zéro totale{% endblock %}
+{% block extra_css %}{% if en_cours %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-red-700"><i class="fas fa-bomb mr-2"></i>Remise à zéro totale</h1>
+        <p class="text-gray-600 mt-1">Version de démonstration uniquement : vide toute la base, puis réinstalle CID avec les données fictives.
+            <a href="{% url 'core:demo_reinitialiser' %}" class="text-blue-700 hover:underline">Pour recréer seulement les dossiers fictifs : Données de démonstration</a>.</p>
+    </div>
+
+    {% if etat %}
+    <div class="rounded-lg shadow p-6 space-y-3 {% if etat.etat == 'en_cours' %}bg-blue-50 border border-blue-200{% elif etat.etat == 'termine' %}bg-green-50 border border-green-200{% else %}bg-red-50 border border-red-200{% endif %}">
+        <p class="font-semibold">
+            {% if en_cours %}<i class="fas fa-spinner fa-spin mr-1"></i>Remise à zéro en cours (lancée par {{ etat.par }}) : cette page se met à jour toute seule.
+            {% elif etat.etat == 'en_cours' %}<i class="fas fa-triangle-exclamation mr-1"></i>La dernière remise à zéro s'est interrompue (redémarrage du serveur ?) : vous pouvez la relancer.
+            {% elif etat.etat == 'termine' %}<i class="fas fa-circle-check mr-1"></i>Dernière remise à zéro terminée (lancée par {{ etat.par }}).
+            {% else %}<i class="fas fa-circle-xmark mr-1"></i>La dernière remise à zéro a échoué : détail ci-dessous.{% endif %}
+        </p>
+        <div class="bg-gray-900 text-gray-100 rounded p-4 text-xs overflow-x-auto"><pre class="whitespace-pre-wrap">{{ etat.journal }}</pre></div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-lg shadow p-6 space-y-3 text-sm text-gray-700">
+        <p><b>Tout est effacé</b> dans la base à laquelle CID est connecté : usagers, dossiers, aides, IP, messages, rendez-vous, comptes des agents, MDS, journaux… ainsi que <b>tous les fichiers de la GED</b> (effacés du stockage).</p>
+        <p><b>Puis CID est réinstallé</b> : installation de base, comptes et familles de test (<code>init2</code>), jeu de données fictives (<code>init_demo</code>, voir <code>docs/DONNEES_FICTIVES.md</code>).</p>
+        <p><b>Conservés :</b> les comptes super-administrateur (mêmes identifiants et mots de passe) et le paramétrage saisi en administration (référentiel AFASE, textes des motifs de refus, types de danger des IP, configuration générale).</p>
+        <p class="text-amber-800 bg-amber-50 border border-amber-200 rounded p-3"><i class="fas fa-right-from-bracket mr-1"></i>Tout le monde est déconnecté au début de l'opération. Reconnectez-vous avec votre identifiant habituel et revenez sur cette page pour suivre la fin (une à quelques minutes).</p>
+    </div>
+
+    {% if autorisee %}
+    <form method="post" class="bg-red-50 border-2 border-red-600 rounded-lg p-6 space-y-3"
+          onsubmit="return confirm('Effacer TOUTES les données de la base ? Cette opération est irréversible.');">
+        {% csrf_token %}
+        <label class="block text-sm font-medium text-red-900">Pour confirmer, tapez <b>{{ confirmation }}</b> :
+            <input type="text" name="confirmation" autocomplete="off" required {% if en_cours %}disabled{% endif %}
+                   class="mt-1 w-full px-3 py-2 border border-red-300 rounded-md">
+        </label>
+        <button type="submit" {% if en_cours %}disabled{% endif %}
+                class="px-6 py-3 rounded-md bg-red-700 text-white text-base font-bold hover:bg-red-800 disabled:opacity-50">
+            <i class="fas fa-bomb mr-2"></i>Tout effacer et réinstaller
+        </button>
+    </form>
+    {% else %}
+    <div class="bg-gray-100 border border-gray-300 rounded-lg p-6 text-sm text-gray-700 space-y-2">
+        <p><i class="fas fa-lock mr-1"></i><b>Désactivée sur ce serveur.</b> Pour l'activer (démonstration seulement), ajoutez la variable d'environnement
+            <code>CID_REMISE_A_ZERO_TOTALE</code> = <code>1</code> (sur Render : Environment), puis redéployez.</p>
+        <p>Retirez-la ensuite : sans elle, le bouton ne fait rien, même si cette page existe encore.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

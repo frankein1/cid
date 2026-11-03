@@ -113,6 +113,10 @@
         <a href="{% url 'core:demo_reinitialiser' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
             <i class="fas fa-flask mr-2 w-4"></i>Données de démonstration
         </a>
+        {# Démonstration uniquement : à supprimer avant la mise en service #}
+        <a href="{% url 'core:remise_a_zero_totale' %}" class="block px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700">
+            <i class="fas fa-bomb mr-2 w-4"></i>Remise à zéro totale
+        </a>
         {% endif %}
     {% endif %}
 </div>
@@ -271,6 +275,7 @@
                 <a href="{% url 'planning:ajouter_jour_bloque' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-ban mr-2 w-4"></i>Bloquer un jour</a>
                 {% if user.is_superuser %}
                 <a href="{% url 'core:demo_reinitialiser' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-flask mr-2 w-4"></i>Données de démonstration</a>
+                <a href="{% url 'core:remise_a_zero_totale' %}" class="block px-3 py-2 rounded-md text-sm font-bold text-white bg-red-600 hover:bg-red-700"><i class="fas fa-bomb mr-2 w-4"></i>Remise à zéro totale</a>
                 {% endif %}
                 {% endif %}
 

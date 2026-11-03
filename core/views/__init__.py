@@ -14,7 +14,7 @@ Permet d'accéder aux vues via core.views.nom_vue
 from .main import dashboard, parametres, accueil
 from .profile import mon_profil
 from .gubed import trigger_test_user
-from .demo import demo_reinitialiser
+from .demo import demo_reinitialiser, remise_a_zero_totale
 from .aide import aide
 from .mot_de_passe import mot_de_passe_oublie, reinitialiser_mot_de_passe, changer_mot_de_passe
 # Ne pas exporter ajax_ville_par_cp ici pour éviter la confusion
