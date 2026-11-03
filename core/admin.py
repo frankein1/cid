@@ -110,3 +110,5 @@ class ProfilAdmin(admin.ModelAdmin):
     search_fields = ("code", "nom")
     list_filter = ("actif",)
     filter_horizontal = ("capacites",)
+
+from core import admin_courriers  # noqa: E402,F401  (modèles de courriers)

@@ -16,6 +16,7 @@ from .capacite import Capacite
 from .organisation import Service
 from .configuration import Configuration
 from .audit import AuditLog
+from .modele_courrier import ModeleCourrier
 
 # Export explicite pour star imports
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     
     # Audit
     'AuditLog',
+    'ModeleCourrier',
 ]

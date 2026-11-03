@@ -274,47 +274,45 @@ def notification_pdf(demande):
     if mds:
         el += [_p(f"<b>{escape(mds.nom)}</b><br/>{_txt(mds.adresse)}<br/>{escape(mds.code_postal)} {escape(mds.ville)}", st),
                Spacer(1, 0.5 * cm)]
+    from core.courriers import modele_texte, rendu
+    from AidFi.services.afase_recours import recours_origine
+    recours = recours_origine(demande)
+    accord = decision.type_decision == 'ACCORD'
+    code = "AFASE_ACCORD" if accord else "AFASE_REFUS"
+    valeurs = {
+        "civilite_appel": "Monsieur" if dem.civilite == 'M.' else "Madame",
+        "numero_dossier": demande.pk,
+        "date_demande": _d(demande.date_signature_demandeur or demande.date_creation),
+        "date_recours": _d(recours.date_recours) if recours else "",
+        "date_decision": _d(decision.date_decision),
+        "enfants": ", ".join(str(e) for e in demande.enfants.filter(concerne=True)) or "vos enfants",
+        "signataire": _nom(decision.decide_par),
+        "fondement_juridique": p.fondement_juridique,
+        "voies_recours": p.texte_voies_recours,
+    }
+    conditions = {"si_recours": bool(recours)}
+    if accord:
+        valeurs.update({
+            "montant_mensuel": _fr(decision.montant_accorde or 0), "duree_mois": decision.duree_accordee,
+            "montant_total": _fr((decision.montant_accorde or 0) * (decision.duree_accordee or 1)),
+            "objet_aide": decision.libelle_decision or "", "organisme_paiement": decision.organisme_paiement or ""})
+        conditions["si_versement_organisme"] = bool(decision.paiement_a == 'ORGANISME' and decision.organisme_paiement)
+    else:
+        # La motivation saisie par le cadre reste interne : seul le texte du code de refus (et sa précision)
+        # est adressé à l'usager.
+        valeurs["motif_refus"] = texte_refus(decision)
+    m = modele_texte(code)   # textes modifiables en administration (Modèles de courriers)
     el += [Table([["", _p(f"{escape(dem.get_civilite_display())} {escape(dem.prenom)} {escape(dem.nom.upper())}<br/>"
                           f"{_txt(dem.adresse)}<br/>{escape(dem.code_postal)} {escape(dem.ville)}", st)]],
                  colWidths=[9 * cm, 8 * cm]),
            Spacer(1, 0.8 * cm),
            _p(f"{escape(mds.ville) if mds else ''}, le {_d(decision.date_decision)}", st), Spacer(1, 0.4 * cm),
-           _p(f"<b>Objet :</b> votre demande d'allocation financière de l'aide sociale à l'enfance (dossier n° {demande.pk})", st),
-           Spacer(1, 0.5 * cm), _p(f"{'Monsieur' if dem.civilite == 'M.' else 'Madame'},", st), Spacer(1, 0.3 * cm)]
-    date_demande = _d(demande.date_signature_demandeur or demande.date_creation)
-    from AidFi.services.afase_recours import recours_origine
-    recours = recours_origine(demande)
-    suite = (f"Suite à votre demande du {date_demande} et à votre recours du {_d(recours.date_recours)}"
-             if recours else f"Suite à votre demande du {date_demande}")
-    enfants = ", ".join(str(e) for e in demande.enfants.filter(concerne=True)) or "vos enfants"
-    if decision.type_decision == 'ACCORD':
-        total = (decision.montant_accorde or 0) * (decision.duree_accordee or 1)
-        versement = (f"Elle sera versée à {escape(decision.organisme_paiement)}, comme vous l'avez autorisé."
-                     if decision.paiement_a == 'ORGANISME' and decision.organisme_paiement
-                     else "Elle sera versée sur votre compte bancaire.")
-        corps = [
-            f"{suite}, j'ai le plaisir de vous informer qu'une allocation financière de "
-            f"l'aide sociale à l'enfance vous est accordée pour {escape(enfants)} :",
-            f"<b>{_fr(decision.montant_accorde)} par mois pendant {decision.duree_accordee} mois</b> (versement mensuel), "
-            f"soit {_fr(total)} au total, au titre de : <b>{escape(decision.libelle_decision or '')}</b>.",
-            versement,
-        ]
-    else:
-        corps = [f"{suite}, j'ai le regret de vous informer que je ne peux pas y donner "
-                 f"une suite favorable, pour le motif suivant :",
-                 f"<b>{escape(texte_refus(decision))}</b>"]
-        # La motivation saisie par le cadre reste interne : seul le texte du code de refus (et sa précision)
-        # est adressé à l'usager.
-    if p.fondement_juridique:
-        corps.append(f"<font size=8>Décision prise en application des textes suivants : {escape(p.fondement_juridique)}</font>")
-    if p.texte_voies_recours:
-        corps.append(f"<b>Voies et délais de recours :</b> {escape(p.texte_voies_recours)}")
-    corps.append(f"Je vous prie d'agréer, {'Monsieur' if dem.civilite == 'M.' else 'Madame'}, l'expression de mes salutations distinguées.")
-    for c in corps:
+           _p(f"<b>Objet :</b> {rendu.ligne(m['objet'], valeurs, conditions)}", st),
+           Spacer(1, 0.5 * cm)]
+    for c in rendu.paragraphes(m["corps"], valeurs, conditions):
         el += [_p(c, st), Spacer(1, 0.3 * cm)]
     el += [Spacer(1, 0.6 * cm),
-           Table([["", _p(f"Pour le Président du Conseil départemental<br/>et par délégation,<br/><br/>"
-                          f"{escape(_nom(decision.decide_par))}", st)]], colWidths=[9 * cm, 8 * cm])]
+           Table([["", _p(rendu.bloc(m["signature"], valeurs, conditions), st)]], colWidths=[9 * cm, 8 * cm])]
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     buffer.seek(0)
     return buffer

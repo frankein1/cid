@@ -13,7 +13,7 @@ par exemple la base PostgreSQL d'alwaysdata), puis réinstalle : install, init2,
 Conservés :
   - les comptes super-administrateur (identifiant, mot de passe, nom, courriel), pour pouvoir se reconnecter ;
   - le paramétrage saisi en administration : référentiel AFASE (paramètres, motifs, montants indicatifs,
-    motifs de refus et leurs textes), types de danger des IP et configuration générale (clé / valeur).
+    motifs de refus et leurs textes), types de danger des IP, modèles de courriers et configuration générale (clé / valeur).
     Les référentiels remplis par des migrations (motifs AFASE, motifs de refus, types de danger) doivent être
     dans MODELES_CONSERVES : « flush » vide aussi leurs tables, et les migrations déjà appliquées ne repassent pas.
 Supprimés aussi : les fichiers de la GED (pCloud sur Render), document par document, avant l'effacement.
@@ -35,7 +35,8 @@ FICHIER_ETAT = os.path.join(tempfile.gettempdir(), "cid_remise_a_zero.json")
 CONFIRMATION = "TOUT EFFACER"
 # Paramétrage conservé (modèles sans lien vers les dossiers ; les liens vers un utilisateur sont vidés)
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
-                     "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration"]
+                     "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration",
+                     "core.ModeleCourrier"]
 DUREE_MAX_MINUTES = 30   # au-delà, une remise « en cours » est considérée comme interrompue (redémarrage du serveur)
 
 
