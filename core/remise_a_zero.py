@@ -33,6 +33,9 @@ from io import StringIO
 from django.utils import timezone
 
 FICHIER_ETAT = os.path.join(tempfile.gettempdir(), "cid_remise_a_zero.json")
+# Sauvegarde du paramétrage et des super-administrateurs, écrite AVANT d'effacer la base. Si la remise à zéro
+# échoue après l'effacement, la suivante repart de ce fichier (la base, vide, ne contient plus rien à sauver).
+FICHIER_SAUVEGARDE = os.path.join(tempfile.gettempdir(), "cid_remise_a_zero_sauvegarde.json")
 CONFIRMATION = "TOUT EFFACER"
 # Paramétrage conservé (modèles sans lien vers les dossiers ; les liens vers un utilisateur sont vidés)
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
@@ -122,20 +125,28 @@ def _remise_a_zero(journal):
     from django.core import serializers
     from django.core.management import call_command
     from django.core.management.color import no_style
-    from django.db import connection
+    from django.db import connection, transaction
     from core.models import User
     from ged.models import DocumentGED
 
-    # 1. Sauvegardes en mémoire : super-administrateurs et paramétrage
-    champs = [f.attname for f in User._meta.concrete_fields if not f.is_relation and not f.primary_key]
-    admins = [{c: getattr(u, c) for c in champs} for u in User.objects.filter(is_superuser=True)]
+    # 1. Sauvegarde : super-administrateurs et paramétrage, dans un fichier, avant tout effacement
+    import json
+    sauvegarde = _reprendre_sauvegarde(journal)
+    if sauvegarde is None:
+        champs = [f.attname for f in User._meta.concrete_fields if not f.is_relation and not f.primary_key]
+        sauvegarde = {
+            "date": timezone.now().isoformat(),
+            "admins": [{c: getattr(u, c) for c in champs} for u in User.objects.filter(is_superuser=True)],
+            "modeles": {nom: json.loads(serializers.serialize(
+                "json", FILTRES_CONSERVES.get(nom, lambda q: q)(apps.get_model(nom).objects.all())))
+                for nom in MODELES_CONSERVES},
+        }
+        with open(FICHIER_SAUVEGARDE, "w", encoding="utf-8") as f:
+            json.dump(sauvegarde, f, ensure_ascii=False, default=str)
+    admins = sauvegarde["admins"]
     journal(f"💾 {len(admins)} compte(s) super-administrateur conservé(s) : {', '.join(a['username'] for a in admins)}")
-    conserves = {}
-    for nom in MODELES_CONSERVES:
-        modele = apps.get_model(nom)
-        qs = FILTRES_CONSERVES.get(nom, lambda q: q)(modele.objects.all())
-        conserves[nom] = serializers.serialize("python", qs)
-    journal("💾 Paramétrage conservé : " + ", ".join(f"{n.split('.')[1]} ({len(v)})" for n, v in conserves.items()))
+    journal("💾 Paramétrage conservé : " + ", ".join(f"{n.split('.')[1]} ({len(v)})"
+                                                   for n, v in sauvegarde["modeles"].items()))
 
     # 2. Fichiers de la GED : chaque suppression purge son fichier du stockage (signaux de ged/signals.py)
     docs = list(DocumentGED.objects.all())
@@ -157,25 +168,51 @@ def _remise_a_zero(journal):
     remettre_admins()
     journal("👤 Comptes super-administrateur recréés (mêmes identifiants et mots de passe)")
 
-    # 5. Paramétrage remis (liens vers un utilisateur vidés : les comptes ont changé)
-    # Les liens vers des données effacées (utilisateurs, MDS, pôles, partenaires…) sont vidés ;
-    # seuls restent les liens entre modèles conservés (ex. action → type d'action).
-    gardes = {n.lower() for n in MODELES_CONSERVES}
-    for nom, objets in conserves.items():
+    # 5. Paramétrage remis. Les liens vers des données effacées (utilisateurs, MDS, pôles, partenaires…) sont
+    # vidés ; seuls restent les liens entre modèles conservés (ex. montant indicatif → motif AFASE).
+    # label_lower garde l'application telle qu'elle est déclarée (« AidFi.referentielmotifafase ») : on compare
+    # donc avec les label_lower des modèles, pas avec les noms de MODELES_CONSERVES mis en minuscules.
+    gardes = {apps.get_model(n)._meta.label_lower for n in MODELES_CONSERVES}
+    echecs = []
+    for nom, objets in sauvegarde["modeles"].items():
         modele = apps.get_model(nom)
-        for o in objets:
-            for champ in list(modele._meta.concrete_fields) + list(modele._meta.many_to_many):
-                if champ.is_relation and champ.related_model._meta.label_lower not in gardes:
-                    o["fields"].pop(champ.name, None)
-        for obj in serializers.deserialize("python", objets):
-            obj.save()
+        try:
+            with transaction.atomic():
+                for o in objets:
+                    for champ in list(modele._meta.concrete_fields) + list(modele._meta.many_to_many):
+                        if champ.is_relation and champ.related_model._meta.label_lower not in gardes:
+                            o["fields"].pop(champ.name, None)
+                for obj in serializers.deserialize("python", objets):
+                    obj.save()
+        except Exception as e:   # un modèle qui échoue n'empêche ni les autres, ni la réinstallation
+            echecs.append(nom)
+            journal(f"⚠️ {nom.split('.')[1]} non remis ({e.__class__.__name__} : {e})")
     with connection.cursor() as cur:   # compteurs d'identifiants remis après les numéros restaurés
         for sql in connection.ops.sequence_reset_sql(no_style(), [apps.get_model(n) for n in MODELES_CONSERVES]):
             cur.execute(sql)
-    journal("⚙️ Paramétrage remis en place")
+    journal("⚙️ Paramétrage remis en place" + (f", sauf : {', '.join(n.split('.')[1] for n in echecs)}"
+                                               f" (sauvegarde gardée : {FICHIER_SAUVEGARDE})" if echecs else ""))
 
     # 6. Réinstallation
     _commande(journal, "install", no_input=True)
     _commande(journal, "init2")
     _commande(journal, "init_demo")
     remettre_admins()   # au cas où init2 aurait le même identifiant qu'un super-administrateur
+    if not echecs:
+        os.remove(FICHIER_SAUVEGARDE)
+
+
+def _reprendre_sauvegarde(journal):
+    """Sauvegarde d'une remise à zéro précédente qui a échoué après l'effacement : elle seule contient encore
+    le paramétrage. Sinon None (on sauvegarde la base actuelle)."""
+    import json
+    if not os.path.exists(FICHIER_SAUVEGARDE):
+        return None
+    try:
+        with open(FICHIER_SAUVEGARDE, encoding="utf-8") as f:
+            sauvegarde = json.load(f)
+    except (OSError, ValueError):
+        return None
+    journal(f"↩️ Reprise de la sauvegarde du {sauvegarde.get('date', '?')[:16].replace('T', ' à ')} "
+            "(la remise à zéro précédente n'est pas allée au bout)")
+    return sauvegarde

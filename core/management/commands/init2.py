@@ -1,4 +1,6 @@
 from django.core.management.base import BaseCommand
+
+from core.management.commands.init_demo import mot_de_passe   # mot de passe commun des comptes de démo
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from mds.models import MDS, UserMDSProfile, MDSReception
@@ -100,7 +102,7 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                user.set_password("testpass123")
+                user.set_password(mot_de_passe())
                 user.save()
 
             profil_code = profils[profil_key]
@@ -268,7 +270,7 @@ class Command(BaseCommand):
                 "first_name": prenom, "last_name": nom, "email": f"{username}@test.fr",
                 "is_active": True, "matricule": username.upper()})
             if cree:
-                u.set_password("testpass123")
+                u.set_password(mot_de_passe())
                 u.save()
             profil = Profil.objects.filter(code=code).first()
             if profil and not u.profils.filter(pk=profil.pk).exists():

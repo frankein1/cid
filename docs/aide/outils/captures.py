@@ -32,7 +32,7 @@ class Cam:
             if '127.0.0.1' in u: return r.continue_()
             return r.abort()
         pg.route('**/*', route)
-        pg.goto(B+'/login/'); pg.fill('input[name=username]',user); pg.fill('input[name=password]','testpass123')
+        pg.goto(B+'/login/'); pg.fill('input[name=username]',user); pg.fill('input[name=password]','demo123&')
         pg.click('form:has(input[name=username]) button[type=submit], form:has(input[name=username]) input[type=submit]')
         return pg
 def prep(pg):
