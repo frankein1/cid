@@ -1,0 +1,12 @@
+{% extends "admin/change_list.html" %}
+{# templates/admin/core/modelecourrier/change_list.html #}
+{% block object-tools-items %}
+  <li><a href="{% url 'admin:core_modelecourrier_importer' %}">Importer (JSON)</a></li>
+  {{ block.super }}
+{% endblock %}
+{% block content %}
+  <p style="max-width:60em">Textes des courriers produits par CID. Tant qu'un texte n'est pas modifié, CID utilise
+    son texte d'origine (générique). Pour reprendre des modèles d'un serveur à l'autre : cochez-les, action
+    « Exporter », puis « Importer » sur l'autre serveur.</p>
+  {{ block.super }}
+{% endblock %}

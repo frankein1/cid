@@ -115,47 +115,29 @@ def _convocation_audition_pdf(action):
     if lrar:
         el.append(Paragraph(f"<b>Lettre recommandée avec accusé de réception"
                             f"{' n° ' + escape(action.numero_lrar) if action.numero_lrar else ''}</b>", st["Normal"]))
-    el += [Paragraph(f"<b>Objet :</b> convocation – information préoccupante réf. {ip.numero}", st["Normal"]),
-           Spacer(1, 0.5 * cm)]
-
-    quand = f"le <b>{_date(action.date_rdv_propose, heure=True)}</b>"
-    lieu = (f"{escape(ip.mds.nom)}, {_txt(ip.mds.adresse)}, {escape(ip.mds.code_postal)} {escape(ip.mds.ville)}"
+    from core.courriers import modele_texte, rendu
+    lieu = (f"{ip.mds.nom}, {ip.mds.adresse}, {ip.mds.code_postal} {ip.mds.ville}"
             if ip.mds else "la Maison départementale de la solidarité")
     noms_enfants = ", ".join(f"{e.prenom} {e.nom.upper()}" for e in enfants)
     pluriel = len(enfants) > 1
     # Date de la convocation précédente, pour une LRAR ou un report
     precedent = ConvoqueIP.objects.filter(suite=action.rdv).select_related('action').first() if action.rdv_id else None
     date_prec = _date(precedent.action.date_rdv_propose or precedent.action.date, heure=True) if precedent else None
-
-    corps = [_salutation(adultes_entete)]
-    if pour_enfants:
-        sujet = f"{'vos enfants' if pluriel else 'votre enfant'} {escape(noms_enfants)}"
-        if lrar:
-            corps.append(f"{sujet[0].upper()}{sujet[1:]} {'ne se sont pas présentés' if pluriel else 'ne s’est pas présenté(e)'}"
-                         + (f" à la convocation du {date_prec}" if date_prec else " à la précédente convocation") + ".")
-        elif action.report_convenu:
-            corps.append("Comme convenu avec vous, nous vous adressons la nouvelle date de convocation.")
-        corps.append(f"Dans le cadre de l'information préoccupante, {sujet} {'sont convoqués' if pluriel else 'est convoqué(e)'} "
-                     f"{quand}, à {lieu}.")
-        corps.append("Les enfants sont reçus un par un par les professionnels ; merci de les accompagner. "
-                     "Les adultes qui les accompagnent patientent en salle d'attente." if pluriel else
-                     "L'enfant est reçu seul par les professionnels ; merci de l'accompagner. "
-                     "L'adulte qui l'accompagne patiente en salle d'attente.")
-    else:
-        if lrar:
-            corps.append("Vous ne vous êtes pas présenté(e)"
-                         + (f" à la convocation du {date_prec}" if date_prec else " à la précédente convocation") + ".")
-        elif action.report_convenu:
-            corps.append("Comme convenu avec vous, nous vous adressons la nouvelle date de convocation.")
-        corps.append(f"Dans le cadre de l'information préoccupante concernant {escape(_enfants(ip))}, "
-                     f"vous êtes convoqué(e) {quand}, à {lieu}.")
-    if lrar:
-        corps.append("Nous vous rappelons que cette évaluation est obligatoire. À défaut de pouvoir la mener avec vous, "
-                     "le rapport sera établi avec les seuls éléments recueillis et transmis à l'inspecteur enfance "
-                     "famille du Département, qui pourra décider de saisir l'autorité judiciaire.")
-    corps += ["En cas d'empêchement, merci de nous contacter au plus vite pour convenir d'une autre date.",
-              "Nous vous prions d'agréer, " + _salutation(adultes_entete).rstrip(',') + ", nos salutations distinguées."]
-    for p in corps:
+    salutation = _salutation(adultes_entete)
+    sujet = f"{'vos enfants' if pluriel else 'votre enfant'} {noms_enfants}"
+    valeurs = {
+        "numero_ip": ip.numero, "salutation": salutation, "salutation_courte": salutation.rstrip(','),
+        "date_rdv": _date(action.date_rdv_propose, heure=True), "lieu": lieu,
+        "vos_enfants": sujet, "Vos_enfants": sujet[0].upper() + sujet[1:],
+        "enfants_ip": _enfants(ip), "date_precedente": date_prec or "",
+    }
+    conditions = {"si_plusieurs_enfants": pluriel, "si_report_convenu": action.report_convenu,
+                  "si_date_precedente": bool(date_prec)}
+    code = f"IP_{'LRAR' if lrar else 'CONVOCATION'}_{'ENFANTS' if pour_enfants else 'ADULTES'}"
+    m = modele_texte(code)   # textes modifiables en administration (Modèles de courriers)
+    el += [Paragraph(f"<b>Objet :</b> {rendu.ligne(m['objet'], valeurs, conditions)}", st["Normal"]),
+           Spacer(1, 0.5 * cm)]
+    for p in rendu.paragraphes(m["corps"], valeurs, conditions):
         el += [Paragraph(p, st["Normal"]), Spacer(1, 0.3 * cm)]
     el += _signatures_binome(ip, st)
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)

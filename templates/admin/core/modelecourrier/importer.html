@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{# templates/admin/core/modelecourrier/importer.html #}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Accueil</a> ›
+  <a href="{% url 'admin:core_modelecourrier_changelist' %}">Modèles de courriers</a> › Importer</div>{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p>Fichier produit par l'action « Exporter » de la liste des modèles. Les modèles du fichier remplacent ceux
+  de ce serveur ; un modèle qui contient une variable inconnue de cette version de CID n'est pas importé.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Importer">
+</form>
+{% endblock %}
