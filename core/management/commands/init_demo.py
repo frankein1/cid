@@ -33,13 +33,13 @@ MARQUEUR = "FAM4-NOL"   # présent = jeu déjà créé
 
 # Comptes ajoutés à ceux d'init2 : (identifiant, prénom, nom, profil, code MDS ou None)
 COMPTES = [
-    ("cadre2", "Cadre", "MDS 2", "MDS_RESPONSABLE", "MDSTEST2"),
-    ("ts2", "Agent Social", "MDS 2", "MDS_AGENTS_SOCIAUX", "MDSTEST2"),
-    ("uagaf1", "Agent", "UAGAF 1", "SERVICE_CONTROLE_AFASE", None),
-    ("regie1", "Régisseur", "Central 1", "REGISSEUR_CENTRAL", None),
-    ("pi_admin", "Agent", "Pôle insertion", "POLE_INSERTION_ADMINISTRATIF", None),
-    ("pi_cadre", "Cadre", "Pôle insertion", "POLE_INSERTION_CADRE", None),
-    ("pi_medecin", "Médecin", "Pôle insertion", "POLE_INSERTION_MEDECIN", None),
+    ("chef_mds2", "Cadre", "MDS 2", "MDS_RESPONSABLE", "MDSTEST2"),
+    ("as1_mds2", "Agent Social", "MDS 2", "MDS_AGENTS_SOCIAUX", "MDSTEST2"),
+    ("uagaf_u1", "Agent", "UAGAF 1", "SERVICE_CONTROLE_AFASE", None),
+    ("regie_r1", "Régisseur", "Central 1", "REGISSEUR_CENTRAL", None),
+    ("admin_pi1", "Agent", "Pôle insertion", "POLE_INSERTION_ADMINISTRATIF", None),
+    ("cadre_pi1", "Cadre", "Pôle insertion", "POLE_INSERTION_CADRE", None),
+    ("medecin_pi1", "Médecin", "Pôle insertion", "POLE_INSERTION_MEDECIN", None),
 ]
 
 # Actions d'insertion fictives : code, libellé, type, niveau, MDS locale (1 ou None), porteur, durée, comité
@@ -110,7 +110,23 @@ def mot_de_passe():
 
 # Comptes de démonstration (init2 et init_demo) : mot de passe remis à mot_de_passe() à chaque création ou
 # réinitialisation du jeu. Jamais un super-administrateur.
-COMPTES_INIT2 = ["asmith", "bjones", "cdubois", "MarioB", "LuigiB", "jcadre1", "kchef", "pmi1", "crip1", "pief1"]
+# Anciens identifiants des comptes de démonstration → identifiants explicites (rôle_structure). Un compte existant
+# est renommé (ses dossiers, messages, rendez-vous le suivent) au lieu d'être recréé : pas de doublon.
+RENOMMAGES = {"kchef": "chef_mds1", "jcadre1": "cadre_mds1", "asmith": "as1_mds1", "bjones": "as2_mds1",
+              "cdubois": "as3_mds1", "MarioB": "aa1_mds1", "LuigiB": "aa2_mds1", "pmi1": "pmi_mds1",
+              "cadre2": "chef_mds2", "ts2": "as1_mds2", "crip1": "crip_c1", "pief1": "ief_p1", "uagaf1": "uagaf_u1",
+              "regie1": "regie_r1", "pi_admin": "admin_pi1", "pi_cadre": "cadre_pi1", "pi_medecin": "medecin_pi1"}
+
+
+def renommer_comptes_demo():
+    for ancien, nouveau in RENOMMAGES.items():
+        u = User.objects.filter(username=ancien, is_superuser=False).first()
+        if u and not User.objects.filter(username=nouveau).exists():
+            u.username = nouveau
+            u.save(update_fields=["username"])
+
+
+COMPTES_INIT2 = ["as1_mds1", "as2_mds1", "as3_mds1", "aa1_mds1", "aa2_mds1", "cadre_mds1", "chef_mds1", "pmi_mds1", "crip_c1", "ief_p1"]
 
 
 class Command(BaseCommand):
@@ -122,6 +138,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **opts):
         from beneficiaire.models import Beneficiaire
+        renommer_comptes_demo()
         if not Beneficiaire.objects.filter(code_interne="FAM1-JEA").exists():
             call_command("init2")
         if opts["reinitialiser"]:
@@ -221,11 +238,11 @@ class Command(BaseCommand):
             user.force_change_password = False
             user.save(update_fields=["password", "force_change_password"])
         if not self.mds2.responsable:
-            self.mds2.responsable = self.u("cadre2")
+            self.mds2.responsable = self.u("chef_mds2")
             self.mds2.save(update_fields=["responsable"])
-        self.ts, self.ts_b, self.cadre, self.cadre2 = self.u("asmith"), self.u("bjones"), self.u("kchef"), self.u("cadre2")
-        self.ts2, self.uagaf, self.regie = self.u("ts2"), self.u("uagaf1"), self.u("regie1")
-        self.pief, self.crip, self.pmi = self.u("pief1"), self.u("crip1"), self.u("pmi1")
+        self.ts, self.ts_b, self.cadre, self.cadre2 = self.u("as1_mds1"), self.u("as2_mds1"), self.u("chef_mds1"), self.u("chef_mds2")
+        self.ts2, self.uagaf, self.regie = self.u("as1_mds2"), self.u("uagaf_u1"), self.u("regie_r1")
+        self.pief, self.crip, self.pmi = self.u("ief_p1"), self.u("crip_c1"), self.u("pmi_mds1")
         self.stdout.write("✅ Comptes et MDS de démonstration")
 
     # ------------------------------------------------------------------ familles
@@ -428,7 +445,7 @@ class Command(BaseCommand):
         """Régisseur (Agent Admin 1) et stock fictif de chèques au coffre de la MDS TEST 01 : 480 €."""
         from AidFi.models.m_cap import ReceptionCAP, TitreCAP
         if not self.mds1.regisseur_id:
-            self.mds1.regisseur = self.u("MarioB")
+            self.mds1.regisseur = self.u("aa1_mds1")
             self.mds1.save(update_fields=["regisseur"])
         reception = ReceptionCAP.objects.create(
             mds=self.mds1, regisseur=self.mds1.regisseur, date_reception=self.j - timedelta(days=20),
@@ -494,7 +511,7 @@ class Command(BaseCommand):
             "nom": "Pôle insertion de démonstration", "adresse": "1 rue de l'Exemple", "code_postal": "13000",
             "ville": "Exemple", "telephone": "0400000000", "email": "pole.insertion@exemple.fr"})
         pole.mds.add(self.mds1, self.mds2)
-        pole.membres.add(*[self.u(c) for c in ("pi_admin", "pi_cadre", "pi_medecin")])
+        pole.membres.add(*[self.u(c) for c in ("admin_pi1", "cadre_pi1", "medecin_pi1")])
         for code, libelle, type_code, niveau, mds, porteur, duree, rythme in ACTIONS_DEMO:
             a, _ = ActionInsertion.objects.update_or_create(code=code, mds=self.mds1 if mds else None, defaults={
                 "libelle": libelle, "type_action": TypeActionInsertion.objects.get(code=type_code), "niveau": niveau,
@@ -504,7 +521,7 @@ class Command(BaseCommand):
                 "description": "Action fictive du jeu de démonstration."})
             if niveau == "DEPARTEMENTAL" and code == "DEMO-MOBIL":
                 a.poles.set([pole])
-        self.stdout.write(f"✅ Insertion : pôle de démonstration (pi_admin, pi_cadre, pi_medecin), {len(ACTIONS_DEMO)} actions fictives")
+        self.stdout.write(f"✅ Insertion : pôle de démonstration (admin_pi1, cadre_pi1, medecin_pi1), {len(ACTIONS_DEMO)} actions fictives")
 
     # ------------------------------------------------------------------ planning
     def planning(self):
@@ -521,7 +538,7 @@ class Command(BaseCommand):
                     "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
                     "beneficiaire": self.b.get(code) if code else None, "statut": statut, "type_rdv": "PERMANENCE",
                     "nature": "PERMANENCE", "domaine": "SOCIAL", "notes_internes": "[démo] rendez-vous fictif",
-                    "cree_par": self.ts, "reserve_par": self.u("MarioB") if code else None,
+                    "cree_par": self.ts, "reserve_par": self.u("aa1_mds1") if code else None,
                     "date_reservation": timezone.now() if code else None})
         # Une semaine plus tard : créneaux libres pour « Prendre rendez-vous » (recherche de J+2 à J+17)
         semaine = jour + timedelta(days=7)
