@@ -39,7 +39,7 @@ with sync_playwright() as p:
     nav = p.chromium.launch()
 
     # ===================== CRIP : enregistrer et transmettre (famille CHERIF)
-    cr = page(nav, "crip1")
+    cr = page(nav, "crip_c1")
     cr.goto(B + "/protection-enfance/ip/")
     shot(cr, "ip-saisir", "01", "a[href$='/ip/nouvelle/']", top=True)
     cr.goto(B + "/protection-enfance/ip/nouvelle/")
@@ -64,7 +64,7 @@ with sync_playwright() as p:
     shot(cr, "ip-saisir", "06", None, top=True)
 
     # ===================== CADRE : réunion IP et binôme
-    ca = page(nav, "kchef")
+    ca = page(nav, "chef_mds1")
     ca.goto(f"{B}/protection-enfance/ip/{ip}/")
     ca.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
     ca.click("button[data-type=REUNION_IP]")
@@ -81,7 +81,7 @@ with sync_playwright() as p:
     shot(ca, "ip-binome", "03", "section:has(h2:has-text('Binôme'))")
 
     # ===================== BINÔME : convoquer, présences, démarches, rapport
-    ts = page(nav, "asmith")
+    ts = page(nav, "as1_mds1")
     ts.goto(f"{B}/protection-enfance/ip/{ip}/")
     f = f"form[action$='/ip/{ip}/audition/']"
     ts.evaluate("document.getElementById('nouvelle-audition').open = true")
@@ -128,7 +128,7 @@ with sync_playwright() as p:
     shot(ts, "ip-synthese", "03", None, top=True)
 
     # ===================== INSPECTEUR : avis
-    pi = page(nav, "pief1")
+    pi = page(nav, "ief_p1")
     pi.goto(B + "/protection-enfance/ip/")
     shot(pi, "ip-inspecteur", "01", f"a[href$='/ip/{ip}/']", top=True)
     pi.goto(f"{B}/protection-enfance/ip/{ip}/rapport/")

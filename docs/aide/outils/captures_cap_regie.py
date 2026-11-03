@@ -28,7 +28,7 @@ with sync_playwright() as p:
     nav = p.chromium.launch()
 
     # ===================== CAP : demande (TS, Sarah AMRANI)
-    ts = page(nav, "asmith")
+    ts = page(nav, "as1_mds1")
     aides_de(ts, "FAM5-SAR")
     shot(ts, "cap-demander", "01", "a[href$='/cap/nouvelle/']")
     ts.click("a[href$='/cap/nouvelle/']"); ts.wait_for_load_state()
@@ -40,7 +40,7 @@ with sync_playwright() as p:
     shot(ts, "cap-demander", "03", None, top=True)
 
     # ===================== CAP : décision, remise, clôture (cadre)
-    ca = page(nav, "kchef")
+    ca = page(nav, "chef_mds1")
     ca.goto(B + "/AidFi/cadre/dashboard/")
     shot(ca, "cap-decider", "01", f"a[href$='/cap/{cap}/']", top=True)
     ca.goto(f"{B}/AidFi/cap/{cap}/")
@@ -61,7 +61,7 @@ with sync_playwright() as p:
     shot(ca, "cap-decider", "07", None, top=True)
 
     # ===================== CAP : coffre (régisseur de la MDS : Agent Admin 1)
-    rg = page(nav, "MarioB")
+    rg = page(nav, "aa1_mds1")
     prep(rg)
     rg.goto(B + "/AidFi/cap/coffres/"); rg.wait_for_load_state()
     shot(rg, "cap-coffre", "01", "a[href$='/reception/']", top=True)
@@ -104,7 +104,7 @@ with sync_playwright() as p:
     shot(ca, "regie-decider", "01", "input[name=montant_accorde]")
     soumettre(ca, "form:has(input[name=montant_accorde])")
     shot(ca, "regie-decider", "02", None, top=True)
-    rc = page(nav, "regie1")
+    rc = page(nav, "regie_r1")
     rc.goto(B + "/AidFi/cap/paierie/")
     shot(rc, "regie-decider", "03", f"a[href$='/regie/{regie}/']", top=True)
     rc.goto(f"{B}/AidFi/regie/{regie}/")

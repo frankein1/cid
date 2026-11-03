@@ -54,7 +54,7 @@ with sync_playwright() as p:
     nav = p.chromium.launch()
 
     # ===================== TRAVAILLEUR SOCIAL : demander une AFASE (famille AUBERT)
-    pg = page(nav, "asmith")
+    pg = page(nav, "as1_mds1")
     pg.goto(B + "/beneficiaire/FAM12-AUR/")
     shot(pg, "afase-demander", "01", "a[href*='/AidFi/beneficiaire/'][href$='/dashboard/']")
     pg.click("a[href*='/AidFi/beneficiaire/'][href$='/dashboard/']"); pg.wait_for_load_state()
@@ -118,7 +118,7 @@ with sync_playwright() as p:
     shot(pg, "afase-ajournement", "03", None, top=True)
 
     # ===================== CADRE : décider (CLASSIC Claire, puis l'AFASE AUBERT déposée ci-dessus)
-    pc = page(nav, "kchef")
+    pc = page(nav, "chef_mds1")
     prep(pc); pc.click("#cadre-button"); pc.wait_for_timeout(200)
     shot(pc, "afase-decider", "01", "#cadre-menu a[href$='/cadre/dashboard/']")
     pc.goto(B + "/AidFi/cadre/dashboard/")
@@ -152,7 +152,7 @@ with sync_playwright() as p:
     shot(pc, "afase-transmettre", "04", None, top=True)
 
     # ===================== UAGAF : contrôler et enregistrer le paiement
-    pu = page(nav, "uagaf1")
+    pu = page(nav, "uagaf_u1")
     pu.goto(B + "/AidFi/afase/controle/")
     shot(pu, "afase-uagaf", "01", f"tr:has-text('n° {afase}')")
     pu.goto(f"{B}/AidFi/afase/{afase}/")
@@ -179,7 +179,7 @@ with sync_playwright() as p:
     shot(pc, "afase-recours", "04", "h2:has-text('Recours contre les refus')")
 
     # ===================== INSPECTEUR : AFASE des familles avec une mesure ASE
-    pi = page(nav, "pief1")
+    pi = page(nav, "ief_p1")
     pi.goto(B + "/AidFi/afase/inspecteur/")
     shot(pi, "afase-inspecteur", "01", "a:has-text('Laura PEREZ')")
     pi.click("a:has-text('Laura PEREZ')"); pi.wait_for_load_state()

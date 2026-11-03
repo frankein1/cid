@@ -24,21 +24,21 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 
 | Identifiant | Nom affiché | Profil | MDS | Sert à tester |
 |---|---|---|---|---|
-| `asmith` | Agent Social 1 | Travailleur social | MDS TEST 01 | Créer et instruire les aides, répondre à un ajournement, évaluer une IP (binôme) |
-| `bjones`, `cdubois` | Agent Social 2 et 3 | Travailleur social | MDS TEST 01 | Second membre de binôme IP, travail à plusieurs |
-| `MarioB`, `LuigiB` | Agent Admin 1 et 2 | Administratif | MDS TEST 01 | Accueil, réservation de rendez-vous |
-| `kchef` | Chef de service | Cadre, **directeur de la MDS TEST 01** | MDS TEST 01 | Décider les AFASE, CAP et régies, recours, binôme IP, visas, statistiques. Reçoit les messages du cadre. |
-| `jcadre1` | Cadre MDS 1 | Cadre | MDS TEST 01 | Second cadre (peut aussi décider) |
-| `pmi1` | Agent PMI 1 | PMI (protection infantile) | MDS TEST 01 | Binôme IP avec un TS |
-| `crip1` | Agent CRIP 1 | CRIP | (départemental) | Saisir une IP et la transmettre à la MDS |
-| `pief1` | Inspecteur Enfance famille 1 | Inspecteur enfance-famille | (départemental) | AFASE des familles avec mesure ASE, avis sur les rapports IP |
-| `cadre2` | Cadre MDS 2 | Responsable de MDS | MDS TEST 02 | Cloisonnement entre MDS, famille séparée sur deux MDS |
-| `ts2` | Agent Social MDS 2 | Travailleur social | MDS TEST 02 | Idem côté travailleur social |
-| `uagaf1` | Agent UAGAF 1 | Contrôle des AFASE (UAGAF) | (départemental) | Contrôler un dossier, le renvoyer, enregistrer le paiement |
-| `regie1` | Régisseur Central 1 | Régisseur central | (départemental) | Chèques service remis par la paierie, régies d'urgence |
-| `pi_admin` | Agent Pôle insertion | Pôle insertion – administratif | Pôle insertion de démonstration (MDS TEST 01 et 02) | Référentiel des actions d'insertion : saisie, import et export CSV |
-| `pi_cadre` | Cadre Pôle insertion | Pôle insertion – cadre | Pôle insertion de démonstration | Référentiel des actions ; plus tard : commissions de validation et de réorientation |
-| `pi_medecin` | Médecin Pôle insertion | Pôle insertion – médecin | Pôle insertion de démonstration | Consultation du référentiel ; plus tard : contrats santé (certificat reçu, avis) |
+| `as1_mds1` | Agent Social 1 | Travailleur social | MDS TEST 01 | Créer et instruire les aides, répondre à un ajournement, évaluer une IP (binôme) |
+| `as2_mds1`, `as3_mds1` | Agent Social 2 et 3 | Travailleur social | MDS TEST 01 | Second membre de binôme IP, travail à plusieurs |
+| `aa1_mds1`, `aa2_mds1` | Agent Admin 1 et 2 | Administratif | MDS TEST 01 | Accueil, réservation de rendez-vous |
+| `chef_mds1` | Chef de service | Cadre, **directeur de la MDS TEST 01** | MDS TEST 01 | Décider les AFASE, CAP et régies, recours, binôme IP, visas, statistiques. Reçoit les messages du cadre. |
+| `cadre_mds1` | Cadre MDS 1 | Cadre | MDS TEST 01 | Second cadre (peut aussi décider) |
+| `pmi_mds1` | Agent PMI 1 | PMI (protection infantile) | MDS TEST 01 | Binôme IP avec un TS |
+| `crip_c1` | Agent CRIP 1 | CRIP | (départemental) | Saisir une IP et la transmettre à la MDS |
+| `ief_p1` | Inspecteur Enfance famille 1 | Inspecteur enfance-famille | (départemental) | AFASE des familles avec mesure ASE, avis sur les rapports IP |
+| `chef_mds2` | Cadre MDS 2 | Responsable de MDS | MDS TEST 02 | Cloisonnement entre MDS, famille séparée sur deux MDS |
+| `as1_mds2` | Agent Social MDS 2 | Travailleur social | MDS TEST 02 | Idem côté travailleur social |
+| `uagaf_u1` | Agent UAGAF 1 | Contrôle des AFASE (UAGAF) | (départemental) | Contrôler un dossier, le renvoyer, enregistrer le paiement |
+| `regie_r1` | Régisseur Central 1 | Régisseur central | (départemental) | Chèques service remis par la paierie, régies d'urgence |
+| `admin_pi1` | Agent Pôle insertion | Pôle insertion – administratif | Pôle insertion de démonstration (MDS TEST 01 et 02) | Référentiel des actions d'insertion : saisie, import et export CSV |
+| `cadre_pi1` | Cadre Pôle insertion | Pôle insertion – cadre | Pôle insertion de démonstration | Référentiel des actions ; plus tard : commissions de validation et de réorientation |
+| `medecin_pi1` | Médecin Pôle insertion | Pôle insertion – médecin | Pôle insertion de démonstration | Consultation du référentiel ; plus tard : contrats santé (certificat reçu, avis) |
 
 Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mot de passe de la variable `ADMIN_PASSWORD`.
 
@@ -71,23 +71,23 @@ Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mo
 
 | Famille | État | Compte | Ce qu'on peut tester |
 |---|---|---|---|
-| VIDAL Nolan | Brouillon | `asmith` | Reprendre une saisie, compléter le formulaire jeune majeur |
-| AMRANI Sarah | En instruction (budget saisi, évaluation à faire) | `asmith` | Finaliser l'instruction et déposer ; enfant à naître |
-| CLASSIC Claire | Déposée (J-3) | `kchef` | Décider : aide à la décision, reste à vivre, motif, montant indicatif |
-| RECOMP Sophie | Déposée, **plus que 10 jours** avant les 2 mois | `kchef` | Alerte de délai, rappel au cadre |
-| BERNANRD Julien | Déposée, **réputée refusée** (2 mois dépassés) | `kchef` | Bandeau rouge, message au cadre et au TS ; décision expresse à prendre |
-| ROUX Kevin | **Ajournée** il y a 5 jours | `asmith` | Compléter et redéposer ; alerte hors 13 |
-| MONOP Jean | **Ajournée depuis 20 jours** | `kchef` | Les 15 jours sont dépassés : refus code 1 proposé par défaut |
-| BENSALEM Nadia | Accordée (paiement à la famille) | `kchef` | Notification à l'usager, pièces exigées, transmission à l'UAGAF |
-| CLASSIC Marc | Transmise au contrôle | `uagaf1` | Contrôler, renvoyer à la MDS ou enregistrer la demande de paiement |
-| RECOMP Paul | Paiement demandé (versement à la **cantine**, tiers) | `uagaf1` | Enregistrer le paiement ; notification avec versement à un tiers |
-| MONOP Jean | Clôturée, payée (il y a ~4 mois) | `kchef` | Historique des 12 mois, statistiques mensuelles |
-| BENSALEM Karim (MDS 2) | Accordée puis **renvoyée par l'UAGAF** (RIB illisible) | `cadre2` | Correction après renvoi ; cloisonnement MDS 2 |
-| LALANNE Francis | Refusée, **code 3 avec précision** (« le Fonds d'aide aux jeunes ») | `kchef` | Courrier de refus avec la précision |
-| GARNIER Céline | Refusée, **recours gracieux en cours** | `kchef` | Enregistrer l'issue du recours |
-| CHERIF Yasmine | Refusée, recours **réformé** → nouvelle AFASE déposée | `kchef` | Décider la nouvelle AFASE (sans délai de 2 mois), joindre la décision sur le recours, courrier « suite à votre recours » |
-| LEGRAND Thomas | Refusée, recours **contentieux rejeté** | `kchef` | Pièce facultative sur l'AFASE refusée ; statistiques des recours |
-| PEREZ Laura | Déposée, **mesure ASE** | `pief1` | La décision revient à l'inspecteur ; le cadre de MDS ne peut pas décider |
+| VIDAL Nolan | Brouillon | `as1_mds1` | Reprendre une saisie, compléter le formulaire jeune majeur |
+| AMRANI Sarah | En instruction (budget saisi, évaluation à faire) | `as1_mds1` | Finaliser l'instruction et déposer ; enfant à naître |
+| CLASSIC Claire | Déposée (J-3) | `chef_mds1` | Décider : aide à la décision, reste à vivre, motif, montant indicatif |
+| RECOMP Sophie | Déposée, **plus que 10 jours** avant les 2 mois | `chef_mds1` | Alerte de délai, rappel au cadre |
+| BERNANRD Julien | Déposée, **réputée refusée** (2 mois dépassés) | `chef_mds1` | Bandeau rouge, message au cadre et au TS ; décision expresse à prendre |
+| ROUX Kevin | **Ajournée** il y a 5 jours | `as1_mds1` | Compléter et redéposer ; alerte hors 13 |
+| MONOP Jean | **Ajournée depuis 20 jours** | `chef_mds1` | Les 15 jours sont dépassés : refus code 1 proposé par défaut |
+| BENSALEM Nadia | Accordée (paiement à la famille) | `chef_mds1` | Notification à l'usager, pièces exigées, transmission à l'UAGAF |
+| CLASSIC Marc | Transmise au contrôle | `uagaf_u1` | Contrôler, renvoyer à la MDS ou enregistrer la demande de paiement |
+| RECOMP Paul | Paiement demandé (versement à la **cantine**, tiers) | `uagaf_u1` | Enregistrer le paiement ; notification avec versement à un tiers |
+| MONOP Jean | Clôturée, payée (il y a ~4 mois) | `chef_mds1` | Historique des 12 mois, statistiques mensuelles |
+| BENSALEM Karim (MDS 2) | Accordée puis **renvoyée par l'UAGAF** (RIB illisible) | `chef_mds2` | Correction après renvoi ; cloisonnement MDS 2 |
+| LALANNE Francis | Refusée, **code 3 avec précision** (« le Fonds d'aide aux jeunes ») | `chef_mds1` | Courrier de refus avec la précision |
+| GARNIER Céline | Refusée, **recours gracieux en cours** | `chef_mds1` | Enregistrer l'issue du recours |
+| CHERIF Yasmine | Refusée, recours **réformé** → nouvelle AFASE déposée | `chef_mds1` | Décider la nouvelle AFASE (sans délai de 2 mois), joindre la décision sur le recours, courrier « suite à votre recours » |
+| LEGRAND Thomas | Refusée, recours **contentieux rejeté** | `chef_mds1` | Pièce facultative sur l'AFASE refusée ; statistiques des recours |
+| PEREZ Laura | Déposée, **mesure ASE** | `ief_p1` | La décision revient à l'inspecteur ; le cadre de MDS ne peut pas décider |
 
 Les textes de refus des codes 1 à 3 sont remplis avec des **textes d'exemple**, seulement s'ils sont vides. Le référentiel complet s'importe depuis **Cadre → Référentiel AFASE** (fichier JSON tiré de la note de service, hors dépôt).
 
@@ -95,41 +95,41 @@ Les textes de refus des codes 1 à 3 sont remplis avec des **textes d'exemple**,
 
 | Famille | Aide | État | Compte |
 |---|---|---|---|
-| AUBERT Aurélie | Chèques service | Déposée | `kchef` (décider) |
-| VIDAL Nolan | Chèques service (40 €) | Accordée, à remettre | `kchef` (remise depuis le coffre) |
-| LEGRAND Thomas | Chèques service | Refusée | `kchef` (consultation) |
-| AMRANI Sarah | Régie (espèces) | Déposée | `kchef` (décider) |
-| GARNIER Céline | Régie (**paiement à un tiers** : pharmacie) | Accordée, transmise à la paierie | `regie1` (verser) |
-| CHERIF Yasmine | Régie (espèces) | Versée, clôturée | `regie1`, statistiques |
+| AUBERT Aurélie | Chèques service | Déposée | `chef_mds1` (décider) |
+| VIDAL Nolan | Chèques service (40 €) | Accordée, à remettre | `chef_mds1` (remise depuis le coffre) |
+| LEGRAND Thomas | Chèques service | Refusée | `chef_mds1` (consultation) |
+| AMRANI Sarah | Régie (espèces) | Déposée | `chef_mds1` (décider) |
+| GARNIER Céline | Régie (**paiement à un tiers** : pharmacie) | Accordée, transmise à la paierie | `regie_r1` (verser) |
+| CHERIF Yasmine | Régie (espèces) | Versée, clôturée | `regie_r1`, statistiques |
 
-**Coffre CAP de la MDS TEST 01** : régisseur **Agent Admin 1** (`MarioB`), 26 chèques fictifs au coffre (10 de 10 €, 10 de 20 €, 6 de 30 € : 480 €), numérotés `DEMO-10-0001`, `DEMO-20-0001`… Ils sont recréés à chaque réinitialisation.
+**Coffre CAP de la MDS TEST 01** : régisseur **Agent Admin 1** (`aa1_mds1`), 26 chèques fictifs au coffre (10 de 10 €, 10 de 20 €, 6 de 30 € : 480 €), numérotés `DEMO-10-0001`, `DEMO-20-0001`… Ils sont recréés à chaque réinitialisation.
 
 ## Informations préoccupantes (IP)
 
 | Famille | Statut | Compte | Ce qu'on peut tester |
 |---|---|---|---|
-| LEGRAND Thomas | **Reçue par la CRIP** (appel au 119), pas encore transmise | `crip1` | Compléter la composition familiale et transmettre à la MDS |
-| CLASSIC Marc | Transmise à la MDS (init2) | `kchef` | Désigner le binôme (proposition de CID) |
-| PEREZ Laura | En évaluation : binôme Agent Social 1 + PMI, **convocation des parents dans 6 jours** | `asmith` ou `pmi1` | Courriers de convocation, présences, actions, rédaction du rapport |
-| AUBERT Aurélie | **En synthèse** : rapport soumis | `kchef`, `asmith` | Visas du cadre et du binôme, transmission à l'inspecteur (`pief1`) |
+| LEGRAND Thomas | **Reçue par la CRIP** (appel au 119), pas encore transmise | `crip_c1` | Compléter la composition familiale et transmettre à la MDS |
+| CLASSIC Marc | Transmise à la MDS (init2) | `chef_mds1` | Désigner le binôme (proposition de CID) |
+| PEREZ Laura | En évaluation : binôme Agent Social 1 + PMI, **convocation des parents dans 6 jours** | `as1_mds1` ou `pmi_mds1` | Courriers de convocation, présences, actions, rédaction du rapport |
+| AUBERT Aurélie | **En synthèse** : rapport soumis | `chef_mds1`, `as1_mds1` | Visas du cadre et du binôme, transmission à l'inspecteur (`ief_p1`) |
 
 ## RSA – Insertion
 
-Menu **Accompagnement → RSA – Insertion**. Un **pôle insertion de démonstration** (`PI-DEMO`) couvre MDS TEST 01 et 02 ; ses trois agents (`pi_admin`, `pi_cadre`, `pi_medecin`) n'ont accès qu'à ce module.
+Menu **Accompagnement → RSA – Insertion**. Un **pôle insertion de démonstration** (`PI-DEMO`) couvre MDS TEST 01 et 02 ; ses trois agents (`admin_pi1`, `cadre_pi1`, `medecin_pi1`) n'ont accès qu'à ce module.
 
 Cinq actions fictives : trois départementales (accompagnement global, plateforme mobilité limitée au pôle de démonstration, parcours santé) et deux locales de MDS TEST 01 (atelier insertion des femmes, atelier bricolage et logement). Les 16 types d'actions sont créés par `python manage.py init_insertion` (lancé par `install`).
 
-À tester : `kchef` crée une action locale (pas d'action départementale) ; `asmith` consulte seulement ; `pi_admin` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les types et les actions départementales.
+À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les types et les actions départementales.
 
 ## Planning
 
-Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`asmith`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. Une semaine plus tard, même permanence avec 5 créneaux libres : de quoi tester « Prendre rendez-vous » depuis une fiche usager (CID propose les créneaux de J+2 à J+17). La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
+Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`as1_mds1`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. Une semaine plus tard, même permanence avec 5 créneaux libres : de quoi tester « Prendre rendez-vous » depuis une fiche usager (CID propose les créneaux de J+2 à J+17). La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
 
 ## Parcours de test conseillés
 
-1. **Circuit AFASE complet** : `asmith` finalise AMRANI → `kchef` accorde → `kchef` transmet à l'UAGAF → `uagaf1` demande le paiement puis l'enregistre.
-2. **Délais** : `kchef` ouvre son tableau de bord (RECOMP Sophie à J-10, BERNANRD réputée refusée, MONOP ajournée échue), puis vérifie ses messages.
-3. **Recours** : `kchef` enregistre l'issue du recours GARNIER (réformé) → décide la nouvelle AFASE → courrier de notification.
-4. **Deux MDS** : `ts2` peut consulter la fiche d'un usager de la MDS TEST 01 (consultation de tous les usagers), mais pas ses dossiers d'aide ; `cadre2` ne décide que les dossiers de la MDS TEST 02 (BENSALEM Karim), et `kchef` ne voit pas ceux de la MDS TEST 02. La famille BENSALEM est répartie entre les deux MDS.
-5. **IP** : `crip1` transmet LEGRAND → `kchef` désigne le binôme → `asmith` convoque → rapport → visas → `pief1` donne son avis.
-6. **Statistiques** : `kchef`, page des aides financières (mois par mois, recours) et page des IP.
+1. **Circuit AFASE complet** : `as1_mds1` finalise AMRANI → `chef_mds1` accorde → `chef_mds1` transmet à l'UAGAF → `uagaf_u1` demande le paiement puis l'enregistre.
+2. **Délais** : `chef_mds1` ouvre son tableau de bord (RECOMP Sophie à J-10, BERNANRD réputée refusée, MONOP ajournée échue), puis vérifie ses messages.
+3. **Recours** : `chef_mds1` enregistre l'issue du recours GARNIER (réformé) → décide la nouvelle AFASE → courrier de notification.
+4. **Deux MDS** : `as1_mds2` peut consulter la fiche d'un usager de la MDS TEST 01 (consultation de tous les usagers), mais pas ses dossiers d'aide ; `chef_mds2` ne décide que les dossiers de la MDS TEST 02 (BENSALEM Karim), et `chef_mds1` ne voit pas ceux de la MDS TEST 02. La famille BENSALEM est répartie entre les deux MDS.
+5. **IP** : `crip_c1` transmet LEGRAND → `chef_mds1` désigne le binôme → `as1_mds1` convoque → rapport → visas → `ief_p1` donne son avis.
+6. **Statistiques** : `chef_mds1`, page des aides financières (mois par mois, recours) et page des IP.

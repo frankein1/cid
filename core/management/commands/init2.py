@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from core.management.commands.init_demo import mot_de_passe   # mot de passe commun des comptes de démo
+from core.management.commands.init_demo import mot_de_passe, renommer_comptes_demo   # comptes de démo
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from mds.models import MDS, UserMDSProfile, MDSReception
@@ -14,6 +14,7 @@ class Command(BaseCommand):
     help = "Initialisation des données de test (agents, familles, salles) – âges réalistes et liens bidirectionnels"
 
     def handle(self, *args, **options):
+        renommer_comptes_demo()   # anciens identifiants (kchef, asmith…) → rôle_structure
         self.stdout.write("🚀 Création des données de test")
 
         # ==========================================================
@@ -77,13 +78,13 @@ class Command(BaseCommand):
         }
 
         agents_data = [
-            ("asmith", "Agent Social 1", "agent_social", False),
-            ("bjones", "Agent Social 2", "agent_social", False),
-            ("cdubois", "Agent Social 3", "agent_social", False),
-            ("MarioB", "Agent Admin 1", "agent_administratif", False),
-            ("LuigiB", "Agent Admin 2", "agent_administratif", False),
-            ("jcadre1", "Cadre MDS 1", "cadre", False),
-            ("kchef", "Chef de service (propriétaire)", "cadre", True),
+            ("as1_mds1", "Agent Social 1", "agent_social", False),
+            ("as2_mds1", "Agent Social 2", "agent_social", False),
+            ("as3_mds1", "Agent Social 3", "agent_social", False),
+            ("aa1_mds1", "Agent Admin 1", "agent_administratif", False),
+            ("aa2_mds1", "Agent Admin 2", "agent_administratif", False),
+            ("cadre_mds1", "Cadre MDS 1", "cadre", False),
+            ("chef_mds1", "Chef de service (propriétaire)", "cadre", True),
         ]
 
         for username, fullname, profil_key, est_proprietaire in agents_data:
@@ -262,9 +263,9 @@ class Command(BaseCommand):
         # Protection de l'enfance : comptes de démonstration et une IP fictive
         # ----------------------------------------------------------
         for username, prenom, nom, code, dans_mds in [
-            ("pmi1", "Agent", "PMI 1", "MDS_PMI_INFANTILE", True),
-            ("crip1", "Agent", "CRIP 1", "CRIP", False),
-            ("pief1", "Inspecteur", "Enfance famille 1", "PIEF", False),
+            ("pmi_mds1", "Agent", "PMI 1", "MDS_PMI_INFANTILE", True),
+            ("crip_c1", "Agent", "CRIP 1", "CRIP", False),
+            ("ief_p1", "Inspecteur", "Enfance famille 1", "PIEF", False),
         ]:
             u, cree = User.objects.get_or_create(username=username, defaults={
                 "first_name": prenom, "last_name": nom, "email": f"{username}@test.fr",
@@ -281,7 +282,7 @@ class Command(BaseCommand):
 
         from protection_enfance.models import EnfantIP, HistoriqueAction, InformationPreoccupante
         if not InformationPreoccupante.objects.filter(famille=pere3).exists():
-            crip = User.objects.get(username="crip1")
+            crip = User.objects.get(username="crip_c1")
             ip = InformationPreoccupante.objects.create(
                 date_reception_crip=timezone.localdate() - timedelta(days=20), recue_par=crip, cree_par=crip,
                 origine="EDUCATION", niveau_urgence="COURANTE", famille=pere3, mds=mds,

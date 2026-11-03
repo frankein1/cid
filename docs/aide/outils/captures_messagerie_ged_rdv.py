@@ -7,7 +7,7 @@
 """
 Captures des fiches d'aide « Messagerie », « Documents (GED) » et « Rendez-vous », sur la base de démonstration
 fraîchement réinitialisée (python manage.py init_demo --reinitialiser). Voir _commun.py.
-Usagère suivie : Sarah AMRANI (FAM5-SAR), référente Agent Social 1 (asmith).
+Usagère suivie : Sarah AMRANI (FAM5-SAR), référente Agent Social 1 (as1_mds1).
 Les documents déposés sont de petits PDF « DOCUMENT FICTIF » ; en local, la GED écrit sur le disque (pas de pCloud).
 """
 import re
@@ -27,7 +27,7 @@ def option_contenant(pg, select, texte):
 
 with sync_playwright() as p:
     nav = p.chromium.launch()
-    ts = page(nav, "asmith")
+    ts = page(nav, "as1_mds1")
     ts.goto(f"{B}/beneficiaire/FAM5-SAR/")
     id_sarah = re.search(r"/messagerie/nouveau/(\d+)/",
                          ts.locator("a[href*='/messagerie/nouveau/']").first.get_attribute("href")).group(1)
@@ -53,7 +53,7 @@ with sync_playwright() as p:
     ts.goto(f"{B}/beneficiaire/FAM5-SAR/")
     shot(ts, "messagerie", "01", f"a[href$='/messagerie/nouveau/{id_sarah}/']")
     ts.goto(f"{B}/messagerie/nouveau/{id_sarah}/")
-    ts.select_option("select[name=destinataire]", option_contenant(ts, "select[name=destinataire]", "(kchef)"))
+    ts.select_option("select[name=destinataire]", option_contenant(ts, "select[name=destinataire]", "(chef_mds1)"))
     ts.fill("input[name=objet]", "Justificatif de domicile reçu")
     ts.select_option("select[name=motif]", "validation_document")
     ts.fill("textarea[name=contenu]", "Bonjour, Mme AMRANI a apporté son justificatif de domicile, joint à ce message (fictif).")
@@ -61,7 +61,7 @@ with sync_playwright() as p:
     ts.locator("input[name=documents_ged]").first.check()
     shot(ts, "messagerie", "03", "input[name=documents_ged]")
     soumettre(ts, "form:has(textarea[name=contenu])")
-    ca = page(nav, "kchef")
+    ca = page(nav, "chef_mds1")
     ca.goto(B + "/messagerie/")
     shot(ca, "messagerie", "04", "a[href*='/messagerie/message/']", top=True)
     ca.locator("a[href*='/messagerie/message/']").first.click(); ca.wait_for_load_state()
