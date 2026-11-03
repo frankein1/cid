@@ -45,6 +45,9 @@ class Command(BaseCommand):
         self.stdout.write("\n📄 Types de documents...")
         call_command('seed_document_types')
 
+        # 6 bis. Types d'actions d'insertion (module RSA)
+        call_command('init_insertion')
+
         # 6. Superuser (si ADMIN_PASSWORD défini)
         admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
         admin_password = os.environ.get('ADMIN_PASSWORD')

@@ -56,6 +56,12 @@ CAPACITES = [
     ('ip_piloter', "IP – Piloter les IP de sa MDS (réunions, binôme, visas, saisines)"),
     ('ip_evaluer', "IP – Peut faire partie d'un binôme d'évaluation"),
     ('afase_controle', 'AFASE – UAGAF, unité administrative de gestion des aides financières (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
+    # --- RSA – INSERTION ---
+    ('rsa_referentiel', "RSA – Gérer le référentiel départemental des actions d'insertion (saisie, import CSV)"),
+    ('rsa_actions_locales', "RSA – Gérer les actions d'insertion locales de sa MDS"),
+    ('rsa_pole_admin', "RSA – Administratif du pôle insertion (réception des contrats, délais)"),
+    ('rsa_pole_cadre', "RSA – Cadre du pôle insertion (commissions de validation et de réorientation)"),
+    ('rsa_pole_medecin', "RSA – Médecin du pôle insertion (contrats santé : certificat reçu, avis)"),
     ('peut_inscrire_aidfi', 'Inscription AidFi'),
     ('peut_consulter_dossiers_aidfi', 'Consulter dossiers AidFi'),
 ]

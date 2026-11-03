@@ -1,0 +1,57 @@
+<!-- templates/insertion/actions_import.html -->
+{% extends "base.html" %}
+{% block title %}Importer des actions d'insertion{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <a href="{% url 'insertion:actions_liste' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Actions d'insertion</a>
+    <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-import text-blue-700 mr-2"></i>Importer des actions (CSV)</h1>
+
+    {% if not lignes %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-3 text-sm text-gray-700">
+        <ol class="list-decimal pl-5 space-y-1">
+            <li>Téléchargez le <a href="{% url 'insertion:actions_modele_csv' %}" class="text-blue-700 hover:underline font-semibold">fichier modèle</a> (ou l'<a href="{% url 'insertion:actions_export_csv' %}?etat=toutes" class="text-blue-700 hover:underline">export</a> des actions existantes, pour les mettre à jour).</li>
+            <li>Remplissez-le dans un tableur, une action par ligne, puis enregistrez-le au format CSV (séparateur point-virgule).</li>
+            <li>Déposez-le ci-dessous : CID affiche ce qu'il va créer ou modifier, et les lignes en erreur, <b>avant</b> d'enregistrer.</li>
+        </ol>
+        <p>Une ligne dont le code existe déjà (dans la même MDS, pour une action locale) <b>met à jour</b> l'action ; rien n'est jamais supprimé (passer « actif » à non pour retirer une action).</p>
+        <details class="text-xs text-gray-600"><summary class="cursor-pointer">Codes à utiliser</summary>
+            <p class="mt-2"><b>Types :</b> {% for t in types %}<code>{{ t.code }}</code> ({{ t.libelle }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+            <p class="mt-1"><b>Pôles :</b> {% for p in poles %}<code>{{ p.code }}</code> ({{ p.nom }}){% if not forloop.last %}, {% endif %}{% empty %}aucun pôle enregistré{% endfor %}</p>
+        </details>
+        <form method="post" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3 pt-2">
+            {% csrf_token %}
+            {{ form.fichier }}
+            <button class="px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-semibold">Analyser le fichier</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="flex flex-wrap gap-3 text-sm">
+        <span class="px-3 py-1 rounded bg-emerald-100 text-emerald-800">{{ resume.creation }} création{{ resume.creation|pluralize }}</span>
+        <span class="px-3 py-1 rounded bg-blue-100 text-blue-800">{{ resume.mise_a_jour }} mise{{ resume.mise_a_jour|pluralize }} à jour</span>
+        <span class="px-3 py-1 rounded {% if resume.erreur %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-600{% endif %}">{{ resume.erreur }} erreur{{ resume.erreur|pluralize }}</span>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">Ligne</th><th class="px-3 py-2 text-left">Code</th><th class="px-3 py-2 text-left">Libellé</th><th class="px-3 py-2 text-left">Résultat</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for l in lignes %}
+            <tr class="{% if l.operation == 'erreur' %}bg-red-50{% endif %}">
+                <td class="px-3 py-2">{{ l.numero }}</td><td class="px-3 py-2 font-mono">{{ l.code }}</td><td class="px-3 py-2">{{ l.libelle }}</td>
+                <td class="px-3 py-2">{% if l.operation == 'creation' %}<span class="text-emerald-700">création</span>{% elif l.operation == 'mise_a_jour' %}<span class="text-blue-700">mise à jour</span>{% else %}<span class="text-red-700">{{ l.erreurs|join:" ; " }}</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <form method="post" class="flex flex-wrap gap-3 items-center">
+        {% csrf_token %}
+        <input type="hidden" name="etape" value="enregistrer">
+        <button class="px-5 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800" {% if not resume.creation and not resume.mise_a_jour %}disabled{% endif %}>
+            <i class="fas fa-check mr-1"></i>Enregistrer {{ resume.creation|add:resume.mise_a_jour }} action{{ resume.creation|add:resume.mise_a_jour|pluralize }}</button>
+        {% if resume.erreur %}<span class="text-sm text-gray-600">Les lignes en erreur seront ignorées : corrigez-les dans le fichier et importez-le de nouveau.</span>{% endif %}
+        <a href="{% url 'insertion:actions_import' %}" class="text-sm text-blue-700 hover:underline">Déposer un autre fichier</a>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

@@ -13,7 +13,8 @@ par exemple la base PostgreSQL d'alwaysdata), puis réinstalle : install, init2,
 Conservés :
   - les comptes super-administrateur (identifiant, mot de passe, nom, courriel), pour pouvoir se reconnecter ;
   - le paramétrage saisi en administration : référentiel AFASE (paramètres, motifs, montants indicatifs,
-    motifs de refus et leurs textes), types de danger des IP, modèles de courriers et configuration générale (clé / valeur).
+    motifs de refus et leurs textes), types de danger des IP, modèles de courriers, types d'actions d'insertion et
+    actions d'insertion départementales, configuration générale (clé / valeur).
     Les référentiels remplis par des migrations (motifs AFASE, motifs de refus, types de danger) doivent être
     dans MODELES_CONSERVES : « flush » vide aussi leurs tables, et les migrations déjà appliquées ne repassent pas.
 Supprimés aussi : les fichiers de la GED (pCloud sur Render), document par document, avant l'effacement.
@@ -36,7 +37,9 @@ CONFIRMATION = "TOUT EFFACER"
 # Paramétrage conservé (modèles sans lien vers les dossiers ; les liens vers un utilisateur sont vidés)
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
                      "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration",
-                     "core.ModeleCourrier"]
+                     "core.ModeleCourrier", "insertion.TypeActionInsertion", "insertion.ActionInsertion"]
+# Lignes conservées d'un modèle (par défaut toutes). Les actions locales, liées à une MDS effacée, ne le sont pas.
+FILTRES_CONSERVES = {"insertion.ActionInsertion": lambda qs: qs.filter(niveau="DEPARTEMENTAL")}
 DUREE_MAX_MINUTES = 30   # au-delà, une remise « en cours » est considérée comme interrompue (redémarrage du serveur)
 
 
@@ -116,7 +119,6 @@ def _commande(journal, nom, **options):
 
 def _remise_a_zero(journal):
     from django.apps import apps
-    from django.conf import settings
     from django.core import serializers
     from django.core.management import call_command
     from django.core.management.color import no_style
@@ -131,7 +133,8 @@ def _remise_a_zero(journal):
     conserves = {}
     for nom in MODELES_CONSERVES:
         modele = apps.get_model(nom)
-        conserves[nom] = serializers.serialize("python", modele.objects.all())
+        qs = FILTRES_CONSERVES.get(nom, lambda q: q)(modele.objects.all())
+        conserves[nom] = serializers.serialize("python", qs)
     journal("💾 Paramétrage conservé : " + ", ".join(f"{n.split('.')[1]} ({len(v)})" for n, v in conserves.items()))
 
     # 2. Fichiers de la GED : chaque suppression purge son fichier du stockage (signaux de ged/signals.py)
@@ -155,12 +158,14 @@ def _remise_a_zero(journal):
     journal("👤 Comptes super-administrateur recréés (mêmes identifiants et mots de passe)")
 
     # 5. Paramétrage remis (liens vers un utilisateur vidés : les comptes ont changé)
-    modeles_users = {settings.AUTH_USER_MODEL.lower()}
+    # Les liens vers des données effacées (utilisateurs, MDS, pôles, partenaires…) sont vidés ;
+    # seuls restent les liens entre modèles conservés (ex. action → type d'action).
+    gardes = {n.lower() for n in MODELES_CONSERVES}
     for nom, objets in conserves.items():
         modele = apps.get_model(nom)
         for o in objets:
-            for champ in modele._meta.concrete_fields:
-                if champ.is_relation and champ.related_model._meta.label_lower in modeles_users:
+            for champ in list(modele._meta.concrete_fields) + list(modele._meta.many_to_many):
+                if champ.is_relation and champ.related_model._meta.label_lower not in gardes:
                     o["fields"].pop(champ.name, None)
         for obj in serializers.deserialize("python", objets):
             obj.save()

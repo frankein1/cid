@@ -1,0 +1,79 @@
+<!-- templates/insertion/actions_liste.html -->
+{% extends "base.html" %}
+{% block title %}Actions d'insertion{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-list-check text-blue-700 mr-2"></i>Actions d'insertion</h1>
+            <p class="text-sm text-gray-500">Actions départementales et actions locales des MDS, rattachées à un type commun.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'insertion:actions_export_csv' %}?{{ requete }}" class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-export mr-1"></i>Exporter (CSV)</a>
+            {% if peut_departemental or peut_local %}
+            <a href="{% url 'insertion:actions_import' %}" class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-import mr-1"></i>Importer (CSV)</a>
+            <a href="{% url 'insertion:action_creation' %}" class="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-plus mr-1"></i>Nouvelle action</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" class="flex flex-wrap gap-2 items-end mb-4">
+        <input type="text" name="q" value="{{ filtres.q }}" placeholder="Libellé, code, porteur, territoire…" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-64">
+        <select name="type" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Tous les types</option>
+            {% for t in types %}<option value="{{ t.code }}" {% if filtres.type == t.code %}selected{% endif %}>{{ t.libelle }}</option>{% endfor %}
+        </select>
+        <select name="niveau" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Départementales et locales</option>
+            {% for code, libelle in niveaux %}<option value="{{ code }}" {% if filtres.niveau == code %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+        </select>
+        {% if poles %}
+        <select name="pole" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Tous les pôles</option>
+            {% for p in poles %}<option value="{{ p.code }}" {% if filtres.pole == p.code %}selected{% endif %}>{{ p.nom }}</option>{% endfor %}
+        </select>
+        {% endif %}
+        <select name="etat" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="">Actives</option>
+            <option value="inactives" {% if filtres.etat == 'inactives' %}selected{% endif %}>Inactives</option>
+            <option value="toutes" {% if filtres.etat == 'toutes' %}selected{% endif %}>Toutes</option>
+        </select>
+        <button class="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm">Filtrer</button>
+    </form>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                <tr>
+                    <th class="px-4 py-3 text-left">Action</th>
+                    <th class="px-4 py-3 text-left">Type</th>
+                    <th class="px-4 py-3 text-left">Périmètre</th>
+                    <th class="px-4 py-3 text-left">Porteur</th>
+                    <th class="px-4 py-3 text-left">Durée</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for a in page_obj %}
+                <tr class="hover:bg-gray-50 {% if not a.actif %}text-gray-400{% endif %}">
+                    <td class="px-4 py-3"><a href="{% url 'insertion:action_detail' a.pk %}" class="text-blue-700 hover:underline font-medium">{{ a.libelle }}</a>
+                        <span class="block text-xs text-gray-500 font-mono">{{ a.code }}{% if not a.actif %} · inactive{% endif %}</span></td>
+                    <td class="px-4 py-3">{{ a.type_action.libelle }}</td>
+                    <td class="px-4 py-3">{% if a.niveau == 'LOCAL' %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">locale</span> {% endif %}{{ a.perimetre }}</td>
+                    <td class="px-4 py-3">{{ a.porteur|default:"—" }}</td>
+                    <td class="px-4 py-3">{{ a.duree|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Aucune action.{% if peut_departemental %} Importez la liste avec le fichier modèle (bouton « Importer »).{% endif %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2 mt-4 text-sm">
+        {% if page_obj.has_previous %}<a href="?{{ requete }}&page={{ page_obj.previous_page_number }}" class="px-3 py-1 border rounded">←</a>{% endif %}
+        <span class="px-3 py-1">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{{ requete }}&page={{ page_obj.next_page_number }}" class="px-3 py-1 border rounded">→</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

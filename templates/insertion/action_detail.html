@@ -1,0 +1,31 @@
+<!-- templates/insertion/action_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ action.libelle }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <a href="{% url 'insertion:actions_liste' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Actions d'insertion</a>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ action.libelle }}</h1>
+            <p class="text-sm text-gray-500"><span class="font-mono">{{ action.code }}</span> · {{ action.type_action.libelle }} · {{ action.get_niveau_display }}
+                {% if not action.actif %}<span class="ml-1 px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs">inactive</span>{% endif %}</p>
+        </div>
+        {% if peut_modifier %}<a href="{% url 'insertion:action_modifier' action.pk %}" class="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-pen mr-1"></i>Modifier</a>{% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 grid md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+        <div><p class="text-xs uppercase text-gray-500">Périmètre</p><p>{{ action.perimetre }}</p></div>
+        <div><p class="text-xs uppercase text-gray-500">Porteur</p><p>{{ action.porteur|default:"—" }}{% if action.partenaire %} · <a href="{% url 'partenaires:liste' %}?q={{ action.partenaire.organisme|urlencode }}" class="text-blue-700 hover:underline">annuaire</a>{% endif %}</p></div>
+        <div><p class="text-xs uppercase text-gray-500">Durée ou volume</p><p>{{ action.duree|default:"—" }}</p></div>
+        <div><p class="text-xs uppercase text-gray-500">Comité de suivi technique</p><p>{% if action.comite_suivi %}Oui{% if action.rythme_comite %} ({{ action.rythme_comite }}){% endif %}{% else %}Non{% endif %}</p></div>
+        <div class="md:col-span-2"><p class="text-xs uppercase text-gray-500">Public visé</p><p class="whitespace-pre-line">{{ action.public_vise|default:"—" }}</p></div>
+        {% if action.description %}<div class="md:col-span-2"><p class="text-xs uppercase text-gray-500">Description</p><p class="whitespace-pre-line">{{ action.description }}</p></div>{% endif %}
+        <div><p class="text-xs uppercase text-gray-500">Destinataires de la prescription</p>
+            {% for d in action.liste_destinataires %}<p class="font-mono text-xs">{{ d }}</p>{% empty %}<p>—</p>{% endfor %}</div>
+        <div><p class="text-xs uppercase text-gray-500">Pièces à joindre</p>
+            {% for p in action.liste_pieces %}<p>• {{ p }}</p>{% empty %}<p>—</p>{% endfor %}</div>
+        {% if action.aussi_logement %}<div class="md:col-span-2"><span class="px-2 py-1 rounded bg-emerald-50 text-emerald-800 text-xs"><i class="fas fa-house mr-1"></i>Concerne aussi le logement</span></div>{% endif %}
+    </div>
+    <p class="text-xs text-gray-400">Modifiée le {{ action.modifie_le|date:"d/m/Y à H:i" }}{% if action.modifie_par %} par {{ action.modifie_par.get_full_name|default:action.modifie_par.username }}{% endif %}.</p>
+</div>
+{% endblock %}
