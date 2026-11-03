@@ -19,7 +19,7 @@ OUT = Path(__file__).resolve().parent.parent / "img"
 RAW = Path(os.environ.get("RAW", "/tmp/captures_aide"))
 TW = Path(os.environ.get("TW", "/tmp/tw"))
 FA = TW / "node_modules/@fortawesome/fontawesome-free"
-MDP = os.environ.get("MDP_DEMO", "testpass123")
+MDP = os.environ.get("MDP_DEMO", "demo123&")
 STYLE = ".cid-hl{outline:4px solid #dc2626 !important;outline-offset:4px;border-radius:8px}"
 HL = """(sel)=>{document.querySelectorAll('.cid-hl').forEach(e=>e.classList.remove('cid-hl'));
  if(!sel) return true; const e=document.querySelector(sel); if(!e) return false; e.classList.add('cid-hl');

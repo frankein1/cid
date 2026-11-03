@@ -19,7 +19,7 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 
 ## Comptes de test
 
-**Mot de passe :** celui de la variable d'environnement `DEMO_PASSWORD` si elle est définie au moment de la création du compte, sinon `testpass123`.
+**Mot de passe de tous les comptes de démonstration : `demo123&`** (ou celui de la variable d'environnement `DEMO_PASSWORD`, si elle est définie). Il est remis à chaque création ou réinitialisation du jeu de démonstration ; le super-administrateur n'est jamais concerné.
 ⚠️ Le dépôt est public : sur une instance accessible depuis Internet, définissez `DEMO_PASSWORD` sur Render, ou changez ces mots de passe.
 
 | Identifiant | Nom affiché | Profil | MDS | Sert à tester |

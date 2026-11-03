@@ -105,7 +105,12 @@ def type_aide(code):
 
 
 def mot_de_passe():
-    return os.environ.get("DEMO_PASSWORD") or "testpass123"
+    return os.environ.get("DEMO_PASSWORD") or "demo123&"
+
+
+# Comptes de démonstration (init2 et init_demo) : mot de passe remis à mot_de_passe() à chaque création ou
+# réinitialisation du jeu. Jamais un super-administrateur.
+COMPTES_INIT2 = ["asmith", "bjones", "cdubois", "MarioB", "LuigiB", "jcadre1", "kchef", "pmi1", "crip1", "pief1"]
 
 
 class Command(BaseCommand):
@@ -210,6 +215,11 @@ class Command(BaseCommand):
                 ump, _ = UserMDSProfile.objects.get_or_create(
                     user=user, mds=MDS.objects.get(code_mds=code_mds), defaults={"principale": True, "actif": True})
                 ump.save()
+        mdp = mot_de_passe()
+        for user in User.objects.filter(username__in=COMPTES_INIT2 + [c[0] for c in COMPTES], is_superuser=False):
+            user.set_password(mdp)
+            user.force_change_password = False
+            user.save(update_fields=["password", "force_change_password"])
         if not self.mds2.responsable:
             self.mds2.responsable = self.u("cadre2")
             self.mds2.save(update_fields=["responsable"])
