@@ -121,6 +121,7 @@ def liste_beneficiaires(request):
                 Q(numero_caf__icontains=identifiant) |
                 Q(numero_france_travail__icontains=identifiant) | 
                 Q(numero_fiscal__icontains=identifiant) |
+                Q(numero_dossier_pmi__icontains=identifiant) |
                 Q(code_interne__icontains=identifiant) |
                 Q(telephone_mobile__icontains=identifiant)
             )

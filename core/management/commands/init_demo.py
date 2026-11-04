@@ -268,6 +268,13 @@ class Command(BaseCommand):
                     "adresse": "12 rue du Rhône" if cp == "84000" else (adresse if n_mds == 1 else "11 rue des Lices"),
                     "code_postal": cp, "ville": ville, "mds": self.mds1 if n_mds == 1 else self.mds2,
                     "statut": "ACTIF", "marital_status": statut_marital, "cree_par": self.ts})
+        # Enfants de moins de 6 ans suivis par la PMI : numéro de dossier fictif (le suivi médical reste hors de CID)
+        for code, numero in [("FAM8-MIL", "PMI-DEMO-0001"), ("FAM10-ADA", "PMI-DEMO-0002")]:
+            Beneficiaire.objects.filter(code_interne=code).update(numero_dossier_pmi=numero)
+        # Points d'attention (bandeau en haut de la fiche)
+        Beneficiaire.objects.filter(code_interne="FAM12-AUR").update(vff=True)
+        Beneficiaire.objects.filter(code_interne="FAM4-NOL").update(rupture_familiale=True)
+        Beneficiaire.objects.filter(code_interne="FAM9-CEL").update(personne_vulnerable=True)
         inverse = {"ENFANT": "PARENT", "CONJOINT": "CONJOINT"}
         for a, c, type_lien, foyer in LIENS:
             LienFamilial.objects.get_or_create(personne_a=self.b[a], personne_b=self.b[c], type_lien=type_lien,

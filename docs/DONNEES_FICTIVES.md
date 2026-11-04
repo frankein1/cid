@@ -134,6 +134,14 @@ Contrats fictifs, tous préparés par **Agent Social 1** (`as1_mds1`), à chaque
 
 À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types et les actions départementales.
 
+## Points d'attention
+
+Cases à cocher de la fiche usager (rubrique « Points d'attention » de la modification), affichées en bandeau en haut de la fiche pour tous les agents : **personne vulnérable** (GARNIER Céline), **rupture familiale** (VIDAL Nolan), **VFF** – violences faites aux femmes (AUBERT Aurélie).
+
+## PMI
+
+Mila PEREZ (4 ans) et Adam CHERIF (3 ans) ont un **n° de dossier PMI** fictif (`PMI-DEMO-0001`, `PMI-DEMO-0002`) : il renvoie au logiciel de la PMI, où reste le suivi médical. Il s'affiche sur la fiche et se cherche avec le champ « identifiant » de la liste des bénéficiaires.
+
 ## Planning
 
 Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`as1_mds1`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. Une semaine plus tard, même permanence avec 5 créneaux libres : de quoi tester « Prendre rendez-vous » depuis une fiche usager (CID propose les créneaux de J+2 à J+17). La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
