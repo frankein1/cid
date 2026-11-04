@@ -14,7 +14,7 @@ Conservés :
   - les comptes super-administrateur (identifiant, mot de passe, nom, courriel), pour pouvoir se reconnecter ;
   - le paramétrage saisi en administration : référentiel AFASE (paramètres, motifs, montants indicatifs,
     motifs de refus et leurs textes), types de danger des IP, modèles de courriers, types d'actions d'insertion et
-    actions d'insertion départementales, configuration générale (clé / valeur).
+    actions d'insertion départementales, paramètres du contrat RSA, configuration générale (clé / valeur).
     Les référentiels remplis par des migrations (motifs AFASE, motifs de refus, types de danger) doivent être
     dans MODELES_CONSERVES : « flush » vide aussi leurs tables, et les migrations déjà appliquées ne repassent pas.
 Supprimés aussi : les fichiers de la GED (pCloud sur Render), document par document, avant l'effacement.
@@ -40,7 +40,8 @@ CONFIRMATION = "TOUT EFFACER"
 # Paramétrage conservé (modèles sans lien vers les dossiers ; les liens vers un utilisateur sont vidés)
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
                      "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration",
-                     "core.ModeleCourrier", "insertion.TypeActionInsertion", "insertion.ActionInsertion"]
+                     "core.ModeleCourrier", "insertion.TypeActionInsertion", "insertion.ActionInsertion",
+                     "insertion.ParametresRSA"]
 # Lignes conservées d'un modèle (par défaut toutes). Les actions locales, liées à une MDS effacée, ne le sont pas.
 FILTRES_CONSERVES = {"insertion.ActionInsertion": lambda qs: qs.filter(niveau="DEPARTEMENTAL")}
 DUREE_MAX_MINUTES = 30   # au-delà, une remise « en cours » est considérée comme interrompue (redémarrage du serveur)

@@ -60,3 +60,58 @@ def actions_visibles(user):
     if ids is None:
         return qs
     return qs.filter(Q(niveau=ActionInsertion.DEPARTEMENTAL) | Q(mds_id__in=ids))
+
+
+# =============================================================================
+# Contrats
+# =============================================================================
+# Référent (agent de la MDS du bénéficiaire, capacité peut_creer) : rédige, signe, transmet, renouvelle.
+# Pôle insertion (contrats des MDS de son pôle) : l'administratif réceptionne, le médecin donne son avis sur les
+# contrats santé, le cadre décide en commission. Les agents du pôle ne voient pas le reste du dossier social.
+
+def poles_de(user):
+    from insertion.models import PoleInsertion
+    return PoleInsertion.objects.filter(membres=user, actif=True)
+
+
+def pole_de_mds(mds):
+    from insertion.models import PoleInsertion
+    return PoleInsertion.objects.filter(mds=mds, actif=True).order_by('code').first() if mds else None
+
+
+def contrats_visibles(user):
+    from insertion.models import ContratInsertion
+    from mds.models import UserMDSProfile
+    qs = ContratInsertion.objects.select_related('beneficiaire', 'mds', 'pole', 'referent')
+    if user.a_la_capacite('peut_administrer'):
+        return qs
+    filtre = Q(pk__in=[])
+    if user.a_la_capacite('peut_voir'):
+        filtre |= Q(mds_id__in=UserMDSProfile.objects.filter(user=user, actif=True).values('mds_id'))
+    if est_agent_pole(user):
+        filtre |= Q(pole__in=poles_de(user))
+    return qs.filter(filtre)
+
+
+def peut_rediger(user, beneficiaire):
+    """Créer ou reprendre un contrat : agent de la MDS du bénéficiaire qui peut créer des dossiers."""
+    return beneficiaire.peut_etre_modifie_par(user)
+
+
+def _du_pole(user, contrat, capacite):
+    if user.is_superuser:
+        return True
+    return (user.a_la_capacite(capacite) and contrat.pole_id is not None
+            and poles_de(user).filter(pk=contrat.pole_id).exists())
+
+
+def est_admin_pole(user, contrat):
+    return _du_pole(user, contrat, 'rsa_pole_admin')
+
+
+def est_cadre_pole(user, contrat):
+    return _du_pole(user, contrat, 'rsa_pole_cadre')
+
+
+def est_medecin_pole(user, contrat):
+    return _du_pole(user, contrat, 'rsa_pole_medecin')

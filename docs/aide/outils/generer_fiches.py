@@ -16,7 +16,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider',
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
-         'insertion-actions', 'insertion-action-locale', 'insertion-import']
+         'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -26,7 +27,8 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                                            'regie-demander', 'regie-decider']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
-             ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import'])]
+             ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
+                                  'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler'])]
 
 
 def rubrique(slug):
@@ -64,6 +66,10 @@ TITRES = {
     'insertion-actions': ("Consulter les actions d'insertion", "Le référentiel commun à toutes les MDS"),
     'insertion-action-locale': ("Créer une action d'insertion locale", "Cadre de MDS"),
     'insertion-import': ("Importer et exporter les actions (CSV)", "Pôle insertion"),
+    'contrat-rediger': ("Rédiger et transmettre un contrat RSA", "Référent de MDS"),
+    'contrat-pole': ("Réceptionner et valider un contrat", "Pôle insertion : administratif et cadre"),
+    'contrat-sante': ("Contrat santé : certificat et avis médical", "Référent et médecin du pôle"),
+    'contrat-renouveler': ("Suivre la file active et renouveler", "Référent de MDS"),
 }
 
 
@@ -806,12 +812,98 @@ page('insertion-import', qui="Agents des pôles insertion (et cadres de MDS pour
      ],
      savoir=["Rien n'est jamais supprimé par un import : pour retirer une action, mettez « actif » à non.",
              "Chaque ligne est contrôlée avec vos droits : un cadre de MDS n'importe que les actions locales de sa MDS."],
-     ensuite=['insertion-actions'])
+     ensuite=['insertion-actions', 'contrat-rediger'])
+
+page('contrat-rediger', qui="Référents des MDS (agents qui peuvent créer des dossiers)", ou="Fiche du bénéficiaire → Contrat RSA", duree="15 minutes",
+     intro="Le contrat se prépare avec le bénéficiaire, s'imprime pour la signature, puis part au pôle insertion d'un clic : plus de ressaisie ni d'envoi papier.",
+     etapes=[
+         ("Ouvrir les contrats du bénéficiaire", [fig('contrat-rediger', '01', "Le bouton « Contrat RSA » de la fiche."),
+                                                  fig('contrat-rediger', '02', "Les contrats du bénéficiaire.")],
+          ["Sur la fiche du bénéficiaire, cliquez sur <span class=\"clic\">Contrat RSA</span>.",
+           "Choisissez le type : <b>ouverture</b> (premier contrat), <b>prolongement</b> ou <b>rétablissement</b> (après une suspension ; après une radiation, c'est une nouvelle demande à la CAF et donc une ouverture).",
+           "Un prolongement ou un rétablissement reprend le diagnostic et les actions en cours du dernier contrat validé."], []),
+         ("Remplir le contrat", [fig('contrat-rediger', '03', "Type, nature, durée, heures d'activité."),
+                                 fig('contrat-rediger', '04', "La parole du bénéficiaire et les engagements du référent.")],
+          ["Les rubriques suivent l'imprimé : conjoint, diagnostic, incidence financière, <b>parole du bénéficiaire</b>, objectifs et étapes du référent, aide aux transports.",
+           "Le conjoint, les enfants et l'identifiant France Travail viennent de la fiche du bénéficiaire.",
+           "Le contrat d'engagement sur mesure prévoit <b>au moins 15 heures d'activité par semaine</b> (réglable en administration)."], []),
+         ("Choisir les actions", [fig('contrat-rediger', '05', "Les actions du contrat.")],
+          ["Choisissez une action du référentiel (actions départementales et actions locales de votre MDS), ou décrivez une autre démarche.",
+           "Deux lignes vides sont proposées à chaque enregistrement : enregistrez pour en ajouter d'autres."], []),
+         ("Signer et transmettre", [fig('contrat-rediger', '06', "Signature, engagements, transmission."),
+                                    fig('contrat-rediger', '07', "Le contrat est transmis au pôle.")],
+          ["Imprimez le <span class=\"clic\">Contrat (PDF)</span> pour la signature, puis indiquez la date de signature et cochez l'accord du bénéficiaire.",
+           "<span class=\"clic\">Enregistrer et transmettre au pôle</span> : CID vérifie qu'il ne manque rien (signature, accord, objectifs, une action au moins) et prévient l'administratif du pôle."], []),
+     ],
+     savoir=["Tant qu'il n'est pas transmis, le contrat reste modifiable ; vous pouvez aussi l'annuler.",
+             "Un contrat <b>ajourné</b> par la commission revient chez vous, modifiable, avec le motif ; transmettez-le de nouveau une fois repris.",
+             "Chaque étape est tracée dans l'historique du contrat, et la décision vous arrive par la messagerie."],
+     ensuite=['contrat-sante', 'contrat-pole', 'contrat-renouveler'])
+
+page('contrat-pole', qui="Agents des pôles insertion : administratif et cadre", ou="RSA – Insertion → Contrats et file active", duree="5 minutes",
+     intro="Le pôle reçoit les contrats des MDS qu'il couvre, les réceptionne, puis le cadre enregistre la décision de la commission.",
+     etapes=[
+         ("Voir ce qui est à traiter", [fig('contrat-pole', '01', "La tuile « Contrats et file active »."),
+                                        fig('contrat-pole', '02', "L'onglet « À traiter ».")],
+          ["L'onglet <b>À traiter</b> montre à chacun ce qu'il doit faire : réceptionner (administratif), décider (cadre), donner un avis (médecin).",
+           "Les agents du pôle voient le contrat, pas le reste du dossier social du bénéficiaire."], []),
+         ("Réceptionner", [fig('contrat-pole', '03', "La réception, par l'administratif du pôle.")],
+          ["Indiquez la date de réception et cliquez sur <span class=\"clic\">Réceptionner le contrat</span> : le cadre est prévenu (et le médecin, pour un contrat santé)."], []),
+         ("Décider en commission", [fig('contrat-pole', '04', "La décision du cadre."),
+                                    fig('contrat-pole', '05', "La décision enregistrée.")],
+          ["<b>Validé</b> : date de début et durée ; CID calcule la date de fin.",
+           "<b>Ajourné</b> ou <b>non validé</b> : le motif est obligatoire ; un contrat ajourné repart chez le référent.",
+           "Si une aide aux transports est demandée : accordée ou refusée, avec son motif (dérogation, durée maximale déjà accordée, conditions non remplies)."], []),
+         ("Valider sauf une action", [fig('contrat-pole', '06', "L'action non retenue et son motif."),
+                                      fig('contrat-pole', '07', "La notification au bénéficiaire.")],
+          ["<b>Validé sauf action</b> : cochez l'action non retenue et donnez son motif ; le contrat est validé pour <b>3 mois</b> (réglable en administration), le temps de retravailler ce point.",
+           "La <span class=\"clic\">Notification au bénéficiaire</span> (PDF) reprend la décision ; son texte se modifie dans les modèles de courriers."], []),
+     ],
+     savoir=["Le référent est prévenu par la messagerie à chaque décision.",
+             "Un contrat santé d'une personne de moins de 60 ans ne peut être validé qu'après l'avis du médecin du pôle."],
+     ensuite=['contrat-sante', 'contrat-renouveler'])
+
+page('contrat-sante', qui="Référents des MDS et médecins des pôles insertion", ou="Fiche du contrat", duree="3 minutes",
+     intro="Pour un contrat santé d'une personne de moins de 60 ans, le médecin traitant adresse un certificat au seul médecin du pôle. CID ne garde aucun contenu médical.",
+     etapes=[
+         ("Demander le certificat (référent)", [fig('contrat-sante', '01', "« Demande de certificat » sur la fiche du contrat."),
+                                                fig('contrat-sante', '02', "Le courrier remis au bénéficiaire pour son médecin.")],
+          ["Dans le contrat, choisissez la nature <b>Santé</b> et le mode de transmission du certificat : <b>sous pli cacheté</b> ou par <b>MSSanté</b> (si le pôle a une adresse MSSanté).",
+           "Imprimez la <span class=\"clic\">Demande de certificat</span> et remettez-la au bénéficiaire pour son médecin traitant.",
+           "Sans mode de transmission, le contrat ne peut pas partir au pôle."], []),
+         ("Donner l'avis (médecin du pôle)", [fig('contrat-sante', '03', "Les contrats santé en attente d'avis."),
+                                              fig('contrat-sante', '04', "L'avis du médecin.")],
+          ["Les contrats santé en attente d'avis sont dans l'onglet <b>À traiter</b>.",
+           "Indiquez la date de réception du certificat, l'avis <b>favorable</b> ou <b>défavorable</b> et, s'il est défavorable, sa motivation.",
+           "<b>Aucun détail médical</b> dans la motivation : ni diagnostic, ni traitement. Le certificat reste chez vous."], []),
+         ("Suite", [fig('contrat-sante', '05', "L'avis apparaît sur le contrat.")],
+          ["Le cadre du pôle est prévenu : la commission peut statuer. Le référent voit l'avis et sa motivation."], []),
+     ],
+     savoir=["L'âge limite (60 ans) et l'adresse MSSanté du médecin du pôle se règlent en administration.",
+             "À partir de 60 ans, le certificat est facultatif."],
+     ensuite=['contrat-pole', 'contrat-rediger'])
+
+page('contrat-renouveler', qui="Référents des MDS (et pôles insertion)", ou="RSA – Insertion → Contrats et file active", duree="3 minutes",
+     intro="La file active signale les contrats qui arrivent à échéance : le bénéficiaire s'engage à renouveler son contrat un mois avant la fin.",
+     etapes=[
+         ("Repérer les échéances", [fig('contrat-renouveler', '01', "Les onglets de la file active.")],
+          ["<b>À renouveler</b> : contrats validés qui se terminent dans les 30 jours (réglable) et n'ont pas encore de suite.",
+           "<b>Échus, sans renouvellement</b> : la date de fin est passée. <b>Validés sauf action</b> : contrats de 3 mois en cours.",
+           "La tuile du module donne les mêmes compteurs."], []),
+         ("Préparer le contrat suivant", [fig('contrat-renouveler', '02', "« Préparer le contrat suivant »."),
+                                          fig('contrat-renouveler', '03', "Le prolongement, prérempli.")],
+          ["Sur le contrat en cours, choisissez <b>prolongement</b> ou <b>rétablissement</b>, puis <span class=\"clic\">Préparer le contrat suivant</span>.",
+           "Le nouveau contrat reprend le diagnostic, et les souhaits du contrat précédent deviennent « ce que j'ai déjà fait ». Les actions en cours sont reprises."], []),
+         ("Reprendre un contrat ajourné", [fig('contrat-renouveler', '04', "Un contrat ajourné, de nouveau modifiable.")],
+          ["Un contrat ajourné apparaît dans votre onglet <b>À traiter</b>, avec le motif de la commission : complétez-le et transmettez-le de nouveau."], []),
+     ],
+     savoir=["Dès qu'un contrat suivant existe, l'alerte du contrat précédent disparaît."],
+     ensuite=['contrat-rediger', 'contrat-pole'])
 
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – contrats et suivi des parcours", "Enfance", "Logement"])
+                  ["RSA – prescriptions et comités de suivi", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

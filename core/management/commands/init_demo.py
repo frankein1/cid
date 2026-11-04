@@ -194,6 +194,11 @@ class Command(BaseCommand):
         nb_docs = docs.count()
         for doc in docs:
             doc.delete()
+        from insertion.models import ContratInsertion
+        contrats = list(ContratInsertion.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
+        Message.objects.filter(content_type=ContentType.objects.get_for_model(ContratInsertion),
+                               object_id__in=contrats).delete()
+        ContratInsertion.objects.filter(pk__in=contrats).delete()
         RecoursAFASE.objects.filter(demande__beneficiaire__in=benefs).delete()
         DemandeAide.objects.filter(pk__in=aides).delete()
         ips.delete()
@@ -522,6 +527,73 @@ class Command(BaseCommand):
             if niveau == "DEPARTEMENTAL" and code == "DEMO-MOBIL":
                 a.poles.set([pole])
         self.stdout.write(f"✅ Insertion : pôle de démonstration (admin_pi1, cadre_pi1, medecin_pi1), {len(ACTIONS_DEMO)} actions fictives")
+        self.contrats(pole)
+
+    def contrats(self, pole):
+        """Contrats fictifs à chaque étape du circuit (référente : Agent Social 1). Voir docs/INSERTION.md."""
+        from insertion.models import ActionInsertion, ContratInsertion as C, LigneActionContrat
+        from insertion.services import contrat_circuit as circuit
+        j = self.j
+        actions = {a.code: a for a in ActionInsertion.objects.filter(code__startswith="DEMO-")}
+        cadre, admin, medecin = self.u("cadre_pi1"), self.u("admin_pi1"), self.u("medecin_pi1")
+
+        def contrat(code, nature, il_y_a, objectifs, codes_actions, **champs):
+            c = circuit.creer(self.b[code], self.ts)
+            c.nature, c.date_etablissement = nature, j - timedelta(days=il_y_a)
+            c.date_signature, c.accord_allocataire, c.engagement_renouvellement = c.date_etablissement, True, True
+            c.parole_situation = "Situation décrite avec le bénéficiaire (fictif)."
+            c.parole_souhaits = "Souhaits exprimés par le bénéficiaire (fictif)."
+            c.objectifs, c.etapes = objectifs, "1. Premier rendez-vous avec le porteur.\n2. Point d'étape à mi-parcours."
+            for k, v in champs.items():
+                setattr(c, k, v)
+            c.save()
+            for code_action in codes_actions:
+                LigneActionContrat.objects.create(contrat=c, action=actions[code_action], date_entree=c.date_etablissement)
+            return c
+
+        def valider(c, il_y_a, mois, decision=C.VALIDE, non_retenues=None):
+            circuit.transmettre(c, self.ts)
+            circuit.receptionner(c, admin)
+            debut = j - timedelta(days=il_y_a)
+            circuit.decider(c, cadre, decision=decision, date_decision=debut, date_debut=debut, duree_mois=mois,
+                            decision_transport='OUI' if c.aide_transport_urbain else '',
+                            non_retenues=non_retenues)
+            C.objects.filter(pk=c.pk).update(date_transmission=debut - timedelta(days=12),
+                                            date_reception=debut - timedelta(days=10))
+
+        # Validé, échéance dans 20 jours : à renouveler
+        sarah = contrat("FAM5-SAR", "EMPLOI", 200, "Retrouver un emploi dans la vente (fictif).", ["DEMO-ACCGLO"],
+                        niveau_etudes="N4", emploi_recherche="Vendeuse (fictif)", permis_b=True,
+                        aide_transport_urbain=True, inscrit_france_travail=True)
+        valider(sarah, 163, 6)   # fin = début + 6 mois - 1 jour, soit environ dans 20 jours
+        # Validé, échu depuis une dizaine de jours, sans contrat suivant
+        kevin = contrat("FAM6-KEV", "SOCIAL", 200, "Stabiliser la situation administrative (fictif).", ["DEMO-MOBIL"])
+        valider(kevin, 193, 6)
+        # Validé sauf action, en vigueur
+        thomas = contrat("FAM11-THO", "SOCIAL", 45, "Reprendre confiance et préparer un projet (fictif).",
+                         ["DEMO-CISF", "DEMO-BRICO"])
+        ligne = thomas.lignes.get(action__code="DEMO-BRICO")
+        valider(thomas, 30, 3, C.VALIDE_SAUF_ACTION, {ligne.pk: "Action réservée au public logement (fictif)"})
+        # Ajourné : de nouveau modifiable par la référente
+        aurelie = contrat("FAM12-AUR", "LOGEMENT", 25, "Accéder à un logement adapté (fictif).", ["DEMO-BRICO"],
+                          logement="HEBERGE")
+        circuit.transmettre(aurelie, self.ts)
+        circuit.receptionner(aurelie, admin)
+        circuit.decider(aurelie, cadre, decision=C.AJOURNE, date_decision=j - timedelta(days=5),
+                        motif="Objectifs à préciser avec la bénéficiaire (fictif).")
+        # Reçu au pôle, en attente de la commission
+        nadia = contrat("FAM7-NAD", "SOCIAL", 12, "Organiser la garde d'enfants pour suivre une formation (fictif).",
+                        ["DEMO-ACCGLO", "DEMO-CISF"], incidence_formation=True)
+        circuit.transmettre(nadia, self.ts)
+        circuit.receptionner(nadia, admin)
+        # Contrat santé transmis : à réceptionner, puis avis du médecin du pôle
+        celine = contrat("FAM9-CEL", "SANTE", 6, "Engager un parcours de soins avant un retour à l'emploi (fictif).",
+                         ["DEMO-SANTE"], certificat_mode="PLI", certificat_demande_le=j - timedelta(days=6))
+        circuit.transmettre(celine, self.ts)
+        # En préparation
+        contrat("FAM8-LAU", "EMPLOI", 2, "", [], date_signature=None, accord_allocataire=False)
+        self.stdout.write("✅ Contrats RSA : en préparation, transmis (santé), reçu, ajourné, validé sauf action, "
+                          "à renouveler, échu")
 
     # ------------------------------------------------------------------ planning
     def planning(self):
