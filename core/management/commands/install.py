@@ -29,6 +29,10 @@ class Command(BaseCommand):
         self.stdout.write("\n📦 Migrations...")
         call_command('migrate', interactive=False)
 
+        # 1 bis. Référentiels remplis par les migrations (à compléter si la base a été vidée)
+        self.stdout.write("\n🧾 Référentiels de base...")
+        call_command('init_referentiels')
+
         # 2. Profils + capacités + AFASE
         self.stdout.write("\n🔐 Profils et capacités...")
         call_command('init_profils')
