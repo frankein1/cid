@@ -33,3 +33,12 @@ class ActionInsertionAdmin(admin.ModelAdmin):
     search_fields = ['code', 'libelle', 'porteur', 'territoire']
     filter_horizontal = ['poles']
     raw_id_fields = ['partenaire']
+
+    def changelist_view(self, request, extra_context=None):
+        from django.contrib import messages
+        from django.urls import reverse
+        from django.utils.html import format_html
+        messages.info(request, format_html(
+            "L'import et l'export CSV des actions se font dans le module : <a href=\"{}\">RSA – Insertion › Importer (CSV)</a>.",
+            reverse('insertion:actions_import')))
+        return super().changelist_view(request, extra_context)
