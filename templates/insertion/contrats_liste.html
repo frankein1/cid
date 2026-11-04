@@ -1,0 +1,52 @@
+<!-- templates/insertion/contrats_liste.html -->
+{% extends "base.html" %}
+{% block title %}Contrats RSA{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:accueil' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>RSA – Insertion</a>
+    <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-contract text-blue-700 mr-2"></i>Contrats : à traiter et file active</h1>
+    <div class="flex flex-wrap gap-2" id="onglets">
+        {% for code, libelle in vues %}
+        <a href="?vue={{ code }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if mds_choisie %}&mds={{ mds_choisie }}{% endif %}"
+           class="px-3 py-1.5 rounded-full text-sm border {% if vue == code %}bg-blue-700 text-white border-blue-700{% else %}bg-white text-gray-700 border-gray-300 hover:bg-gray-50{% endif %}">{{ libelle }}
+            {% if code == 'a_traiter' and compteurs.a_traiter %}<span class="ml-1 px-1.5 rounded-full bg-red-500 text-white text-xs">{{ compteurs.a_traiter }}</span>{% endif %}
+            {% if code == 'a_renouveler' and compteurs.a_renouveler %}<span class="ml-1 px-1.5 rounded-full bg-amber-500 text-white text-xs">{{ compteurs.a_renouveler }}</span>{% endif %}
+            {% if code == 'expires' and compteurs.expires %}<span class="ml-1 px-1.5 rounded-full bg-red-500 text-white text-xs">{{ compteurs.expires }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    <form method="get" class="flex flex-wrap gap-2 items-end">
+        <input type="hidden" name="vue" value="{{ vue }}">
+        <input type="text" name="q" value="{{ q }}" placeholder="Nom, prénom ou code" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        {% if mds_liste|length > 1 %}<select name="mds" class="px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Toutes les MDS</option>{% for m in mds_liste %}<option value="{{ m.code_mds }}"{% if m.code_mds == mds_choisie %} selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select>{% endif %}
+        <button class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-magnifying-glass mr-1"></i>Filtrer</button>
+    </form>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
+                <th class="px-4 py-2 text-left">Contrat</th><th class="px-4 py-2 text-left">Bénéficiaire</th><th class="px-4 py-2 text-left">Type · nature</th>
+                <th class="px-4 py-2 text-left">MDS · référent</th><th class="px-4 py-2 text-left">Échéance</th><th class="px-4 py-2 text-left">Statut</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for c in page_obj %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2"><a href="{% url 'insertion:contrat_detail' c.pk %}" class="text-blue-700 font-semibold hover:underline">{{ c.numero }}</a>{% if c.date_transmission %}<br><span class="text-xs text-gray-500">transmis le {{ c.date_transmission|date:"d/m/Y" }}</span>{% endif %}</td>
+                <td class="px-4 py-2">{{ c.beneficiaire.nom|upper }} {{ c.beneficiaire.prenom }}</td>
+                <td class="px-4 py-2">{{ c.get_type_contrat_display }}<br><span class="text-xs text-gray-500">{{ c.get_nature_display }}</span></td>
+                <td class="px-4 py-2">{{ c.mds.nom }}<br><span class="text-xs text-gray-500">{{ c.referent.get_full_name|default:c.referent.username }}</span></td>
+                <td class="px-4 py-2">{{ c.date_fin|date:"d/m/Y"|default:"—" }}</td>
+                <td class="px-4 py-2">{% include "insertion/_statut_contrat.html" %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">{% if vue == 'a_traiter' %}Rien à traiter pour l'instant.{% else %}Aucun contrat.{% endif %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex gap-2 text-sm">{% if page_obj.has_previous %}<a href="?vue={{ vue }}&q={{ q|urlencode }}&mds={{ mds_choisie }}&page={{ page_obj.previous_page_number }}" class="text-blue-700">← Précédents</a>{% endif %}
+        <span class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?vue={{ vue }}&q={{ q|urlencode }}&mds={{ mds_choisie }}&page={{ page_obj.next_page_number }}" class="text-blue-700">Suivants →</a>{% endif %}</div>
+    {% endif %}
+    <p class="text-xs text-gray-500">« À renouveler » : contrats validés dont l'échéance tombe dans le délai d'alerte (Paramètres du contrat RSA, 30 jours par défaut) et qui n'ont pas encore de contrat suivant.</p>
+</div>
+{% endblock %}

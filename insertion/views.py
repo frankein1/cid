@@ -36,7 +36,17 @@ def accueil(request):
     return render(request, "insertion/accueil.html", {
         "poles": poles, "nb_departementales": actions.filter(niveau=ActionInsertion.DEPARTEMENTAL).count(),
         "nb_locales": actions.filter(niveau=ActionInsertion.LOCAL).count(),
+        **_compteurs_contrats(request.user),
     })
+
+
+def _compteurs_contrats(user):
+    from insertion.views_contrats import _filtrer, a_traiter
+    base = acces.contrats_visibles(user).exclude(statut='ANNULE')
+    return {"nb_a_traiter": a_traiter(user, base).distinct().count(),
+            "nb_en_vigueur": _filtrer(base, "en_cours").distinct().count(),
+            "nb_a_renouveler": _filtrer(base, "a_renouveler").distinct().count(),
+            "nb_expires": _filtrer(base, "expires").distinct().count()}
 
 
 def _filtrer(request):

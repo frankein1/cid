@@ -6,7 +6,7 @@
 # insertion/urls.py
 from django.urls import path
 
-from insertion import views
+from insertion import views, views_contrats as vc
 
 app_name = 'insertion'
 
@@ -19,4 +19,19 @@ urlpatterns = [
     path('actions/importer/', views.actions_import, name='actions_import'),
     path('actions/<int:pk>/', views.action_detail, name='action_detail'),
     path('actions/<int:pk>/modifier/', views.action_saisie, name='action_modifier'),
+    # Contrats
+    path('contrats/', vc.contrats_liste, name='contrats_liste'),
+    path('beneficiaire/<str:code_interne>/contrats/', vc.contrats_beneficiaire, name='contrats_beneficiaire'),
+    path('beneficiaire/<str:code_interne>/contrats/nouveau/', vc.contrat_nouveau, name='contrat_nouveau'),
+    path('contrats/<int:pk>/', vc.contrat_detail, name='contrat_detail'),
+    path('contrats/<int:pk>/modifier/', vc.contrat_modifier, name='contrat_modifier'),
+    path('contrats/<int:pk>/transmettre/', vc.contrat_transmettre, name='contrat_transmettre'),
+    path('contrats/<int:pk>/annuler/', vc.contrat_annuler, name='contrat_annuler'),
+    path('contrats/<int:pk>/renouveler/', vc.contrat_renouveler, name='contrat_renouveler'),
+    path('contrats/<int:pk>/receptionner/', vc.contrat_receptionner, name='contrat_receptionner'),
+    path('contrats/<int:pk>/avis/', vc.contrat_avis, name='contrat_avis'),
+    path('contrats/<int:pk>/decision/', vc.contrat_decision, name='contrat_decision'),
+    path('contrats/<int:pk>/contrat.pdf', vc.contrat_pdf, name='contrat_pdf'),
+    path('contrats/<int:pk>/certificat-medical.pdf', vc.contrat_courrier_medecin, name='contrat_courrier_medecin'),
+    path('contrats/<int:pk>/notification.pdf', vc.contrat_notification, name='contrat_notification'),
 ]

@@ -13,6 +13,8 @@ Les textes des courriers produits par CID se modifient sans toucher au code : **
 | Convocation des enfants (à l'adulte qui les héberge) | `IP_CONVOCATION_ENFANTS` |
 | Relance en recommandé d'un adulte absent | `IP_LRAR_ADULTES` |
 | Relance en recommandé : enfants absents | `IP_LRAR_ENFANTS` |
+| Contrat santé : demande de certificat au médecin traitant | `RSA_CERTIFICAT_MEDECIN` |
+| Notification au bénéficiaire de la décision sur son contrat | `RSA_NOTIFICATION_DECISION` |
 
 Tant qu'un modèle n'est pas modifié, CID imprime son **texte d'origine** : un texte générique, écrit pour CID, identique aux courriers d'avant les modèles. L'en-tête (MDS, destinataire, lieu et date), le numéro de recommandé et les signatures des professionnels restent ajoutés par CID.
 

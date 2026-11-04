@@ -80,6 +80,18 @@ _PRECEDENTE = "{si_date_precedente:à la convocation du {date_precedente}|à la 
 _REPORT = "{si_report_convenu:Comme convenu avec vous, nous vous adressons la nouvelle date de convocation.}"
 _OBJET_IP = "convocation – information préoccupante réf. {numero_ip}"
 
+
+_RSA = {
+    "civilite_appel": ("Madame ou Monsieur, selon la civilité du bénéficiaire", "Madame"),
+    "beneficiaire": ("Prénom et NOM du bénéficiaire", "Lucie EXEMPLE"),
+    "date_naissance": ("Date de naissance du bénéficiaire", "03/04/1990"),
+    "nom_contrat": ("Nom du contrat (Paramètres du contrat RSA)", "Contrat d'engagement"),
+    "numero_contrat": ("Numéro du contrat dans CID", "C2026-00012"),
+    "pole": ("Nom du pôle insertion", "Pôle insertion Exemple"),
+    "referent": ("Nom du référent", "Agent Exemple"),
+    "mds": ("MDS du référent", "MDS Exemple"),
+}
+
 COURRIERS = {
     # ------------------------------------------------------------------ AFASE
     "AFASE_ACCORD": {
@@ -139,6 +151,65 @@ COURRIERS = {
         "objet": _OBJET_IP,
         "corps": ("{salutation}\n\n{Vos_enfants} {si_plusieurs_enfants:ne se sont pas présentés|ne s’est pas présenté(e)} "
                   + _PRECEDENTE + ".\n\n" + _CONVOCATION_ENFANTS + "\n\n" + _OBLIGATOIRE + "\n\n" + _EMPECHEMENT),
+    },
+    # ------------------------------------------------------------------ RSA – Insertion
+    "RSA_CERTIFICAT_MEDECIN": {
+        "rubrique": "RSA – Insertion", "libelle": "Contrat santé : demande de certificat au médecin traitant",
+        "variables": {**_RSA,
+                      "adresse_pli": ("Adresse du médecin du pôle, pour l'envoi sous pli cacheté",
+                                      "Médecin du pôle insertion, 1 rue de l'Exemple, 13000 Exemple"),
+                      "adresse_mssante": ("Adresse MSSanté du médecin du pôle", "medecin.pole@exemple.mssante.fr")},
+        "conditions": {"si_mssante": "le pôle a une adresse MSSanté"},
+        "objet": "certificat médical – {nom_contrat} de {beneficiaire}",
+        "corps": ("Docteur,\n\n"
+                  "Votre patient(e) {beneficiaire}, né(e) le {date_naissance}, bénéficiaire du RSA, prépare avec "
+                  "son référent un {nom_contrat} orienté vers la santé.\n\n"
+                  "Pour que ce contrat puisse être validé, le médecin du pôle insertion a besoin d'un certificat "
+                  "médical de votre part, indiquant si l'état de santé de votre patient(e) justifie, pour la durée "
+                  "du contrat, un parcours centré sur la santé plutôt que sur l'emploi.\n\n"
+                  "Ce certificat est couvert par le secret médical. Il est adressé au seul médecin du pôle :\n\n"
+                  "{si_mssante:**par messagerie sécurisée de santé (MSSanté) : {adresse_mssante}**, ou sous pli "
+                  "cacheté portant la mention « Confidentiel – secret médical » à : {adresse_pli}"
+                  "|**sous pli cacheté** portant la mention « Confidentiel – secret médical », à : {adresse_pli}}\n\n"
+                  "Le référent et les services administratifs n'ont connaissance que de l'avis du médecin du pôle "
+                  "(favorable ou défavorable), jamais du contenu du certificat.\n\n"
+                  "Je vous remercie de votre collaboration et vous prie d'agréer, Docteur, l'expression de mes "
+                  "salutations distinguées."),
+        "signature": "{referent}\nRéférent, {mds}",
+    },
+    "RSA_NOTIFICATION_DECISION": {
+        "rubrique": "RSA – Insertion", "libelle": "Notification au bénéficiaire de la décision sur son contrat",
+        "variables": {**_RSA,
+                      "date_decision": ("Date de la commission", "20/10/2026"),
+                      "date_debut": ("Début du contrat validé", "01/11/2026"),
+                      "date_fin": ("Fin du contrat validé", "30/04/2027"),
+                      "duree_mois": ("Durée validée en mois", "6"),
+                      "actions_non_retenues": ("Actions non retenues et leur motif", "Atelier Exemple (places complètes)"),
+                      "motif": ("Motif de l'ajournement ou de la non-validation", "Objectifs à préciser avec le référent"),
+                      "date_renouvellement": ("Date à laquelle préparer le renouvellement (un mois avant la fin)",
+                                              "31/03/2027"),
+                      "signataire": ("Nom du cadre du pôle qui a décidé", "Cadre Exemple")},
+        "conditions": {"si_valide": "le contrat est validé (avec ou sans réserve)",
+                       "si_sauf_action": "le contrat est validé sauf une action",
+                       "si_ajourne": "le contrat est ajourné",
+                       "si_non_valide": "le contrat n'est pas validé",
+                       "si_transport_accorde": "l'aide aux transports est accordée",
+                       "si_transport_refuse": "l'aide aux transports est refusée"},
+        "objet": "votre {nom_contrat} (n° {numero_contrat})",
+        "corps": ("{civilite_appel},\n\n"
+                  "Votre {nom_contrat}, préparé avec {referent} ({mds}), a été examiné par la commission du "
+                  "{date_decision}.\n\n"
+                  "{si_valide:Il est **validé pour {duree_mois} mois, du {date_debut} au {date_fin}**.}\n\n"
+                  "{si_sauf_action:Une action n'a pas été retenue : {actions_non_retenues}. Votre référent "
+                  "reprendra ce point avec vous d'ici la fin du contrat.}\n\n"
+                  "{si_ajourne:Il est **ajourné** : {motif}. Votre référent reprendra le contrat avec vous.}\n\n"
+                  "{si_non_valide:Il n'est **pas validé** : {motif}. Votre référent prendra contact avec vous.}\n\n"
+                  "{si_transport_accorde:L'aide aux transports demandée vous est accordée pour la durée du contrat.}\n\n"
+                  "{si_transport_refuse:L'aide aux transports demandée ne vous est pas accordée.}\n\n"
+                  "{si_valide:Comme vous vous y êtes engagé(e), pensez à préparer le renouvellement de votre contrat "
+                  "avec votre référent à partir du {date_renouvellement}.}\n\n"
+                  "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées."),
+        "signature": "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}\n{pole}",
     },
 }
 CHAMPS = ("objet", "corps", "signature")

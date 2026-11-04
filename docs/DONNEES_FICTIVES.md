@@ -36,9 +36,9 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 | `as1_mds2` | Agent Social MDS 2 | Travailleur social | MDS TEST 02 | Idem côté travailleur social |
 | `uagaf_u1` | Agent UAGAF 1 | Contrôle des AFASE (UAGAF) | (départemental) | Contrôler un dossier, le renvoyer, enregistrer le paiement |
 | `regie_r1` | Régisseur Central 1 | Régisseur central | (départemental) | Chèques service remis par la paierie, régies d'urgence |
-| `admin_pi1` | Agent Pôle insertion | Pôle insertion – administratif | Pôle insertion de démonstration (MDS TEST 01 et 02) | Référentiel des actions d'insertion : saisie, import et export CSV |
-| `cadre_pi1` | Cadre Pôle insertion | Pôle insertion – cadre | Pôle insertion de démonstration | Référentiel des actions ; plus tard : commissions de validation et de réorientation |
-| `medecin_pi1` | Médecin Pôle insertion | Pôle insertion – médecin | Pôle insertion de démonstration | Consultation du référentiel ; plus tard : contrats santé (certificat reçu, avis) |
+| `admin_pi1` | Agent Pôle insertion | Pôle insertion – administratif | Pôle insertion de démonstration (MDS TEST 01 et 02) | Réception des contrats ; référentiel des actions : saisie, import et export CSV |
+| `cadre_pi1` | Cadre Pôle insertion | Pôle insertion – cadre | Pôle insertion de démonstration | Référentiel des actions ; commission de validation des contrats (plus tard : réorientations) |
+| `medecin_pi1` | Médecin Pôle insertion | Pôle insertion – médecin | Pôle insertion de démonstration | Contrats santé : certificat reçu, avis favorable ou défavorable |
 
 Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mot de passe de la variable `ADMIN_PASSWORD`.
 
@@ -119,7 +119,20 @@ Menu **Accompagnement → RSA – Insertion**. Un **pôle insertion de démonstr
 
 Cinq actions fictives : trois départementales (accompagnement global, plateforme mobilité limitée au pôle de démonstration, parcours santé) et deux locales de MDS TEST 01 (atelier insertion des femmes, atelier bricolage et logement). Les 16 types d'actions sont créés par `python manage.py init_insertion` (lancé par `install`).
 
-À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les types et les actions départementales.
+Contrats fictifs, tous préparés par **Agent Social 1** (`as1_mds1`), à chaque étape du circuit :
+
+| Bénéficiaire | Contrat | À tester avec |
+|---|---|---|
+| PEREZ Laura | En préparation (emploi), incomplet | `as1_mds1` : compléter, signer, transmettre |
+| GARNIER Céline | **Santé**, transmis au pôle, certificat sous pli | `admin_pi1` réceptionne ; `medecin_pi1` donne l'avis ; `cadre_pi1` décide |
+| BENSALEM Nadia | Reçu au pôle, en attente de commission (deux actions) | `cadre_pi1` : validé, validé sauf action, ajourné ou non validé |
+| AUBERT Aurélie | **Ajourné** (logement) | `as1_mds1` : le reprendre et le transmettre de nouveau |
+| LEGRAND Thomas | Validé sauf action, en vigueur (3 mois) | Fiche du contrat, notification |
+| AMRANI Sarah | Validé, **à renouveler** (fin dans environ 20 jours), aide aux transports accordée | `as1_mds1` : préparer le prolongement |
+| ROUX Kevin | Validé, **échu** depuis une dizaine de jours, sans suite | File active, onglet « Échus » |
+| CHERIF Yasmine | Aucun contrat | `as1_mds1` : premier contrat (ouverture) |
+
+À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types et les actions départementales.
 
 ## Planning
 
