@@ -26,23 +26,9 @@
     </div>
     {% else %}
     <div class="flex flex-wrap gap-3 text-sm">
-        <span class="px-3 py-1 rounded bg-emerald-100 text-emerald-800">{{ resume.creation }} création{{ resume.creation|pluralize }}</span>
+        <span class="px-3 py-1 rounded bg-orange-100 text-orange-800">{{ resume.creation }} création{{ resume.creation|pluralize }}</span>
         <span class="px-3 py-1 rounded bg-blue-100 text-blue-800">{{ resume.mise_a_jour }} mise{{ resume.mise_a_jour|pluralize }} à jour</span>
         <span class="px-3 py-1 rounded {% if resume.erreur %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-600{% endif %}">{{ resume.erreur }} erreur{{ resume.erreur|pluralize }}</span>
-    </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
-            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
-                <th class="px-3 py-2 text-left">Ligne</th><th class="px-3 py-2 text-left">Code</th><th class="px-3 py-2 text-left">Libellé</th><th class="px-3 py-2 text-left">Résultat</th></tr></thead>
-            <tbody class="divide-y divide-gray-100">
-            {% for l in lignes %}
-            <tr class="{% if l.operation == 'erreur' %}bg-red-50{% endif %}">
-                <td class="px-3 py-2">{{ l.numero }}</td><td class="px-3 py-2 font-mono">{{ l.code }}</td><td class="px-3 py-2">{{ l.libelle }}</td>
-                <td class="px-3 py-2">{% if l.operation == 'creation' %}<span class="text-emerald-700">création</span>{% elif l.operation == 'mise_a_jour' %}<span class="text-blue-700">mise à jour</span>{% else %}<span class="text-red-700">{{ l.erreurs|join:" ; " }}</span>{% endif %}</td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
     </div>
     <form method="post" class="flex flex-wrap gap-3 items-center">
         {% csrf_token %}
@@ -52,6 +38,20 @@
         {% if resume.erreur %}<span class="text-sm text-gray-600">Les lignes en erreur seront ignorées : corrigez-les dans le fichier et importez-le de nouveau.</span>{% endif %}
         <a href="{% url 'insertion:actions_import' %}" class="text-sm text-blue-700 hover:underline">Déposer un autre fichier</a>
     </form>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase"><tr>
+                <th class="px-3 py-2 text-left">Ligne</th><th class="px-3 py-2 text-left">Code</th><th class="px-3 py-2 text-left">Libellé</th><th class="px-3 py-2 text-left">Résultat</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for l in lignes %}
+            <tr class="{% if l.operation == 'erreur' %}bg-red-50{% endif %}">
+                <td class="px-3 py-2">{{ l.numero }}</td><td class="px-3 py-2 font-mono">{{ l.code }}</td><td class="px-3 py-2">{{ l.libelle }}</td>
+                <td class="px-3 py-2">{% if l.operation == 'creation' %}<span class="text-orange-700 font-medium">création</span>{% elif l.operation == 'mise_a_jour' %}<span class="text-blue-700">mise à jour</span>{% else %}<span class="text-red-700">{{ l.erreurs|join:" ; " }}</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
