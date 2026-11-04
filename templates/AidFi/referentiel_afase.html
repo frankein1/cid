@@ -13,7 +13,7 @@
     </div>
 
     {% if admin %}
-    <form method="post" enctype="multipart/form-data" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-wrap gap-3 items-center text-sm">
+    <form id="import" method="post" enctype="multipart/form-data" style="scroll-margin-top: 6rem" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-wrap gap-3 items-center text-sm">
         {% csrf_token %}
         <span class="font-semibold text-indigo-900">Importer un référentiel (fichier JSON) :</span>
         <input type="file" name="fichier" accept=".json,application/json" required>

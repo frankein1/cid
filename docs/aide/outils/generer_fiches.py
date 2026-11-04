@@ -15,7 +15,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'afase-recours', 'afase-inspecteur',
          'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider',
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
-         'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']
+         'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
+         'insertion-actions', 'insertion-action-locale', 'insertion-import']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -24,7 +25,8 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Chèques service (CAP) et régie d'urgence", ['cap-demander', 'cap-decider', 'cap-coffre',
                                                            'regie-demander', 'regie-decider']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
-             ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue'])]
+             ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
+             ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import'])]
 
 
 def rubrique(slug):
@@ -59,6 +61,9 @@ TITRES = {
     'ged-deposer': ("Déposer et consulter un document", "La GED du bénéficiaire"),
     'rdv-prendre': ("Prendre un rendez-vous", "Permanence, VAD ou autre rendez-vous"),
     'rdv-issue': ("Noter l'issue d'un rendez-vous", "Venu, absent, annulé, reporté…"),
+    'insertion-actions': ("Consulter les actions d'insertion", "Le référentiel commun à toutes les MDS"),
+    'insertion-action-locale': ("Créer une action d'insertion locale", "Cadre de MDS"),
+    'insertion-import': ("Importer et exporter les actions (CSV)", "Pôle insertion"),
 }
 
 
@@ -748,10 +753,65 @@ page('rdv-issue', qui="Agent du rendez-vous, cadre", ou="Menu « Planning » →
      savoir=["Seuls l'agent du rendez-vous et le cadre peuvent en noter l'issue."],
      ensuite=['rdv-prendre'])
 
+
+# =============================================================================
+# RSA – INSERTION
+page('insertion-actions', qui="Tous les agents du module RSA", ou="Menu « Accompagnement » → RSA – Insertion", duree="1 minute",
+     intro="Le référentiel réunit les actions départementales et les actions locales des MDS, chacune rattachée à un type commun.",
+     etapes=[
+         ("Ouvrir le référentiel", [fig('insertion-actions', '01', "L'accueil du module RSA – Insertion.")],
+          ["Menu <b>Accompagnement → RSA – Insertion</b>, puis <span class=\"clic\">Actions d'insertion</span>.",
+           "Les agents d'un pôle insertion voient aussi le pôle auquel ils appartiennent."], []),
+         ("Chercher une action", [fig('insertion-actions', '02', "Filtres : texte, type, niveau, pôle, état.")],
+          ["Tapez un mot (libellé, code, porteur, commune) ou choisissez un <b>type</b> d'action (mobilité, santé, garde d'enfants…).",
+           "<b>Niveau</b> : actions départementales ou locales (MDS) ; <b>pôle</b> : actions d'un pôle insertion ; <b>état</b> : actives, inactives ou toutes.",
+           "Les actions locales sont signalées par l'étiquette <b>locale</b>."], []),
+         ("Lire la fiche d'une action", [fig('insertion-actions', '03', "Fiche d'une action.")],
+          ["Cliquez sur l'action : périmètre, porteur, durée, public visé, <b>destinataires de la prescription</b>, <b>pièces à joindre</b>, passage en comité de suivi technique."], []),
+     ],
+     savoir=["Les actions départementales sont visibles de tous ; les actions locales, des agents de la MDS et du pôle insertion qui la couvre.",
+             "Une action qui s'arrête passe <b>inactive</b> : elle n'est jamais supprimée (l'historique des parcours reste lisible)."],
+     ensuite=['insertion-action-locale', 'insertion-import'])
+
+page('insertion-action-locale', qui="Cadres de MDS", ou="RSA – Insertion → Actions d'insertion", duree="3 minutes",
+     intro="Une MDS enregistre ses propres actions (par exemple celles financées pour son territoire), rattachées à un type commun pour des statistiques comparables.",
+     etapes=[
+         ("Nouvelle action", [fig('insertion-action-locale', '01', "Le bouton « Nouvelle action ».")],
+          ["Dans la liste des actions, cliquez sur <span class=\"clic\">Nouvelle action</span>."], []),
+         ("Décrire l'action", [fig('insertion-action-locale', '02', "Code, libellé, type, MDS, porteur…")],
+          ["<b>Code</b> court propre à CID (ex. LOC-GARDE) et <b>libellé</b>.",
+           "<b>Type d'action</b> : obligatoire, il range l'action dans la typologie commune.",
+           "Le niveau est <b>Locale (MDS)</b> ; choisissez la <b>MDS</b> si vous en avez plusieurs.",
+           "Porteur (ou sa fiche dans l'annuaire des partenaires), territoire, public visé, durée, destinataires de la prescription et pièces à joindre (une par ligne), comité de suivi technique."], []),
+         ("Enregistrer", [fig('insertion-action-locale', '03', "L'action est créée.")],
+          ["Cliquez sur <span class=\"clic\">Enregistrer</span>. Le bouton <b>Modifier</b> de la fiche permet de la compléter ou de la passer inactive."], []),
+     ],
+     savoir=["Les actions départementales sont gérées par les pôles insertion (et l'administration)."],
+     ensuite=['insertion-actions', 'insertion-import'])
+
+page('insertion-import', qui="Agents des pôles insertion (et cadres de MDS pour leurs actions locales)", ou="RSA – Insertion → Actions d'insertion → Importer (CSV)", duree="5 minutes",
+     intro="Créez ou mettez à jour beaucoup d'actions d'un coup avec un tableur : CID montre ce qu'il va faire avant d'enregistrer.",
+     etapes=[
+         ("Préparer le fichier", [fig('insertion-import', '01', "Le fichier modèle et les codes à utiliser.")],
+          ["Téléchargez le <span class=\"clic\">fichier modèle</span> (ou l'export des actions existantes pour les mettre à jour).",
+           "Une action par ligne : code, libellé, <b>type</b> (code de la liste « Codes à utiliser »), niveau (DEPARTEMENTAL ou LOCAL), MDS pour une action locale, pôles…",
+           "Enregistrez au format <b>CSV</b>, séparateur point-virgule."], []),
+         ("Analyser, puis enregistrer", [fig('insertion-import', '02', "L'aperçu : créations, mises à jour, erreurs."),
+                                        fig('insertion-import', '03', "Import terminé.")],
+          ["Déposez le fichier et cliquez sur <b>Analyser le fichier</b> : rien n'est encore enregistré.",
+           "L'aperçu donne, ligne par ligne, les <b>créations</b>, les <b>mises à jour</b> (code déjà connu) et les <b>erreurs</b> (type inconnu, droits insuffisants…).",
+           "Cliquez sur <span class=\"clic\">Enregistrer</span> : les lignes en erreur sont ignorées ; corrigez-les dans le fichier et importez-le de nouveau."], []),
+         ("Exporter", [fig('insertion-import', '04', "« Exporter (CSV) » reprend les filtres de la liste.")],
+          ["<span class=\"clic\">Exporter (CSV)</span> produit un fichier au même format : modifiez-le et réimportez-le pour des mises à jour en masse."], []),
+     ],
+     savoir=["Rien n'est jamais supprimé par un import : pour retirer une action, mettez « actif » à non.",
+             "Chaque ligne est contrôlée avec vos droits : un cadre de MDS n'importe que les actions locales de sa MDS."],
+     ensuite=['insertion-actions'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – CER", "Enfance", "Logement"])
+                  ["RSA – contrats et suivi des parcours", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">
