@@ -1,0 +1,30 @@
+<!-- templates/insertion/prescription_choix.html -->
+{% extends "base.html" %}
+{% block title %}Nouvelle prescription – {{ beneficiaire.prenom }} {{ beneficiaire.nom }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:contrats_beneficiaire' beneficiaire.code_interne %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Parcours RSA de {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</a>
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-share-from-square text-blue-700 mr-2"></i>Nouvelle prescription : choisir l'action</h1>
+        <p class="text-sm text-gray-500">Actions départementales{% if pole %} du {{ pole.nom }}{% endif %} et actions locales de {{ beneficiaire.mds.nom }}.
+            {% if contrat %}La prescription sera rattachée au contrat <a class="text-blue-700 hover:underline" href="{% url 'insertion:contrat_detail' contrat.pk %}">{{ contrat.numero }}</a>.{% else %}Aucun contrat en cours : la prescription ne sera rattachée à aucun contrat.{% endif %}</p>
+    </div>
+    <form method="get" class="flex gap-2"><input type="text" name="q" value="{{ q }}" placeholder="Libellé, code, porteur, type" class="px-3 py-2 border border-gray-300 rounded-lg text-sm w-72">
+        <button class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-magnifying-glass mr-1"></i>Chercher</button></form>
+    <div class="grid md:grid-cols-2 gap-4" id="choix-actions">
+        {% for a in actions %}
+        <form method="post" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">{% csrf_token %}
+            <input type="hidden" name="action" value="{{ a.pk }}">
+            <div class="flex justify-between gap-2"><h2 class="font-semibold text-gray-800">{{ a.libelle }}</h2><span class="font-mono text-xs text-gray-500">{{ a.code }}</span></div>
+            <p class="text-xs text-gray-500">{{ a.type_action.libelle }} · {{ a.get_niveau_display }}{% if a.porteur %} · {{ a.porteur }}{% endif %}{% if a.duree %} · {{ a.duree }}{% endif %}</p>
+            <p class="text-xs flex flex-wrap gap-2">
+                {% if a.validation_pole %}<span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800"><i class="fas fa-stamp mr-1"></i>validation du pôle</span>{% endif %}
+                {% if a.questions.all %}<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ a.questions.all|length }} question{{ a.questions.all|length|pluralize }} propre{{ a.questions.all|length|pluralize }}</span>{% endif %}
+                {% if a.liste_pieces %}<span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ a.liste_pieces|length }} pièce{{ a.liste_pieces|length|pluralize }} à joindre</span>{% endif %}
+            </p>
+            <button class="self-start mt-1 px-3 py-1.5 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800">Prescrire cette action</button>
+        </form>
+        {% empty %}<p class="text-gray-500">Aucune action ne correspond.</p>{% endfor %}
+    </div>
+</div>
+{% endblock %}

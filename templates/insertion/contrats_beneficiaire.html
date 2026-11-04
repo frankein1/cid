@@ -1,12 +1,12 @@
 <!-- templates/insertion/contrats_beneficiaire.html -->
 {% extends "base.html" %}
-{% block title %}Contrats – {{ beneficiaire.prenom }} {{ beneficiaire.nom }}{% endblock %}
+{% block title %}Parcours RSA – {{ beneficiaire.prenom }} {{ beneficiaire.nom }}{% endblock %}
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-6">
     <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</a>
     <div class="flex flex-wrap justify-between items-start gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-contract text-blue-700 mr-2"></i>{{ parametres.nom_contrat }} – {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</h1>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-contract text-blue-700 mr-2"></i>Parcours RSA – {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</h1>
             <p class="text-sm text-gray-500">{{ beneficiaire.mds.nom }}{% if pole %} · {{ pole.nom }}{% else %} · <span class="text-orange-700">aucun pôle insertion ne couvre cette MDS (à rattacher en administration)</span>{% endif %}</p>
         </div>
         {% if peut_rediger %}
@@ -28,6 +28,7 @@
         {% endif %}
     </div>
 
+    <h2 class="text-lg font-semibold text-gray-800">Contrats</h2>
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table class="min-w-full text-sm">
             <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
@@ -45,6 +46,28 @@
             {% empty %}
             <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Aucun contrat pour l'instant.</td></tr>
             {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex flex-wrap justify-between items-center gap-3 pt-2">
+        <h2 class="text-lg font-semibold text-gray-800">Prescriptions</h2>
+        {% if peut_rediger %}<a id="nouvelle-prescription" href="{% url 'insertion:prescription_nouvelle' beneficiaire.code_interne %}" class="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-share-from-square mr-1"></i>Nouvelle prescription</a>{% endif %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="prescriptions-beneficiaire">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
+                <th class="px-4 py-2 text-left">Prescription</th><th class="px-4 py-2 text-left">Action</th><th class="px-4 py-2 text-left">Entrée · sortie</th><th class="px-4 py-2 text-left">Statut</th><th class="px-4 py-2 text-left">Prescripteur</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for p in prescriptions %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2"><a href="{% url 'insertion:prescription_detail' p.pk %}" class="text-blue-700 font-semibold hover:underline">{{ p.numero }}</a><br><span class="text-xs text-gray-500">du {{ p.date_prescription|date:"d/m/Y" }}</span></td>
+                <td class="px-4 py-2">{{ p.action.libelle }}<br><span class="text-xs text-gray-500">{{ p.action.porteur }}</span></td>
+                <td class="px-4 py-2">{{ p.date_entree|date:"d/m/Y"|default:"—" }}{% if p.date_sortie %} → {{ p.date_sortie|date:"d/m/Y" }}{% endif %}</td>
+                <td class="px-4 py-2">{% include "insertion/_statut_prescription.html" %}</td>
+                <td class="px-4 py-2">{{ p.prescripteur.get_full_name|default:p.prescripteur.username }}</td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Aucune prescription.</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>

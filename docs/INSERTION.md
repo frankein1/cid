@@ -1,7 +1,7 @@
 <!-- docs/INSERTION.md -->
 # Module RSA – Insertion
 
-Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Les prescriptions, comités de suivi technique, réorientations et statistiques viendront ensuite.
+Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Étape 3 : les prescriptions. Les comités de suivi technique, réorientations et statistiques viendront ensuite.
 
 ## Pôles insertion
 
@@ -48,7 +48,7 @@ La liste réelle des actions d'un département ne se met pas dans le dépôt de 
 
 ## Le contrat (étape 2)
 
-Fiche du bénéficiaire → **Contrat RSA** (agents de la MDS du bénéficiaire). Le nom du contrat s'affiche partout tel qu'il est réglé en administration.
+Fiche du bénéficiaire → **Parcours RSA** (contrats et prescriptions) (agents de la MDS du bénéficiaire). Le nom du contrat s'affiche partout tel qu'il est réglé en administration.
 
 **Rédaction (référent)** : type **ouverture**, **prolongement** ou **rétablissement** (après une suspension ; une radiation impose une nouvelle demande CAF, donc une ouverture), nature (social, emploi, santé, logement), rubriques de l'imprimé départemental (conjoint, diagnostic, incidence financière, parole du bénéficiaire, objectifs et étapes du référent, actions, aide aux transports, engagements, signature). Le conjoint, les enfants et l'identifiant France Travail viennent de la fiche ; un prolongement reprend le diagnostic et les actions en cours du dernier contrat validé.
 
@@ -80,6 +80,34 @@ En préparation ──(référent : transmettre)──▶ Transmis au pôle ─�
 | Pôle – médecin (`rsa_pole_medecin`) | donner l'avis sur les contrats santé |
 | Pôle – cadre (`rsa_pole_cadre`) | décider en commission |
 
+## Les prescriptions (étape 3)
+
+Parcours RSA du bénéficiaire → **Nouvelle prescription** : choix d'une action (départementales du pôle, locales de la MDS), puis la fiche de liaison.
+
+- **Tronc commun prérempli** (dossier et contrat en cours) : situation RSA (socle, majoré), QPV, RQTH, France Travail, qualification, inactivité ; **freins** (liste commune : mobilité, garde d'enfants, langue, logement, famille, santé, finances, démarches administratives, isolement, projet professionnel, recherche d'emploi) ; diagnostic, avis motivé, objectifs ; orientation demandée par la personne ou proposée par le travailleur social ; pièces fournies ; **consentement** à la transmission (obligatoire).
+- **Questions propres à l'action** : définies sur la fiche de l'action (« Modifier les questions ») par ceux qui gèrent l'action. Types : texte, oui / non, un choix, plusieurs choix, date, nombre ; obligatoire ou non ; **accès restreint** (réponse visible des agents de la MDS du bénéficiaire, du cadre et du médecin du pôle, jamais de l'administratif ; aucun détail médical).
+- **Circuit** :
+
+```
+En préparation ──(prescripteur : adresser)──▶ [À valider par le pôle ──▶ Refusée]
+                                             ──▶ Adressée au porteur ──▶ Intégrée ──▶ Terminée · Arrêtée · Réorientée
+                                                                     ├─▶ Non intégrée
+                                                                     └─▶ Réorientée
+```
+
+  Le passage par le pôle dépend de l'action (case « Prescription validée par le pôle insertion », colonne CSV `validation_pole`) ; l'administratif ou le cadre du pôle valide ou refuse (motif). Le **retour du porteur** (premier rendez-vous, diagnostic finalisé, intégration, sortie, réorientation vers l'ASI, un autre dispositif ou France Travail) est noté par le prescripteur ou par l'administratif du pôle. Messages automatiques au prescripteur ou au pôle ; historique.
+- **Tableau des actions du contrat** : la prescription est rattachée au contrat en préparation ou en vigueur ; une fois adressée au porteur, la ligne de l'action s'y ajoute (ou reprend la ligne existante de la même action), et son entrée, sa sortie et son motif suivent le retour du porteur. Dans la rédaction du contrat, ces lignes ne se saisissent pas.
+- **Fiche de liaison (PDF)** à signer et à adresser au porteur, avec un cadre « retour du porteur » à compléter.
+- Le pôle ne voit ni les contrats ni les prescriptions **en préparation** (consentement pas encore recueilli).
+- Liste RSA – Insertion → **Prescriptions** : à traiter (pôle : à valider ; prescripteur : refusées), en attente du porteur, en cours, sorties, en préparation.
+
+| Rôle | Peut |
+|---|---|
+| Agent de la MDS (`peut_creer`) | prescrire, adresser, annuler, noter le retour du porteur, imprimer |
+| Pôle – administratif (`rsa_pole_admin`) | valider ou refuser, noter le retour du porteur |
+| Pôle – cadre (`rsa_pole_cadre`) | valider ou refuser ; voit les réponses à accès restreint |
+| Pôle – médecin (`rsa_pole_medecin`) | consulter ; voit les réponses à accès restreint |
+
 ## Remise à zéro (démonstration)
 
-La remise à zéro totale conserve les paramètres du contrat, les types d'actions et les actions départementales (sans leurs liens vers les pôles, MDS et partenaires, recréés ensuite) ; les actions locales disparaissent avec leur MDS.
+La remise à zéro totale conserve les paramètres du contrat, les types d'actions, les actions départementales et leurs questions (sans leurs liens vers les pôles, MDS et partenaires, recréés ensuite) ; les actions locales disparaissent avec leur MDS.

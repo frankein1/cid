@@ -18,8 +18,8 @@ import io
 from django.db import transaction
 
 COLONNES = ["code", "libelle", "type", "niveau", "mds", "poles", "territoire", "porteur", "public_vise", "duree",
-            "destinataires", "pieces_a_joindre", "comite_suivi", "rythme_comite", "aussi_logement", "actif",
-            "description"]
+            "destinataires", "pieces_a_joindre", "comite_suivi", "rythme_comite", "aussi_logement", "validation_pole",
+            "actif", "description"]
 AIDE = {
     "code": "obligatoire, propre à CID (ex. ACCGLO)",
     "libelle": "obligatoire",
@@ -29,7 +29,9 @@ AIDE = {
     "poles": "codes des pôles séparés par des virgules ; vide = tout le département",
     "destinataires": "adresses séparées par des virgules",
     "pieces_a_joindre": "pièces séparées par des virgules",
-    "comite_suivi": "oui / non", "aussi_logement": "oui / non", "actif": "oui / non (vide = oui)",
+    "comite_suivi": "oui / non", "aussi_logement": "oui / non",
+    "validation_pole": "oui / non : les prescriptions passent par le pôle avant le porteur",
+    "actif": "oui / non (vide = oui)",
 }
 VRAI = {"oui", "o", "x", "1", "vrai", "true", "yes"}
 FAUX = {"non", "n", "0", "faux", "false", "no", ""}
@@ -71,7 +73,8 @@ def export_csv(actions):
         w.writerow([a.code, a.libelle, a.type_action.code, a.niveau, a.mds.code_mds if a.mds_id else "",
                     ",".join(p.code for p in a.poles.all()), a.territoire, a.porteur, a.public_vise, a.duree,
                     ",".join(a.liste_destinataires), ",".join(a.liste_pieces), "oui" if a.comite_suivi else "non",
-                    a.rythme_comite, "oui" if a.aussi_logement else "non", "oui" if a.actif else "non", a.description])
+                    a.rythme_comite, "oui" if a.aussi_logement else "non", "oui" if a.validation_pole else "non",
+                    "oui" if a.actif else "non", a.description])
     return "﻿" + sortie.getvalue()
 
 
@@ -138,7 +141,8 @@ def analyser(texte, user):
             else:
                 erreurs.append(f"pôle inconnu : « {c} »")
         booleens = {}
-        for champ, defaut in (("comite_suivi", False), ("aussi_logement", False), ("actif", True)):
+        for champ, defaut in (("comite_suivi", False), ("aussi_logement", False), ("validation_pole", False),
+                               ("actif", True)):
             try:
                 booleens[champ] = _bool(ligne.get(champ), defaut)
             except ValueError as e:

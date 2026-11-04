@@ -198,6 +198,11 @@ class Command(BaseCommand):
         contrats = list(ContratInsertion.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
         Message.objects.filter(content_type=ContentType.objects.get_for_model(ContratInsertion),
                                object_id__in=contrats).delete()
+        from insertion.models import PrescriptionInsertion
+        prescriptions = list(PrescriptionInsertion.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
+        Message.objects.filter(content_type=ContentType.objects.get_for_model(PrescriptionInsertion),
+                               object_id__in=prescriptions).delete()
+        PrescriptionInsertion.objects.filter(pk__in=prescriptions).delete()
         ContratInsertion.objects.filter(pk__in=contrats).delete()
         RecoursAFASE.objects.filter(demande__beneficiaire__in=benefs).delete()
         DemandeAide.objects.filter(pk__in=aides).delete()
@@ -533,6 +538,7 @@ class Command(BaseCommand):
                 "description": "Action fictive du jeu de démonstration."})
             if niveau == "DEPARTEMENTAL" and code == "DEMO-MOBIL":
                 a.poles.set([pole])
+        self.questions_actions()
         self.stdout.write(f"✅ Insertion : pôle de démonstration (admin_pi1, cadre_pi1, medecin_pi1), {len(ACTIONS_DEMO)} actions fictives")
         self.contrats(pole)
 
@@ -601,6 +607,98 @@ class Command(BaseCommand):
         contrat("FAM8-LAU", "EMPLOI", 2, "", [], date_signature=None, accord_allocataire=False)
         self.stdout.write("✅ Contrats RSA : en préparation, transmis (santé), reçu, ajourné, validé sauf action, "
                           "à renouveler, échu")
+        self.prescriptions()
+
+    def questions_actions(self):
+        """Questions propres aux actions fictives, validation par le pôle, pièces à joindre."""
+        from insertion.models import ActionInsertion, QuestionAction as Q
+        a = {x.code: x for x in ActionInsertion.objects.filter(code__startswith="DEMO-")}
+        ActionInsertion.objects.filter(pk=a["DEMO-ACCGLO"].pk).update(
+            pieces_a_joindre="Attestation CAF de moins d'un mois\nCV")
+        ActionInsertion.objects.filter(pk=a["DEMO-SANTE"].pk).update(validation_pole=True)
+        Q.objects.filter(action__in=a.values()).delete()
+        Q.objects.create(action=a["DEMO-MOBIL"], ordre=1, libelle="Permis de conduire", type_reponse=Q.CHOIX,
+                         choix="Aucun\nCode en cours\nPermis B\nPermis suspendu ou annulé", obligatoire=True)
+        Q.objects.create(action=a["DEMO-MOBIL"], ordre=2, libelle="Besoins de mobilité", type_reponse=Q.CHOIX_MULTIPLE,
+                         choix="Aide au permis\nLocation de véhicule\nDeux-roues\nTransports en commun")
+        Q.objects.create(action=a["DEMO-SANTE"], ordre=1, type_reponse=Q.OUI_NON, obligatoire=True, restreinte=True,
+                         libelle="Grille d'aide à la décision santé remplie avec la personne",
+                         aide="La grille reste dans le dossier papier ; aucun détail médical ici.")
+        Q.objects.create(action=a["DEMO-CISF"], ordre=1, libelle="Besoin d'un mode de garde pendant l'atelier",
+                         type_reponse=Q.OUI_NON, obligatoire=True)
+        Q.objects.create(action=a["DEMO-CISF"], ordre=2, libelle="Nombre d'enfants à faire garder",
+                         type_reponse=Q.NOMBRE)
+
+    def prescriptions(self):
+        """Prescriptions fictives à chaque étape, rattachées aux contrats de démonstration."""
+        from insertion.models import ActionInsertion, PrescriptionInsertion as P
+        from insertion.services import prescription_circuit as circuit
+        j = self.j
+        a = {x.code: x for x in ActionInsertion.objects.filter(code__startswith="DEMO-")}
+        admin = self.u("admin_pi1")
+
+        def presc(code, action, il_y_a, reponses=None, **champs):
+            p = circuit.creer(self.b[code], self.ts, a[action])
+            p.consentement, p.date_signature = True, j - timedelta(days=il_y_a)
+            p.objectifs = p.objectifs or "Objectifs travaillés avec la personne (fictif)."
+            p.diagnostic = "Diagnostic partagé avec la personne (fictif)."
+            p.avis_motive = "Action adaptée au projet de la personne (fictif)."
+            p.situation_rsa = "SOCLE"
+            for k, v in champs.items():
+                setattr(p, k, v)
+            p.save()
+            if reponses:
+                questions = {q.libelle: q.pk for q in a[action].questions.all()}
+                circuit.enregistrer_reponses(p, {questions[k]: v for k, v in reponses.items()})
+            return p
+
+        def dater(p, il_y_a):
+            P.objects.filter(pk=p.pk).update(date_prescription=j - timedelta(days=il_y_a),
+                                             date_envoi=j - timedelta(days=il_y_a - 1))
+
+        # Intégrée, en cours (Sarah, accompagnement global) : la ligne du contrat suit
+        sarah = presc("FAM5-SAR", "DEMO-ACCGLO", 160, freins=["GARDE", "RECHERCHE_EMPLOI"],
+                      pieces_fournies=["Attestation CAF de moins d'un mois", "CV"], inscrit_france_travail=True)
+        circuit.adresser(sarah, self.ts)
+        circuit.noter_retour(sarah, admin, issue=P.INTEGREE, premier_rdv_le=j - timedelta(days=150),
+                             premier_rdv_issue="PRESENT", diagnostic_finalise=True, date_entree=j - timedelta(days=145))
+        dater(sarah, 160)
+        # Terminée (Kevin, plateforme mobilité)
+        kevin = presc("FAM6-KEV", "DEMO-MOBIL", 190, {"Permis de conduire": "Code en cours",
+                                                     "Besoins de mobilité": "Aide au permis"}, freins=["MOBILITE"])
+        circuit.adresser(kevin, self.ts)
+        circuit.noter_retour(kevin, self.ts, issue=P.INTEGREE, premier_rdv_le=j - timedelta(days=180),
+                             premier_rdv_issue="PRESENT", date_entree=j - timedelta(days=175))
+        circuit.noter_retour(kevin, self.ts, issue=P.TERMINEE, date_sortie=j - timedelta(days=20),
+                             motif_sortie="Permis obtenu (fictif)")
+        dater(kevin, 190)
+        # Intégrée, en cours (Thomas, atelier ; son autre action n'a pas été retenue par la commission)
+        thomas = presc("FAM11-THO", "DEMO-CISF", 40, {"Besoin d'un mode de garde pendant l'atelier": "non"},
+                       freins=["ISOLEMENT"])
+        circuit.adresser(thomas, self.ts)
+        circuit.noter_retour(thomas, self.ts, issue=P.INTEGREE, premier_rdv_le=j - timedelta(days=30),
+                             premier_rdv_issue="PRESENT", date_entree=j - timedelta(days=28))
+        dater(thomas, 40)
+        # Adressée au porteur, en attente d'intégration (Nadia, atelier, garde d'enfants)
+        nadia = presc("FAM7-NAD", "DEMO-CISF", 10, {"Besoin d'un mode de garde pendant l'atelier": "oui",
+                                                    "Nombre d'enfants à faire garder": "1"}, freins=["GARDE", "ISOLEMENT"])
+        circuit.adresser(nadia, self.ts)
+        dater(nadia, 10)
+        # À valider par le pôle (Céline, parcours santé ; réponse à accès restreint)
+        celine = presc("FAM9-CEL", "DEMO-SANTE", 6, {"Grille d'aide à la décision santé remplie avec la personne": "oui"},
+                       freins=["SANTE"])
+        circuit.adresser(celine, self.ts)
+        dater(celine, 6)
+        # Refusée par le pôle (Aurélie, parcours santé)
+        aurelie = presc("FAM12-AUR", "DEMO-SANTE", 20,
+                        {"Grille d'aide à la décision santé remplie avec la personne": "oui"}, freins=["LOGEMENT"])
+        circuit.adresser(aurelie, self.ts)
+        circuit.valider(aurelie, admin, False, "Action complète jusqu'à la prochaine session (fictif).")
+        dater(aurelie, 20)
+        # En préparation (Laura, plateforme mobilité) : la ligne s'ajoutera au contrat en préparation à l'envoi
+        presc("FAM8-LAU", "DEMO-MOBIL", 1, consentement=False, freins=["MOBILITE", "GARDE"])
+        self.stdout.write("✅ Prescriptions : en préparation, à valider par le pôle, refusée, en attente du porteur, "
+                          "intégrées, terminée")
 
     # ------------------------------------------------------------------ planning
     def planning(self):

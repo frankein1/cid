@@ -24,7 +24,20 @@
             {% for d in action.liste_destinataires %}<p class="font-mono text-xs">{{ d }}</p>{% empty %}<p>—</p>{% endfor %}</div>
         <div><p class="text-xs uppercase text-gray-500">Pièces à joindre</p>
             {% for p in action.liste_pieces %}<p>• {{ p }}</p>{% empty %}<p>—</p>{% endfor %}</div>
-        {% if action.aussi_logement %}<div class="md:col-span-2"><span class="px-2 py-1 rounded bg-emerald-50 text-emerald-800 text-xs"><i class="fas fa-house mr-1"></i>Concerne aussi le logement</span></div>{% endif %}
+        {% if action.aussi_logement or action.validation_pole %}<div class="md:col-span-2 flex flex-wrap gap-2">
+            {% if action.aussi_logement %}<span class="px-2 py-1 rounded bg-emerald-50 text-emerald-800 text-xs"><i class="fas fa-house mr-1"></i>Concerne aussi le logement</span>{% endif %}
+            {% if action.validation_pole %}<span class="px-2 py-1 rounded bg-indigo-50 text-indigo-800 text-xs"><i class="fas fa-stamp mr-1"></i>Prescription validée par le pôle insertion</span>{% endif %}
+        </div>{% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-sm" id="questions-action">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="font-semibold text-gray-800">Questions propres à l'action</h2>
+            {% if peut_modifier %}<a href="{% url 'insertion:action_questions' action.pk %}" class="text-blue-700 hover:underline text-sm"><i class="fas fa-list-check mr-1"></i>Modifier les questions</a>{% endif %}
+        </div>
+        {% for q in action.questions.all %}
+        <p>• {{ q.libelle }} <span class="text-xs text-gray-500">({{ q.get_type_reponse_display|lower }}{% if q.obligatoire %}, obligatoire{% endif %}{% if q.restreinte %}, accès restreint{% endif %})</span></p>
+        {% empty %}<p class="text-gray-500">Aucune : la prescription ne comporte que le tronc commun.</p>{% endfor %}
     </div>
     <p class="text-xs text-gray-400">Modifiée le {{ action.modifie_le|date:"d/m/Y à H:i" }}{% if action.modifie_par %} par {{ action.modifie_par.get_full_name|default:action.modifie_par.username }}{% endif %}.</p>
 </div>

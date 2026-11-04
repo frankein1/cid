@@ -90,6 +90,9 @@ class ActionInsertion(models.Model):
     comite_suivi = models.BooleanField("Passage en comité de suivi technique", default=False)
     rythme_comite = models.CharField("Rythme des comités", max_length=100, blank=True, help_text="Ex. : semestriel")
     aussi_logement = models.BooleanField("Concerne aussi le logement", default=False)
+    validation_pole = models.BooleanField(
+        "Prescription validée par le pôle insertion", default=False,
+        help_text="Les prescriptions vers cette action passent par le pôle avant d'être adressées au porteur.")
     actif = models.BooleanField("Active", default=True)
     modifie_le = models.DateTimeField("Modifiée le", auto_now=True)
     modifie_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -398,6 +401,9 @@ class LigneActionContrat(models.Model):
     date_entree = models.DateField("Entrée", null=True, blank=True)
     date_sortie = models.DateField("Sortie", null=True, blank=True)
     motif_sortie = models.CharField("Motif de sortie", max_length=200, blank=True)
+    prescription = models.ForeignKey('PrescriptionInsertion', on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='lignes_contrat', verbose_name="Prescription",
+                                     help_text="Ligne tenue à jour par la prescription (entrée, sortie, motif).")
     non_retenue = models.BooleanField("Non retenue par la commission", default=False)
     motif_non_retenue = models.CharField("Motif (action non retenue)", max_length=255, blank=True)
 
@@ -430,3 +436,178 @@ class HistoriqueContrat(models.Model):
         ordering = ['-date', '-pk']
         verbose_name = "Historique d'un contrat"
         verbose_name_plural = "Historique des contrats"
+
+
+# =============================================================================
+# Étape 3 : les prescriptions
+# =============================================================================
+
+class QuestionAction(models.Model):
+    """Question propre à une action, posée dans la prescription (permis de conduire, garde d'enfants…)."""
+    TEXTE, OUI_NON, CHOIX, CHOIX_MULTIPLE, DATE, NOMBRE = 'TEXTE', 'OUI_NON', 'CHOIX', 'CHOIX_MULTIPLE', 'DATE', 'NOMBRE'
+    TYPES = [(TEXTE, "Texte"), (OUI_NON, "Oui / non"), (CHOIX, "Un choix dans une liste"),
+             (CHOIX_MULTIPLE, "Plusieurs choix dans une liste"), (DATE, "Date"), (NOMBRE, "Nombre")]
+    action = models.ForeignKey(ActionInsertion, on_delete=models.CASCADE, related_name='questions')
+    libelle = models.CharField("Question", max_length=255)
+    type_reponse = models.CharField("Type de réponse", max_length=15, choices=TYPES, default=TEXTE)
+    choix = models.TextField("Choix proposés", blank=True, help_text="Un choix par ligne (listes seulement).")
+    aide = models.CharField("Aide", max_length=255, blank=True)
+    obligatoire = models.BooleanField("Obligatoire", default=False)
+    restreinte = models.BooleanField(
+        "Réponse à accès restreint", default=False,
+        help_text="Visible seulement des agents de la MDS du bénéficiaire, et du cadre et du médecin du pôle "
+                  "(ex. grille d'aide à la décision santé). Jamais de détail médical.")
+    ordre = models.PositiveSmallIntegerField("Ordre", default=0)
+
+    class Meta:
+        ordering = ['ordre', 'pk']
+        verbose_name = "Question propre à l'action"
+        verbose_name_plural = "Questions propres à l'action"
+
+    def __str__(self):
+        return self.libelle
+
+    @property
+    def liste_choix(self):
+        return [c.strip() for c in self.choix.splitlines() if c.strip()]
+
+
+FREINS = [
+    ('MOBILITE', "Mobilité"), ('GARDE', "Garde d'enfants"), ('LANGUE', "Langue, savoirs de base"),
+    ('LOGEMENT', "Logement"), ('FAMILLE', "Situation familiale"), ('SANTE', "Santé"), ('FINANCES', "Finances, budget"),
+    ('ADMINISTRATIF', "Démarches administratives, numérique"), ('ISOLEMENT', "Isolement"),
+    ('PROJET', "Projet professionnel"), ('RECHERCHE_EMPLOI', "Techniques de recherche d'emploi"),
+]
+
+
+class PrescriptionInsertion(models.Model):
+    BROUILLON, A_VALIDER, REFUSEE, EN_ATTENTE = 'BROUILLON', 'A_VALIDER', 'REFUSEE', 'EN_ATTENTE'
+    INTEGREE, NON_INTEGREE, TERMINEE, ARRETEE, REORIENTEE, ANNULEE = (
+        'INTEGREE', 'NON_INTEGREE', 'TERMINEE', 'ARRETEE', 'REORIENTEE', 'ANNULEE')
+    STATUTS = [(BROUILLON, "En préparation"), (A_VALIDER, "À valider par le pôle"), (REFUSEE, "Refusée par le pôle"),
+               (EN_ATTENTE, "Adressée au porteur, en attente d'intégration"), (INTEGREE, "Intégrée, en cours"),
+               (NON_INTEGREE, "Non intégrée"), (TERMINEE, "Terminée"), (ARRETEE, "Arrêtée"),
+               (REORIENTEE, "Réorientée"), (ANNULEE, "Annulée")]
+    MODIFIABLES = (BROUILLON,)
+    OUVERTES = (A_VALIDER, EN_ATTENTE, INTEGREE)
+    SORTIES = [(TERMINEE, "Terminée (parcours mené à son terme)"), (ARRETEE, "Arrêtée"),
+               (REORIENTEE, "Réorientée")]
+
+    SITUATIONS_RSA = [('', "—"), ('SOCLE', "RSA socle"), ('MAJORE', "RSA majoré")]
+    DEMANDE_PAR = [('PERSONNE', "Demandée par la personne"), ('TS', "Proposée par le travailleur social")]
+    ISSUES_RDV = [('', "—"), ('PRESENT', "Présent(e)"), ('ABSENT', "Absent(e)"), ('EXCUSE', "Excusé(e)"),
+                  ('RECONVOQUE', "Reconvoqué(e)")]
+    REORIENTATIONS = [('', "—"), ('ASI', "Accompagnement social individuel (ASI)"),
+                      ('DISPOSITIF', "Autre dispositif"), ('FRANCE_TRAVAIL', "France Travail")]
+
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE,
+                                     related_name='prescriptions_insertion', verbose_name="Bénéficiaire")
+    mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, related_name='prescriptions_insertion')
+    pole = models.ForeignKey(PoleInsertion, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='prescriptions', verbose_name="Pôle insertion")
+    prescripteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                     related_name='prescriptions_insertion', verbose_name="Prescripteur")
+    action = models.ForeignKey(ActionInsertion, on_delete=models.PROTECT, related_name='prescriptions',
+                               verbose_name="Action")
+    contrat = models.ForeignKey(ContratInsertion, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='prescriptions', verbose_name="Contrat")
+    statut = models.CharField("Statut", max_length=15, choices=STATUTS, default=BROUILLON)
+    date_prescription = models.DateField("Date de la prescription", null=True, blank=True)
+
+    # ---------------------------------------------------------------- tronc commun (prérempli, modifiable)
+    situation_rsa = models.CharField("Situation RSA", max_length=10, choices=SITUATIONS_RSA, blank=True)
+    qpv = models.BooleanField("Habite un quartier prioritaire (QPV)", default=False)
+    rqth = models.BooleanField("Reconnaissance de la qualité de travailleur handicapé (RQTH)", default=False)
+    inscrit_france_travail = models.BooleanField("Inscrit(e) à France Travail", default=False)
+    identifiant_france_travail = models.CharField("Identifiant France Travail", max_length=20, blank=True)
+    qualification = models.CharField("Qualification, niveau", max_length=200, blank=True)
+    inactivite = models.CharField("Sans activité depuis", max_length=100, blank=True)
+    freins = models.JSONField("Freins", default=list, blank=True)
+    diagnostic = models.TextField("Diagnostic", blank=True)
+    avis_motive = models.TextField("Avis motivé du prescripteur", blank=True)
+    objectifs = models.TextField("Objectifs de l'orientation", blank=True)
+    demande_par = models.CharField("Orientation", max_length=10, choices=DEMANDE_PAR, default='TS')
+    pieces_fournies = models.JSONField("Pièces fournies", default=list, blank=True)
+    consentement = models.BooleanField(
+        "Le bénéficiaire accepte que ces informations soient transmises au porteur de l'action", default=False)
+    date_signature = models.DateField("Signée le", null=True, blank=True)
+
+    # ---------------------------------------------------------------- pôle
+    date_envoi = models.DateField("Adressée le", null=True, blank=True)
+    valide_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+', verbose_name="Validée par")
+    date_validation = models.DateField("Validée ou refusée le", null=True, blank=True)
+    motif_refus = models.TextField("Motif du refus", blank=True)
+
+    # ---------------------------------------------------------------- retour du porteur
+    premier_rdv_le = models.DateField("Premier rendez-vous le", null=True, blank=True)
+    premier_rdv_issue = models.CharField("Premier rendez-vous", max_length=12, choices=ISSUES_RDV, blank=True)
+    diagnostic_finalise = models.BooleanField("Diagnostic finalisé par le porteur", default=False)
+    date_entree = models.DateField("Entrée dans l'action le", null=True, blank=True)
+    motif_non_integration = models.CharField("Motif de non-intégration", max_length=255, blank=True)
+    date_sortie = models.DateField("Sortie le", null=True, blank=True)
+    motif_sortie = models.CharField("Motif de sortie", max_length=255, blank=True)
+    reorientation = models.CharField("Réorientation vers", max_length=15, choices=REORIENTATIONS, blank=True)
+    reorientation_precision = models.CharField("Précision sur la réorientation", max_length=255, blank=True)
+    commentaire_porteur = models.TextField("Commentaire du porteur", blank=True)
+
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_prescription', '-pk']
+        verbose_name = "Prescription"
+        verbose_name_plural = "Prescriptions"
+
+    def __str__(self):
+        return f"{self.numero} – {self.action.libelle}"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('insertion:prescription_detail', args=[self.pk])
+
+    @property
+    def numero(self):
+        annee = (self.date_prescription or timezone.localdate()).year
+        return f"P{annee}-{self.pk or 0:05d}"
+
+    @property
+    def modifiable(self):
+        return self.statut in self.MODIFIABLES
+
+    @property
+    def libelles_freins(self):
+        noms = dict(FREINS)
+        return [noms.get(f, f) for f in self.freins]
+
+    def manques_envoi(self):
+        manques = []
+        if not self.consentement:
+            manques.append("le consentement du bénéficiaire")
+        if not self.objectifs.strip():
+            manques.append("les objectifs de l'orientation")
+        for q in self.action.questions.filter(obligatoire=True):
+            r = self.reponses.filter(question=q).first()
+            if not r or not r.valeur.strip():
+                manques.append(f"la réponse à « {q.libelle} »")
+        return manques
+
+
+class ReponseQuestion(models.Model):
+    prescription = models.ForeignKey(PrescriptionInsertion, on_delete=models.CASCADE, related_name='reponses')
+    question = models.ForeignKey(QuestionAction, on_delete=models.CASCADE, related_name='reponses')
+    valeur = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['prescription', 'question'], name='reponse_unique')]
+
+
+class HistoriquePrescription(models.Model):
+    prescription = models.ForeignKey(PrescriptionInsertion, on_delete=models.CASCADE, related_name='historique')
+    date = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    action = models.CharField(max_length=200)
+    commentaire = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-date', '-pk']

@@ -1,0 +1,3 @@
+<!-- templates/insertion/_statut_prescription.html -->
+{% with s=p.statut %}<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold
+ {% if s == 'BROUILLON' %}bg-gray-100 text-gray-700{% elif s == 'A_VALIDER' %}bg-indigo-100 text-indigo-800{% elif s == 'REFUSEE' %}bg-red-100 text-red-800{% elif s == 'EN_ATTENTE' %}bg-blue-100 text-blue-800{% elif s == 'INTEGREE' %}bg-green-100 text-green-800{% elif s == 'NON_INTEGREE' %}bg-orange-100 text-orange-800{% elif s == 'TERMINEE' %}bg-emerald-100 text-emerald-800{% elif s == 'REORIENTEE' %}bg-amber-100 text-amber-800{% else %}bg-gray-200 text-gray-600{% endif %}">{{ p.get_statut_display }}</span>{% endwith %}

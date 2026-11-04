@@ -1,0 +1,143 @@
+<!-- templates/insertion/prescription_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ p.numero }}{% endblock %}
+{% block content %}
+{% with b=p.beneficiaire a=p.action %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div class="flex flex-wrap gap-4 text-sm">
+        {% if role.prescripteur %}<a href="{% url 'insertion:contrats_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Parcours RSA de {{ b.prenom }} {{ b.nom|upper }}</a>{% endif %}
+        <a href="{% url 'insertion:prescriptions_liste' %}" class="text-blue-700 hover:underline"><i class="fas fa-list mr-1"></i>Prescriptions</a>
+    </div>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Prescription {{ p.numero }} : {{ a.libelle }}</h1>
+            <p class="text-sm text-gray-600">{{ b.get_civilite_display }} {{ b.prenom }} {{ b.nom|upper }} · {{ a.porteur|default:"porteur non renseigné" }} · {{ p.mds.nom }} · {{ p.prescripteur.get_full_name|default:p.prescripteur.username }}</p>
+            <p class="mt-2">{% include "insertion/_statut_prescription.html" %}
+                {% if p.contrat %}<a href="{% url 'insertion:contrat_detail' p.contrat.pk %}" class="ml-2 text-sm text-blue-700 hover:underline"><i class="fas fa-file-contract mr-1"></i>contrat {{ p.contrat.numero }}</a>{% endif %}</p>
+        </div>
+        <a href="{% url 'insertion:prescription_pdf' p.pk %}" target="_blank" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-pdf mr-1 text-red-600"></i>Fiche de liaison (PDF)</a>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4 text-sm">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 grid md:grid-cols-2 gap-x-6 gap-y-3">
+                <div><p class="text-xs uppercase text-gray-500">Situation RSA</p><p>{{ p.get_situation_rsa_display|default:"—" }}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">France Travail</p><p>{% if p.inscrit_france_travail %}inscrit(e){% if p.identifiant_france_travail %} ({{ p.identifiant_france_travail }}){% endif %}{% else %}non inscrit(e){% endif %}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">RQTH · QPV</p><p>{{ p.rqth|yesno:"oui,non" }} · {{ p.qpv|yesno:"oui,non" }}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">Qualification · sans activité depuis</p><p>{{ p.qualification|default:"—" }} · {{ p.inactivite|default:"—" }}</p></div>
+                <div class="md:col-span-2"><p class="text-xs uppercase text-gray-500">Freins</p><p>{% for f in p.libelles_freins %}<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">{{ f }}</span>{% empty %}—{% endfor %}</p></div>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
+                <h2 class="font-semibold text-gray-800">L'orientation <span class="text-xs font-normal text-gray-500">({{ p.get_demande_par_display|lower }})</span></h2>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div><p class="text-xs uppercase text-gray-500">Diagnostic</p><p class="whitespace-pre-line">{{ p.diagnostic|default:"—" }}</p></div>
+                    <div><p class="text-xs uppercase text-gray-500">Avis motivé</p><p class="whitespace-pre-line">{{ p.avis_motive|default:"—" }}</p></div>
+                    <div><p class="text-xs uppercase text-gray-500">Objectifs</p><p class="whitespace-pre-line">{{ p.objectifs|default:"—" }}</p></div>
+                </div>
+            </div>
+            {% if questions %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5" id="reponses-questions">
+                <h2 class="font-semibold text-gray-800 mb-2">Questions propres à l'action</h2>
+                {% for q, valeur, masquee in questions %}
+                <p class="py-1 border-b border-gray-50"><span class="text-gray-500">{{ q.libelle }} :</span>
+                    {% if masquee %}<span class="text-purple-700"><i class="fas fa-lock mr-1"></i>accès restreint</span>{% else %}<span class="whitespace-pre-line">{{ valeur|linebreaksbr|default:"—" }}</span>{% endif %}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 grid md:grid-cols-2 gap-x-6 gap-y-2">
+                <div><p class="text-xs uppercase text-gray-500">Pièces fournies</p>{% for x in a.liste_pieces %}<p>{% if x in p.pieces_fournies %}<i class="fas fa-check text-green-600 mr-1"></i>{% else %}<i class="far fa-square text-gray-400 mr-1"></i>{% endif %}{{ x }}</p>{% empty %}<p>—</p>{% endfor %}</div>
+                <div><p class="text-xs uppercase text-gray-500">Consentement · signature</p><p>{{ p.consentement|yesno:"donné,non donné" }} · {{ p.date_signature|date:"d/m/Y"|default:"—" }}</p>
+                    <p class="text-xs uppercase text-gray-500 mt-2">Adresser à</p>{% for d in a.liste_destinataires %}<p class="font-mono text-xs">{{ d }}</p>{% empty %}<p>—</p>{% endfor %}</div>
+            </div>
+            {% if p.statut != 'BROUILLON' %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5" id="bloc-retour">
+                <h2 class="font-semibold text-gray-800 mb-2">Suivi</h2>
+                <div class="grid md:grid-cols-2 gap-x-6 gap-y-2">
+                    <p><span class="text-gray-500">Adressée le :</span> {{ p.date_envoi|date:"d/m/Y"|default:"—" }}</p>
+                    {% if p.date_validation %}<p><span class="text-gray-500">{% if p.statut == 'REFUSEE' %}Refusée{% else %}Validée{% endif %} par le pôle le :</span> {{ p.date_validation|date:"d/m/Y" }} ({{ p.valide_par.get_full_name|default:p.valide_par.username }})</p>{% endif %}
+                    {% if p.motif_refus %}<p class="md:col-span-2"><span class="text-gray-500">Motif du refus :</span> {{ p.motif_refus }}</p>{% endif %}
+                    <p><span class="text-gray-500">Premier rendez-vous :</span> {{ p.premier_rdv_le|date:"d/m/Y"|default:"—" }}{% if p.premier_rdv_issue %} ({{ p.get_premier_rdv_issue_display|lower }}){% endif %}</p>
+                    <p><span class="text-gray-500">Diagnostic du porteur :</span> {{ p.diagnostic_finalise|yesno:"finalisé,pas encore" }}</p>
+                    <p><span class="text-gray-500">Entrée :</span> {{ p.date_entree|date:"d/m/Y"|default:"—" }}</p>
+                    <p><span class="text-gray-500">Sortie :</span> {{ p.date_sortie|date:"d/m/Y"|default:"—" }}{% if p.motif_sortie %} – {{ p.motif_sortie }}{% endif %}</p>
+                    {% if p.motif_non_integration %}<p class="md:col-span-2"><span class="text-gray-500">Non intégrée :</span> {{ p.motif_non_integration }}</p>{% endif %}
+                    {% if p.reorientation %}<p class="md:col-span-2"><span class="text-gray-500">Réorientée vers :</span> {{ p.get_reorientation_display }}{% if p.reorientation_precision %} – {{ p.reorientation_precision }}{% endif %}</p>{% endif %}
+                    {% if p.commentaire_porteur %}<p class="md:col-span-2 whitespace-pre-line"><span class="text-gray-500">Commentaire du porteur :</span> {{ p.commentaire_porteur }}</p>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="space-y-4">
+            {% if role.prescripteur and p.statut == 'BROUILLON' %}
+            <div class="bg-white rounded-xl border-2 border-blue-200 shadow-sm p-5 space-y-3" id="panneau-prescripteur">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-user-pen mr-1 text-blue-700"></i>Prescripteur</h2>
+                <a href="{% url 'insertion:prescription_modifier' p.pk %}" class="block text-center px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-pen mr-1"></i>Compléter la fiche</a>
+                {% if manques %}<div class="text-xs text-orange-900 bg-orange-50 rounded p-2">Pour adresser la prescription, il manque : {{ manques|join:", " }}.</div>
+                {% else %}<form method="post" action="{% url 'insertion:prescription_adresser' p.pk %}">{% csrf_token %}
+                    <button id="adresser" class="w-full px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold hover:bg-green-800"><i class="fas fa-paper-plane mr-1"></i>Adresser {% if a.validation_pole %}au pôle pour validation{% else %}au porteur{% endif %}</button></form>{% endif %}
+                <form method="post" action="{% url 'insertion:prescription_annuler' p.pk %}" onsubmit="return confirm('Annuler cette prescription ?');">{% csrf_token %}
+                    <button class="w-full px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">Annuler la prescription</button></form>
+            </div>
+            {% endif %}
+
+            {% if role.valider and p.statut == 'A_VALIDER' %}
+            <form method="post" action="{% url 'insertion:prescription_valider' p.pk %}" class="bg-white rounded-xl border-2 border-indigo-200 shadow-sm p-5 space-y-3 text-sm" id="panneau-pole">{% csrf_token %}
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-stamp mr-1 text-indigo-700"></i>Pôle insertion : validation</h2>
+                <div class="space-y-1">{% for r in validation.decision %}<label class="flex items-center gap-2">{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ validation.motif.label }}</label>{{ validation.motif }}</div>
+                <button id="valider" class="w-full px-4 py-2 rounded-lg bg-indigo-700 text-white text-sm font-semibold hover:bg-indigo-800">Enregistrer</button>
+                <p class="text-xs text-gray-500">Le prescripteur est prévenu par la messagerie.</p>
+            </form>
+            {% endif %}
+
+            {% if role.retour and p.statut in 'EN_ATTENTE INTEGREE' %}
+            <form method="post" action="{% url 'insertion:prescription_retour' p.pk %}" class="bg-white rounded-xl border-2 border-green-200 shadow-sm p-5 space-y-3 text-sm" id="panneau-retour">{% csrf_token %}
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-reply mr-1 text-green-700"></i>Retour du porteur</h2>
+                {% if p.statut == 'EN_ATTENTE' %}
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.premier_rdv_le.label }}</label>{{ retour.premier_rdv_le }}</div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">Issue</label>{{ retour.premier_rdv_issue }}</div>
+                </div>
+                <label class="flex items-center gap-2">{{ retour.diagnostic_finalise }} {{ retour.diagnostic_finalise.label }}</label>
+                {% else %}{% for f in retour %}{% if f.name in "premier_rdv_le premier_rdv_issue diagnostic_finalise" %}<input type="hidden" name="{{ f.html_name }}" value="{% if f.value %}{% if f.name == 'premier_rdv_le' %}{{ f.value|date:'Y-m-d' }}{% else %}{{ f.value }}{% endif %}{% endif %}">{% endif %}{% endfor %}{% endif %}
+                <div class="space-y-1" id="choix-issue"><p class="text-xs font-semibold text-gray-600">{{ retour.issue.label }}</p>{% for r in retour.issue %}<label class="flex items-center gap-2">{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div>
+                <div class="issue issue-INTEGREE hidden"><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.date_entree.label }}</label>{{ retour.date_entree }}</div>
+                {% if p.statut == 'INTEGREE' %}<input type="hidden" name="date_entree" value="{{ p.date_entree|date:'Y-m-d' }}">{% endif %}
+                <div class="issue issue-NON_INTEGREE hidden"><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.motif_non_integration.label }}</label>{{ retour.motif_non_integration }}</div>
+                <div class="issue issue-TERMINEE issue-ARRETEE issue-REORIENTEE hidden grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.date_sortie.label }}</label>{{ retour.date_sortie }}</div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.motif_sortie.label }}</label>{{ retour.motif_sortie }}</div>
+                </div>
+                <div class="issue issue-REORIENTEE hidden grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.reorientation.label }}</label>{{ retour.reorientation }}</div>
+                    <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.reorientation_precision.label }}</label>{{ retour.reorientation_precision }}</div>
+                </div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ retour.commentaire_porteur.label }}</label>{{ retour.commentaire_porteur }}</div>
+                <button id="noter-retour" class="w-full px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold hover:bg-green-800">Enregistrer le retour</button>
+                <p class="text-xs text-gray-500">{% if p.contrat %}La ligne de l'action dans le contrat {{ p.contrat.numero }} est mise à jour.{% endif %}</p>
+            </form>
+            <script>
+            (function () {
+                var f = document.getElementById('panneau-retour');
+                var maj = function () {
+                    var v = (f.querySelector('input[name=issue]:checked') || {}).value || '';
+                    f.querySelectorAll('.issue').forEach(function (d) { d.classList.toggle('hidden', !v || !d.classList.contains('issue-' + v)); });
+                };
+                f.querySelectorAll('input[name=issue]').forEach(function (r) { r.addEventListener('change', maj); });
+                maj();
+            })();
+            </script>
+            {% endif %}
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <h2 class="font-semibold text-gray-800 mb-2"><i class="fas fa-clock-rotate-left mr-1 text-gray-500"></i>Historique</h2>
+                <ul class="space-y-2 text-xs">
+                    {% for h in historique %}<li><span class="text-gray-500">{{ h.date|date:"d/m/Y H:i" }}</span> · {{ h.action }}{% if h.user %} <span class="text-gray-500">({{ h.user.get_full_name|default:h.user.username }})</span>{% endif %}{% if h.commentaire %}<br><span class="text-gray-600">{{ h.commentaire }}</span>{% endif %}</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+{% endblock %}
