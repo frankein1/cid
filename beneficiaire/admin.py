@@ -47,7 +47,7 @@ class BeneficiaireAdmin(admin.ModelAdmin):
             'fields': ('telephone_mobile', 'telephone_fixe', 'email', 'adresse', 'code_postal', 'ville')
         }),
         ('Informations Administratives', {
-            'fields': ('nir', 'numero_caf', 'numero_france_travail', 'numero_fiscal', 'date_entree', 'date_sortie', 'motif_sortie', 'detail_sortie')
+            'fields': ('nir', 'numero_caf', 'numero_france_travail', 'numero_fiscal', 'numero_dossier_pmi', 'date_entree', 'date_sortie', 'motif_sortie', 'detail_sortie')
         }),
         ('Rattachement', {'fields': ('mds', 'referent_mds')}),
         ('Tracking', {
