@@ -16,6 +16,8 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 import logging
 
+from . import chiffrement
+
 logger = logging.getLogger(__name__)
 
 def is_render_environment():
@@ -89,7 +91,8 @@ class SeaweedFSStorage(Storage):
     # ==================== CŒUR DU STOCKAGE ====================
     
     def _save(self, name, content):
-        """Sauvegarde un fichier, retourne un FID"""
+        """Sauvegarde un fichier, retourne un FID (chiffré au préalable si une clé est configurée)."""
+        content = self._chiffrer(name, content)
         if self.use_pcloud:
             return self._save_pcloud(name, content)
         if self.use_temporary:
@@ -149,15 +152,44 @@ class SeaweedFSStorage(Storage):
             raise
     
     def open(self, name, mode='rb'):
-        """Ouvre un fichier par son FID"""
+        """Ouvre un fichier par son FID ; il est rendu EN CLAIR (déchiffré s'il était chiffré)."""
         fid = name
 
         if fid.startswith(PCLOUD_PREFIX):
-            return self._open_pcloud(fid)
-        if self.use_temporary or self.use_pcloud:
-            return self._open_temporary(fid)
+            fichier = self._open_pcloud(fid)
+        elif self.use_temporary or self.use_pcloud:
+            fichier = self._open_temporary(fid)
         else:
-            return self._open_seaweedfs(fid)
+            fichier = self._open_seaweedfs(fid)
+        return ContentFile(chiffrement.dechiffrer(fichier.read()), name=fid)
+
+    def open_brut(self, fid):
+        """Contenu tel qu'il est stocké (chiffré ou non) : pour la commande chiffrer_ged et les contrôles."""
+        if fid.startswith(PCLOUD_PREFIX):
+            return self._open_pcloud(fid).read()
+        if self.use_temporary or self.use_pcloud:
+            return self._open_temporary(fid).read()
+        return self._open_seaweedfs(fid).read()
+
+    _alerte_clair = False
+
+    def _chiffrer(self, name, content):
+        if hasattr(content, 'seek'):
+            content.seek(0)
+        if hasattr(content, 'chunks'):
+            donnees = b''.join(content.chunks())
+        elif hasattr(content, 'read'):
+            donnees = content.read()
+        else:
+            donnees = content
+        g = chiffrement.gestionnaire()
+        if not g.actif:
+            if not SeaweedFSStorage._alerte_clair:
+                logger.warning("⚠️ GED : aucune clé de chiffrement configurée, fichiers stockés EN CLAIR")
+                SeaweedFSStorage._alerte_clair = True
+            return ContentFile(donnees, name=name)
+        # Jamais de repli en clair si le chiffrement échoue : l'erreur remonte, le fichier n'est pas déposé
+        return ContentFile(chiffrement.chiffrer(donnees, g), name=name)
     
     def _open_temporary(self, fid):
         """Ouvre depuis le stockage temporaire"""
