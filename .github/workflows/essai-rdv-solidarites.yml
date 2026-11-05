@@ -1,0 +1,116 @@
+# .github/workflows/essai-rdv-solidarites.yml
+# Essai CID ↔ RDV-Solidarités : lance une copie ÉPHÉMÈRE de RDV-Solidarités (logiciel libre de l'État,
+# github.com/betagouv/rdv-service-public, lancé depuis la copie frankein1/MRS, version figée ci-dessous), y crée des données FICTIVES,
+# puis vérifie chaque point de l'API dont CID a besoin (.github/rdvsp/sonde.py). Tout est effacé à la fin.
+name: Essai RDV-Solidarités
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/rdvsp/**'
+      - '.github/workflows/essai-rdv-solidarites.yml'
+      - 'connecteurs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  essai:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lapin_development
+          POSTGRES_PASSWORD: lapin_development
+          POSTGRES_DB: lapin_development
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    env:
+      MRS_DEPOT: frankein1/MRS   # copie de github.com/betagouv/rdv-service-public
+      MRS_VERSION: 6bc33f1da8c30d3d62b6c7b9ef327de5372b6c27   # 5 novembre 2026
+      MRS_DIR: ${{ github.workspace }}/mrs
+      SEED_JSON: ${{ github.workspace }}/seed.json
+      RAILS_ENV: development
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: lapin_development
+      POSTGRES_PASSWORD: lapin_development
+      REDIS_URL: redis://localhost:6379
+      ALLOWED_WEBHOOK_HOSTS: localhost
+    steps:
+      - name: CID
+        uses: actions/checkout@v4
+
+      - name: RDV-Solidarités (version figée)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MRS_DEPOT }}
+          ref: ${{ env.MRS_VERSION }}
+          path: mrs
+          persist-credentials: false
+
+      - name: Configuration de développement (instance RDV-Solidarités)
+        working-directory: mrs
+        run: |
+          cp .env.sample .env
+          grep -v '^HOST=' .env.rdv_solidarites.sample >> .env
+          cat >> .env <<'FIN'
+          HOST=http://localhost:3000
+          RDV_SOLIDARITES_INSTANCE_NAME=lapin_development
+          DEFAULT_DOMAIN_IS_RDV_SOLIDARITES=true
+          ALLOWED_WEBHOOK_HOSTS=localhost
+          FIN
+
+      - name: Ruby et dépendances
+        uses: ruby/setup-ruby@v1
+        with:
+          working-directory: mrs
+          bundler-cache: true
+
+      - name: Base de données et données fictives
+        working-directory: mrs
+        run: |
+          bin/rails db:create db:schema:load
+          bin/rails runner ../.github/rdvsp/seed.rb
+
+      - name: Démarrer RDV-Solidarités et son exécuteur de tâches
+        working-directory: mrs
+        run: |
+          nohup bin/rails server -p 3000 -b 127.0.0.1 > ../serveur.log 2>&1 &
+          nohup bundle exec good_job start > ../taches.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -s -o /dev/null http://localhost:3000/api/v1/agents/me && break
+            sleep 2
+          done
+          curl -s -o /dev/null -w "API : %{http_code}\n" http://localhost:3000/api/v1/agents/me
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Essai de l'API
+        run: |
+          pip install requests
+          python .github/rdvsp/sonde.py
+
+      - name: Journaux (en cas d'échec)
+        if: failure()
+        run: |
+          tail -n 120 serveur.log || true
+          tail -n 80 taches.log || true
+          tail -n 120 mrs/log/development.log || true
+
+      - name: Compte rendu
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compte-rendu-rdv-solidarites
+          path: rapport_rdvsp.md
+          if-no-files-found: ignore
