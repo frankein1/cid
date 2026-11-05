@@ -114,3 +114,36 @@ class PrescriptionInsertionAdmin(admin.ModelAdmin):
     search_fields = ['beneficiaire__nom', 'beneficiaire__prenom', 'action__libelle', 'action__code']
     raw_id_fields = ['beneficiaire', 'action', 'contrat', 'prescripteur', 'valide_par']
     inlines = [ReponseQuestionInline, HistoriquePrescriptionInline]
+
+
+from insertion.models import CommissionReorientation, DemandeReorientation, ExamenReorientation, OrganismeOrientation  # noqa: E402
+
+
+@admin.register(OrganismeOrientation)
+class OrganismeOrientationAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'categorie', 'ville', 'email', 'actif']
+    list_filter = ['categorie', 'actif']
+    search_fields = ['nom', 'ville']
+    filter_horizontal = ['poles']
+
+
+class ExamenInline(admin.TabularInline):
+    model = ExamenReorientation
+    extra = 0
+
+
+@admin.register(CommissionReorientation)
+class CommissionReorientationAdmin(admin.ModelAdmin):
+    """Dépannage seulement : la commission se prépare et se tient dans le module RSA – Insertion."""
+    list_display = ['date', 'pole', 'statut', 'lieu']
+    list_filter = ['statut', 'pole']
+    filter_horizontal = ['participants']
+    inlines = [ExamenInline]
+
+
+@admin.register(DemandeReorientation)
+class DemandeReorientationAdmin(admin.ModelAdmin):
+    list_display = ['numero', 'beneficiaire', 'statut', 'orientation_proposee', 'commission', 'organisme_retenu']
+    list_filter = ['statut', 'orientation_proposee', 'pole']
+    search_fields = ['beneficiaire__nom', 'beneficiaire__prenom']
+    raw_id_fields = ['beneficiaire', 'referent', 'contrat', 'commission', 'decide_par']

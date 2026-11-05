@@ -9,7 +9,8 @@ from django import forms
 from django.db.models import Q
 from django.forms import inlineformset_factory
 
-from insertion.models import (FREINS, ActionInsertion, ContratInsertion, LigneActionContrat, ParametresRSA,
+from insertion.models import (FREINS, ActionInsertion, CommissionReorientation, ContratInsertion,
+                              DemandeReorientation, LigneActionContrat, OrganismeOrientation, ParametresRSA,
                               PoleInsertion, PrescriptionInsertion, QuestionAction, TypeActionInsertion)
 
 CHAMP = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -313,3 +314,85 @@ QuestionsFormSet = forms.inlineformset_factory(
              'aide': forms.TextInput(attrs={'class': CHAMP}), 'type_reponse': forms.Select(attrs={'class': CHAMP}),
              'ordre': forms.NumberInput(attrs={'class': CHAMP})},
     extra=2, can_delete=True)
+
+
+
+# =============================================================================
+# Réorientation
+# =============================================================================
+class DemandeReorientationForm(forms.ModelForm):
+    freins = forms.MultipleChoiceField(label="Freins", choices=FREINS, required=False,
+                                       widget=forms.CheckboxSelectMultiple)
+
+    class Meta:
+        model = DemandeReorientation
+        fields = ['situation', 'freins', 'motif', 'orientation_proposee', 'organisme_propose', 'precision',
+                  'avis_personne']
+        widgets = {'situation': forms.Textarea(attrs={'rows': 3}), 'motif': forms.Textarea(attrs={'rows': 3}),
+                   'avis_personne': forms.RadioSelect}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from insertion import acces
+        self.fields['organisme_propose'].queryset = acces.organismes_pour(self.instance.pole)
+        self.fields['organisme_propose'].required = False
+        self.fields['orientation_proposee'].required = False   # contrôlé à l'inscription
+        _styler(self)
+
+    def clean(self):
+        d = super().clean()
+        org = d.get('organisme_propose')
+        if org and d.get('orientation_proposee') and org.categorie != d['orientation_proposee']:
+            self.add_error('organisme_propose', "Cet organisme ne correspond pas à l'orientation proposée.")
+        if org and not d.get('orientation_proposee'):
+            d['orientation_proposee'] = org.categorie
+        return d
+
+
+class CommissionForm(forms.ModelForm):
+    class Meta:
+        model = CommissionReorientation
+        fields = ['date', 'heure', 'lieu']
+        widgets = {'date': DATE, 'heure': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M')}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _styler(self)
+
+
+class ParticipantsForm(forms.ModelForm):
+    class Meta:
+        model = CommissionReorientation
+        fields = ['date', 'heure', 'lieu', 'participants', 'participants_externes', 'observations']
+        widgets = {'date': DATE, 'heure': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+                   'participants': forms.CheckboxSelectMultiple,
+                   'participants_externes': forms.Textarea(attrs={'rows': 2}),
+                   'observations': forms.Textarea(attrs={'rows': 3})}
+
+    def __init__(self, *args, candidats=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if candidats is not None:
+            self.fields['participants'].queryset = candidats
+        self.fields['participants'].label_from_instance = lambda u: (u.get_full_name() or u.username)
+        _styler(self)
+
+
+class DecisionReorientationForm(forms.Form):
+    decision = forms.ChoiceField(label="Décision", choices=DemandeReorientation.DECISIONS, widget=forms.RadioSelect)
+    organisme_retenu = forms.ModelChoiceField(label="Organisme retenu", queryset=OrganismeOrientation.objects.none(),
+                                              required=False)
+    date_effet = forms.DateField(label="Date d'effet", required=False, widget=DATE)
+    motif = forms.CharField(label="Motif", required=False, widget=forms.Textarea(attrs={'rows': 2}))
+
+    def __init__(self, *args, pole=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from insertion import acces
+        self.fields['organisme_retenu'].queryset = acces.organismes_pour(pole)
+        _styler(self)
+
+
+OrganismesFormSet = forms.modelformset_factory(
+    OrganismeOrientation, fields=['nom', 'categorie', 'ville', 'email', 'telephone', 'actif'], extra=2,
+    widgets={'nom': forms.TextInput(attrs={'class': CHAMP}), 'categorie': forms.Select(attrs={'class': CHAMP}),
+             'ville': forms.TextInput(attrs={'class': CHAMP}), 'email': forms.EmailInput(attrs={'class': CHAMP}),
+             'telephone': forms.TextInput(attrs={'class': CHAMP})})

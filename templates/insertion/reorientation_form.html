@@ -1,0 +1,39 @@
+<!-- templates/insertion/reorientation_form.html -->
+{% extends "base.html" %}
+{% block title %}{{ d.numero }} – demande de réorientation{% endblock %}
+{% block content %}
+{% with b=d.beneficiaire %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:reorientation_detail' d.pk %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Demande {{ d.numero }}</a>
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Demande de réorientation</h1>
+        <p class="text-sm text-gray-500">{{ b.get_civilite_display }} {{ b.prenom }} {{ b.nom|upper }} · référent actuel : {{ d.referent.get_full_name|default:d.referent.username }} ({{ d.mds.nom }}){% if d.contrat %} · contrat {{ d.contrat.numero }}{% endif %}</p>
+    </div>
+    <form method="post" class="space-y-5" id="form-reorientation">{% csrf_token %}
+        {% if form.errors %}<div class="p-3 rounded bg-red-50 text-red-800 text-sm">{% for champ, erreurs in form.errors.items %}<p>{{ erreurs|join:" " }}</p>{% endfor %}</div>{% endif %}
+        <fieldset class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
+            <legend class="px-2 font-semibold text-gray-800">Situation</legend>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.situation.label }}</label>{{ form.situation }}</div>
+            <div><p class="block text-xs font-semibold text-gray-600 mb-1">{{ form.freins.label }}</p>
+                <div class="grid md:grid-cols-3 gap-2 text-sm">{% for c in form.freins %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>
+        </fieldset>
+        <fieldset class="bg-white rounded-xl border-2 border-amber-200 shadow-sm p-5 space-y-3" id="rubrique-orientation">
+            <legend class="px-2 font-semibold text-gray-800">La réorientation</legend>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.motif.label }} *</label>{{ form.motif }}</div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.orientation_proposee.label }} *</label>{{ form.orientation_proposee }}</div>
+                <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.organisme_propose.label }}</label>{{ form.organisme_propose }}
+                    <p class="text-xs text-gray-500 mt-1">Liste tenue par le pôle insertion. L'organisme retenu devient le référent RSA de la personne.</p></div>
+            </div>
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.precision.label }}</label>{{ form.precision }}</div>
+            <div class="text-sm"><p class="text-xs font-semibold text-gray-600 mb-1">{{ form.avis_personne.label }}</p><div class="flex flex-wrap gap-6">{% for r in form.avis_personne %}<label class="flex items-center gap-2">{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div></div>
+        </fieldset>
+        <div class="flex flex-wrap gap-3">
+            <button name="suite" value="enregistrer" class="px-5 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-floppy-disk mr-1"></i>Enregistrer</button>
+            {% if d.statut == 'BROUILLON' %}<button name="suite" value="inscrire" id="enregistrer-inscrire" class="px-5 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700"><i class="fas fa-calendar-plus mr-1"></i>Enregistrer et inscrire en commission</button>{% endif %}
+            <a href="{% url 'insertion:reorientation_detail' d.pk %}" class="px-5 py-2 rounded-lg border border-gray-300 text-sm hover:bg-white">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endwith %}
+{% endblock %}

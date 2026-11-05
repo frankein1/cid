@@ -6,7 +6,7 @@
 # insertion/urls.py
 from django.urls import path
 
-from insertion import views, views_contrats as vc, views_prescriptions as vp
+from insertion import views, views_contrats as vc, views_prescriptions as vp, views_reorientation as vr
 
 app_name = 'insertion'
 
@@ -45,4 +45,19 @@ urlpatterns = [
     path('prescriptions/<int:pk>/retour/', vp.prescription_retour, name='prescription_retour'),
     path('prescriptions/<int:pk>/fiche.pdf', vp.prescription_pdf, name='prescription_pdf'),
     path('actions/<int:pk>/questions/', vp.action_questions, name='action_questions'),
+    # Réorientation
+    path('beneficiaire/<str:code_interne>/reorientation/nouvelle/', vr.reorientation_nouvelle, name='reorientation_nouvelle'),
+    path('reorientations/<int:pk>/', vr.reorientation_detail, name='reorientation_detail'),
+    path('reorientations/<int:pk>/modifier/', vr.reorientation_modifier, name='reorientation_modifier'),
+    path('reorientations/<int:pk>/inscrire/', vr.reorientation_inscrire, name='reorientation_inscrire'),
+    path('reorientations/<int:pk>/annuler/', vr.reorientation_annuler, name='reorientation_annuler'),
+    path('reorientations/<int:pk>/retirer/', vr.reorientation_retirer, name='reorientation_retirer'),
+    path('reorientations/<int:pk>/notification.pdf', vr.reorientation_notification, name='reorientation_notification'),
+    path('commissions/', vr.commissions_liste, name='commissions_liste'),
+    path('commissions/<int:pk>/', vr.commission_detail, name='commission_detail'),
+    path('commissions/<int:pk>/dossier/<int:demande_pk>/decision/', vr.commission_decision, name='commission_decision'),
+    path('commissions/<int:pk>/ajouter-attente/', vr.commission_ajouter_attente, name='commission_ajouter_attente'),
+    path('commissions/<int:pk>/cloturer/', vr.commission_cloturer, name='commission_cloturer'),
+    path('commissions/<int:pk>/<str:document>.pdf', vr.commission_pdf, name='commission_pdf'),
+    path('organismes/', vr.organismes, name='organismes'),
 ]

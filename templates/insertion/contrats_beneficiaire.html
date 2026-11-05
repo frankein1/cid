@@ -28,6 +28,11 @@
         {% endif %}
     </div>
 
+    {% if reorientee %}
+    <div class="p-4 rounded-xl bg-amber-50 border border-amber-300 text-sm text-amber-900" id="bandeau-reorientee">
+        <i class="fas fa-right-left mr-1"></i><b>Réorientée vers {{ reorientee.organisme_retenu }}</b> depuis le {{ reorientee.date_effet|date:"d/m/Y" }} (commission du {{ reorientee.date_decision|date:"d/m/Y" }}) : cet organisme est son référent RSA ; la personne n'est plus dans la file active de la MDS.
+    </div>
+    {% endif %}
     <h2 class="text-lg font-semibold text-gray-800">Contrats</h2>
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table class="min-w-full text-sm">
@@ -68,6 +73,28 @@
                 <td class="px-4 py-2">{{ p.prescripteur.get_full_name|default:p.prescripteur.username }}</td>
             </tr>
             {% empty %}<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">Aucune prescription.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex flex-wrap justify-between items-center gap-3 pt-2">
+        <h2 class="text-lg font-semibold text-gray-800">Réorientation</h2>
+        {% if peut_rediger %}<form method="post" action="{% url 'insertion:reorientation_nouvelle' beneficiaire.code_interne %}">{% csrf_token %}
+            <button id="nouvelle-reorientation" class="px-4 py-2 rounded-lg border border-amber-500 text-amber-800 text-sm font-semibold hover:bg-amber-50"><i class="fas fa-right-left mr-1"></i>Demander une réorientation</button></form>{% endif %}
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="reorientations-beneficiaire">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
+                <th class="px-4 py-2 text-left">Demande</th><th class="px-4 py-2 text-left">Orientation proposée</th><th class="px-4 py-2 text-left">Commission</th><th class="px-4 py-2 text-left">Statut</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for d in reorientations %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2"><a href="{% url 'insertion:reorientation_detail' d.pk %}" class="text-blue-700 font-semibold hover:underline">{{ d.numero }}</a><br><span class="text-xs text-gray-500">du {{ d.date_demande|date:"d/m/Y" }}</span></td>
+                <td class="px-4 py-2">{{ d.orientation_libelle }}</td>
+                <td class="px-4 py-2">{% if d.commission %}{{ d.commission.date|date:"d/m/Y" }}{% elif d.statut == 'INSCRITE' %}<span class="text-gray-500">prochaine commission</span>{% else %}—{% endif %}</td>
+                <td class="px-4 py-2">{% include "insertion/_statut_reorientation.html" %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">Aucune demande de réorientation.</td></tr>{% endfor %}
             </tbody>
         </table>
     </div>

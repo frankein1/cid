@@ -150,3 +150,52 @@ def peut_noter_retour(user, prescription):
 def voit_reponses_restreintes(user, prescription):
     return (peut_rediger(user, prescription.beneficiaire) or prescription.beneficiaire.peut_etre_vu_par(user)
             or _du_pole(user, prescription, 'rsa_pole_cadre') or _du_pole(user, prescription, 'rsa_pole_medecin'))
+
+
+# =============================================================================
+# Réorientations et commission de réorientation
+# =============================================================================
+# Le référent (agent de la MDS) prépare et inscrit la demande, sans validation du cadre de MDS.
+# L'administratif et le cadre du pôle préparent la commission, notent les décisions et la clôturent.
+
+def reorientations_visibles(user):
+    from insertion.models import DemandeReorientation
+    from mds.models import UserMDSProfile
+    qs = DemandeReorientation.objects.select_related('beneficiaire', 'mds', 'pole', 'referent', 'commission',
+                                                     'organisme_propose', 'organisme_retenu')
+    if user.a_la_capacite('peut_administrer'):
+        return qs
+    filtre = Q(pk__in=[])
+    if user.a_la_capacite('peut_voir'):
+        filtre |= Q(mds_id__in=UserMDSProfile.objects.filter(user=user, actif=True).values('mds_id'))
+    if user.a_la_capacite('rsa_pole_admin') or user.a_la_capacite('rsa_pole_cadre'):
+        filtre |= Q(pole__in=poles_de(user)) & ~Q(statut__in=('BROUILLON', 'ANNULEE'))
+    return qs.filter(filtre)
+
+
+def peut_gerer_commission(user, pole):
+    if user.is_superuser:
+        return True
+    return ((user.a_la_capacite('rsa_pole_admin') or user.a_la_capacite('rsa_pole_cadre'))
+            and pole is not None and poles_de(user).filter(pk=pole.pk).exists())
+
+
+def commissions_visibles(user):
+    from insertion.models import CommissionReorientation
+    qs = CommissionReorientation.objects.select_related('pole')
+    if user.is_superuser:
+        return qs
+    if user.a_la_capacite('rsa_pole_admin') or user.a_la_capacite('rsa_pole_cadre'):
+        return qs.filter(pole__in=poles_de(user))
+    return qs.none()
+
+
+def peut_gerer_organismes(user):
+    return (user.is_superuser or user.a_la_capacite('rsa_referentiel') or user.a_la_capacite('rsa_pole_admin')
+            or user.a_la_capacite('rsa_pole_cadre'))
+
+
+def organismes_pour(pole):
+    from insertion.models import OrganismeOrientation
+    return OrganismeOrientation.objects.filter(actif=True).filter(
+        Q(poles__isnull=True) | Q(poles=pole.pk if pole else None)).distinct()

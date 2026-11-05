@@ -211,6 +211,32 @@ COURRIERS = {
                   "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées."),
         "signature": "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}\n{pole}",
     },
+    "RSA_NOTIFICATION_REORIENTATION": {
+        "rubrique": "RSA – Insertion", "libelle": "Notification au bénéficiaire de la décision de réorientation",
+        "variables": {
+            "civilite_appel": ("Madame ou Monsieur, selon la civilité du bénéficiaire", "Madame"),
+            "beneficiaire": ("Prénom et NOM du bénéficiaire", "Lucie EXEMPLE"),
+            "date_commission": ("Date de la commission de réorientation", "15/01/2027"),
+            "organisme": ("Nouveau référent RSA (organisme retenu)", "France Travail"),
+            "coordonnees_organisme": ("Adresse et téléphone de l'organisme", "1 rue de l'Exemple – 13000 Exemple"),
+            "date_effet": ("Date d'effet de la réorientation", "01/02/2027"),
+            "motif": ("Motif de la décision", "Projet professionnel défini"),
+            "referent": ("Nom du référent actuel", "Agent Exemple"),
+            "mds": ("MDS du référent actuel", "MDS Exemple"),
+            "pole": ("Nom du pôle insertion", "Pôle insertion Exemple"),
+            "signataire": ("Agent du pôle qui a noté la décision", "Cadre Exemple"),
+        },
+        "conditions": {"si_acceptee": "la réorientation est acceptée", "si_refusee": "la réorientation est refusée"},
+        "objet": "votre accompagnement au titre du RSA",
+        "corps": ("{civilite_appel},\n\n"
+                  "Votre situation a été examinée par la commission de réorientation du {date_commission}.\n\n"
+                  "{si_acceptee:Vous êtes désormais accompagné(e) par **{organisme}**, à compter du {date_effet}. "
+                  "Cet organisme devient votre référent pour le RSA et prendra contact avec vous.}\n\n"
+                  "{si_acceptee:Coordonnées : {coordonnees_organisme}}\n\n"
+                  "{si_refusee:Votre accompagnement se poursuit avec {referent} ({mds}). Motif : {motif}}\n\n"
+                  "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées."),
+        "signature": "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}\n{pole}",
+    },
 }
 CHAMPS = ("objet", "corps", "signature")
 

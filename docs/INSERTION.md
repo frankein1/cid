@@ -1,7 +1,7 @@
 <!-- docs/INSERTION.md -->
 # Module RSA – Insertion
 
-Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Étape 3 : les prescriptions. Les comités de suivi technique, réorientations et statistiques viendront ensuite.
+Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Étape 3 : les prescriptions. Étape 4 : la commission de réorientation. Les comités de suivi technique et les statistiques viendront ensuite.
 
 ## Pôles insertion
 
@@ -108,6 +108,19 @@ En préparation ──(prescripteur : adresser)──▶ [À valider par le pôl
 | Pôle – cadre (`rsa_pole_cadre`) | valider ou refuser ; voit les réponses à accès restreint |
 | Pôle – médecin (`rsa_pole_medecin`) | consulter ; voit les réponses à accès restreint |
 
+## La commission de réorientation (étape 4)
+
+Tous les trimestres, la commission du pôle (un membre de chaque MDS, administratifs et cadres du pôle) réoriente des bénéficiaires vers **France Travail** (remise sur le marché de l'emploi), la **CAF** (par exemple à la première naissance) ou une **association** : l'organisme retenu devient leur référent RSA.
+
+- **Demande** (référent, sans validation du cadre de MDS) : Parcours RSA → *Demander une réorientation* : situation, freins (repris de la dernière prescription), **motif** et **orientation proposée** (obligatoires), organisme proposé, précision, avis de la personne. *Inscrire en commission* : la demande rejoint la prochaine commission programmée du pôle, ou attend la suivante.
+- **Commission** (RSA – Insertion → Réorientation, administratifs et cadres du pôle) : programmation (date, heure, lieu) — les demandes en attente sont inscrites d'office ; ordre du jour par MDS (PDF) ; participants (agents du pôle et des MDS du pôle, autres participants) ; décision par dossier : **acceptée** (organisme retenu, date d'effet), **refusée** ou **ajournée** (motif) ; retrait d'un dossier (commission suivante) ; **clôture** : les référents sont prévenus, les ajournées passent à la commission suivante ; relevé de décisions (PDF, une ligne par dossier examiné, `ExamenReorientation`).
+- **Effet** : à la date d'effet d'une réorientation acceptée, la personne sort de la file active RSA de la MDS (plus d'alerte « à renouveler », « échu » ou « validé sauf action ») ; bandeau sur son parcours RSA ; l'historique reste consultable.
+- **Notification au bénéficiaire** : modèle de courrier `RSA_NOTIFICATION_REORIENTATION` (texte générique, modifiable en administration).
+- **Organismes de réorientation** (RSA – Insertion → Réorientation → Organismes, ou menu Admin) : France Travail et la CAF créés par `init_insertion` ; les associations s'ajoutent dans CID (pôles, `rsa_referentiel`).
+- Le pôle ne voit pas les demandes en préparation ; le médecin du pôle ne voit pas les réorientations.
+
+**Comités de suivi technique (CST)** : non développés, faute d'information sur leur fonctionnement (à préciser avec le pôle insertion).
+
 ## Remise à zéro (démonstration)
 
-La remise à zéro totale conserve les paramètres du contrat, les types d'actions, les actions départementales et leurs questions (sans leurs liens vers les pôles, MDS et partenaires, recréés ensuite) ; les actions locales disparaissent avec leur MDS.
+La remise à zéro totale conserve les paramètres du contrat, les types d'actions, les actions départementales et leurs questions, les organismes de réorientation (sans leurs liens vers les pôles, MDS et partenaires, recréés ensuite) ; les actions locales disparaissent avec leur MDS.

@@ -33,9 +33,18 @@
                 <span class="px-2 py-0.5 rounded {% if nb_presc_en_attente %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">{{ nb_presc_en_attente }} en attente du porteur</span>
             </p>
         </a>
+        {% if gere_commissions %}<a href="{% url 'insertion:commissions_liste' %}" id="tuile-reorientation" class="block bg-white rounded-xl border border-gray-200 shadow-sm p-5 hover:border-blue-400">
+        {% else %}<div id="tuile-reorientation" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">{% endif %}
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-right-left text-amber-600 mr-2"></i>Réorientation</h2>
+            <p class="text-sm text-gray-600 mt-1">{% if prochaine_commission %}Prochaine commission le {{ prochaine_commission.date|date:"d/m/Y" }}.{% else %}Aucune commission programmée.{% endif %}</p>
+            <p class="text-sm mt-2 flex flex-wrap gap-2">
+                <span class="px-2 py-0.5 rounded {% if nb_reo_inscrites %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-600{% endif %}">{{ nb_reo_inscrites }} demande{{ nb_reo_inscrites|pluralize }} inscrite{{ nb_reo_inscrites|pluralize }}</span>
+                {% if nb_reo_attente %}<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">{{ nb_reo_attente }} en attente d'une commission</span>{% endif %}
+            </p>
+        {% if gere_commissions %}</a>{% else %}</div>{% endif %}
         <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-5">
             <h2 class="font-semibold text-gray-500"><i class="fas fa-route mr-2"></i>À venir</h2>
-            <p class="text-sm text-gray-500 mt-1">Comités de suivi technique, réorientations, statistiques.</p>
+            <p class="text-sm text-gray-500 mt-1">Comités de suivi technique (à préciser), file active complète, statistiques.</p>
         </div>
     </div>
 </div>

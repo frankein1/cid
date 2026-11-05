@@ -61,7 +61,15 @@ def contrats_beneficiaire(request, code_interne):
         "dernier_valide": dernier_valide, "parametres": ParametresRSA.courant(),
         "pole": acces.pole_de_mds(b.mds),
         "prescriptions": b.prescriptions_insertion.exclude(statut='ANNULEE').select_related('action', 'prescripteur'),
+        "reorientations": b.reorientations.exclude(statut='ANNULEE').select_related('commission', 'organisme_retenu',
+                                                                                    'organisme_propose'),
+        "reorientee": _reorientee(b),
     })
+
+
+def _reorientee(b):
+    from insertion.services.reorientation_circuit import reorientation_effective
+    return reorientation_effective(b)
 
 
 @login_required
@@ -290,6 +298,12 @@ def _filtrer(qs, vue):
     p = ParametresRSA.courant()
     decides = Q(statut__in=(C.VALIDE, C.VALIDE_SAUF_ACTION))
     sans_suite = ~Q(suivants__statut__in=[s for s, _ in C.STATUTS if s not in (C.ANNULE, C.NON_VALIDE)])
+    if vue in ("a_renouveler", "expires", "sauf_action"):
+        # Réorientée (France Travail, CAF, association) : la personne a quitté la file active RSA de la MDS
+        from django.db.models import Exists, OuterRef
+        from insertion.models import DemandeReorientation
+        qs = qs.exclude(Exists(DemandeReorientation.objects.filter(
+            beneficiaire=OuterRef('beneficiaire'), statut=DemandeReorientation.ACCEPTEE, date_effet__lte=aujourd_hui)))
     if vue == "en_cours":
         return qs.filter(decides, date_debut__lte=aujourd_hui, date_fin__gte=aujourd_hui)
     if vue == "a_renouveler":

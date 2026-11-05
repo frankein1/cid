@@ -47,7 +47,19 @@ def _compteurs_contrats(user):
             "nb_en_vigueur": _filtrer(base, "en_cours").distinct().count(),
             "nb_a_renouveler": _filtrer(base, "a_renouveler").distinct().count(),
             "nb_expires": _filtrer(base, "expires").distinct().count(),
-            **_compteurs_prescriptions(user)}
+            **_compteurs_prescriptions(user), **_compteurs_reorientation(user)}
+
+
+def _compteurs_reorientation(user):
+    from insertion.models import DemandeReorientation as D
+    from insertion.services.reorientation_circuit import prochaine_commission
+    base = acces.reorientations_visibles(user)
+    poles = list(acces.poles_de(user))
+    prochaines = [c for c in (prochaine_commission(p) for p in poles) if c]
+    return {"nb_reo_inscrites": base.filter(statut=D.INSCRITE).count(),
+            "nb_reo_attente": base.filter(statut=D.INSCRITE, commission__isnull=True).count(),
+            "prochaine_commission": min(prochaines, key=lambda c: c.date) if prochaines else None,
+            "gere_commissions": user.is_superuser or any(acces.peut_gerer_commission(user, p) for p in poles)}
 
 
 def _compteurs_prescriptions(user):

@@ -298,3 +298,115 @@ class FicheLiaisonTests(_Base):
         ActionInsertion.objects.filter(pk=self.action.pk).update(fiche_avec_nir=True)
         p.action.refresh_from_db()
         self.assertIn("290017500000000", self._texte_pdf(p))
+
+
+class ReorientationTests(_Base):
+    def _demande(self, **champs):
+        from insertion.services import reorientation_circuit as rc
+        d = rc.creer(self.benef, self.ts)
+        d.motif, d.orientation_proposee = "Projet emploi", "FRANCE_TRAVAIL"
+        for k, v in champs.items():
+            setattr(d, k, v)
+        d.save()
+        return rc, d
+
+    def _ft(self):
+        from insertion.models import OrganismeOrientation
+        return OrganismeOrientation.objects.create(nom="France Travail (essai)", categorie="FRANCE_TRAVAIL")
+
+    def test_inscription_puis_commission_reprend_les_attentes(self):
+        from insertion.models import DemandeReorientation as D
+        rc, d = self._demande(motif="")
+        with self.assertRaises(circuit.ErreurCircuit):   # motif obligatoire
+            rc.inscrire(d, self.ts)
+        d.motif = "Projet emploi"
+        d.save()
+        rc.inscrire(d, self.ts)
+        self.assertEqual((d.statut, d.commission), (D.INSCRITE, None))   # pas encore de commission
+        c, n = rc.creer_commission(self.pole, self.admin, date=timezone.localdate() + timedelta(days=10))
+        d.refresh_from_db()
+        self.assertEqual((n, d.commission), (1, c))
+        rc2, d2 = self._demande()
+        rc2.inscrire(d2, self.ts)
+        self.assertEqual(d2.commission, c)   # rejoint la prochaine commission en préparation
+
+    def test_decisions_cloture_et_file_active(self):
+        from insertion.models import DemandeReorientation as D
+        from insertion.services.commission_pdf import releve_pdf
+        from insertion.views_contrats import _filtrer
+        ft = self._ft()
+        # contrat validé, échu : il est dans les « échus »… jusqu'à la réorientation
+        contrat = self._pret()
+        circuit.transmettre(contrat, self.ts)
+        debut = timezone.localdate() - timedelta(days=200)
+        circuit.decider(contrat, self.cadre, decision=C.VALIDE, date_decision=debut, date_debut=debut, duree_mois=6)
+        self.assertIn(contrat, _filtrer(C.objects.all(), "expires"))
+        rc, d = self._demande()
+        rc.inscrire(d, self.ts)
+        c, _ = rc.creer_commission(self.pole, self.admin, date=timezone.localdate())
+        d.refresh_from_db()
+        with self.assertRaises(circuit.ErreurCircuit):   # clôture impossible sans décision
+            rc.cloturer(c, self.admin)
+        with self.assertRaises(circuit.ErreurCircuit):   # acceptée sans organisme
+            rc.decider(d, self.cadre, decision=D.ACCEPTEE)
+        rc.decider(d, self.cadre, decision=D.ACCEPTEE, organisme_retenu=ft, date_effet=timezone.localdate())
+        rc.cloturer(c, self.cadre)
+        d.refresh_from_db()
+        self.assertEqual(d.statut, D.ACCEPTEE)
+        self.assertNotIn(contrat, _filtrer(C.objects.all(), "expires"))
+        self.assertTrue(releve_pdf(c).read(4) == b"%PDF")
+
+    def test_ajournement_passe_a_la_suivante(self):
+        from insertion.models import DemandeReorientation as D
+        rc, d = self._demande()
+        rc.inscrire(d, self.ts)
+        c, _ = rc.creer_commission(self.pole, self.admin, date=timezone.localdate())
+        d.refresh_from_db()
+        with self.assertRaises(circuit.ErreurCircuit):   # motif obligatoire
+            rc.decider(d, self.admin, decision=D.AJOURNEE)
+        rc.decider(d, self.admin, decision=D.AJOURNEE, motif="À revoir")
+        suivante, _ = rc.creer_commission(self.pole, self.admin, date=timezone.localdate() + timedelta(days=90))
+        rc.cloturer(c, self.admin)
+        d.refresh_from_db()
+        self.assertEqual((d.statut, d.commission, d.nb_ajournements, d.decision), (D.INSCRITE, suivante, 1, ""))
+        self.assertEqual(c.examens.get().decision, D.AJOURNEE)   # le relevé de la 1re commission le garde
+
+    def test_droits(self):
+        from insertion.models import DemandeReorientation as D
+        rc, d = self._demande()
+        self.assertNotIn(d, acces.reorientations_visibles(self.admin))   # brouillon : pas au pôle
+        rc.inscrire(d, self.ts)
+        self.assertIn(d, acces.reorientations_visibles(self.admin))
+        self.assertNotIn(d, acces.reorientations_visibles(self.medecin))
+        self.assertNotIn(d, acces.reorientations_visibles(self.ts_b))
+        self.assertTrue(acces.peut_gerer_commission(self.cadre, self.pole))
+        self.assertFalse(acces.peut_gerer_commission(self.ts, self.pole))
+        c, _ = rc.creer_commission(self.pole, self.admin, date=timezone.localdate())
+        cl = Client(HTTP_HOST="localhost")
+        cl.force_login(self.ts)
+        self.assertEqual(cl.get(f"/insertion/commissions/{c.pk}/").status_code, 404)
+        self.assertEqual(cl.post(f"/insertion/commissions/{c.pk}/cloturer/").status_code, 404)
+
+    def test_parcours_web(self):
+        from insertion.models import DemandeReorientation as D
+        ft = self._ft()
+        cl = Client(HTTP_HOST="localhost")
+        cl.force_login(self.ts)
+        cl.post(f"/insertion/beneficiaire/{self.benef.code_interne}/reorientation/nouvelle/")
+        d = D.objects.get(beneficiaire=self.benef)
+        r = cl.post(f"/insertion/reorientations/{d.pk}/modifier/", {
+            "motif": "Emploi", "orientation_proposee": "FRANCE_TRAVAIL", "organisme_propose": ft.pk,
+            "avis_personne": "ACCORD", "suite": "inscrire"})
+        self.assertEqual(r.status_code, 302)
+        d.refresh_from_db()
+        self.assertEqual(d.statut, D.INSCRITE)
+        cl.force_login(self.admin)
+        r = cl.post("/insertion/commissions/", {"pole": self.pole.pk, "date": "2026-12-15", "lieu": "Salle"})
+        c = self.pole.commissions_reorientation.get()
+        r = cl.post(f"/insertion/commissions/{c.pk}/dossier/{d.pk}/decision/", {
+            f"d{d.pk}-decision": "ACCEPTEE", f"d{d.pk}-organisme_retenu": ft.pk, f"d{d.pk}-date_effet": "2027-01-01"})
+        cl.post(f"/insertion/commissions/{c.pk}/cloturer/")
+        d.refresh_from_db()
+        self.assertEqual((d.statut, d.organisme_retenu), (D.ACCEPTEE, ft))
+        self.assertEqual(cl.get(f"/insertion/reorientations/{d.pk}/notification.pdf").status_code, 200)
+        self.assertEqual(cl.get(f"/insertion/commissions/{c.pk}/ordre-du-jour.pdf").status_code, 200)
