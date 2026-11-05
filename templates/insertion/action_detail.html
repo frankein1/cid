@@ -24,9 +24,10 @@
             {% for d in action.liste_destinataires %}<p class="font-mono text-xs">{{ d }}</p>{% empty %}<p>—</p>{% endfor %}</div>
         <div><p class="text-xs uppercase text-gray-500">Pièces à joindre</p>
             {% for p in action.liste_pieces %}<p>• {{ p }}</p>{% empty %}<p>—</p>{% endfor %}</div>
-        {% if action.aussi_logement or action.validation_pole %}<div class="md:col-span-2 flex flex-wrap gap-2">
+        {% if action.aussi_logement or action.validation_pole or action.fiche_avec_nir %}<div class="md:col-span-2 flex flex-wrap gap-2">
             {% if action.aussi_logement %}<span class="px-2 py-1 rounded bg-emerald-50 text-emerald-800 text-xs"><i class="fas fa-house mr-1"></i>Concerne aussi le logement</span>{% endif %}
             {% if action.validation_pole %}<span class="px-2 py-1 rounded bg-indigo-50 text-indigo-800 text-xs"><i class="fas fa-stamp mr-1"></i>Prescription validée par le pôle insertion</span>{% endif %}
+            {% if action.fiche_avec_nir %}<span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs"><i class="fas fa-id-card mr-1"></i>Fiche de liaison avec le n° de sécurité sociale</span>{% endif %}
         </div>{% endif %}
     </div>
 

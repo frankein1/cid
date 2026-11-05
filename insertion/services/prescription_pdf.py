@@ -47,12 +47,15 @@ def fiche_pdf(p, restreintes=True):
         ("Né(e) le", _d(b.date_naissance)), ("Adresse", f"{b.adresse}, {b.code_postal} {b.ville}"),
         ("Téléphone, courriel", " · ".join(x for x in [b.telephone_mobile, b.telephone_fixe, b.email] if x) or "—"),
         ("N° allocataire", b.numero_caf or "—"),
+        *([("N° de sécurité sociale", b.nir or "—")] if a.fiche_avec_nir else []),
         ("Situation familiale", b.get_marital_status_display() if b.marital_status else "—"),
         ("Enfants au foyer", _enfants(b)),
     ], st)
     el += _rubrique("Situation", [
         ("RSA", p.get_situation_rsa_display() if p.situation_rsa else "—"),
-        ("Contrat", f"n° {p.contrat.numero}" + (f", jusqu'au {_d(p.contrat.date_fin)}" if p.contrat.date_fin else "")
+        ("Contrat", f"n° {p.contrat.numero}" + (f", du {_d(p.contrat.date_debut)} au {_d(p.contrat.date_fin)}"
+                                                 if p.contrat.date_fin else
+                                                 f", établi le {_d(p.contrat.date_etablissement)} (en cours de validation)")
          if p.contrat_id else "aucun"),
         ("France Travail", ("inscrit(e)" + (f", identifiant {p.identifiant_france_travail}"
                                             if p.identifiant_france_travail else "")) if p.inscrit_france_travail

@@ -20,7 +20,7 @@ class ActionInsertionForm(forms.ModelForm):
         model = ActionInsertion
         fields = ['code', 'libelle', 'type_action', 'niveau', 'mds', 'poles', 'territoire', 'porteur', 'partenaire',
                   'public_vise', 'description', 'duree', 'destinataires', 'pieces_a_joindre', 'comite_suivi',
-                  'rythme_comite', 'aussi_logement', 'validation_pole', 'actif']
+                  'rythme_comite', 'aussi_logement', 'validation_pole', 'fiche_avec_nir', 'actif']
         widgets = {
             'public_vise': forms.Textarea(attrs={'rows': 2}), 'description': forms.Textarea(attrs={'rows': 3}),
             'destinataires': forms.Textarea(attrs={'rows': 2}), 'pieces_a_joindre': forms.Textarea(attrs={'rows': 2}),
