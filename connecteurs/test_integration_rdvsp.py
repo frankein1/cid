@@ -119,7 +119,8 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
 
         # 3. L'usagère réserve en ligne → le RDV arrive dans l'agenda CID
         motif_id = MotifRDVSPPublie.objects.get().motif_sp_id
-        lieu_id = self.mds.rdvsp.lieu_sp_id
+        from connecteurs.models import MdsRDVSP
+        lieu_id = MdsRDVSP.objects.get(mds=self.mds).lieu_sp_id
         offset = datetime.combine(lundi, time(9)).astimezone().strftime("%z")
         offset = f"{offset[:3]}:{offset[3:]}"
         r1 = _rails("reserver", self.usager_sp, motif_id, lieu_id, self.seed["agente_id"],
