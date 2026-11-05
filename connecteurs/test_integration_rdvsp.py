@@ -61,7 +61,8 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
         self.admin = User.objects.create_superuser("synchro", password="x", matricule="SYN",
                                                    email=self.seed["agent_email"])
         CompteRDVSP.objects.create(utilisateur=self.admin, agent_id=str(self.seed["agent_id"]),
-                                   jeton_acces=self.seed["jeton"], jeton_renouvellement="",
+                                   jeton_acces=self.seed["jeton_cid"],
+                                   jeton_renouvellement=self.seed["jeton_cid_renouvellement"],
                                    expire_le=timezone.now() + timedelta(minutes=100))
         p = ParametresRDVSP.get()
         p.compte_synchro, p.service_sp_id = self.admin, self.seed["service_id"]

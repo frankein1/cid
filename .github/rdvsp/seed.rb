@@ -39,12 +39,16 @@ secret = app.plaintext_secret   # tiré par RDV-Solidarités et stocké haché :
 puts "Diagnostic OAuth : application retrouvée par identifiant + secret = " \
      "#{Doorkeeper.config.application_model.by_uid_and_secret('cid-essai', secret).present?}, " \
      "confidentielle = #{app.confidential}, jeton rattaché = #{jeton.application_id == app.id}"
+# Jeton propre à l'essai de la synchronisation CID (celui de la sonde est renouvelé, donc révoqué, à l'étape 13)
+jeton_cid = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: agent.id, scopes: "write",
+                                            expires_in: 7200, use_refresh_token: true)
 
 donnees = {
   territory_id: territory.id, organisation_id: orga.id, service_id: service.id,
   agent_id: agent.id, agent_email: agent.email,
   organisation2_id: orga2.id, agente_id: agente.id, agente_email: agente.email,
   jeton: jeton.plaintext_token, jeton_renouvellement: jeton.plaintext_refresh_token,
+  jeton_cid: jeton_cid.plaintext_token, jeton_cid_renouvellement: jeton_cid.plaintext_refresh_token,
   client_id: app.uid, client_secret: secret,
 }
 File.write(ENV.fetch("SEED_JSON"), JSON.pretty_generate(donnees))
