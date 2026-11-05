@@ -175,7 +175,14 @@ class Client:
         if r.status_code == 401:
             raise ConnexionRequise("Votre connexion RDV Service Public n'est plus valable.")
         if r.status_code >= 400:
-            raise RDVSPErreur(f"RDV Service Public a refusé la demande ({r.status_code}).")
+            detail = ""
+            try:
+                corps = r.json()
+                detail = " ; ".join(map(str, corps.get("error_messages") or corps.get("errors") or []))[:300]
+            except ValueError:
+                pass
+            raise RDVSPErreur(f"RDV Service Public a refusé la demande ({r.status_code})"
+                              + (f" : {detail}" if detail else "."))
         self.dernier_code = r.status_code
         return r.json() if r.content else {}
 

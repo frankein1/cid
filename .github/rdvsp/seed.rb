@@ -23,6 +23,12 @@ agent = create(:agent, email: "agent.essai@cid.test", first_name: "Agent", last_
                        role_in_territories: [territory])   # administrateur de l'espace : déclare le webhook
 AgentTerritorialAccessRight.find_or_create_by!(agent: agent, territory: territory)
 
+# Pour l'essai de la synchronisation CID : une 2e MDS, et l'agente de CID qui y tient ses permanences
+orga2 = create(:organisation, territory: territory, name: "MDS TEST 02")
+AgentRole.create!(agent: agent, organisation: orga2, access_level: AgentRole::ACCESS_LEVEL_ADMIN)
+agente = create(:agent, email: "ines.essai@cid.test", first_name: "Inès", last_name: "ESSAI", service: service,
+                        basic_role_in_organisations: [orga2])
+
 app = OauthApplication.create!(name: "CID (essai)", uid: "cid-essai", logo_base64: "",
                                redirect_uri: "http://localhost:8099/connecteurs/rdv-service-public/retour/",
                                scopes: "write")
@@ -37,6 +43,7 @@ puts "Diagnostic OAuth : application retrouvée par identifiant + secret = " \
 donnees = {
   territory_id: territory.id, organisation_id: orga.id, service_id: service.id,
   agent_id: agent.id, agent_email: agent.email,
+  organisation2_id: orga2.id, agente_id: agente.id, agente_email: agente.email,
   jeton: jeton.plaintext_token, jeton_renouvellement: jeton.plaintext_refresh_token,
   client_id: app.uid, client_secret: secret,
 }
