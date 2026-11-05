@@ -13,12 +13,19 @@ La démonstration ne contient que des données fictives (voir `DONNEES_FICTIVES.
 - **Protection de l'enfance** : informations préoccupantes et suivi ASE, avec accès réservés.
 - **RSA – Insertion** (`INSERTION.md`) : contrats, prescriptions, commission de réorientation, file active et statistiques.
 - **Modèles de courriers** (`MODELES_COURRIERS.md`).
+- **Simulation des droits** (`SIMULATION_DROITS.md`) : RSA, prime d'activité, aide au logement, prestations familiales, estimés avec OpenFisca à partir du foyer de la fiche, sans ressaisie ni envoi de données à l'extérieur.
+
+## Protection des données
+
+- **Journal d'activité** (`JOURNAL_ACTIVITE.md`) : qui a consulté, modifié ou exporté un dossier ; conservé 12 mois.
+- **Archivage RGPD** (`RGPD_ARCHIVAGE.md`) : dossiers inactifs depuis 3 ans proposés à l'archivage (jamais les dossiers IP ou enfance), masqués et en lecture seule, effacés seulement sur décision d'un administrateur.
 
 ## Échanges avec d'autres services
 
 | Service | État |
 |---|---|
 | API Particulier (situation CAF/MSA, France Travail) | en service sur le bac à sable (données fictives) |
+| **OpenFisca** (moteur de calcul de l'État) | intégré, calcul sur le serveur CID ; à installer à part (`SIMULATION_DROITS.md`) |
 | **RDV Service Public** (ANCT) | **passerelle présente, désactivée : prête à l'activation après obtention des identifiants ANCT et test sur leur environnement de démonstration** (`RDV_SERVICE_PUBLIC.md`) |
 
 ## Licence
