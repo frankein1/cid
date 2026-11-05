@@ -23,22 +23,22 @@ agent = create(:agent, email: "agent.essai@cid.test", first_name: "Agent", last_
                        role_in_territories: [territory])   # administrateur de l'espace : déclare le webhook
 AgentTerritorialAccessRight.find_or_create_by!(agent: agent, territory: territory)
 
-app = OauthApplication.create!(name: "CID (essai)", uid: "cid-essai", secret: "secret-essai", logo_base64: "",
+app = OauthApplication.create!(name: "CID (essai)", uid: "cid-essai", logo_base64: "",
                                redirect_uri: "http://localhost:8099/connecteurs/rdv-service-public/retour/",
                                scopes: "write")
 jeton = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: agent.id, scopes: "write",
                                         expires_in: 7200, use_refresh_token: true)
 
-app.reload
+secret = app.plaintext_secret   # tiré par RDV-Solidarités et stocké haché : lisible seulement maintenant
 puts "Diagnostic OAuth : application retrouvée par identifiant + secret = " \
-     "#{Doorkeeper.config.application_model.by_uid_and_secret('cid-essai', 'secret-essai').present?}, " \
+     "#{Doorkeeper.config.application_model.by_uid_and_secret('cid-essai', secret).present?}, " \
      "confidentielle = #{app.confidential}, jeton rattaché = #{jeton.application_id == app.id}"
 
 donnees = {
   territory_id: territory.id, organisation_id: orga.id, service_id: service.id,
   agent_id: agent.id, agent_email: agent.email,
   jeton: jeton.plaintext_token, jeton_renouvellement: jeton.plaintext_refresh_token,
-  client_id: app.uid, client_secret: "secret-essai",
+  client_id: app.uid, client_secret: secret,
 }
 File.write(ENV.fetch("SEED_JSON"), JSON.pretty_generate(donnees))
 puts "Données fictives créées : organisation #{orga.id}, agent #{agent.id}"
