@@ -46,7 +46,17 @@ def _compteurs_contrats(user):
     return {"nb_a_traiter": a_traiter(user, base).distinct().count(),
             "nb_en_vigueur": _filtrer(base, "en_cours").distinct().count(),
             "nb_a_renouveler": _filtrer(base, "a_renouveler").distinct().count(),
-            "nb_expires": _filtrer(base, "expires").distinct().count()}
+            "nb_expires": _filtrer(base, "expires").distinct().count(),
+            **_compteurs_prescriptions(user)}
+
+
+def _compteurs_prescriptions(user):
+    from insertion.models import PrescriptionInsertion as P
+    from insertion.views_prescriptions import a_traiter
+    base = acces.prescriptions_visibles(user).exclude(statut=P.ANNULEE)
+    return {"nb_presc_a_traiter": a_traiter(user, base).count(),
+            "nb_presc_en_cours": base.filter(statut=P.INTEGREE).count(),
+            "nb_presc_en_attente": base.filter(statut=P.EN_ATTENTE).count()}
 
 
 def _filtrer(request):

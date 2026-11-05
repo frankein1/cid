@@ -9,8 +9,8 @@ from django import forms
 from django.db.models import Q
 from django.forms import inlineformset_factory
 
-from insertion.models import (ActionInsertion, ContratInsertion, LigneActionContrat, ParametresRSA, PoleInsertion,
-                              TypeActionInsertion)
+from insertion.models import (FREINS, ActionInsertion, ContratInsertion, LigneActionContrat, ParametresRSA,
+                              PoleInsertion, PrescriptionInsertion, QuestionAction, TypeActionInsertion)
 
 CHAMP = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 
@@ -20,7 +20,7 @@ class ActionInsertionForm(forms.ModelForm):
         model = ActionInsertion
         fields = ['code', 'libelle', 'type_action', 'niveau', 'mds', 'poles', 'territoire', 'porteur', 'partenaire',
                   'public_vise', 'description', 'duree', 'destinataires', 'pieces_a_joindre', 'comite_suivi',
-                  'rythme_comite', 'aussi_logement', 'actif']
+                  'rythme_comite', 'aussi_logement', 'validation_pole', 'actif']
         widgets = {
             'public_vise': forms.Textarea(attrs={'rows': 2}), 'description': forms.Textarea(attrs={'rows': 3}),
             'destinataires': forms.Textarea(attrs={'rows': 2}), 'pieces_a_joindre': forms.Textarea(attrs={'rows': 2}),
@@ -197,3 +197,119 @@ class DecisionForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _styler(self)
+
+
+
+# =============================================================================
+# Prescriptions
+# =============================================================================
+class PrescriptionForm(forms.ModelForm):
+    """Tronc commun, freins, pièces fournies et questions propres à l'action (champs « q_<pk> »)."""
+    freins = forms.MultipleChoiceField(label="Freins", choices=FREINS, required=False,
+                                       widget=forms.CheckboxSelectMultiple)
+    pieces_fournies = forms.MultipleChoiceField(label="Pièces fournies", required=False,
+                                                widget=forms.CheckboxSelectMultiple)
+
+    class Meta:
+        model = PrescriptionInsertion
+        fields = ['situation_rsa', 'qpv', 'rqth', 'inscrit_france_travail', 'identifiant_france_travail',
+                  'qualification', 'inactivite', 'freins', 'diagnostic', 'avis_motive', 'objectifs', 'demande_par',
+                  'pieces_fournies', 'consentement', 'date_signature']
+        widgets = {'diagnostic': forms.Textarea(attrs={'rows': 3}), 'avis_motive': forms.Textarea(attrs={'rows': 3}),
+                   'objectifs': forms.Textarea(attrs={'rows': 3}), 'date_signature': DATE,
+                   'demande_par': forms.RadioSelect}
+
+    def __init__(self, *args, voit_restreintes=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        p = self.instance
+        self.fields['pieces_fournies'].choices = [(x, x) for x in p.action.liste_pieces]
+        reponses = {r.question_id: r.valeur for r in p.reponses.all()}
+        self.questions = []
+        for q in p.action.questions.all():
+            if q.restreinte and not voit_restreintes:
+                continue
+            nom = f"q_{q.pk}"
+            valeur = reponses.get(q.pk, "")
+            if q.type_reponse == q.OUI_NON:
+                champ = forms.ChoiceField(choices=[('', "—"), ('oui', "Oui"), ('non', "Non")])
+            elif q.type_reponse == q.CHOIX:
+                champ = forms.ChoiceField(choices=[('', "—")] + [(c, c) for c in q.liste_choix])
+            elif q.type_reponse == q.CHOIX_MULTIPLE:
+                champ = forms.MultipleChoiceField(choices=[(c, c) for c in q.liste_choix],
+                                                  widget=forms.CheckboxSelectMultiple)
+                valeur = [v for v in valeur.split("\n") if v]
+            elif q.type_reponse == q.DATE:
+                champ = forms.DateField(widget=DATE)
+            elif q.type_reponse == q.NOMBRE:
+                champ = forms.DecimalField()
+            else:
+                champ = forms.CharField(widget=forms.Textarea(attrs={'rows': 2}))
+            champ.label, champ.help_text, champ.required = q.libelle, q.aide, False   # obligatoire : contrôlé à l'envoi
+            champ.initial = valeur
+            self.fields[nom] = champ
+            self.questions.append((q, nom))
+        _styler(self)
+
+    def reponses(self):
+        """{question_pk: texte} à enregistrer."""
+        out = {}
+        for q, nom in self.questions:
+            v = self.cleaned_data.get(nom)
+            if isinstance(v, (list, tuple)):
+                v = "\n".join(v)
+            elif v is None:
+                v = ""
+            elif hasattr(v, 'strftime'):
+                v = v.strftime('%Y-%m-%d')
+            out[q.pk] = str(v)
+        return out
+
+    def champs_questions(self):
+        return [(q, self[nom]) for q, nom in self.questions]
+
+
+class ValidationPrescriptionForm(forms.Form):
+    decision = forms.ChoiceField(choices=[('valider', "Valider : adresser au porteur"), ('refuser', "Refuser")],
+                                 widget=forms.RadioSelect, label="Décision du pôle")
+    motif = forms.CharField(label="Motif du refus", required=False, widget=forms.Textarea(attrs={'rows': 2}))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _styler(self)
+
+
+class RetourPorteurForm(forms.Form):
+    issue = forms.ChoiceField(label="Où en est la personne ?", required=False, widget=forms.RadioSelect)
+    premier_rdv_le = forms.DateField(label="Premier rendez-vous le", required=False, widget=DATE)
+    premier_rdv_issue = forms.ChoiceField(label="Premier rendez-vous", required=False,
+                                          choices=PrescriptionInsertion.ISSUES_RDV)
+    diagnostic_finalise = forms.BooleanField(label="Diagnostic finalisé par le porteur", required=False)
+    date_entree = forms.DateField(label="Entrée dans l'action le", required=False, widget=DATE)
+    motif_non_integration = forms.CharField(label="Motif de non-intégration", required=False)
+    date_sortie = forms.DateField(label="Sortie le", required=False, widget=DATE)
+    motif_sortie = forms.CharField(label="Motif de sortie", required=False)
+    reorientation = forms.ChoiceField(label="Réorientation vers", required=False,
+                                      choices=PrescriptionInsertion.REORIENTATIONS)
+    reorientation_precision = forms.CharField(label="Précision", required=False)
+    commentaire_porteur = forms.CharField(label="Commentaire du porteur", required=False,
+                                          widget=forms.Textarea(attrs={'rows': 2}))
+
+    def __init__(self, *args, prescription=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        P = PrescriptionInsertion
+        if prescription is not None and prescription.statut == P.INTEGREE:
+            choix = [('', "Toujours en cours"), (P.TERMINEE, "Terminée"), (P.ARRETEE, "Arrêtée"),
+                     (P.REORIENTEE, "Réorientée")]
+        else:
+            choix = [('', "Pas encore de décision"), (P.INTEGREE, "Intégrée"), (P.NON_INTEGREE, "Non intégrée"),
+                     (P.REORIENTEE, "Réorientée")]
+        self.fields['issue'].choices = choix
+        _styler(self)
+
+
+QuestionsFormSet = forms.inlineformset_factory(
+    ActionInsertion, QuestionAction, fields=['libelle', 'type_reponse', 'choix', 'aide', 'obligatoire', 'restreinte', 'ordre'],
+    widgets={"choix": forms.Textarea(attrs={"rows": 2, "class": CHAMP}), 'libelle': forms.TextInput(attrs={'class': CHAMP}),
+             'aide': forms.TextInput(attrs={'class': CHAMP}), 'type_reponse': forms.Select(attrs={'class': CHAMP}),
+             'ordre': forms.NumberInput(attrs={'class': CHAMP})},
+    extra=2, can_delete=True)

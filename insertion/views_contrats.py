@@ -35,12 +35,16 @@ def _contrat(request, pk):
     return get_object_or_404(acces.contrats_visibles(request.user), pk=pk)
 
 
-def actions_pour(contrat):
-    """Actions proposées dans un contrat : départementales (de tout le département ou du pôle du contrat)
-    et locales de la MDS du contrat."""
+def actions_proposees(mds_id, pole_id):
+    """Actions proposées à un bénéficiaire : départementales (de tout le département ou de son pôle)
+    et locales de sa MDS."""
     qs = ActionInsertion.objects.filter(actif=True).select_related('type_action')
-    dep = Q(niveau=ActionInsertion.DEPARTEMENTAL) & (Q(poles__isnull=True) | Q(poles=contrat.pole_id))
-    return qs.filter(dep | Q(niveau=ActionInsertion.LOCAL, mds=contrat.mds_id)).distinct()
+    dep = Q(niveau=ActionInsertion.DEPARTEMENTAL) & (Q(poles__isnull=True) | Q(poles=pole_id))
+    return qs.filter(dep | Q(niveau=ActionInsertion.LOCAL, mds=mds_id)).distinct()
+
+
+def actions_pour(contrat):
+    return actions_proposees(contrat.mds_id, contrat.pole_id)
 
 
 # ---------------------------------------------------------------------- bénéficiaire
@@ -56,6 +60,7 @@ def contrats_beneficiaire(request, code_interne):
         "en_preparation": next((c for c in contrats if c.statut in C.MODIFIABLES), None),
         "dernier_valide": dernier_valide, "parametres": ParametresRSA.courant(),
         "pole": acces.pole_de_mds(b.mds),
+        "prescriptions": b.prescriptions_insertion.exclude(statut='ANNULEE').select_related('action', 'prescripteur'),
     })
 
 
@@ -91,7 +96,9 @@ def contrat_modifier(request, pk):
         messages.warning(request, "Ce contrat n'est plus modifiable (transmis au pôle ou décidé).")
         return redirect("insertion:contrat_detail", pk=c.pk)
     form = ContratForm(request.POST or None, instance=c)
-    lignes = LignesFormSet(request.POST or None, instance=c, actions=actions_pour(c), prefix="lignes")
+    # Les lignes venues d'une prescription sont tenues à jour par la prescription : elles ne se saisissent pas ici
+    lignes = LignesFormSet(request.POST or None, instance=c, actions=actions_pour(c), prefix="lignes",
+                           queryset=c.lignes.filter(prescription__isnull=True))
     if request.method == "POST" and form.is_valid() and lignes.is_valid():
         form.save()
         lignes.save()
@@ -109,6 +116,7 @@ def contrat_modifier(request, pk):
     return render(request, "insertion/contrat_form.html", {
         "contrat": c, "form": form, "lignes": lignes, "parametres": ParametresRSA.courant(),
         "reseau": c.beneficiaire.reseau_familial(),
+        "lignes_prescrites": c.lignes.filter(prescription__isnull=False).select_related('action', 'prescription'),
     })
 
 

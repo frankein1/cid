@@ -1,0 +1,63 @@
+<!-- templates/insertion/prescription_form.html -->
+{% extends "base.html" %}
+{% block title %}{{ p.numero }} – fiche de liaison{% endblock %}
+{% block content %}
+{% with b=p.beneficiaire a=p.action %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:prescription_detail' p.pk %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Prescription {{ p.numero }}</a>
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Prescription vers « {{ a.libelle }} »</h1>
+        <p class="text-sm text-gray-500">{{ b.get_civilite_display }} {{ b.prenom }} {{ b.nom|upper }} · {{ a.porteur|default:"porteur non renseigné" }}{% if p.contrat %} · contrat {{ p.contrat.numero }}{% endif %}
+            {% if a.validation_pole %} · <span class="text-indigo-700">passe par le pôle avant le porteur</span>{% endif %}</p>
+    </div>
+    <form method="post" class="space-y-5" id="form-prescription">{% csrf_token %}
+        {% if form.errors %}<div class="p-3 rounded bg-red-50 text-red-800 text-sm" id="erreurs">{% for champ, erreurs in form.errors.items %}<p>{% if champ != '__all__' %}{% for f in form %}{% if f.name == champ %}{{ f.label }} : {% endif %}{% endfor %}{% endif %}{{ erreurs|join:" " }}</p>{% endfor %}</div>{% endif %}
+        <fieldset class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <legend class="px-2 font-semibold text-gray-800">Situation (préremplie)</legend>
+            <div class="grid md:grid-cols-2 gap-x-6 gap-y-3">
+                {% for f in form %}{% if f.name in "situation_rsa qpv rqth inscrit_france_travail identifiant_france_travail qualification inactivite" %}
+                <div class="{% if f.field.widget.input_type == 'checkbox' %}flex items-start gap-2{% endif %}">
+                    {% if f.field.widget.input_type == 'checkbox' %}{{ f }}<label for="{{ f.id_for_label }}" class="text-sm text-gray-700">{{ f.label }}</label>
+                    {% else %}<label for="{{ f.id_for_label }}" class="block text-xs font-semibold text-gray-600 mb-1">{{ f.label }}</label>{{ f }}{% endif %}
+                </div>{% endif %}{% endfor %}
+            </div>
+        </fieldset>
+        <fieldset class="bg-white rounded-xl border border-gray-200 shadow-sm p-5" id="rubrique-freins">
+            <legend class="px-2 font-semibold text-gray-800">Freins</legend>
+            <div class="grid md:grid-cols-3 gap-2 text-sm">{% for c in form.freins %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>
+        </fieldset>
+        <fieldset class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3" id="rubrique-orientation">
+            <legend class="px-2 font-semibold text-gray-800">L'orientation</legend>
+            <div class="flex gap-6 text-sm">{% for r in form.demande_par %}<label class="flex items-center gap-2">{{ r.tag }} {{ r.choice_label }}</label>{% endfor %}</div>
+            {% for f in form %}{% if f.name in "diagnostic avis_motive objectifs" %}
+            <div><label for="{{ f.id_for_label }}" class="block text-xs font-semibold text-gray-600 mb-1">{{ f.label }}</label>{{ f }}{% for e in f.errors %}<p class="text-xs text-red-700">{{ e }}</p>{% endfor %}</div>
+            {% endif %}{% endfor %}
+        </fieldset>
+        {% if form.champs_questions %}
+        <fieldset class="bg-white rounded-xl border-2 border-blue-100 shadow-sm p-5 space-y-3" id="rubrique-questions">
+            <legend class="px-2 font-semibold text-gray-800">Questions propres à l'action</legend>
+            {% for q, f in form.champs_questions %}
+            <div><label for="{{ f.id_for_label }}" class="block text-xs font-semibold text-gray-600 mb-1">{{ q.libelle }}{% if q.obligatoire %} *{% endif %}{% if q.restreinte %} <span class="text-purple-700 font-normal"><i class="fas fa-lock ml-1"></i> accès restreint</span>{% endif %}</label>
+                {% if q.type_reponse == 'CHOIX_MULTIPLE' %}<div class="flex flex-wrap gap-4 text-sm">{% for c in f %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>{% else %}{{ f }}{% endif %}
+                {% if q.aide %}<p class="text-xs text-gray-500 mt-1">{{ q.aide }}</p>{% endif %}
+                {% for e in f.errors %}<p class="text-xs text-red-700">{{ e }}</p>{% endfor %}</div>
+            {% endfor %}
+            <p class="text-xs text-gray-500">* obligatoire pour adresser la prescription.</p>
+        </fieldset>
+        {% endif %}
+        <fieldset class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3" id="rubrique-signature">
+            <legend class="px-2 font-semibold text-gray-800">Pièces et consentement</legend>
+            {% if a.liste_pieces %}<div class="text-sm"><p class="text-xs font-semibold text-gray-600 mb-1">Pièces jointes</p><div class="flex flex-wrap gap-4">{% for c in form.pieces_fournies %}<label class="flex items-center gap-2">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div>
+                <p class="text-xs text-gray-500 mt-1">Les pièces se déposent dans les documents de l'usager (GED).</p></div>{% endif %}
+            <label class="flex items-start gap-2 text-sm">{{ form.consentement }} {{ form.consentement.label }}</label>
+            <div class="max-w-xs"><label class="block text-xs font-semibold text-gray-600 mb-1">{{ form.date_signature.label }}</label>{{ form.date_signature }}</div>
+        </fieldset>
+        <div class="flex flex-wrap gap-3 sticky bottom-0 bg-gray-50/95 py-3">
+            <button name="suite" value="enregistrer" class="px-5 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-floppy-disk mr-1"></i>Enregistrer</button>
+            <button name="suite" value="adresser" id="enregistrer-adresser" class="px-5 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold hover:bg-green-800"><i class="fas fa-paper-plane mr-1"></i>Enregistrer et adresser {% if a.validation_pole %}au pôle{% else %}au porteur{% endif %}</button>
+            <a href="{% url 'insertion:prescription_detail' p.pk %}" class="px-5 py-2 rounded-lg border border-gray-300 text-sm hover:bg-white">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endwith %}
+{% endblock %}

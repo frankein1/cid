@@ -16,13 +16,15 @@ from django.utils import timezone
 from beneficiaire.models import Beneficiaire
 from core.models import Profil, User
 from insertion import acces
-from insertion.models import ActionInsertion, ContratInsertion as C, LigneActionContrat, PoleInsertion, TypeActionInsertion
+from insertion.models import (ActionInsertion, ContratInsertion as C, LigneActionContrat, PoleInsertion,
+                              PrescriptionInsertion as P, QuestionAction, TypeActionInsertion)
 from insertion.services import contrat_circuit as circuit
 from insertion.services import contrat_pdf
 from mds.models import MDS, UserMDSProfile
 
 
-class ContratTests(TestCase):
+class _Base(TestCase):
+    """Comptes, pôle, bénéficiaire et actions fictifs communs aux tests du module."""
     @classmethod
     def setUpTestData(cls):
         for cmd in ("init_capacites", "init_profils", "init_insertion"):
@@ -62,6 +64,7 @@ class ContratTests(TestCase):
         LigneActionContrat.objects.create(contrat=c, action=self.action2)
         return c
 
+class ContratTests(_Base):
     def test_creation_preremplie(self):
         c = circuit.creer(self.benef, self.ts)
         self.assertEqual((c.pole, c.mds, c.statut, c.heures_activite_hebdo), (self.pole, self.mds, C.BROUILLON, 15))
@@ -144,6 +147,8 @@ class ContratTests(TestCase):
 
     def test_droits(self):
         c = self._pret()
+        self.assertNotIn(c, acces.contrats_visibles(self.cadre))   # en préparation : pas encore au pôle
+        circuit.transmettre(c, self.ts)
         self.assertIn(c, acces.contrats_visibles(self.ts))
         self.assertNotIn(c, acces.contrats_visibles(self.ts_b))
         self.assertIn(c, acces.contrats_visibles(self.cadre))
@@ -179,3 +184,100 @@ class ContratTests(TestCase):
         for pdf in (contrat_pdf.contrat_pdf(c), contrat_pdf.courrier_medecin_pdf(c)):
             self.assertTrue(pdf.read(4) == b"%PDF")
         self.assertEqual(cl.get(f"/insertion/contrats/{c.pk}/contrat.pdf").status_code, 200)
+
+
+
+class PrescriptionTests(_Base):
+
+    def _presc(self, action=None, **champs):
+        from insertion.services import prescription_circuit as pc
+        p = pc.creer(self.benef, self.ts, action or self.action)
+        p.consentement, p.objectifs = True, "Objectif"
+        for k, v in champs.items():
+            setattr(p, k, v)
+        p.save()
+        return pc, p
+
+    def test_creation_rattachee_au_contrat(self):
+        c = self._pret()
+        pc, p = self._presc()
+        self.assertEqual((p.contrat, p.statut, p.pole), (c, P.BROUILLON, self.pole))
+
+    def test_question_obligatoire_bloque_l_envoi(self):
+        q = QuestionAction.objects.create(action=self.action, libelle="Permis", obligatoire=True)
+        pc, p = self._presc()
+        with self.assertRaises(circuit.ErreurCircuit):
+            pc.adresser(p, self.ts)
+        pc.enregistrer_reponses(p, {q.pk: "oui"})
+        pc.adresser(p, self.ts)
+        self.assertEqual(p.statut, P.EN_ATTENTE)
+
+    def test_consentement_obligatoire(self):
+        pc, p = self._presc(consentement=False)
+        with self.assertRaises(circuit.ErreurCircuit):
+            pc.adresser(p, self.ts)
+
+    def test_validation_pole_puis_retour_et_ligne_du_contrat(self):
+        c = self._pret()
+        nouvelle = ActionInsertion.objects.create(code="T-ACT3", libelle="Action validée par le pôle",
+                                                  type_action=TypeActionInsertion.objects.first(), validation_pole=True)
+        pc, p = self._presc(nouvelle)
+        pc.adresser(p, self.ts)
+        self.assertEqual(p.statut, P.A_VALIDER)
+        self.assertFalse(c.lignes.filter(action=nouvelle).exists())   # pas de ligne avant le porteur
+        self.assertFalse(acces.peut_valider_prescription(self.medecin, p))
+        with self.assertRaises(circuit.ErreurCircuit):
+            pc.valider(p, self.admin, False, "")   # motif obligatoire
+        pc.valider(p, self.admin, True)
+        self.assertEqual(p.statut, P.EN_ATTENTE)
+        ligne = c.lignes.get(action=nouvelle)
+        self.assertEqual(ligne.prescription, p)
+        pc.noter_retour(p, self.admin, issue=P.INTEGREE, date_entree=date(2026, 11, 10))
+        with self.assertRaises(circuit.ErreurCircuit):   # arrêt sans motif
+            pc.noter_retour(p, self.ts, issue=P.ARRETEE, date_sortie=date(2027, 1, 5))
+        pc.noter_retour(p, self.ts, issue=P.REORIENTEE, date_sortie=date(2027, 1, 5), reorientation="FRANCE_TRAVAIL")
+        ligne.refresh_from_db()
+        self.assertEqual((ligne.date_entree, ligne.date_sortie), (date(2026, 11, 10), date(2027, 1, 5)))
+        self.assertIn("France Travail", ligne.motif_sortie)
+
+    def test_transitions_impossibles(self):
+        pc, p = self._presc()
+        pc.adresser(p, self.ts)
+        with self.assertRaises(circuit.ErreurCircuit):   # pas de sortie avant l'entrée
+            pc.noter_retour(p, self.ts, issue=P.TERMINEE, date_sortie=date(2027, 1, 5))
+
+    def test_droits_et_reponses_restreintes(self):
+        q = QuestionAction.objects.create(action=self.action, libelle="Grille santé", restreinte=True)
+        pc, p = self._presc()
+        pc.enregistrer_reponses(p, {q.pk: "oui"})
+        self.assertNotIn(p, acces.prescriptions_visibles(self.admin))   # brouillon : pas au pôle
+        pc.adresser(p, self.ts)
+        self.assertIn(p, acces.prescriptions_visibles(self.admin))
+        self.assertNotIn(p, acces.prescriptions_visibles(self.ts_b))
+        self.assertFalse(acces.voit_reponses_restreintes(self.admin, p))
+        self.assertTrue(acces.voit_reponses_restreintes(self.medecin, p))
+        self.assertTrue(acces.voit_reponses_restreintes(self.ts, p))
+        cl = Client(HTTP_HOST="localhost")
+        cl.force_login(self.admin)
+        self.assertNotIn("<span class=\"whitespace-pre-line\">oui", cl.get(f"/insertion/prescriptions/{p.pk}/").content.decode())
+        self.assertEqual(cl.get(f"/insertion/prescriptions/{p.pk}/modifier/").status_code, 403)
+
+    def test_saisie_web_et_pdf(self):
+        q = QuestionAction.objects.create(action=self.action, libelle="Besoins", type_reponse=QuestionAction.CHOIX_MULTIPLE,
+                                          choix="A\nB\nC")
+        cl = Client(HTTP_HOST="localhost")
+        cl.force_login(self.ts)
+        r = cl.post(f"/insertion/beneficiaire/{self.benef.code_interne}/prescriptions/nouvelle/", {"action": self.action.pk})
+        p = P.objects.get(beneficiaire=self.benef)
+        self.assertRedirects(r, f"/insertion/prescriptions/{p.pk}/modifier/", fetch_redirect_response=False)
+        r = cl.post(f"/insertion/prescriptions/{p.pk}/modifier/", {
+            "demande_par": "TS", "objectifs": "Emploi", "freins": ["MOBILITE", "GARDE"], f"q_{q.pk}": ["A", "C"],
+            "consentement": "on", "suite": "adresser"})
+        self.assertEqual(r.status_code, 302)
+        p.refresh_from_db()
+        self.assertEqual((p.statut, p.freins, p.reponses.get().valeur), (P.EN_ATTENTE, ["MOBILITE", "GARDE"], "A\nC"))
+        self.assertEqual(cl.get(f"/insertion/prescriptions/{p.pk}/fiche.pdf").status_code, 200)
+        r = cl.post(f"/insertion/prescriptions/{p.pk}/retour/", {"issue": "INTEGREE", "date_entree": "2026-11-12",
+                                                                  "premier_rdv_issue": "PRESENT"})
+        p.refresh_from_db()
+        self.assertEqual((p.statut, p.date_entree), (P.INTEGREE, date(2026, 11, 12)))

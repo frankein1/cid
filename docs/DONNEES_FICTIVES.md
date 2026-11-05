@@ -132,7 +132,22 @@ Contrats fictifs, tous préparés par **Agent Social 1** (`as1_mds1`), à chaque
 | ROUX Kevin | Validé, **échu** depuis une dizaine de jours, sans suite | File active, onglet « Échus » |
 | CHERIF Yasmine | Aucun contrat | `as1_mds1` : premier contrat (ouverture) |
 
-À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types et les actions départementales.
+Questions propres aux actions fictives : plateforme mobilité (permis de conduire, obligatoire ; besoins de mobilité, plusieurs choix), parcours santé (grille d'aide à la décision santé, obligatoire et **à accès restreint** ; l'action **passe par le pôle**), atelier insertion des femmes (garde d'enfants, obligatoire ; nombre d'enfants).
+
+Prescriptions fictives (prescriptrice : `as1_mds1`) :
+
+| Bénéficiaire | Prescription | À tester avec |
+|---|---|---|
+| PEREZ Laura | Plateforme mobilité, **en préparation** (sans consentement) | `as1_mds1` : compléter, adresser ; la ligne s'ajoute au contrat en préparation |
+| GARNIER Céline | Parcours santé, **à valider par le pôle** | `admin_pi1` ou `cadre_pi1` : valider ou refuser ; `admin_pi1` ne voit pas la réponse restreinte, `medecin_pi1` la voit |
+| AUBERT Aurélie | Parcours santé, **refusée** par le pôle | `as1_mds1` : onglet « À traiter » |
+| BENSALEM Nadia | Atelier, **adressée au porteur**, en attente d'intégration | `admin_pi1` ou `as1_mds1` : noter le premier rendez-vous et l'intégration |
+| LEGRAND Thomas | Atelier, **intégrée** (en cours) | `as1_mds1` : noter la sortie ; voir la ligne du contrat |
+| AMRANI Sarah | Accompagnement global, **intégrée** | Ligne du contrat tenue à jour |
+| ROUX Kevin | Plateforme mobilité, **terminée** (permis obtenu) | Onglet « Sorties » |
+| CHERIF Yasmine | Aucune | `as1_mds1` : première prescription |
+
+À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types, les actions départementales et leurs questions.
 
 ## Points d'attention
 

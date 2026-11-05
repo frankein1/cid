@@ -6,7 +6,7 @@
 # insertion/urls.py
 from django.urls import path
 
-from insertion import views, views_contrats as vc
+from insertion import views, views_contrats as vc, views_prescriptions as vp
 
 app_name = 'insertion'
 
@@ -34,4 +34,15 @@ urlpatterns = [
     path('contrats/<int:pk>/contrat.pdf', vc.contrat_pdf, name='contrat_pdf'),
     path('contrats/<int:pk>/certificat-medical.pdf', vc.contrat_courrier_medecin, name='contrat_courrier_medecin'),
     path('contrats/<int:pk>/notification.pdf', vc.contrat_notification, name='contrat_notification'),
+    # Prescriptions
+    path('prescriptions/', vp.prescriptions_liste, name='prescriptions_liste'),
+    path('beneficiaire/<str:code_interne>/prescriptions/nouvelle/', vp.prescription_nouvelle, name='prescription_nouvelle'),
+    path('prescriptions/<int:pk>/', vp.prescription_detail, name='prescription_detail'),
+    path('prescriptions/<int:pk>/modifier/', vp.prescription_modifier, name='prescription_modifier'),
+    path('prescriptions/<int:pk>/adresser/', vp.prescription_adresser, name='prescription_adresser'),
+    path('prescriptions/<int:pk>/annuler/', vp.prescription_annuler, name='prescription_annuler'),
+    path('prescriptions/<int:pk>/valider/', vp.prescription_valider, name='prescription_valider'),
+    path('prescriptions/<int:pk>/retour/', vp.prescription_retour, name='prescription_retour'),
+    path('prescriptions/<int:pk>/fiche.pdf', vp.prescription_pdf, name='prescription_pdf'),
+    path('actions/<int:pk>/questions/', vp.action_questions, name='action_questions'),
 ]

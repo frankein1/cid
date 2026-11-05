@@ -88,8 +88,8 @@ def contrats_visibles(user):
     filtre = Q(pk__in=[])
     if user.a_la_capacite('peut_voir'):
         filtre |= Q(mds_id__in=UserMDSProfile.objects.filter(user=user, actif=True).values('mds_id'))
-    if est_agent_pole(user):
-        filtre |= Q(pole__in=poles_de(user))
+    if est_agent_pole(user):   # le pôle ne voit un contrat qu'une fois transmis
+        filtre |= Q(pole__in=poles_de(user)) & ~Q(statut__in=('BROUILLON', 'ANNULE'))
     return qs.filter(filtre)
 
 
@@ -115,3 +115,38 @@ def est_cadre_pole(user, contrat):
 
 def est_medecin_pole(user, contrat):
     return _du_pole(user, contrat, 'rsa_pole_medecin')
+
+
+# =============================================================================
+# Prescriptions
+# =============================================================================
+# Prescripteur (agent de la MDS du bénéficiaire) : rédige, adresse, note le retour du porteur.
+# Pôle insertion : valide ou refuse quand l'action l'exige (administratif ou cadre), peut noter le retour.
+# Réponses « à accès restreint » : agents de la MDS du bénéficiaire, cadre et médecin du pôle.
+
+def prescriptions_visibles(user):
+    from insertion.models import PrescriptionInsertion
+    from mds.models import UserMDSProfile
+    qs = PrescriptionInsertion.objects.select_related('beneficiaire', 'mds', 'pole', 'prescripteur', 'action',
+                                                      'action__type_action')
+    if user.a_la_capacite('peut_administrer'):
+        return qs
+    filtre = Q(pk__in=[])
+    if user.a_la_capacite('peut_voir'):
+        filtre |= Q(mds_id__in=UserMDSProfile.objects.filter(user=user, actif=True).values('mds_id'))
+    if est_agent_pole(user):   # ni brouillon (consentement pas encore recueilli), ni prescription annulée
+        filtre |= Q(pole__in=poles_de(user)) & ~Q(statut__in=('BROUILLON', 'ANNULEE'))
+    return qs.filter(filtre)
+
+
+def peut_valider_prescription(user, prescription):
+    return _du_pole(user, prescription, 'rsa_pole_admin') or _du_pole(user, prescription, 'rsa_pole_cadre')
+
+
+def peut_noter_retour(user, prescription):
+    return peut_rediger(user, prescription.beneficiaire) or _du_pole(user, prescription, 'rsa_pole_admin')
+
+
+def voit_reponses_restreintes(user, prescription):
+    return (peut_rediger(user, prescription.beneficiaire) or prescription.beneficiaire.peut_etre_vu_par(user)
+            or _du_pole(user, prescription, 'rsa_pole_cadre') or _du_pole(user, prescription, 'rsa_pole_medecin'))

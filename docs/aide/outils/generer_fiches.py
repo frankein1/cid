@@ -17,7 +17,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'insertion-actions', 'insertion-action-locale', 'insertion-import',
-         'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler']
+         'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
+         'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -28,7 +29,9 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
-                                  'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler'])]
+                                  'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
+                                  'prescription-rediger', 'prescription-pole', 'prescription-suivi',
+                                  'action-questions'])]
 
 
 def rubrique(slug):
@@ -70,6 +73,10 @@ TITRES = {
     'contrat-pole': ("Réceptionner et valider un contrat", "Pôle insertion : administratif et cadre"),
     'contrat-sante': ("Contrat santé : certificat et avis médical", "Référent et médecin du pôle"),
     'contrat-renouveler': ("Suivre la file active et renouveler", "Référent de MDS"),
+    'prescription-rediger': ("Prescrire une action d'insertion", "Référent de MDS"),
+    'prescription-pole': ("Valider une prescription, noter le retour du porteur", "Pôle insertion"),
+    'prescription-suivi': ("Suivre les prescriptions et le tableau des actions", "Référent de MDS"),
+    'action-questions': ("Questions propres à une action", "Pôle insertion, cadre de MDS"),
 }
 
 
@@ -814,12 +821,12 @@ page('insertion-import', qui="Agents des pôles insertion (et cadres de MDS pour
              "Chaque ligne est contrôlée avec vos droits : un cadre de MDS n'importe que les actions locales de sa MDS."],
      ensuite=['insertion-actions', 'contrat-rediger'])
 
-page('contrat-rediger', qui="Référents des MDS (agents qui peuvent créer des dossiers)", ou="Fiche du bénéficiaire → Contrat RSA", duree="15 minutes",
+page('contrat-rediger', qui="Référents des MDS (agents qui peuvent créer des dossiers)", ou="Fiche du bénéficiaire → Parcours RSA", duree="15 minutes",
      intro="Le contrat se prépare avec le bénéficiaire, s'imprime pour la signature, puis part au pôle insertion d'un clic : plus de ressaisie ni d'envoi papier.",
      etapes=[
-         ("Ouvrir les contrats du bénéficiaire", [fig('contrat-rediger', '01', "Le bouton « Contrat RSA » de la fiche."),
+         ("Ouvrir les contrats du bénéficiaire", [fig('contrat-rediger', '01', "Le bouton « Parcours RSA » de la fiche."),
                                                   fig('contrat-rediger', '02', "Les contrats du bénéficiaire.")],
-          ["Sur la fiche du bénéficiaire, cliquez sur <span class=\"clic\">Contrat RSA</span>.",
+          ["Sur la fiche du bénéficiaire, cliquez sur <span class=\"clic\">Parcours RSA</span> (contrats et prescriptions).",
            "Choisissez le type : <b>ouverture</b> (premier contrat), <b>prolongement</b> ou <b>rétablissement</b> (après une suspension ; après une radiation, c'est une nouvelle demande à la CAF et donc une ouverture).",
            "Un prolongement ou un rétablissement reprend le diagnostic et les actions en cours du dernier contrat validé."], []),
          ("Remplir le contrat", [fig('contrat-rediger', '03', "Type, nature, durée, heures d'activité."),
@@ -900,10 +907,81 @@ page('contrat-renouveler', qui="Référents des MDS (et pôles insertion)", ou="
      savoir=["Dès qu'un contrat suivant existe, l'alerte du contrat précédent disparaît."],
      ensuite=['contrat-rediger', 'contrat-pole'])
 
+page('prescription-rediger', qui="Référents des MDS (agents qui peuvent créer des dossiers)", ou="Fiche du bénéficiaire → Parcours RSA → Nouvelle prescription", duree="10 minutes",
+     intro="La prescription remplace la fiche de liaison papier : CID préremplit le tronc commun, ajoute les questions propres à l'action et l'adresse au porteur (ou au pôle).",
+     etapes=[
+         ("Choisir l'action", [fig('prescription-rediger', '01', "« Nouvelle prescription » dans le parcours RSA."),
+                               fig('prescription-rediger', '02', "Les actions proposées.")],
+          ["Dans le <b>Parcours RSA</b> du bénéficiaire, cliquez sur <span class=\"clic\">Nouvelle prescription</span>.",
+           "CID propose les actions départementales de votre pôle et les actions locales de votre MDS. Chaque carte indique si l'action passe par le pôle, ses questions propres et ses pièces à joindre.",
+           "Cliquez sur <span class=\"clic\">Prescrire cette action</span>."], []),
+         ("Compléter le tronc commun", [fig('prescription-rediger', '03', "La situation, préremplie."),
+                                        fig('prescription-rediger', '04', "Les freins et l'orientation.")],
+          ["La situation est préremplie à partir du dossier et du contrat en cours : identifiant France Travail, qualification, objectifs.",
+           "Cochez les <b>freins</b> (liste commune à toutes les MDS) et rédigez le diagnostic, l'avis motivé et les objectifs de l'orientation."], []),
+         ("Répondre aux questions de l'action", [fig('prescription-rediger', '05', "Les questions propres à l'action.")],
+          ["Les questions marquées d'un astérisque sont obligatoires pour adresser la prescription.",
+           "Une réponse <b>à accès restreint</b> (cadenas) n'est visible que de la MDS, du cadre et du médecin du pôle."], []),
+         ("Consentement et envoi", [fig('prescription-rediger', '06', "Pièces, consentement, envoi."),
+                                    fig('prescription-rediger', '07', "La prescription est adressée.")],
+          ["Cochez les pièces fournies (déposées dans les documents de l'usager) et le <b>consentement</b> du bénéficiaire à la transmission.",
+           "<span class=\"clic\">Enregistrer et adresser</span> : au porteur directement, ou au pôle si l'action l'exige.",
+           "La <span class=\"clic\">Fiche de liaison (PDF)</span> s'imprime pour la signature et pour le porteur, avec un cadre « retour du porteur »."], []),
+     ],
+     savoir=["Sans consentement, la prescription ne part pas.",
+             "Si un contrat est en cours, la prescription y est rattachée : la ligne de l'action s'ajoute toute seule au tableau des actions."],
+     ensuite=['prescription-suivi', 'prescription-pole'])
+
+page('prescription-pole', qui="Agents des pôles insertion (administratif et cadre)", ou="RSA – Insertion → Prescriptions", duree="3 minutes",
+     intro="Certaines actions passent par le pôle avant le porteur. Le pôle peut aussi noter le retour du porteur quand c'est lui qui le reçoit.",
+     etapes=[
+         ("Voir ce qui est à valider", [fig('prescription-pole', '01', "La tuile « Prescriptions »."),
+                                        fig('prescription-pole', '02', "L'onglet « À traiter ».")],
+          ["L'onglet <b>À traiter</b> liste les prescriptions qui attendent la validation de votre pôle.",
+           "Le pôle ne voit une prescription qu'une fois adressée par la MDS (jamais en préparation)."], []),
+         ("Valider ou refuser", [fig('prescription-pole', '03', "La validation du pôle.")],
+          ["<b>Valider</b> : la prescription est adressée au porteur. <b>Refuser</b> : le motif est obligatoire.",
+           "Le prescripteur est prévenu par la messagerie."], []),
+         ("Noter le retour du porteur", [fig('prescription-pole', '04', "Premier rendez-vous et intégration."),
+                                         fig('prescription-pole', '05', "Le suivi enregistré.")],
+          ["Premier rendez-vous (présent, absent, excusé, reconvoqué), diagnostic finalisé, puis l'issue : <b>intégrée</b> (date d'entrée), <b>non intégrée</b> (motif) ou <b>réorientée</b>.",
+           "Le prescripteur est prévenu, et la ligne de l'action dans le contrat est mise à jour."], []),
+     ],
+     savoir=["Une action passe par le pôle quand sa fiche porte « Prescription validée par le pôle insertion » (réglage du référentiel, aussi dans l'import CSV : colonne validation_pole)."],
+     ensuite=['prescription-suivi', 'action-questions'])
+
+page('prescription-suivi', qui="Référents des MDS", ou="RSA – Insertion → Prescriptions", duree="3 minutes",
+     intro="Les prescriptions se suivent jusqu'à la sortie ; le tableau des actions du contrat suit, sans ressaisie.",
+     etapes=[
+         ("Retrouver ses prescriptions", [fig('prescription-suivi', '01', "Les onglets.")],
+          ["<b>En attente du porteur</b> : adressées, pas encore intégrées. <b>En cours</b> : intégrées. <b>Sorties</b> : terminées, arrêtées, réorientées ou non intégrées.",
+           "Une prescription <b>refusée</b> par le pôle apparaît dans votre onglet <b>À traiter</b>."], []),
+         ("Noter la sortie", [fig('prescription-suivi', '02', "La sortie de l'action.")],
+          ["Sur une prescription en cours : <b>terminée</b>, <b>arrêtée</b> (motif obligatoire) ou <b>réorientée</b> (vers l'ASI, un autre dispositif ou France Travail), avec la date de sortie."], []),
+         ("Le tableau des actions du contrat", [fig('prescription-suivi', '03', "Entrée, sortie et motif, venus de la prescription.")],
+          ["La ligne de l'action porte le numéro et le statut de la prescription ; ses dates et son motif de sortie viennent du retour du porteur.",
+           "Dans la rédaction du contrat, ces lignes ne se saisissent pas : elles sont tenues à jour par la prescription."], []),
+     ],
+     savoir=["Chaque étape est tracée dans l'historique de la prescription."],
+     ensuite=['prescription-rediger', 'contrat-renouveler'])
+
+page('action-questions', qui="Pôles insertion (actions départementales), cadres de MDS (actions locales)", ou="RSA – Insertion → Actions d'insertion → une action", duree="5 minutes",
+     intro="Chaque action peut ajouter ses propres questions à la prescription : permis de conduire, garde d'enfants, type de projet…",
+     etapes=[
+         ("Ouvrir les questions de l'action", [fig('action-questions', '01', "Les questions sur la fiche de l'action.")],
+          ["Sur la fiche d'une action que vous gérez, cliquez sur <span class=\"clic\">Modifier les questions</span>."], []),
+         ("Écrire les questions", [fig('action-questions', '02', "Une question par bloc.")],
+          ["Pour chaque question : le libellé, le type de réponse (texte, oui / non, un ou plusieurs choix, date, nombre), les choix (un par ligne), une aide, l'ordre.",
+           "<b>Obligatoire</b> : la prescription ne part pas sans réponse. <b>Accès restreint</b> : réponse visible de la MDS, du cadre et du médecin du pôle seulement (jamais de détail médical)."], []),
+     ],
+     savoir=["Supprimer une question efface aussi ses réponses dans les prescriptions : préférez la reformuler.",
+             "Les questions des actions départementales sont conservées par la remise à zéro de démonstration."],
+     ensuite=['insertion-actions', 'prescription-rediger'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – prescriptions et comités de suivi", "Enfance", "Logement"])
+                  ["RSA – comités de suivi et réorientations", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

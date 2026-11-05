@@ -1,0 +1,48 @@
+<!-- templates/insertion/prescriptions_liste.html -->
+{% extends "base.html" %}
+{% block title %}Prescriptions{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:accueil' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>RSA – Insertion</a>
+    <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-share-from-square text-blue-700 mr-2"></i>Prescriptions</h1>
+    <div class="flex flex-wrap gap-2" id="onglets">
+        {% for code, libelle in vues %}
+        <a href="?vue={{ code }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if action_choisie %}&action={{ action_choisie }}{% endif %}"
+           class="px-3 py-1.5 rounded-full text-sm border {% if vue == code %}bg-blue-700 text-white border-blue-700{% else %}bg-white text-gray-700 border-gray-300 hover:bg-gray-50{% endif %}">{{ libelle }}
+            {% if code == 'a_traiter' and compteurs.a_traiter %}<span class="ml-1 px-1.5 rounded-full bg-red-500 text-white text-xs">{{ compteurs.a_traiter }}</span>{% endif %}
+            {% if code == 'en_attente' and compteurs.en_attente %}<span class="ml-1 px-1.5 rounded-full bg-blue-500 text-white text-xs">{{ compteurs.en_attente }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    <form method="get" class="flex flex-wrap gap-2 items-end">
+        <input type="hidden" name="vue" value="{{ vue }}">
+        <input type="text" name="q" value="{{ q }}" placeholder="Bénéficiaire ou action" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        {% if actions|length > 1 %}<select name="action" class="px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="">Toutes les actions</option>{% for a in actions %}<option value="{{ a.pk }}"{% if a.pk|stringformat:"s" == action_choisie %} selected{% endif %}>{{ a.libelle }}</option>{% endfor %}</select>{% endif %}
+        <button class="px-4 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-magnifying-glass mr-1"></i>Filtrer</button>
+    </form>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
+                <th class="px-4 py-2 text-left">Prescription</th><th class="px-4 py-2 text-left">Bénéficiaire</th><th class="px-4 py-2 text-left">Action</th>
+                <th class="px-4 py-2 text-left">MDS · prescripteur</th><th class="px-4 py-2 text-left">Entrée · sortie</th><th class="px-4 py-2 text-left">Statut</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for p in page_obj %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2"><a href="{% url 'insertion:prescription_detail' p.pk %}" class="text-blue-700 font-semibold hover:underline">{{ p.numero }}</a><br><span class="text-xs text-gray-500">du {{ p.date_prescription|date:"d/m/Y" }}</span></td>
+                <td class="px-4 py-2">{{ p.beneficiaire.nom|upper }} {{ p.beneficiaire.prenom }}</td>
+                <td class="px-4 py-2">{{ p.action.libelle }}<br><span class="text-xs text-gray-500">{{ p.action.porteur }}</span></td>
+                <td class="px-4 py-2">{{ p.mds.nom }}<br><span class="text-xs text-gray-500">{{ p.prescripteur.get_full_name|default:p.prescripteur.username }}</span></td>
+                <td class="px-4 py-2">{{ p.date_entree|date:"d/m/Y"|default:"—" }}<br><span class="text-xs text-gray-500">{{ p.date_sortie|date:"d/m/Y"|default:"" }}</span></td>
+                <td class="px-4 py-2">{% include "insertion/_statut_prescription.html" %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">{% if vue == 'a_traiter' %}Rien à traiter pour l'instant.{% else %}Aucune prescription.{% endif %}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex gap-2 text-sm">{% if page_obj.has_previous %}<a href="?vue={{ vue }}&q={{ q|urlencode }}&action={{ action_choisie }}&page={{ page_obj.previous_page_number }}" class="text-blue-700">← Précédentes</a>{% endif %}
+        <span class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?vue={{ vue }}&q={{ q|urlencode }}&action={{ action_choisie }}&page={{ page_obj.next_page_number }}" class="text-blue-700">Suivantes →</a>{% endif %}</div>
+    {% endif %}
+</div>
+{% endblock %}
