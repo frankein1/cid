@@ -1,0 +1,65 @@
+<!-- templates/insertion/reorientation_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ d.numero }}{% endblock %}
+{% block content %}
+{% with b=d.beneficiaire %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div class="flex flex-wrap gap-4 text-sm">
+        {% if referent %}<a href="{% url 'insertion:contrats_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Parcours RSA de {{ b.prenom }} {{ b.nom|upper }}</a>{% endif %}
+        {% if d.commission and gestion %}<a href="{% url 'insertion:commission_detail' d.commission.pk %}" class="text-blue-700 hover:underline"><i class="fas fa-people-group mr-1"></i>Commission du {{ d.commission.date|date:"d/m/Y" }}</a>{% endif %}
+    </div>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Réorientation {{ d.numero }}</h1>
+            <p class="text-sm text-gray-600">{{ b.get_civilite_display }} {{ b.prenom }} {{ b.nom|upper }} · {{ d.mds.nom }} · {{ d.referent.get_full_name|default:d.referent.username }}</p>
+            <p class="mt-2">{% include "insertion/_statut_reorientation.html" %}</p>
+        </div>
+        {% if d.statut == 'ACCEPTEE' or d.statut == 'REFUSEE' %}<a href="{% url 'insertion:reorientation_notification' d.pk %}" target="_blank" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-envelope mr-1 text-blue-700"></i>Notification au bénéficiaire</a>{% endif %}
+    </div>
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4 text-sm">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
+                <div><p class="text-xs uppercase text-gray-500">Orientation proposée</p><p class="font-semibold">{{ d.orientation_libelle }}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">Motif</p><p class="whitespace-pre-line">{{ d.motif|default:"—" }}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">Situation et parcours</p><p class="whitespace-pre-line">{{ d.situation|default:"—" }}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">Freins</p><p>{% for f in d.libelles_freins %}<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs">{{ f }}</span>{% empty %}—{% endfor %}</p></div>
+                <div><p class="text-xs uppercase text-gray-500">La personne</p><p>{{ d.get_avis_personne_display }}</p></div>
+            </div>
+            {% if d.statut == 'ACCEPTEE' or d.statut == 'REFUSEE' %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5" id="bloc-decision">
+                <h2 class="font-semibold text-gray-800">Décision de la commission du {{ d.date_decision|date:"d/m/Y" }}</h2>
+                <p class="mt-1"><b>{{ d.get_statut_display }}</b>{% if d.organisme_retenu %} : nouveau référent RSA <b>{{ d.organisme_retenu }}</b> à compter du {{ d.date_effet|date:"d/m/Y" }}{% endif %}</p>
+                {% if d.motif_decision %}<p class="whitespace-pre-line">Motif : {{ d.motif_decision }}</p>{% endif %}
+            </div>
+            {% elif d.statut == 'INSCRITE' %}
+            <div class="bg-blue-50 rounded-xl border border-blue-200 p-5 text-blue-900">
+                {% if d.commission %}Inscrite à la commission du <b>{{ d.commission.date|date:"d/m/Y" }}</b>{% if d.commission.lieu %} ({{ d.commission.lieu }}){% endif %}.{% else %}En attente de la prochaine commission{% if prochaine %} (du {{ prochaine.date|date:"d/m/Y" }}){% endif %} : le pôle l'ajoutera à son ordre du jour.{% endif %}
+                {% if d.nb_ajournements %}<br>Déjà ajournée {{ d.nb_ajournements }} fois{% if d.motif_decision %} – dernier motif : {{ d.motif_decision }}{% endif %}.{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="space-y-4">
+            {% if referent and d.modifiable %}
+            <div class="bg-white rounded-xl border-2 border-blue-200 shadow-sm p-5 space-y-3" id="panneau-referent">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-user-pen mr-1 text-blue-700"></i>Référent</h2>
+                <a href="{% url 'insertion:reorientation_modifier' d.pk %}" class="block text-center px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800"><i class="fas fa-pen mr-1"></i>Compléter la demande</a>
+                {% if d.statut == 'BROUILLON' %}
+                {% if manques %}<div class="text-xs text-orange-900 bg-orange-50 rounded p-2">Pour inscrire la demande, il manque : {{ manques|join:", " }}.</div>
+                {% else %}<form method="post" action="{% url 'insertion:reorientation_inscrire' d.pk %}">{% csrf_token %}
+                    <button id="inscrire" class="w-full px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700"><i class="fas fa-calendar-plus mr-1"></i>Inscrire en commission</button></form>{% endif %}
+                {% endif %}
+                <form method="post" action="{% url 'insertion:reorientation_annuler' d.pk %}" onsubmit="return confirm('Annuler cette demande ?');">{% csrf_token %}
+                    <button class="w-full px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">Annuler la demande</button></form>
+            </div>
+            {% endif %}
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <h2 class="font-semibold text-gray-800 mb-2"><i class="fas fa-clock-rotate-left mr-1 text-gray-500"></i>Historique</h2>
+                <ul class="space-y-2 text-xs">
+                    {% for h in historique %}<li><span class="text-gray-500">{{ h.date|date:"d/m/Y H:i" }}</span> · {{ h.action }}{% if h.user %} <span class="text-gray-500">({{ h.user.get_full_name|default:h.user.username }})</span>{% endif %}{% if h.commentaire %}<br><span class="text-gray-600">{{ h.commentaire }}</span>{% endif %}</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+{% endblock %}

@@ -18,7 +18,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
-         'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions']
+         'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
+         'reorientation-demander', 'commission-reorientation', 'organismes-reorientation']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -31,7 +32,8 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
                                   'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
                                   'prescription-rediger', 'prescription-pole', 'prescription-suivi',
-                                  'action-questions'])]
+                                  'action-questions', 'reorientation-demander', 'commission-reorientation',
+                                  'organismes-reorientation'])]
 
 
 def rubrique(slug):
@@ -77,6 +79,9 @@ TITRES = {
     'prescription-pole': ("Valider une prescription, noter le retour du porteur", "Pôle insertion"),
     'prescription-suivi': ("Suivre les prescriptions et le tableau des actions", "Référent de MDS"),
     'action-questions': ("Questions propres à une action", "Pôle insertion, cadre de MDS"),
+    'reorientation-demander': ("Demander une réorientation", "Référent de MDS"),
+    'commission-reorientation': ("Préparer et tenir la commission de réorientation", "Pôle insertion : administratif et cadre"),
+    'organismes-reorientation': ("Organismes de réorientation", "Pôle insertion"),
 }
 
 
@@ -978,10 +983,63 @@ page('action-questions', qui="Pôles insertion (actions départementales), cadre
              "Les questions des actions départementales sont conservées par la remise à zéro de démonstration."],
      ensuite=['insertion-actions', 'prescription-rediger'])
 
+page('reorientation-demander', qui="Référents des MDS", ou="Fiche du bénéficiaire → Parcours RSA → Demander une réorientation", duree="5 minutes",
+     intro="Quand une personne doit être accompagnée ailleurs (France Travail, CAF, association), le référent inscrit sa situation à la commission trimestrielle de réorientation du pôle. Pas besoin de l'accord du cadre de MDS.",
+     etapes=[
+         ("Créer la demande", [fig('reorientation-demander', '01', "La rubrique « Réorientation » du parcours RSA.")],
+          ["Dans le <b>Parcours RSA</b>, cliquez sur <span class=\"clic\">Demander une réorientation</span>. Les freins de la dernière prescription sont repris."], []),
+         ("Motiver la réorientation", [fig('reorientation-demander', '02', "Motif, orientation proposée, avis de la personne.")],
+          ["Le <b>motif</b> et l'<b>orientation proposée</b> (France Travail, CAF, association, autre) sont obligatoires ; l'organisme vient de la liste tenue par le pôle.",
+           "Indiquez si la personne est informée et d'accord."], []),
+         ("Inscrire en commission", [fig('reorientation-demander', '03', "La demande inscrite.")],
+          ["<span class=\"clic\">Enregistrer et inscrire en commission</span> : la demande rejoint la prochaine commission programmée de votre pôle, ou attend la suivante. Le pôle est prévenu."], []),
+     ],
+     savoir=["La décision vous arrive par la messagerie à la clôture de la commission.",
+             "Acceptée : à la date d'effet, l'organisme retenu devient le référent RSA de la personne ; elle sort de la file active RSA de la MDS (plus d'alerte de renouvellement), son parcours reste consultable.",
+             "Ajournée : la demande est présentée à la commission suivante, sans nouvelle saisie."],
+     ensuite=['commission-reorientation', 'contrat-renouveler'])
+
+page('commission-reorientation', qui="Administratifs et cadres des pôles insertion", ou="RSA – Insertion → Réorientation", duree="selon la séance",
+     intro="Tous les trimestres, la commission (un membre de chaque MDS, administratifs et cadres du pôle) examine les demandes de réorientation. CID prépare l'ordre du jour, garde les décisions et prévient les référents.",
+     etapes=[
+         ("Programmer la commission", [fig('commission-reorientation', '01', "La tuile « Réorientation »."),
+                                       fig('commission-reorientation', '02', "Programmer une commission.")],
+          ["Indiquez la date, l'heure et le lieu : toutes les demandes en attente sont inscrites d'office à l'ordre du jour.",
+           "Les demandes inscrites ensuite rejoignent automatiquement la prochaine commission."], []),
+         ("Préparer la séance", [fig('commission-reorientation', '03', "L'ordre du jour, par MDS."),
+                                 fig('commission-reorientation', '04', "Les participants.")],
+          ["L'<span class=\"clic\">Ordre du jour</span> (PDF) se distribue aux membres.",
+           "Cochez les agents présents et notez les autres participants.",
+           "Un dossier peut être <b>retiré</b> de l'ordre du jour : il passe à la commission suivante."], []),
+         ("Noter les décisions", [fig('commission-reorientation', '05', "Réorientation acceptée."),
+                                  fig('commission-reorientation', '06', "Réorientation refusée, avec son motif.")],
+          ["<b>Acceptée</b> : l'organisme retenu et la date d'effet. <b>Refusée</b> ou <b>ajournée</b> : le motif est obligatoire.",
+           "Une décision se corrige tant que la commission n'est pas clôturée."], []),
+         ("Clôturer", [fig('commission-reorientation', '07', "La clôture."),
+                       fig('commission-reorientation', '08', "Le relevé de décisions.")],
+          ["<span class=\"clic\">Clôturer la commission</span> (toutes les décisions notées) : les référents sont prévenus, les dossiers ajournés passent à la commission suivante.",
+           "Le <span class=\"clic\">Relevé de décisions</span> (PDF) garde la trace de chaque dossier examiné, ajournés compris."], []),
+         ("Informer la personne", [fig('commission-reorientation', '09', "La décision sur la demande."),
+                                   fig('commission-reorientation', '10', "La notification au bénéficiaire.")],
+          ["Sur chaque demande décidée, la <span class=\"clic\">Notification au bénéficiaire</span> (PDF) reprend la décision et les coordonnées du nouveau référent ; son texte se modifie dans les modèles de courriers."], []),
+     ],
+     savoir=["Les demandes en préparation ne sont pas visibles du pôle : seulement une fois inscrites."],
+     ensuite=['organismes-reorientation', 'reorientation-demander'])
+
+page('organismes-reorientation', qui="Pôles insertion", ou="RSA – Insertion → Réorientation → Organismes de réorientation", duree="2 minutes",
+     intro="La liste des organismes qui peuvent devenir le référent RSA d'une personne : France Travail, la CAF et les associations du territoire.",
+     etapes=[
+         ("Tenir la liste", [fig('organismes-reorientation', '01', "Les organismes.")],
+          ["France Travail et la CAF sont créés à l'installation ; ajoutez les associations (nom, catégorie, ville, courriel, téléphone).",
+           "Désactivez un organisme qui ne prend plus de bénéficiaires, plutôt que de le supprimer : son historique reste."], []),
+     ],
+     savoir=["La liste est conservée par la remise à zéro de démonstration."],
+     ensuite=['commission-reorientation'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – comités de suivi et réorientations", "Enfance", "Logement"])
+                  ["RSA – comités de suivi technique et statistiques", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

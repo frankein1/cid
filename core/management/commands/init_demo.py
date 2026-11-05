@@ -198,6 +198,11 @@ class Command(BaseCommand):
         contrats = list(ContratInsertion.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
         Message.objects.filter(content_type=ContentType.objects.get_for_model(ContratInsertion),
                                object_id__in=contrats).delete()
+        from insertion.models import DemandeReorientation
+        reorientations = list(DemandeReorientation.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
+        Message.objects.filter(content_type=ContentType.objects.get_for_model(DemandeReorientation),
+                               object_id__in=reorientations).delete()
+        DemandeReorientation.objects.filter(pk__in=reorientations).delete()
         from insertion.models import PrescriptionInsertion
         prescriptions = list(PrescriptionInsertion.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
         Message.objects.filter(content_type=ContentType.objects.get_for_model(PrescriptionInsertion),
@@ -608,6 +613,7 @@ class Command(BaseCommand):
         self.stdout.write("✅ Contrats RSA : en préparation, transmis (santé), reçu, ajourné, validé sauf action, "
                           "à renouveler, échu")
         self.prescriptions()
+        self.reorientations(pole)
 
     def questions_actions(self):
         """Questions propres aux actions fictives, validation par le pôle, pièces à joindre."""
@@ -699,6 +705,58 @@ class Command(BaseCommand):
         presc("FAM8-LAU", "DEMO-MOBIL", 1, consentement=False, freins=["MOBILITE", "GARDE"])
         self.stdout.write("✅ Prescriptions : en préparation, à valider par le pôle, refusée, en attente du porteur, "
                           "intégrées, terminée")
+
+    def reorientations(self, pole):
+        """Organismes, une commission passée (clôturée) et la prochaine (en préparation), demandes fictives."""
+        from insertion.models import CommissionReorientation, DemandeReorientation as D, OrganismeOrientation as O
+        from insertion.services import reorientation_circuit as circuit
+        j = self.j
+        admin, cadre = self.u("admin_pi1"), self.u("cadre_pi1")
+        call_command("init_insertion", stdout=StringIO())   # France Travail et CAF
+        ft = O.objects.filter(categorie=O.FRANCE_TRAVAIL).first()
+        caf = O.objects.filter(categorie=O.CAF).first()
+        asso, _ = O.objects.get_or_create(nom="Association d'accompagnement Exemple (fictif)",
+                                         defaults={"categorie": O.ASSOCIATION, "ville": "Martigues",
+                                                   "email": "accueil@exemple.org"})
+        CommissionReorientation.objects.filter(pole=pole).delete()
+
+        def demande(code, referent, orientation, motif, organisme=None, freins=(), avis="ACCORD"):
+            d = circuit.creer(self.b[code], referent)
+            d.motif, d.orientation_proposee, d.organisme_propose = motif, orientation, organisme
+            d.situation = "Situation résumée avec la personne (fictif)."
+            d.freins, d.avis_personne = list(freins) or d.freins, avis
+            d.save()
+            return d
+
+        # Commission passée, clôturée : une acceptée (MDS 2), une refusée, une ajournée
+        passee, _ = circuit.creer_commission(pole, admin, date=j - timedelta(days=70), lieu="Salle du pôle (fictif)")
+        karim = demande("FAM7-KAR", self.u("as1_mds2"), O.FRANCE_TRAVAIL,
+                        "Projet professionnel défini, prêt pour un accompagnement vers l'emploi (fictif).", ft,
+                        ["RECHERCHE_EMPLOI"])
+        celine = demande("FAM9-CEL", self.ts, O.ASSOCIATION, "Besoin d'un accompagnement santé renforcé (fictif).",
+                         asso, ["SANTE"], avis="DESACCORD")
+        thomas = demande("FAM11-THO", self.ts, O.FRANCE_TRAVAIL, "Souhaite reprendre un emploi rapidement (fictif).", ft)
+        for d in (karim, celine, thomas):
+            circuit.inscrire(d, d.referent)
+            d.refresh_from_db()
+            d.commission = passee
+            d.save()
+        circuit.decider(karim, cadre, decision=D.ACCEPTEE, organisme_retenu=ft, date_effet=j - timedelta(days=60))
+        circuit.decider(celine, cadre, decision=D.REFUSEE, motif="Parcours santé en cours avec la MDS (fictif).")
+        circuit.decider(thomas, cadre, decision=D.AJOURNEE, motif="Attendre la fin de l'atelier en cours (fictif).")
+        passee.participants.set([admin, cadre, self.ts, self.u("as1_mds2")])
+        circuit.cloturer(passee, cadre)
+        # Prochaine commission, en préparation : Thomas (ajourné) la rejoint, deux nouvelles demandes inscrites
+        prochaine, _ = circuit.creer_commission(pole, admin, date=j + timedelta(days=21), lieu="Salle du pôle (fictif)")
+        for code, orientation, motif, organisme in [
+                ("FAM5-SAR", O.FRANCE_TRAVAIL, "Accompagnement global mené à son terme, recherche d'emploi active (fictif).", ft),
+                ("FAM7-NAD", O.CAF, "Naissance à venir : accompagnement proposé par la CAF (fictif).", caf)]:
+            d = demande(code, self.ts, orientation, motif, organisme)
+            circuit.inscrire(d, self.ts)
+        # En préparation (référente)
+        demande("FAM12-AUR", self.ts, O.ASSOCIATION, "", asso, avis="NON_INFORMEE")
+        self.stdout.write("✅ Réorientation : commission passée (acceptée, refusée, ajournée), prochaine commission "
+                          f"le {prochaine.date:%d/%m/%Y} (3 dossiers), une demande en préparation")
 
     # ------------------------------------------------------------------ planning
     def planning(self):

@@ -29,9 +29,11 @@ TYPES = [
     ("publics-specifiques", "Publics spécifiques (jeunes, seniors, femmes, gens du voyage, détention…)"),
 ]
 
+ORGANISMES = [("France Travail", "FRANCE_TRAVAIL"), ("CAF", "CAF")]
+
 
 class Command(BaseCommand):
-    help = "Crée les types d'actions d'insertion manquants (module RSA – Insertion)"
+    help = "Crée les types d'actions d'insertion et les organismes de réorientation de base manquants (RSA – Insertion)"
 
     def handle(self, *args, **options):
         from insertion.models import TypeActionInsertion
@@ -41,3 +43,8 @@ class Command(BaseCommand):
             crees += cree
         self.stdout.write(self.style.SUCCESS(f"✅ Types d'actions d'insertion : {crees} créé(s), "
                                              f"{TypeActionInsertion.objects.count()} au total"))
+        # Organismes de réorientation de base (les associations s'ajoutent dans CID, propres à chaque territoire)
+        from insertion.models import OrganismeOrientation
+        for nom, categorie in ORGANISMES:
+            if not OrganismeOrientation.objects.filter(categorie=categorie).exists():
+                OrganismeOrientation.objects.create(nom=nom, categorie=categorie)

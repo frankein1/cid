@@ -1,0 +1,57 @@
+<!-- templates/insertion/commissions_liste.html -->
+{% extends "base.html" %}
+{% block title %}Commissions de réorientation{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <a href="{% url 'insertion:accueil' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>RSA – Insertion</a>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-people-group text-blue-700 mr-2"></i>Commissions de réorientation</h1>
+            <p class="text-sm text-gray-500">Tous les trimestres : un membre de chaque MDS, les administratifs et les cadres du pôle. Réorientations vers France Travail, la CAF ou une association.</p>
+        </div>
+        <a href="{% url 'insertion:organismes' %}" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-building mr-1"></i>Organismes de réorientation</a>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+            <h2 class="font-semibold text-gray-800">À venir</h2>
+            {% for c in a_venir %}
+            <a href="{% url 'insertion:commission_detail' c.pk %}" class="block bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:border-blue-400">
+                <div class="flex justify-between"><span class="font-semibold text-gray-800">{{ c.date|date:"l d F Y" }}{% if c.heure %} à {{ c.heure|time:"H:i" }}{% endif %}</span><span class="text-sm text-blue-700">{{ c.nb }} dossier{{ c.nb|pluralize }}</span></div>
+                <p class="text-sm text-gray-500">{{ c.pole.nom }}{% if c.lieu %} · {{ c.lieu }}{% endif %}{% if c.date < aujourd_hui %} · <span class="text-orange-700">date passée, à clôturer</span>{% endif %}</p>
+            </a>
+            {% empty %}<p class="text-sm text-gray-500">Aucune commission programmée.</p>{% endfor %}
+
+            <h2 class="font-semibold text-gray-800 pt-2">Demandes en attente d'une commission</h2>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="demandes-attente">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-4 py-2 text-left">Demande</th><th class="px-4 py-2 text-left">Bénéficiaire</th><th class="px-4 py-2 text-left">MDS</th><th class="px-4 py-2 text-left">Orientation proposée</th></tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                    {% for d in attente %}
+                    <tr><td class="px-4 py-2"><a href="{% url 'insertion:reorientation_detail' d.pk %}" class="text-blue-700 hover:underline">{{ d.numero }}</a>{% if d.nb_ajournements %}<br><span class="text-xs text-orange-700">ajournée {{ d.nb_ajournements }} fois</span>{% endif %}</td>
+                        <td class="px-4 py-2">{{ d.beneficiaire.nom|upper }} {{ d.beneficiaire.prenom }}</td><td class="px-4 py-2">{{ d.mds.nom }}</td>
+                        <td class="px-4 py-2">{{ d.orientation_libelle }}</td></tr>
+                    {% empty %}<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500">Aucune demande en attente.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="font-semibold text-gray-800 pt-2">Passées</h2>
+            {% for c in passees %}
+            <a href="{% url 'insertion:commission_detail' c.pk %}" class="block bg-white rounded-xl border border-gray-200 p-3 hover:border-blue-400 text-sm">
+                <span class="font-semibold">{{ c.date|date:"d/m/Y" }}</span> · {{ c.pole.nom }} · clôturée</a>
+            {% empty %}<p class="text-sm text-gray-500">Aucune.</p>{% endfor %}
+        </div>
+        {% if poles %}
+        <form method="post" class="bg-white rounded-xl border-2 border-blue-200 shadow-sm p-5 space-y-3 self-start" id="nouvelle-commission">{% csrf_token %}
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-calendar-plus mr-1 text-blue-700"></i>Programmer une commission</h2>
+            {% if poles|length > 1 %}<div><label class="block text-xs font-semibold text-gray-600 mb-1">Pôle</label><select name="pole" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">{% for p in poles %}<option value="{{ p.pk }}">{{ p.nom }}</option>{% endfor %}</select></div>
+            {% else %}<input type="hidden" name="pole" value="{{ poles.0.pk }}">{% endif %}
+            {% for f in form %}<div><label class="block text-xs font-semibold text-gray-600 mb-1">{{ f.label }}</label>{{ f }}{% for e in f.errors %}<p class="text-xs text-red-700">{{ e }}</p>{% endfor %}</div>{% endfor %}
+            <button id="programmer" class="w-full px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800">Programmer</button>
+            <p class="text-xs text-gray-500">Les demandes en attente sont inscrites d'office à son ordre du jour.</p>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

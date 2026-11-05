@@ -147,7 +147,18 @@ Prescriptions fictives (prescriptrice : `as1_mds1`) :
 | ROUX Kevin | Plateforme mobilité, **terminée** (permis obtenu) | Onglet « Sorties » |
 | CHERIF Yasmine | Aucune | `as1_mds1` : première prescription |
 
-À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types, les actions départementales et leurs questions.
+Réorientation (organismes : France Travail, CAF, « Association d'accompagnement Exemple (fictif) ») :
+
+| Bénéficiaire | Demande | À tester avec |
+|---|---|---|
+| BENSALEM Karim (MDS 2) | **Acceptée** vers France Travail par la commission passée (il y a 70 jours), effective : sort de la file active | `as1_mds2` : bandeau sur son parcours RSA |
+| GARNIER Céline | **Refusée** par la commission passée | Relevé de décisions de la commission passée |
+| LEGRAND Thomas | **Ajournée** une fois, inscrite à la prochaine commission (dans 21 jours) | `admin_pi1`, `cadre_pi1` : décider, clôturer |
+| AMRANI Sarah | Inscrite à la prochaine commission (France Travail) | idem |
+| BENSALEM Nadia | Inscrite à la prochaine commission (CAF, naissance à venir) | idem |
+| AUBERT Aurélie | **En préparation** (association), motif à écrire | `as1_mds1` : compléter, inscrire |
+
+À tester : `chef_mds1` crée une action locale (pas d'action départementale) ; `as1_mds1` consulte seulement ; `admin_pi1` télécharge le fichier modèle CSV, importe, voit l'aperçu (créations, mises à jour, erreurs) avant d'enregistrer, et exporte. La remise à zéro totale conserve les paramètres du contrat, les types, les actions départementales et leurs questions, les organismes de réorientation.
 
 ## Points d'attention
 

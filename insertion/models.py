@@ -614,3 +614,194 @@ class HistoriquePrescription(models.Model):
 
     class Meta:
         ordering = ['-date', '-pk']
+
+
+# =============================================================================
+# Étape 4 : la commission de réorientation
+# =============================================================================
+
+class OrganismeOrientation(models.Model):
+    """Organisme vers lequel une personne peut être réorientée ; il devient son référent RSA."""
+    FRANCE_TRAVAIL, CAF, ASSOCIATION, AUTRE = 'FRANCE_TRAVAIL', 'CAF', 'ASSOCIATION', 'AUTRE'
+    CATEGORIES = [(FRANCE_TRAVAIL, "France Travail"), (CAF, "CAF"), (ASSOCIATION, "Association"),
+                  (AUTRE, "Autre organisme")]
+    nom = models.CharField("Nom", max_length=200)
+    categorie = models.CharField("Catégorie", max_length=15, choices=CATEGORIES, default=ASSOCIATION)
+    adresse = models.CharField("Adresse", max_length=255, blank=True)
+    code_postal = models.CharField("Code postal", max_length=5, blank=True)
+    ville = models.CharField("Ville", max_length=100, blank=True)
+    email = models.EmailField("Courriel", blank=True)
+    telephone = models.CharField("Téléphone", max_length=20, blank=True)
+    poles = models.ManyToManyField(PoleInsertion, blank=True, related_name='organismes_orientation',
+                                   verbose_name="Pôles concernés", help_text="Vide : tout le département.")
+    actif = models.BooleanField("Actif", default=True)
+
+    class Meta:
+        ordering = ['categorie', 'nom']
+        verbose_name = "Organisme de réorientation"
+        verbose_name_plural = "Organismes de réorientation"
+
+    def __str__(self):
+        return self.nom
+
+
+class CommissionReorientation(models.Model):
+    """Commission trimestrielle du pôle : un membre de chaque MDS, administratifs et cadres du pôle."""
+    PREPARATION, CLOTUREE = 'PREPARATION', 'CLOTUREE'
+    STATUTS = [(PREPARATION, "En préparation"), (CLOTUREE, "Clôturée")]
+    pole = models.ForeignKey(PoleInsertion, on_delete=models.CASCADE, related_name='commissions_reorientation',
+                             verbose_name="Pôle insertion")
+    date = models.DateField("Date")
+    heure = models.TimeField("Heure", null=True, blank=True)
+    lieu = models.CharField("Lieu", max_length=200, blank=True)
+    statut = models.CharField("Statut", max_length=12, choices=STATUTS, default=PREPARATION)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='commissions_reorientation',
+                                          verbose_name="Participants (agents)")
+    participants_externes = models.TextField("Autres participants", blank=True)
+    observations = models.TextField("Observations générales", blank=True)
+    cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    cloturee_le = models.DateTimeField(null=True, blank=True)
+    cloturee_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='+')
+
+    class Meta:
+        ordering = ['-date', '-pk']
+        verbose_name = "Commission de réorientation"
+        verbose_name_plural = "Commissions de réorientation"
+
+    def __str__(self):
+        return f"Commission de réorientation du {self.date:%d/%m/%Y} – {self.pole}"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('insertion:commission_detail', args=[self.pk])
+
+    @property
+    def numero(self):
+        return f"CR{self.date:%Y%m%d}-{self.pole.code}"
+
+    @property
+    def beneficiaire(self):   # messages automatiques : jamais liés à un usager
+        return None
+
+
+class DemandeReorientation(models.Model):
+    BROUILLON, INSCRITE, ACCEPTEE, REFUSEE, ANNULEE = 'BROUILLON', 'INSCRITE', 'ACCEPTEE', 'REFUSEE', 'ANNULEE'
+    STATUTS = [(BROUILLON, "En préparation"), (INSCRITE, "Inscrite en commission"),
+               (ACCEPTEE, "Réorientation acceptée"), (REFUSEE, "Réorientation refusée"), (ANNULEE, "Annulée")]
+    AJOURNEE = 'AJOURNEE'
+    DECISIONS = [(ACCEPTEE, "Réorientation acceptée"), (REFUSEE, "Réorientation refusée"),
+                 (AJOURNEE, "Ajournée (présentée à la commission suivante)")]
+    AVIS_PERSONNE = [('ACCORD', "Informée et d'accord"), ('DESACCORD', "Informée, pas d'accord"),
+                     ('NON_INFORMEE', "Pas encore informée")]
+
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE,
+                                     related_name='reorientations', verbose_name="Bénéficiaire")
+    mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, related_name='reorientations')
+    pole = models.ForeignKey(PoleInsertion, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='reorientations')
+    referent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                                 related_name='reorientations', verbose_name="Référent actuel")
+    contrat = models.ForeignKey(ContratInsertion, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='reorientations')
+    commission = models.ForeignKey(CommissionReorientation, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='demandes', verbose_name="Commission")
+    statut = models.CharField("Statut", max_length=10, choices=STATUTS, default=BROUILLON)
+    date_demande = models.DateField("Demande du", null=True, blank=True)
+
+    situation = models.TextField("Situation et parcours", blank=True)
+    freins = models.JSONField("Freins", default=list, blank=True)
+    motif = models.TextField("Motif de la réorientation", blank=True)
+    orientation_proposee = models.CharField("Orientation proposée", max_length=15,
+                                            choices=OrganismeOrientation.CATEGORIES, blank=True)
+    organisme_propose = models.ForeignKey(OrganismeOrientation, on_delete=models.SET_NULL, null=True, blank=True,
+                                          related_name='+', verbose_name="Organisme proposé")
+    precision = models.CharField("Précision", max_length=255, blank=True)
+    avis_personne = models.CharField("La personne", max_length=12, choices=AVIS_PERSONNE, default='NON_INFORMEE')
+
+    decision = models.CharField("Décision", max_length=10, choices=DECISIONS, blank=True)
+    organisme_retenu = models.ForeignKey(OrganismeOrientation, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name='reorientations', verbose_name="Organisme retenu")
+    date_effet = models.DateField("Date d'effet", null=True, blank=True)
+    motif_decision = models.TextField("Motif de la décision", blank=True)
+    decide_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    date_decision = models.DateField("Décision du", null=True, blank=True)
+    nb_ajournements = models.PositiveSmallIntegerField("Ajournements", default=0)
+
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_demande', '-pk']
+        verbose_name = "Demande de réorientation"
+        verbose_name_plural = "Demandes de réorientation"
+
+    def __str__(self):
+        return f"{self.numero} – {self.beneficiaire}"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('insertion:reorientation_detail', args=[self.pk])
+
+    @property
+    def numero(self):
+        return f"R{(self.date_demande or timezone.localdate()).year}-{self.pk or 0:05d}"
+
+    @property
+    def modifiable(self):
+        return self.statut in (self.BROUILLON, self.INSCRITE) and not (
+            self.commission_id and self.commission.statut == CommissionReorientation.CLOTUREE)
+
+    @property
+    def libelles_freins(self):
+        noms = dict(FREINS)
+        return [noms.get(f, f) for f in self.freins]
+
+    @property
+    def orientation_libelle(self):
+        """« France Travail », « Association – Nom de l'association (précision) »… sans répéter le nom."""
+        libelle = self.get_orientation_proposee_display() or "—"
+        org = self.organisme_propose
+        if org and org.nom.strip().lower() != libelle.lower():
+            libelle += f" – {org.nom}"
+        return libelle + (f" ({self.precision})" if self.precision else "")
+
+    @property
+    def effective(self):
+        return self.statut == self.ACCEPTEE and self.date_effet and self.date_effet <= timezone.localdate()
+
+    def manques_inscription(self):
+        manques = []
+        if not self.motif.strip():
+            manques.append("le motif de la réorientation")
+        if not self.orientation_proposee:
+            manques.append("l'orientation proposée")
+        if not self.pole_id:
+            manques.append("un pôle insertion couvrant la MDS")
+        return manques
+
+
+class HistoriqueReorientation(models.Model):
+    demande = models.ForeignKey(DemandeReorientation, on_delete=models.CASCADE, related_name='historique')
+    date = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    action = models.CharField(max_length=200)
+    commentaire = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-date', '-pk']
+
+
+class ExamenReorientation(models.Model):
+    """Décision d'une commission sur un dossier (une ligne par passage : un dossier ajourné passe deux fois)."""
+    commission = models.ForeignKey(CommissionReorientation, on_delete=models.CASCADE, related_name='examens')
+    demande = models.ForeignKey(DemandeReorientation, on_delete=models.CASCADE, related_name='examens')
+    decision = models.CharField(max_length=10, choices=DemandeReorientation.DECISIONS)
+    organisme_retenu = models.ForeignKey(OrganismeOrientation, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name='+')
+    date_effet = models.DateField(null=True, blank=True)
+    motif = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['commission', 'demande'], name='examen_unique')]
