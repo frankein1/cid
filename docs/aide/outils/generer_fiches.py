@@ -20,7 +20,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
-         'file-active', 'statistiques-rsa', 'journal-activite']
+         'file-active', 'statistiques-rsa', 'journal-activite', 'archivage-rgpd']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -30,7 +30,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                                            'regie-demander', 'regie-decider']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
-             ("Protection des données", ['journal-activite']),
+             ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
                                   'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
                                   'prescription-rediger', 'prescription-pole', 'prescription-suivi',
@@ -87,6 +87,7 @@ TITRES = {
     'file-active': ("La file active RSA", "Référents, cadres, pôles insertion"),
     'statistiques-rsa': ("Les statistiques RSA", "Référents, cadres, pôles insertion"),
     'journal-activite': ("Le journal d'activité : qui a consulté un dossier", "Cadres de MDS, administrateurs"),
+    'archivage-rgpd': ("Archiver les dossiers inactifs (RGPD)", "Cadres de MDS, administrateurs"),
 }
 
 
@@ -1089,6 +1090,27 @@ page('journal-activite', qui="Cadres de MDS (dossiers de leur MDS), super-admini
              "Une même page rouverte par le même agent dans les 10 minutes n'est notée qu'une fois.",
              "Un cadre ne voit que ce qui touche aux dossiers de sa MDS."],
      ensuite=['beneficiaire-modifier'])
+
+page('archivage-rgpd', qui="Cadres de MDS (dossiers de leur MDS), super-administrateurs (tout le département et l'effacement)", ou="Menu Cadre → Archivage RGPD", duree="3 minutes",
+     intro="Le RGPD interdit de garder indéfiniment les dossiers des personnes qu'on n'accompagne plus. CID propose les dossiers inactifs depuis 3 ans ; le cadre les archive, l'administrateur les efface ensuite sur décision.",
+     etapes=[
+         ("Voir les dossiers proposés", [fig('archivage-rgpd', '01', "Les dossiers sans activité depuis 3 ans.")],
+          ["Menu <span class=\"clic\">Cadre → Archivage RGPD</span> : la liste des dossiers de votre MDS <b>sans aucune activité depuis 3 ans</b> (fiche, rendez-vous, aides, RSA, documents, messages…), avec la date de la dernière activité.",
+           "Les dossiers liés à une <b>information préoccupante</b> ou à un <b>suivi enfance</b> ne sont jamais proposés."], []),
+         ("Archiver", [fig('archivage-rgpd', '02', "Le dossier archivé n'apparaît plus que dans cette liste.")],
+          ["Cochez les dossiers, choisissez le <b>motif</b> (fin d'accompagnement, sans nouvelles, déménagement…), puis <span class=\"clic\">Archiver la sélection</span>.",
+           "Le dossier est <b>masqué partout dans CID</b> (recherche, liste, agenda, famille des proches) et <b>en lecture seule</b>."], []),
+         ("Consulter ou désarchiver", [fig('archivage-rgpd', '03', "Le dossier archivé, en lecture seule.")],
+          ["Dans « Dossiers archivés », cliquez sur le nom : identité, dates, motif et contenu du dossier.",
+           "L'usager revient ? Choisissez le motif puis <span class=\"clic\">Désarchiver</span> : le dossier retrouve son statut d'avant."], []),
+         ("Effacer définitivement (administrateur)", [fig('archivage-rgpd', '04', "L'effacement, sur confirmation.")],
+          ["Réservé aux super-administrateurs : <span class=\"clic\">Admin → Archivage RGPD → Effacement définitif</span> liste les dossiers <b>archivés depuis au moins 12 mois</b>, avec ce qui sera effacé.",
+           "Cochez, tapez <b>EFFACER</b>, confirmez. C'est <b>irréversible</b> : il ne reste qu'une trace anonyme (MDS, dates, motif)."], []),
+     ],
+     savoir=["Durées réglables dans la configuration : RGPD_ARCHIVAGE_ANS (3 ans) et RGPD_EFFACEMENT_MOIS (12 mois).",
+             "Avant d'effacer, vérifier les durées de conservation propres à certaines pièces (comptables notamment) : l'effacement supprime aussi les aides du dossier.",
+             "Les rendez-vous passés restent dans l'agenda de la MDS, sans l'usager ; le journal d'activité perd son nom."],
+     ensuite=['journal-activite'])
 
 # =============================================================================
 # Sommaire
