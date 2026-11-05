@@ -238,5 +238,22 @@ def effacer(beneficiaire, user):
             action=OperationRGPD.EFFACEMENT, motif=beneficiaire.motif_archivage, mds=beneficiaire.mds,
             derniere_activite=beneficiaire.operations_rgpd.filter(action=OperationRGPD.ARCHIVAGE)
             .values_list('derniere_activite', flat=True).first(), elements_effaces=b['elements'], par=user)
+        pk = beneficiaire.pk
         beneficiaire.delete()    # les traces d'archivage perdent leur lien : elles deviennent anonymes
+        _anonymiser_journal(pk)
     return trace
+
+
+def _anonymiser_journal(pk):
+    """
+    Journal d'activité (s'il est installé) : les lignes du dossier effacé, y compris celles écrites pendant
+    l'effacement, perdent le lien et le nom de l'usager ; il reste qui a fait quoi, et quand.
+    """
+    from core.models import AuditLog
+    champs = {f.name for f in AuditLog._meta.concrete_fields}
+    if 'beneficiaire' not in champs:
+        return
+    maj = {'beneficiaire': None}
+    if 'objet_libelle' in champs:
+        maj['objet_libelle'] = "(dossier effacé)"
+    AuditLog.objects.filter(beneficiaire_id=pk).update(**maj)
