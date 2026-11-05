@@ -1,6 +1,6 @@
 # .github/workflows/essai-rdv-solidarites.yml
 # Essai CID ↔ RDV-Solidarités : lance une copie ÉPHÉMÈRE de RDV-Solidarités (logiciel libre de l'État,
-# github.com/betagouv/rdv-service-public, version figée ci-dessous), y crée des données FICTIVES,
+# github.com/betagouv/rdv-service-public, lancé depuis la copie frankein1/MRS, version figée ci-dessous), y crée des données FICTIVES,
 # puis vérifie chaque point de l'API dont CID a besoin (.github/rdvsp/sonde.py). Tout est effacé à la fin.
 name: Essai RDV-Solidarités
 
@@ -33,7 +33,7 @@ jobs:
         image: redis:7
         ports: ["6379:6379"]
     env:
-      MRS_DEPOT: betagouv/rdv-service-public
+      MRS_DEPOT: frankein1/MRS   # copie de github.com/betagouv/rdv-service-public
       MRS_VERSION: 6bc33f1da8c30d3d62b6c7b9ef327de5372b6c27   # 5 novembre 2026
       MRS_DIR: ${{ github.workspace }}/mrs
       SEED_JSON: ${{ github.workspace }}/seed.json
