@@ -21,3 +21,26 @@ class JournalAppelAPIAdmin(admin.ModelAdmin):
     list_display = ('date', 'utilisateur', 'beneficiaire', 'source', 'code_http', 'statut_appel', 'environnement')
     list_filter = ('source', 'statut_appel', 'environnement')
     readonly_fields = [f.name for f in JournalAppelAPI._meta.fields]
+
+
+from .models import CompteRDVSP, LienUsagerRDVSP, AppelRDVSP  # noqa: E402
+
+
+@admin.register(CompteRDVSP)
+class CompteRDVSPAdmin(admin.ModelAdmin):
+    list_display = ('utilisateur', 'agent_id', 'expire_le', 'date_maj')
+    exclude = ('jeton_acces', 'jeton_renouvellement')   # les jetons ne s'affichent jamais
+    readonly_fields = ('utilisateur', 'agent_id', 'expire_le', 'date_maj')
+
+
+@admin.register(LienUsagerRDVSP)
+class LienUsagerRDVSPAdmin(admin.ModelAdmin):
+    list_display = ('beneficiaire', 'usager_rdvsp_id', 'date_creation')
+    search_fields = ('beneficiaire__nom', 'beneficiaire__code_interne', 'usager_rdvsp_id')
+
+
+@admin.register(AppelRDVSP)
+class AppelRDVSPAdmin(admin.ModelAdmin):
+    list_display = ('date', 'utilisateur', 'beneficiaire', 'action', 'code_http', 'reussi')
+    list_filter = ('action', 'reussi')
+    readonly_fields = [f.name for f in AppelRDVSP._meta.fields]
