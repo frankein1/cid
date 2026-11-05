@@ -23,7 +23,7 @@ class Command(BaseCommand):
             'ged_televerser', 'ged_valider', 'ged_supprimer',
             'planning_generer', 'planning_bloquer', 'planning_exporter', 'planning_convoquer',
             'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi',
-            'peut_consulter_tous_usagers',
+            'peut_consulter_tous_usagers', 'rgpd_archiver',
             'ip_piloter',
             'rsa_actions_locales', 'voir_journal_activite',
         ]

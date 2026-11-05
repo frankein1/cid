@@ -41,6 +41,9 @@ CAPACITES = [
     ('ged_valider', 'GED – Valider'),
     ('ged_supprimer', 'GED – Supprimer'),
 
+    # --- RGPD ---
+    ('rgpd_archiver', "RGPD – Archiver les dossiers inactifs de sa MDS (consulter et désarchiver les dossiers archivés)"),
+
     # --- Planning ---
     ('planning_generer', 'Planning – Générer'),
     ('planning_bloquer', 'Planning – Bloquer'),

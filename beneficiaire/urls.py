@@ -11,13 +11,19 @@ AMELIORE : Ajout URLs sortie et décès
 """
 
 from django.urls import path
-from . import views
+from . import views, views_rgpd
 
 app_name = 'beneficiaire'
 
 urlpatterns = [
     # Liste et recherche
     path('', views.liste_beneficiaires, name='liste'),
+
+    # Archivage RGPD (avant les routes <code_interne>/)
+    path('rgpd/archivage/', views_rgpd.rgpd_archivage, name='rgpd_archivage'),
+    path('rgpd/archiver/', views_rgpd.rgpd_archiver, name='rgpd_archiver'),
+    path('rgpd/effacement/', views_rgpd.rgpd_effacement, name='rgpd_effacement'),
+    path('rgpd/dossier/<str:code_interne>/', views_rgpd.rgpd_dossier, name='rgpd_dossier'),
     
     # CRUD Bénéficiaire
     path('ajouter/', views.ajouter_beneficiaire, name='ajouter_beneficiaire'),

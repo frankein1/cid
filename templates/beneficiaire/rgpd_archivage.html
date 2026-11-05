@@ -1,0 +1,78 @@
+<!-- /templates/beneficiaire/rgpd_archivage.html -->
+{% extends "base.html" %}
+{% block title %}Archivage RGPD{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+        <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-box-archive text-blue-600 mr-2"></i>Archivage RGPD des dossiers</h1>
+        <div class="flex gap-2 items-center">
+            <form method="get" class="flex gap-2 items-center">
+                <select name="mds" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="this.form.submit()">
+                    <option value="">{% if tout %}Toutes les MDS{% else %}Mes MDS{% endif %}</option>
+                    {% for m in mds_liste %}<option value="{{ m.pk }}" {% if mds_choisie == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}
+                </select>
+            </form>
+            {% if tout %}
+            <a href="{% url 'beneficiaire:rgpd_effacement' %}" id="lien-effacement" class="px-4 py-2 bg-red-700 text-white rounded-lg text-sm hover:bg-red-800">
+                <i class="fas fa-eraser mr-1"></i>Effacement définitif ({{ nb_effacables }})</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <p class="text-sm text-gray-700 bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+        Sont proposés les dossiers <strong>sans aucune activité depuis {{ delai_ans }} an{{ delai_ans|pluralize }}</strong>
+        (fiche, rendez-vous, aides, RSA, documents, messages…). Les dossiers liés à une <strong>information préoccupante</strong>
+        ou à un <strong>suivi enfance</strong> ne sont jamais proposés.
+        Un dossier archivé est <strong>masqué partout dans CID et en lecture seule</strong> ; il peut être désarchivé.
+        L'effacement définitif n'intervient que sur décision d'un administrateur, au plus tôt {{ delai_mois }} mois après l'archivage.
+    </p>
+
+    <form method="post" action="{% url 'beneficiaire:rgpd_archiver' %}" id="form-archiver" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {% csrf_token %}
+        <h2 class="font-bold text-gray-800 mb-3">Dossiers proposés à l'archivage ({{ candidats|length }})</h2>
+        {% if candidats %}
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-gray-500 border-b">
+                <tr><th class="py-2 pr-2"><input type="checkbox" onclick="document.querySelectorAll('.case-rgpd').forEach(c => c.checked = this.checked)" title="Tout cocher"></th>
+                    <th class="py-2 pr-4">Usager</th><th class="py-2 pr-4">MDS</th><th class="py-2 pr-4">Référent</th><th class="py-2 pr-4">Statut</th><th class="py-2">Dernière activité</th></tr>
+            </thead>
+            <tbody>
+            {% for b, activite in candidats %}
+            <tr class="border-b border-gray-100">
+                <td class="py-2 pr-2"><input type="checkbox" name="ids" value="{{ b.pk }}" class="case-rgpd"></td>
+                <td class="py-2 pr-4"><a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline">{{ b.nom|upper }} {{ b.prenom }}</a> <span class="text-gray-400">{{ b.code_interne }}</span></td>
+                <td class="py-2 pr-4">{{ b.mds.nom|default:"—" }}</td>
+                <td class="py-2 pr-4">{{ b.referent_mds.get_full_name|default:"—" }}</td>
+                <td class="py-2 pr-4">{{ b.get_statut_display }}</td>
+                <td class="py-2">{{ activite|date:"d/m/Y"|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="flex flex-wrap gap-3 items-end mt-4">
+            <div><label class="block text-xs font-semibold text-gray-600 mb-1">Motif</label>
+                <select name="motif" required class="px-3 py-2 border border-gray-300 rounded-lg text-sm">{% for c, l in motifs %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></div>
+            <div class="flex-1 min-w-[12rem]"><label class="block text-xs font-semibold text-gray-600 mb-1">Commentaire (facultatif)</label>
+                <input type="text" name="commentaire" maxlength="255" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></div>
+            <button type="submit" class="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm hover:bg-blue-800"><i class="fas fa-box-archive mr-1"></i>Archiver la sélection</button>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400 italic">Aucun dossier à archiver.</p>
+        {% endif %}
+    </form>
+
+    <div id="dossiers-archives" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="font-bold text-gray-800 mb-3">Dossiers archivés</h2>
+        {% for b in archives %}
+        <p class="text-sm py-1.5 border-b border-gray-100 flex flex-wrap justify-between gap-2">
+            <span><a href="{% url 'beneficiaire:rgpd_dossier' b.code_interne %}" class="text-blue-700 hover:underline">{{ b.nom|upper }} {{ b.prenom }}</a> <span class="text-gray-400">{{ b.code_interne }} · {{ b.mds.nom|default:"—" }}</span></span>
+            <span class="text-gray-500">archivé le {{ b.date_archivage|date:"d/m/Y" }}{% if b.archive_par %} par {{ b.archive_par.get_full_name|default:b.archive_par.username }}{% endif %}</span>
+        </p>
+        {% empty %}
+        <p class="text-sm text-gray-400 italic">Aucun dossier archivé.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

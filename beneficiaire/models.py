@@ -19,6 +19,16 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.db.models import Q
 
+
+class BeneficiaireManager(models.Manager):
+    """
+    Gestionnaire par défaut : les dossiers ARCHIVÉS (RGPD) sont masqués partout dans CID
+    (recherches, listes, fiches, agenda…). Seule la page d'archivage les voit, via Beneficiaire.tous.
+    """
+    def get_queryset(self):
+        return super().get_queryset().exclude(statut='ARCHIVE')
+
+
 class Beneficiaire(models.Model):
     STATUT_CHOICES = [
         ('ACTIF', 'Actif'),
@@ -126,6 +136,16 @@ class Beneficiaire(models.Model):
     detail_sortie = models.TextField(blank=True, null=True)
     est_decede = models.BooleanField(default=False)
     date_deces = models.DateField(null=True, blank=True)
+
+    # Archivage RGPD (beneficiaire/archivage.py) : dossier masqué et en lecture seule
+    date_archivage = models.DateTimeField(null=True, blank=True)
+    archive_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name='+')
+    motif_archivage = models.CharField(max_length=20, blank=True)
+    statut_avant_archivage = models.CharField(max_length=20, blank=True)
+
+    objects = BeneficiaireManager()   # sans les dossiers archivés (défaut)
+    tous = models.Manager()           # y compris les dossiers archivés
 
     # Tracking
     date_creation = models.DateTimeField(auto_now_add=True)
@@ -235,7 +255,7 @@ class Beneficiaire(models.Model):
             autre = lien.personne_b if direct else lien.personne_a
             if autre is None or autre.pk == self.pk:
                 continue
-            if not inclure_sortis and autre.statut in ('SORTI', 'DECEDE'):
+            if autre.statut == 'ARCHIVE' or (not inclure_sortis and autre.statut in ('SORTI', 'DECEDE')):
                 continue
             # Priorité au lien direct (libellé exact)
             if autre.pk in membres and not direct:
@@ -274,6 +294,8 @@ class Beneficiaire(models.Model):
 
     def peut_etre_modifie_par(self, user):
         """✅ CORRIGÉ CORE : peut_creer + même MDS"""
+        if self.statut == 'ARCHIVE':   # dossier archivé (RGPD) : lecture seule
+            return False
         if user.is_superuser or user.a_la_capacite('peut_administrer'):
             return True
         return (user.a_la_capacite('peut_creer') and self.peut_etre_vu_par(user))
@@ -350,7 +372,7 @@ def generate_code_interne(sender, instance, **kwargs):
         for _ in range(10):
             random_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
             code = f"{prefix}-{random_str}"
-            if not Beneficiaire.objects.filter(code_interne=code).exists():
+            if not Beneficiaire.tous.filter(code_interne=code).exists():
                 instance.code_interne = code
                 break
 
@@ -376,3 +398,32 @@ class TransfertMDS(models.Model):
 
     def __str__(self):
         return f"{self.beneficiaire} : {self.mds_origine} → {self.mds_destination}"
+
+
+class OperationRGPD(models.Model):
+    """
+    Trace des archivages, désarchivages et effacements (beneficiaire/archivage.py).
+    À l'effacement, le lien vers le dossier disparaît : il ne reste qu'une trace anonyme
+    (MDS, dates, motif, nombre d'éléments effacés), utile aux statistiques et au contrôle.
+    """
+    ARCHIVAGE, DESARCHIVAGE, EFFACEMENT = 'ARCHIVAGE', 'DESARCHIVAGE', 'EFFACEMENT'
+    ACTIONS = [(ARCHIVAGE, "Archivage"), (DESARCHIVAGE, "Désarchivage"), (EFFACEMENT, "Effacement définitif")]
+
+    beneficiaire = models.ForeignKey(Beneficiaire, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='operations_rgpd')
+    action = models.CharField(max_length=15, choices=ACTIONS)
+    motif = models.CharField(max_length=20, blank=True)
+    commentaire = models.CharField(max_length=255, blank=True)
+    mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    derniere_activite = models.DateField(null=True, blank=True)
+    elements_effaces = models.JSONField(default=dict, blank=True, help_text="Nombre d'éléments effacés, par type")
+    date = models.DateTimeField(auto_now_add=True)
+    par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "Opération RGPD (archivage / effacement)"
+        verbose_name_plural = "Opérations RGPD (archivages / effacements)"
+
+    def __str__(self):
+        return f"{self.get_action_display()} – {self.date:%d/%m/%Y}"
