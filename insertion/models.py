@@ -90,6 +90,9 @@ class ActionInsertion(models.Model):
     comite_suivi = models.BooleanField("Passage en comité de suivi technique", default=False)
     rythme_comite = models.CharField("Rythme des comités", max_length=100, blank=True, help_text="Ex. : semestriel")
     aussi_logement = models.BooleanField("Concerne aussi le logement", default=False)
+    fiche_avec_nir = models.BooleanField(
+        "La fiche de liaison demande le n° de sécurité sociale", default=False,
+        help_text="Le n° de sécurité sociale n'est imprimé sur la fiche de liaison que pour les actions qui l'exigent.")
     validation_pole = models.BooleanField(
         "Prescription validée par le pôle insertion", default=False,
         help_text="Les prescriptions vers cette action passent par le pôle avant d'être adressées au porteur.")

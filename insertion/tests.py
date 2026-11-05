@@ -281,3 +281,20 @@ class PrescriptionTests(_Base):
                                                                   "premier_rdv_issue": "PRESENT"})
         p.refresh_from_db()
         self.assertEqual((p.statut, p.date_entree), (P.INTEGREE, date(2026, 11, 12)))
+
+
+class FicheLiaisonTests(_Base):
+    def _texte_pdf(self, p):
+        import subprocess
+        from insertion.services.prescription_pdf import fiche_pdf
+        return subprocess.run(["pdftotext", "-", "-"], input=fiche_pdf(p).read(), capture_output=True).stdout.decode()
+
+    def test_nir_seulement_si_l_action_le_demande(self):
+        from insertion.services import prescription_circuit as pc
+        Beneficiaire.objects.filter(pk=self.benef.pk).update(nir="290017500000000")
+        self.benef.refresh_from_db()
+        p = pc.creer(self.benef, self.ts, self.action)
+        self.assertNotIn("290017500000000", self._texte_pdf(p))
+        ActionInsertion.objects.filter(pk=self.action.pk).update(fiche_avec_nir=True)
+        p.action.refresh_from_db()
+        self.assertIn("290017500000000", self._texte_pdf(p))
