@@ -2,6 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load ged_tags %} {# IMPORTANT : Chargement des tags pour le badge #}
+{% load capacites %}
 
 {% block title %}{{ beneficiaire.nom }} {{ beneficiaire.prenom }} - SI-DITAS{% endblock %}
 
@@ -135,6 +136,12 @@
            class="inline-flex items-center px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition text-sm">
             <i class="fas fa-file-contract mr-2"></i>Parcours RSA
         </a>
+        {% if request.user.is_superuser or request.user|peut:"voir_journal_activite" %}
+        <a href="{% url 'core:journal_activite' %}?beneficiaire={{ beneficiaire.code_interne }}" id="lien-journal"
+           class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition text-sm" title="Qui a consulté, modifié ou exporté ce dossier">
+            <i class="fas fa-shoe-prints mr-2"></i>Journal du dossier
+        </a>
+        {% endif %}
         {% for ip in ips_famille %}
         <a href="{% url 'protection_enfance:ip_detail' ip.numero %}"
            class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"

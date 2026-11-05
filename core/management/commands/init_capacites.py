@@ -57,6 +57,7 @@ CAPACITES = [
     ('ip_evaluer', "IP – Peut faire partie d'un binôme d'évaluation"),
     ('afase_controle', 'AFASE – UAGAF, unité administrative de gestion des aides financières (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
     # --- RSA – INSERTION ---
+    ('voir_journal_activite', "Consulter le journal d'activité des dossiers de sa MDS (consultations, modifications, exports)"),
     ('rsa_referentiel', "RSA – Gérer le référentiel départemental des actions d'insertion (saisie, import CSV)"),
     ('rsa_actions_locales', "RSA – Gérer les actions d'insertion locales de sa MDS"),
     ('rsa_pole_admin', "RSA – Administratif du pôle insertion (réception des contrats, délais)"),

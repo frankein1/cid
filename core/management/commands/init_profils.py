@@ -25,7 +25,7 @@ class Command(BaseCommand):
             'peut_gestion_aides_aidfi', 'peut_valider_cheque_aidfi',
             'peut_consulter_tous_usagers',
             'ip_piloter',
-            'rsa_actions_locales',
+            'rsa_actions_locales', 'voir_journal_activite',
         ]
 
         PROFILS = [

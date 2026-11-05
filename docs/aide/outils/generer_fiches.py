@@ -20,7 +20,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
-         'file-active', 'statistiques-rsa']
+         'file-active', 'statistiques-rsa', 'journal-activite']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -30,6 +30,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                                            'regie-demander', 'regie-decider']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
+             ("Protection des données", ['journal-activite']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
                                   'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
                                   'prescription-rediger', 'prescription-pole', 'prescription-suivi',
@@ -85,6 +86,7 @@ TITRES = {
     'organismes-reorientation': ("Organismes de réorientation", "Pôle insertion"),
     'file-active': ("La file active RSA", "Référents, cadres, pôles insertion"),
     'statistiques-rsa': ("Les statistiques RSA", "Référents, cadres, pôles insertion"),
+    'journal-activite': ("Le journal d'activité : qui a consulté un dossier", "Cadres de MDS, administrateurs"),
 }
 
 
@@ -1071,6 +1073,22 @@ page('statistiques-rsa', qui="Référents, cadres de MDS, agents des pôles inse
      ],
      savoir=["Les alertes cliquables renvoient vers la file active filtrée."],
      ensuite=['file-active'])
+
+page('journal-activite', qui="Cadres de MDS (dossiers de leur MDS), super-administrateurs (tout)", ou="Fiche de l'usager → Journal du dossier, ou menu Cadre → Journal d'activité", duree="2 minutes",
+     intro="CID note qui consulte, modifie, exporte ou télécharge un dossier, et les connexions : en cas de question d'un usager ou de doute, on sait qui a fait quoi.",
+     etapes=[
+         ("Ouvrir le journal d'un dossier", [fig('journal-activite', '01', "« Journal du dossier » sur la fiche de l'usager.")],
+          ["Sur la fiche de l'usager, cliquez sur <span class=\"clic\">Journal du dossier</span> (visible des cadres et des administrateurs)."], []),
+         ("Lire le journal", [fig('journal-activite', '02', "Consultations, modifications avec l'avant / après, exports.")],
+          ["Chaque ligne : la date, l'agent, l'action (consultation, création, modification, suppression, export, téléchargement) et le détail.",
+           "Une modification montre l'<b>avant / après</b> des champs modifiés ; les champs sensibles (n° de sécurité sociale…) ne sont jamais recopiés."], []),
+         ("Chercher et exporter", [fig('journal-activite', '03', "Les filtres.")],
+          ["Filtrez par usager, agent, action et période (les 30 derniers jours par défaut). <span class=\"clic\">Exporter (CSV)</span> reprend la sélection."], []),
+     ],
+     savoir=["Le journal est conservé 12 mois, puis effacé automatiquement (durée réglable : clé JOURNAL_DUREE_MOIS de la configuration).",
+             "Une même page rouverte par le même agent dans les 10 minutes n'est notée qu'une fois.",
+             "Un cadre ne voit que ce qui touche aux dossiers de sa MDS."],
+     ensuite=['beneficiaire-modifier'])
 
 # =============================================================================
 # Sommaire

@@ -135,6 +135,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.utilisateur_courant.CurrentUserMiddleware',  # auteur des modifications (AuditedMixin)
+    'core.journal.JournalConsultationMiddleware',  # journal d'activité : consultations, exports
     'core.middleware_mot_de_passe.ChangementMotDePasseObligatoire',  # mot de passe provisoire à changer
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
