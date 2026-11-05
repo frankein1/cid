@@ -29,11 +29,16 @@ app = OauthApplication.create!(name: "CID (essai)", uid: "cid-essai", secret: "s
 jeton = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: agent.id, scopes: "write",
                                         expires_in: 7200, use_refresh_token: true)
 
+app.reload
+puts "Diagnostic OAuth : application retrouvée par identifiant + secret = " \
+     "#{Doorkeeper.config.application_model.by_uid_and_secret('cid-essai', 'secret-essai').present?}, " \
+     "confidentielle = #{app.confidential}, jeton rattaché = #{jeton.application_id == app.id}"
+
 donnees = {
   territory_id: territory.id, organisation_id: orga.id, service_id: service.id,
   agent_id: agent.id, agent_email: agent.email,
   jeton: jeton.plaintext_token, jeton_renouvellement: jeton.plaintext_refresh_token,
-  client_id: app.uid, client_secret: app.plaintext_secret || "secret-essai",
+  client_id: app.uid, client_secret: "secret-essai",
 }
 File.write(ENV.fetch("SEED_JSON"), JSON.pretty_generate(donnees))
 puts "Données fictives créées : organisation #{orga.id}, agent #{agent.id}"

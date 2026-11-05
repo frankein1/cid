@@ -239,9 +239,13 @@ def main():
 
     @etape("13. Renouveler le jeton OAuth")
     def e13():
-        r = requests.post(f"{MRS}/oauth/token", data={
-            "grant_type": "refresh_token", "refresh_token": SEED["jeton_renouvellement"],
-            "client_id": SEED["client_id"], "client_secret": SEED["client_secret"]}, timeout=30)
+        corps = {"grant_type": "refresh_token", "refresh_token": SEED["jeton_renouvellement"]}
+        r = requests.post(f"{MRS}/oauth/token", timeout=30,
+                          data={**corps, "client_id": SEED["client_id"], "client_secret": SEED["client_secret"]})
+        if r.status_code != 200:   # authentification du client par l'en-tête HTTP Basic
+            print("   paramètres refusés :", r.text[:300], flush=True)
+            r = requests.post(f"{MRS}/oauth/token", data=corps, timeout=30,
+                              auth=(SEED["client_id"], SEED["client_secret"]))
         nouveau = r.json().get("access_token") if r.status_code == 200 else None
         c = appel("GET", "/agents/me", jeton=nouveau)[0] if nouveau else 0
         noter("13. Renouveler le jeton OAuth", r.status_code == 200 and c == 200,
