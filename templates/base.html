@@ -159,6 +159,7 @@
         <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">Paramétrage</div>
         <a href="{% url 'mds:liste_mds' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-user-shield mr-2 w-4"></i>Comptes & droits</a>
         <a href="{% url 'admin:index' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-gears mr-2 w-4"></i>Administration de CID</a>
+        <a href="{% url 'core:journal_activite' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-shoe-prints mr-2 w-4"></i>Journal d'activité</a>
         <a href="{% url 'admin:core_modelecourrier_changelist' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-envelope-open-text mr-2 w-4"></i>Modèles de courriers</a>
         <a href="{% url 'AidFi:referentiel_afase' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-compass mr-2 w-4"></i>Référentiel AFASE</a>
         <a href="{% url 'AidFi:referentiel_afase' %}#import" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 pl-10">↳ Importer (JSON)</a>
@@ -225,6 +226,12 @@
            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
             🧭 Référentiel AFASE
         </a>
+        {% if user|a_la_capacite:'voir_journal_activite' %}
+        <a href="{% url 'core:journal_activite' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            👣 Journal d'activité
+        </a>
+        {% endif %}
 
         {# Placeholder futur #}
         <a href="#"
@@ -350,6 +357,7 @@
                 <a href="{% url 'planning:statistiques' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">📊 Statistiques</a>
                 {% endif %}
                 <a href="{% url 'AidFi:referentiel_afase' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">🧭 Référentiel AFASE</a>
+                {% if user|a_la_capacite:'voir_journal_activite' %}<a href="{% url 'core:journal_activite' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">👣 Journal d'activité</a>{% endif %}
                 {% endif %}
             </div>
             {% endif %}

@@ -1,0 +1,47 @@
+<!-- templates/core/journal_activite.html -->
+{% extends "base.html" %}
+{% block title %}Journal d'activité{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-5">
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-shoe-prints text-blue-700 mr-2"></i>Journal d'activité</h1>
+            <p class="text-sm text-gray-500">{% if beneficiaire %}Dossier de <b>{{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</b> ({{ beneficiaire.code_interne }}) : qui l'a consulté, modifié ou exporté.{% else %}Consultations, modifications, exports et connexions{% if not tout %} pour les dossiers de vos MDS{% endif %}.{% endif %}
+                Conservé 12 mois, puis effacé automatiquement.</p>
+        </div>
+        <a href="?{{ requete }}{% if requete %}&{% endif %}export=csv" id="export-csv" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-csv mr-1 text-green-700"></i>Exporter (CSV)</a>
+    </div>
+    <form method="get" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end text-sm" id="filtres">
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Usager (code)</label><input type="text" name="beneficiaire" value="{{ f.beneficiaire }}" placeholder="ex. FAM5-SAR" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Agent</label><input type="text" name="agent" value="{{ f.agent }}" placeholder="nom ou identifiant" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Action</label><select name="action" class="px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for code, lib in actions %}<option value="{{ code }}"{% if code == f.action %} selected{% endif %}>{{ lib }}</option>{% endfor %}</select></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Du</label><input type="date" name="du" value="{{ du|date:'Y-m-d' }}" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Au</label><input type="date" name="au" value="{{ au|date:'Y-m-d' }}" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        <button class="px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800"><i class="fas fa-filter mr-1"></i>Filtrer</button>
+    </form>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto" id="tableau-journal">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">Agent</th><th class="px-3 py-2 text-left">Action</th><th class="px-3 py-2 text-left">Usager</th><th class="px-3 py-2 text-left">Détail</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for l in page_obj %}
+            <tr class="align-top">
+                <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ l.timestamp|date:"d/m/Y H:i:s" }}</td>
+                <td class="px-3 py-2">{{ l.utilisateur_nom|default:l.utilisateur.username|default:"—" }}</td>
+                <td class="px-3 py-2"><span class="px-2 py-0.5 rounded text-xs font-semibold {% if l.action == 'READ' %}bg-blue-50 text-blue-800{% elif l.action == 'CREATE' %}bg-green-100 text-green-800{% elif l.action == 'UPDATE' %}bg-amber-100 text-amber-800{% elif l.action == 'DELETE' or l.action == 'LOGIN_FAILED' %}bg-red-100 text-red-800{% elif l.action == 'EXPORT' or l.action == 'DOWNLOAD' %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-700{% endif %}">{{ l.get_action_display }}</span></td>
+                <td class="px-3 py-2">{% if l.beneficiaire %}<a href="?beneficiaire={{ l.beneficiaire.code_interne }}" class="text-blue-700 hover:underline">{{ l.beneficiaire.nom|upper }} {{ l.beneficiaire.prenom }}</a>{% else %}—{% endif %}</td>
+                <td class="px-3 py-2">{{ l.description }}
+                    {% if l.details.changements %}<details class="mt-1"><summary class="text-xs text-gray-500 cursor-pointer">avant / après</summary>
+                        <ul class="text-xs text-gray-600">{% for champ, v in l.details.changements.items %}<li><b>{{ v.libelle|default:champ }}</b> : {{ v.avant|default:"(vide)" }} → {{ v.apres|default:"(vide)" }}</li>{% endfor %}</ul></details>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Rien sur cette période.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex gap-2 text-sm">{% if page_obj.has_previous %}<a href="?{{ requete }}&page={{ page_obj.previous_page_number }}" class="text-blue-700">← Plus récents</a>{% endif %}
+        <span class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{{ requete }}&page={{ page_obj.next_page_number }}" class="text-blue-700">Plus anciens →</a>{% endif %}</div>
+    {% endif %}
+    <p class="text-xs text-gray-500">Les valeurs des champs sensibles (n° de sécurité sociale, mots de passe…) ne sont jamais recopiées dans le journal. Une même page rouverte par le même agent dans les 10 minutes n'est notée qu'une fois.</p>
+</div>
+{% endblock %}

@@ -15,3 +15,9 @@ class CoreConfig(AppConfig):
     def ready(self):
         # On réactive l'importation des signaux
         import core.signals
+        # Journal d'activité : créations, modifications, suppressions, déconnexions
+        from django.contrib.auth.signals import user_logged_in, user_logged_out
+        from core import journal
+        journal.brancher_signaux()
+        user_logged_in.connect(journal.connexion, dispatch_uid="journal-connexion")
+        user_logged_out.connect(journal.deconnexion, dispatch_uid="journal-deconnexion")

@@ -19,6 +19,8 @@ from core.views import accompagnement
 
 app_name = 'core'
 
+from core.views import journal as journal_vues  # noqa: E402
+
 urlpatterns = [
     # ============================================================================
     # VUES PRINCIPALES (main.py)
@@ -57,6 +59,7 @@ urlpatterns = [
     path('mot-de-passe-oublie/', views.mot_de_passe_oublie, name='mot_de_passe_oublie'),
     path('mon-mot-de-passe/', views.changer_mot_de_passe, name='changer_mot_de_passe'),
     path('comptes/<int:user_id>/mot-de-passe/', views.reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe'),
+    path('journal-activite/', journal_vues.journal_activite, name='journal_activite'),
     path('aide/', views.aide, name='aide'),
     path('aide/<path:chemin>', views.aide, name='aide_fichier'),
 ]

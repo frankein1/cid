@@ -5,6 +5,7 @@
 # =============================================================================
 
 # core/models/audit.py
+# Journal d'activité des agents : voir core/journal.py (consultations, modifications, exports, connexions).
 
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
@@ -17,18 +18,21 @@ class AuditLog(models.Model):
     """
   
     ACTIONS = [
-        ('CREATE', 'Creation'),
+        ('CREATE', 'Création'),
         ('READ', 'Consultation'),
-        ('UPDATE', 'Update'),
-        ('DELETE', 'Deletion'),
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
-        ('EXPORT', 'Data export'),
-        ('PRINT', 'Print'),
+        ('UPDATE', 'Modification'),
+        ('DELETE', 'Suppression'),
+        ('LOGIN', 'Connexion'),
+        ('LOGIN_SUCCESS', 'Connexion'),
+        ('LOGIN_FAILED', 'Échec de connexion'),
+        ('LOGOUT', 'Déconnexion'),
+        ('EXPORT', 'Export'),
+        ('DOWNLOAD', 'Téléchargement'),
+        ('PRINT', 'Impression'),
         ('VALIDATE', 'Validation'),
-        ('REJECT', 'Rejection'),
-        ('SEND', 'Send'),
-        ('RECEIVE', 'Receive'),
+        ('REJECT', 'Rejet'),
+        ('SEND', 'Envoi'),
+        ('RECEIVE', 'Réception'),
     ]
     
     NIVEAUX = [
@@ -70,6 +74,12 @@ class AuditLog(models.Model):
     object_id = models.PositiveIntegerField(null=True, blank=True)
     objet_concerne = GenericForeignKey('content_type', 'object_id')
     
+    # Usager concerné (pour retrouver tout ce qui touche à un dossier), libellés gardés même après suppression
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='journal_activite')
+    utilisateur_nom = models.CharField(max_length=150, blank=True)
+    objet_libelle = models.CharField(max_length=255, blank=True)
+
     # Description
     description = models.TextField()
     
@@ -102,7 +112,10 @@ class AuditLog(models.Model):
             models.Index(fields=['action', '-timestamp']),
             models.Index(fields=['content_type', 'object_id']),
             models.Index(fields=['-timestamp']),
+            models.Index(fields=['beneficiaire', '-timestamp']),
         ]
+        verbose_name = "Journal d'activité"
+        verbose_name_plural = "Journal d'activité"
     
     def __str__(self):
         return f"{self.timestamp} - {self.utilisateur} - {self.get_action_display()}"
