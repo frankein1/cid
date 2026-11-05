@@ -381,3 +381,40 @@ class DocumentTypeUpdateView(LoginRequiredMixin, UpdateView):
         if not request.user.a_la_capacite('peut_administrer'):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
+
+
+# -----------------------------------------------------------------------------
+# État du chiffrement de la GED (super-administrateurs)
+# -----------------------------------------------------------------------------
+from django.contrib.auth.decorators import login_required, user_passes_test  # noqa: E402
+
+from . import chiffrement  # noqa: E402
+
+
+LOT_CHIFFREMENT = 50   # fichiers par clic (évite de dépasser le délai d'une requête web)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def etat_chiffrement(request):
+    g, erreur = None, None
+    try:
+        g = chiffrement.gestionnaire()
+    except chiffrement.ErreurChiffrement as e:
+        erreur = str(e)
+    if request.method == "POST" and g and g.actif:
+        from io import StringIO
+        from django.core.management import call_command
+        sortie, erreurs = StringIO(), StringIO()
+        try:
+            call_command("chiffrer_ged", max=LOT_CHIFFREMENT, stdout=sortie, stderr=erreurs)
+            messages.success(request, sortie.getvalue().strip())
+        except Exception as e:
+            messages.error(request, f"Chiffrement interrompu : {e}")
+        if erreurs.getvalue().strip():
+            messages.error(request, erreurs.getvalue().strip()[:500])
+        return redirect("ged:etat_chiffrement")
+    return render(request, "ged/etat_chiffrement.html", {
+        "actif": bool(g and g.actif), "gestionnaire": g.nom if g else "—", "cle_id": g.cle_id if g else "—",
+        "erreur": erreur, "algo": chiffrement.ALGO,
+    })

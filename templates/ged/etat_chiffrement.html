@@ -1,0 +1,28 @@
+<!-- /templates/ged/etat_chiffrement.html -->
+{% extends "base.html" %}
+{% block title %}Chiffrement de la GED{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-lock text-blue-600 mr-2"></i>Chiffrement des documents (GED)</h1>
+    <div id="etat-chiffrement" class="rounded-xl border p-5 {% if actif %}bg-green-50 border-green-200{% else %}bg-red-50 border-red-200{% endif %}">
+        {% if actif %}
+        <p class="font-semibold text-green-800"><i class="fas fa-lock mr-1"></i>Chiffrement actif</p>
+        <p class="text-sm text-green-900 mt-1">{{ algo }}, une clé par fichier. Gestionnaire de clés : <strong>{{ gestionnaire }}</strong>, clé maîtresse <code>{{ cle_id }}</code>.</p>
+        <p class="text-sm text-green-900 mt-2">Les fichiers déposés avant l'activation restent lisibles. Pour les chiffrer aussi :</p>
+        <form method="post" class="mt-2" id="form-chiffrer-anciens">
+            {% csrf_token %}
+            <button type="submit" class="px-4 py-2 bg-green-700 text-white rounded-lg text-sm hover:bg-green-800"><i class="fas fa-lock mr-1"></i>Chiffrer les fichiers existants (par lots de 50)</button>
+            <span class="text-xs text-green-900 ml-2">ou <code>python manage.py chiffrer_ged</code> sur le serveur</span>
+        </form>
+        {% else %}
+        <p class="font-semibold text-red-800"><i class="fas fa-lock-open mr-1"></i>Chiffrement inactif : les fichiers sont stockés en clair.</p>
+        {% if erreur %}<p class="text-sm text-red-900 mt-1">{{ erreur }}</p>{% endif %}
+        <p class="text-sm text-red-900 mt-2">Pour l'activer : générer une clé (<code>python manage.py cle_ged</code>), la recopier dans la variable d'environnement <code>GED_CLE_MAITRESSE</code> du serveur, puis lancer <code>python manage.py chiffrer_ged</code> pour les fichiers existants.</p>
+        {% endif %}
+    </div>
+    <p class="text-sm text-amber-900 bg-amber-50 border-l-4 border-amber-400 p-3 rounded">
+        <strong>Perdre la clé maîtresse, c'est perdre tous les documents chiffrés.</strong> Elle doit être sauvegardée hors de CID (coffre-fort de la DSI).
+        En production, préférer un gestionnaire de clés (OpenBao / Vault, <code>GED_KMS=openbao</code>). Voir docs/CHIFFREMENT_GED.md.
+    </p>
+</div>
+{% endblock %}

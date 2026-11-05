@@ -11,6 +11,7 @@ from . import views
 app_name = 'ged'
 
 urlpatterns = [
+    path('chiffrement/', views.etat_chiffrement, name='etat_chiffrement'),
     # ==========================================================================
     # DOCUMENTS LIÉS À UN BÉNÉFICIAIRE (Contexte spécifique)
     # ==========================================================================

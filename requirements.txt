@@ -27,6 +27,11 @@ urllib3==2.8.0
 # Export iCalendar (.ics) pour Outlook
 icalendar==5.0.13
 
+# Chiffrement des fichiers de la GED (AES-256-GCM, ged/chiffrement.py)
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.0
+
 # Génération de PDF
 reportlab==5.1.0
 
