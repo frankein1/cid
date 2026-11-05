@@ -1,0 +1,8 @@
+<!-- templates/insertion/_barres.html -->
+{% for r in lignes %}
+<div class="flex items-center gap-2 text-sm py-0.5">
+    <span class="w-48 shrink-0 truncate" title="{{ r.libelle }}">{{ r.libelle }}</span>
+    <span class="flex-1 bg-gray-100 rounded h-3"><span class="block h-3 rounded {{ couleur|default:'bg-blue-600' }}" style="width: {{ r.part }}%"></span></span>
+    <span class="w-20 text-right tabular-nums">{{ r.nombre }} <span class="text-xs text-gray-500">({{ r.part }} %)</span></span>
+</div>
+{% empty %}<p class="text-sm text-gray-500">Aucune donnée sur la période.</p>{% endfor %}

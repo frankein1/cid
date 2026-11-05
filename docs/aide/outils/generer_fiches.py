@@ -19,7 +19,8 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
-         'reorientation-demander', 'commission-reorientation', 'organismes-reorientation']
+         'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
+         'file-active', 'statistiques-rsa']
 RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Bénéficiaires", ['beneficiaire-chercher', 'beneficiaire-creer', 'beneficiaire-famille',
                                 'beneficiaire-modifier', 'beneficiaire-transferer', 'beneficiaire-sortie']),
@@ -33,7 +34,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                   'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
                                   'prescription-rediger', 'prescription-pole', 'prescription-suivi',
                                   'action-questions', 'reorientation-demander', 'commission-reorientation',
-                                  'organismes-reorientation'])]
+                                  'organismes-reorientation', 'file-active', 'statistiques-rsa'])]
 
 
 def rubrique(slug):
@@ -82,6 +83,8 @@ TITRES = {
     'reorientation-demander': ("Demander une réorientation", "Référent de MDS"),
     'commission-reorientation': ("Préparer et tenir la commission de réorientation", "Pôle insertion : administratif et cadre"),
     'organismes-reorientation': ("Organismes de réorientation", "Pôle insertion"),
+    'file-active': ("La file active RSA", "Référents, cadres, pôles insertion"),
+    'statistiques-rsa': ("Les statistiques RSA", "Référents, cadres, pôles insertion"),
 }
 
 
@@ -1036,10 +1039,43 @@ page('organismes-reorientation', qui="Pôles insertion", ou="RSA – Insertion �
      savoir=["La liste est conservée par la remise à zéro de démonstration."],
      ensuite=['commission-reorientation'])
 
+page('file-active', qui="Référents, cadres de MDS, agents des pôles insertion", ou="RSA – Insertion → File active et statistiques → File active", duree="2 minutes",
+     intro="La file active réunit, dans votre périmètre, toutes les personnes suivies au titre du RSA, avec leurs alertes : plus de tableau Excel tenu à la main.",
+     etapes=[
+         ("Ouvrir la file active", [fig('file-active', '01', "La tuile « File active et statistiques »."),
+                                    fig('file-active', '02', "Une ligne par personne.")],
+          ["Chacun voit son périmètre : le référent sa file active, le cadre sa MDS, le pôle les MDS de son pôle.",
+           "Pour chaque personne : le contrat (en vigueur, sinon le dernier), son échéance, les actions en cours et les <b>alertes</b> (sans contrat en vigueur, à renouveler, échu, validé sauf action, en cours de validation, ajourné, réorientation inscrite)."], []),
+         ("Filtrer", [fig('file-active', '03', "Les filtres.")],
+          ["Par nom, MDS, référent, commune, nature du contrat ou alerte. « Personnes réorientées » montre celles qui ont quitté la file active (France Travail, CAF, association)."], []),
+         ("Exporter", [fig('file-active', '04', "L'export CSV.")],
+          ["<span class=\"clic\">Exporter (CSV)</span> reprend la liste filtrée. Le fichier (séparateur « ; », UTF-8) s'ouvre dans LibreOffice, Excel ou tout autre outil."], []),
+     ],
+     savoir=["La file active ne demande aucune saisie : elle vient des contrats, des prescriptions et des réorientations.",
+             "Les agents du pôle voient le contrat, pas le reste du dossier social."],
+     ensuite=['statistiques-rsa', 'contrat-renouveler'])
+
+page('statistiques-rsa', qui="Référents, cadres de MDS, agents des pôles insertion", ou="RSA – Insertion → File active et statistiques → Statistiques", duree="2 minutes",
+     intro="Les chiffres du RSA, sans saisie : contractualisation, décisions, délais, prescriptions, réorientations, dans votre périmètre et sur la période choisie.",
+     etapes=[
+         ("Les indicateurs", [fig('statistiques-rsa', '01', "File active, contractualisation, délais.")],
+          ["<b>Taux de contractualisation</b> : part de la file active qui a un contrat en vigueur aujourd'hui.",
+           "<b>Délais</b> moyens : de la transmission à la réception par le pôle, puis de la réception à la décision.",
+           "Choisissez la période (par défaut, depuis le 1er janvier) et, si besoin, une MDS."], []),
+         ("Par MDS et par action", [fig('statistiques-rsa', '02', "Comparaison des MDS."),
+                                    fig('statistiques-rsa', '03', "Prescriptions et taux d'intégration par action.")],
+          ["Pour le pôle et le département : file active, contrats en vigueur, contractualisation, renouvellements et échus par MDS.",
+           "Par action : prescriptions, intégrations, non-intégrations et <b>taux d'intégration</b> ; freins relevés et sorties d'action ; décisions de la commission, aide aux transports, contrats santé ; réorientations décidées et vers qui."], []),
+         ("Exporter", [fig('statistiques-rsa', '04', "L'export CSV.")],
+          ["<span class=\"clic\">Exporter (CSV)</span> rassemble tous les tableaux en une liste « section ; libellé ; nombre ; part », facile à retravailler dans un tableur."], []),
+     ],
+     savoir=["Les alertes cliquables renvoient vers la file active filtrée."],
+     ensuite=['file-active'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – comités de suivi technique et statistiques", "Enfance", "Logement"])
+                  ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance", "Logement"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

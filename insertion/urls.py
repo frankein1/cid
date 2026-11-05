@@ -6,7 +6,7 @@
 # insertion/urls.py
 from django.urls import path
 
-from insertion import views, views_contrats as vc, views_prescriptions as vp, views_reorientation as vr
+from insertion import views, views_contrats as vc, views_prescriptions as vp, views_reorientation as vr, views_stats as vs
 
 app_name = 'insertion'
 
@@ -60,4 +60,7 @@ urlpatterns = [
     path('commissions/<int:pk>/cloturer/', vr.commission_cloturer, name='commission_cloturer'),
     path('commissions/<int:pk>/<str:document>.pdf', vr.commission_pdf, name='commission_pdf'),
     path('organismes/', vr.organismes, name='organismes'),
+    # File active et statistiques
+    path('file-active/', vs.file_active, name='file_active'),
+    path('statistiques/', vs.statistiques, name='statistiques'),
 ]

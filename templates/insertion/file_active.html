@@ -1,0 +1,54 @@
+<!-- templates/insertion/file_active.html -->
+{% extends "base.html" %}
+{% block title %}File active RSA{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-5">
+    <a href="{% url 'insertion:accueil' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>RSA – Insertion</a>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-users-viewfinder text-blue-700 mr-2"></i>File active RSA</h1>
+            <p class="text-sm text-gray-500">Périmètre : <b>{{ perimetre.libelle }}</b> · {{ nb }} personne{{ nb|pluralize }}{% if nb != nb_total %} sur {{ nb_total }}{% endif %}{% if reorientes %} réorientée{{ nb|pluralize }}{% endif %}.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="?{{ requete }}{% if requete %}&{% endif %}export=csv" id="export-csv" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-csv mr-1 text-green-700"></i>Exporter (CSV)</a>
+            <a href="{% url 'insertion:statistiques' %}" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-chart-column mr-1 text-blue-700"></i>Statistiques</a>
+        </div>
+    </div>
+    <form method="get" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 grid md:grid-cols-4 lg:grid-cols-7 gap-3 text-sm items-end" id="filtres">
+        <div class="lg:col-span-2"><label class="block text-xs font-semibold text-gray-600 mb-1">Recherche</label><input type="text" name="q" value="{{ f.q }}" placeholder="Nom, prénom, code" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+        {% if mds_liste|length > 1 %}<div><label class="block text-xs font-semibold text-gray-600 mb-1">MDS</label><select name="mds" class="w-full px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for m in mds_liste %}<option value="{{ m.pk }}"{% if m.pk == mds_choisie %} selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select></div>{% endif %}
+        {% if not perimetre.est_referent %}<div><label class="block text-xs font-semibold text-gray-600 mb-1">Référent</label><select name="referent" class="w-full px-3 py-2 border border-gray-300 rounded-lg"><option value="">Tous</option>{% for r in referents %}<option value="{{ r.pk }}"{% if r.pk|stringformat:"s" == f.referent %} selected{% endif %}>{{ r.get_full_name|default:r.username }}</option>{% endfor %}</select></div>{% endif %}
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Commune</label><select name="ville" class="w-full px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for v in villes %}<option{% if v == f.ville %} selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Nature du contrat</label><select name="nature" class="w-full px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for code, lib in natures %}<option value="{{ code }}"{% if code == f.nature %} selected{% endif %}>{{ lib }}</option>{% endfor %}</select></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Alerte</label><select name="alerte" class="w-full px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for code, lib in alertes.items %}<option value="{{ code }}"{% if code == f.alerte %} selected{% endif %}>{{ lib }}</option>{% endfor %}</select></div>
+        <div class="flex flex-col gap-2"><label class="flex items-center gap-2 text-xs"><input type="checkbox" name="reorientes" value="1"{% if reorientes %} checked{% endif %}> Personnes réorientées</label>
+            <button class="px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800"><i class="fas fa-filter mr-1"></i>Filtrer</button></div>
+    </form>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto" id="tableau-file-active">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr>
+                <th class="px-3 py-2 text-left">Personne</th><th class="px-3 py-2 text-left">MDS · référent</th><th class="px-3 py-2 text-left">Contrat</th>
+                <th class="px-3 py-2 text-left">Échéance</th><th class="px-3 py-2 text-left">Actions en cours</th><th class="px-3 py-2 text-left">Alertes</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">
+            {% for l in page_obj %}
+            <tr class="hover:bg-gray-50 align-top">
+                <td class="px-3 py-2">{% if perimetre.voit_dossiers %}<a href="{% url 'insertion:contrats_beneficiaire' l.beneficiaire.code_interne %}" class="text-blue-700 font-semibold hover:underline">{{ l.beneficiaire.nom|upper }} {{ l.beneficiaire.prenom }}</a>{% else %}{{ l.beneficiaire.nom|upper }} {{ l.beneficiaire.prenom }}{% endif %}<br><span class="text-xs text-gray-500">{{ l.beneficiaire.ville }}</span></td>
+                <td class="px-3 py-2">{{ l.mds.nom }}<br><span class="text-xs text-gray-500">{{ l.referent.get_full_name|default:l.referent.username }}</span></td>
+                <td class="px-3 py-2">{% if l.contrat %}<a href="{% url 'insertion:contrat_detail' l.contrat.pk %}" class="text-blue-700 hover:underline">{{ l.contrat.numero }}</a><br><span class="text-xs text-gray-500">{{ l.contrat.get_statut_display }} · {{ l.contrat.get_nature_display }}</span>{% else %}<span class="text-gray-400">aucun</span>{% endif %}</td>
+                <td class="px-3 py-2">{% if l.en_vigueur %}{{ l.en_vigueur.date_fin|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+                <td class="px-3 py-2">{% for p in l.prescriptions_en_cours %}<a href="{% url 'insertion:prescription_detail' p.pk %}" class="block text-xs text-blue-700 hover:underline">{{ p.action.libelle }}</a>{% empty %}<span class="text-gray-400">—</span>{% endfor %}</td>
+                <td class="px-3 py-2">{% for a in l.alertes %}<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded text-xs {% if a == 'expire' or a == 'sans_contrat' %}bg-red-100 text-red-800{% elif a == 'renouveler' %}bg-amber-100 text-amber-800{% elif a == 'reorientation' %}bg-orange-100 text-orange-800{% else %}bg-blue-50 text-blue-800{% endif %}">{% for code, lib in alertes.items %}{% if code == a %}{{ lib }}{% endif %}{% endfor %}</span>{% endfor %}
+                    {% if l.reoriente %}<span class="inline-block px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-900">réorientée : {{ l.reoriente.organisme_retenu }} ({{ l.reoriente.date_effet|date:"d/m/Y" }})</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Personne dans ce périmètre.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="flex gap-2 text-sm">{% if page_obj.has_previous %}<a href="?{{ requete }}&page={{ page_obj.previous_page_number }}" class="text-blue-700">← Précédents</a>{% endif %}
+        <span class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{{ requete }}&page={{ page_obj.next_page_number }}" class="text-blue-700">Suivants →</a>{% endif %}</div>
+    {% endif %}
+    <p class="text-xs text-gray-500">File active : personnes qui ont un contrat ou une prescription adressée, sauf celles réorientées (France Travail, CAF, association) depuis la date d'effet. L'export CSV (séparateur « ; », UTF-8) reprend les filtres choisis et s'ouvre dans LibreOffice, Excel ou tout autre outil.</p>
+</div>
+{% endblock %}
