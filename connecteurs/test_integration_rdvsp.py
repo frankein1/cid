@@ -50,7 +50,8 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
         self.seed = json.load(open(os.environ["SEED_JSON"]))
         self.env = mock.patch.dict(os.environ, {
             "RDVSP_ACTIF": "1", "RDVSP_URL": "http://localhost:3000", "RDVSP_CLIENT_ID": self.seed["client_id"],
-            "RDVSP_CLIENT_SECRET": self.seed["client_secret"], "RDVSP_SECRET_AVIS": "secret-avis-integration"})
+            "RDVSP_CLIENT_SECRET": self.seed["client_secret"], "RDVSP_SECRET_AVIS": "secret-avis-integration",
+            "RDVSP_PREFIXE": "cid-essai"})   # la sonde a déjà pris les références « cid-… »
         self.env.start()
         self.addCleanup(self.env.stop)
         self.mds = MDS.objects.create(code_mds="T2", nom="MDS TEST 02", adresse="2 rue des Essais", code_postal="13110",

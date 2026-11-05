@@ -65,7 +65,7 @@ def signer(corps):
 
 
 @mock.patch.dict(os.environ, ENV)
-class SynchroTests(TestCase):
+class _Base(TestCase):
     @classmethod
     def setUpTestData(cls):
         for cmd in ("init_capacites", "init_profils"):
@@ -98,7 +98,7 @@ class SynchroTests(TestCase):
         self.mrs = FauxMRS()
         self.p = mock.patch.object(api.Client, "appel", autospec=True, side_effect=self.mrs)
         self.p.start()
-        self.addCleanup(self.p.stop)
+        self.addCleanup(lambda: self.p.stop())   # self.p peut être remplacé par une sous-classe
 
     def publier(self):
         with self.captureOnCommitCallbacks(execute=True):
@@ -107,6 +107,9 @@ class SynchroTests(TestCase):
     def lundi_publie(self):
         return PlageRDVSP.objects.get().premier_jour
 
+
+@mock.patch.dict(os.environ, ENV)
+class SynchroTests(_Base):
     # --- 1. Publication -------------------------------------------------------
     def test_publication(self):
         b = self.publier()
@@ -281,3 +284,33 @@ class DesactiveeTests(TestCase):
         r = Client(HTTP_HOST="localhost").post(reverse("connecteurs:rdvsp_avis"), b"{}",
                                                content_type="application/json", HTTP_X_LAPIN_SIGNATURE=signer(b"{}"))
         self.assertEqual(r.status_code, 404)
+
+
+@mock.patch.dict(os.environ, ENV)
+class ReprisesTests(_Base):
+    """Base CID réinitialisée : lieu et motif existent déjà dans RDV-Solidarités sous la même référence."""
+    def setUp(self):
+        super().setUp()
+        def deja(client, methode, chemin, **kw):
+            if methode == "POST" and chemin in ("/lieux", "/motifs"):
+                raise api.RDVSPErreur("RDV Service Public a refusé la demande (422) : external_id est déjà utilisé")
+            if chemin == "/lieux":
+                return {"lieux": [{"id": 41, "name": "Autre", "organisation_id": 7},
+                                  {"id": 42, "name": "MDS Essai", "organisation_id": 7}]}
+            if chemin == "/organisations/7/motifs":
+                return {"motifs": [{"id": 43, "name": "Renouvellement RSA", "organisation_id": 7}]}
+            return self.mrs(client, methode, chemin, **kw)
+        self.p.stop()
+        self.p = mock.patch.object(api.Client, "appel", autospec=True, side_effect=deja)
+        self.p.start()
+
+    def test_reprise_de_l_existant(self):
+        b = self.publier()
+        self.assertEqual((b["publiees"], b["erreurs"]), (1, []))
+        self.assertEqual(MdsRDVSP.objects.get(mds=self.mds).lieu_sp_id, 42)
+        from connecteurs.models import MotifRDVSPPublie
+        self.assertEqual(MotifRDVSPPublie.objects.get().motif_sp_id, 43)
+
+    def test_prefixe(self):
+        with mock.patch.dict(os.environ, {"RDVSP_PREFIXE": "cid13-demo"}):
+            self.assertEqual(MdsRDVSP.objects.get(mds=self.mds).reference_lieu, f"cid13-demo-mds-{self.mds.pk}")

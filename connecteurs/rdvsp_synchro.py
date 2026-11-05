@@ -35,7 +35,7 @@ from django.utils.dateparse import parse_datetime
 
 from . import rdv_service_public as api
 from .models import (AbsenceRDVSP, AppelRDVSP, AvisRDVSP, LienUsagerRDVSP, MdsRDVSP, MotifRDVSP,
-                     MotifRDVSPPublie, ParametresRDVSP, PlageRDVSP, RdvRDVSP)
+                     MotifRDVSPPublie, ParametresRDVSP, PlageRDVSP, RdvRDVSP, prefixe_references)
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,11 @@ def publier_lieu_et_motifs(c, mds_sp):
             corps.update(latitude=float(mds.latitude), longitude=float(mds.longitude))
         else:
             corps["address_without_geocoding"] = True
-        lieu = _corps(c.appel("POST", "/lieux", json=corps), "lieu")
+        try:
+            lieu = _corps(c.appel("POST", "/lieux", json=corps), "lieu")
+        except api.RDVSPErreur as e:
+            # Déjà créé (base CID réinitialisée…) : on reprend le lieu existant de l'organisation, par son nom
+            lieu = _deja_cree(e, c.get("/lieux").get("lieux", []), mds_sp, mds.nom)
         mds_sp.lieu_sp_id = lieu["id"]
         mds_sp.save(update_fields=["lieu_sp_id"])
     for motif in MotifRDVSP.objects.filter(actif=True):
@@ -118,8 +122,22 @@ def publier_lieu_et_motifs(c, mds_sp):
         }
         if p.service_sp_id:
             corps["service_id"] = p.service_sp_id
-        m = _corps(c.appel("POST", "/motifs", json=corps), "motif")
+        try:
+            m = _corps(c.appel("POST", "/motifs", json=corps), "motif")
+        except api.RDVSPErreur as e:
+            existants = c.get(f"/organisations/{mds_sp.organisation_sp_id}/motifs").get("motifs", [])
+            m = _deja_cree(e, existants, mds_sp, motif.nom)
         MotifRDVSPPublie.objects.create(motif=motif, mds_sp=mds_sp, motif_sp_id=m["id"])
+
+
+def _deja_cree(erreur, existants, mds_sp, nom):
+    if "déjà utilisé" not in str(erreur) and "already" not in str(erreur):
+        raise erreur
+    for x in existants:
+        if x.get("name") == nom and x.get("organisation_id") in (None, mds_sp.organisation_sp_id):
+            return x
+    raise SynchroErreur(f"{nom} : référence déjà utilisée dans RDV-Solidarités, mais introuvable dans "
+                        f"l'organisation {mds_sp.organisation_sp_id} (préfixe RDVSP_PREFIXE à changer ?).")
 
 
 def _prochain(jour, jour_semaine):
@@ -147,7 +165,7 @@ def _publier_plage(c, dj, debut, semaines):
         "first_day": premier.isoformat(), "start_time": dj.heure_debut.strftime("%H:%M"),
         "end_time": dj.heure_fin.strftime("%H:%M"), "lieu_external_id": mds_sp.reference_lieu,
         "motif_external_ids": motifs, "recurrence": json.dumps(recurrence),
-        "external_reference": {"external_id": f"cid-dj-{dj.pk}-{premier.isoformat()}"},
+        "external_reference": {"external_id": f"{prefixe_references()}-dj-{dj.pk}-{premier.isoformat()}"},
     })
     plage = _corps(reponse, "plage_ouverture")
     return PlageRDVSP.objects.create(

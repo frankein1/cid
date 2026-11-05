@@ -142,6 +142,16 @@ class AppelRDVSP(models.Model):
 # CID est l'agenda maître : il publie ses demi-journées de réception, bloque ce qui est pris chez lui,
 # et reçoit les RDV pris en ligne. Rien ne se passe tant que la passerelle n'est pas activée.
 # -----------------------------------------------------------------------------
+def prefixe_references():
+    """
+    Préfixe des références CID envoyées à RDV-Solidarités (lieux, motifs, permanences). RDV-Solidarités refuse
+    une référence déjà utilisée par la même application : chaque serveur CID (démo, production…) qui partage
+    les mêmes identifiants OAuth doit avoir son propre préfixe (variable RDVSP_PREFIXE, défaut « cid »).
+    """
+    import os
+    return os.environ.get("RDVSP_PREFIXE", "").strip() or "cid"
+
+
 class ParametresRDVSP(models.Model):
     """Réglages de la synchronisation (une seule ligne)."""
     compte_synchro = models.ForeignKey(
@@ -183,7 +193,7 @@ class MdsRDVSP(models.Model):
 
     @property
     def reference_lieu(self):
-        return f"cid-mds-{self.mds_id}"
+        return f"{prefixe_references()}-mds-{self.mds_id}"
 
 
 class MotifRDVSP(models.Model):
@@ -206,7 +216,7 @@ class MotifRDVSP(models.Model):
         return self.nom
 
     def reference(self, mds_sp):
-        return f"cid-motif-{self.pk}-mds-{mds_sp.mds_id}"
+        return f"{prefixe_references()}-motif-{self.pk}-mds-{mds_sp.mds_id}"
 
 
 class MotifRDVSPPublie(models.Model):
