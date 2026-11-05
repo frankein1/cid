@@ -31,7 +31,7 @@ def _rails(*args):
     p = subprocess.run(["bin/rails", "runner", "../.github/rdvsp/agir.rb", *map(str, args)],
                        cwd=os.environ["MRS_DIR"], capture_output=True, text=True, timeout=240)
     if p.returncode:
-        raise RuntimeError(p.stderr[-800:])
+        raise RuntimeError(p.stderr[:700] + " … " + p.stderr[-300:])
     return json.loads(p.stdout.strip().splitlines()[-1])
 
 
