@@ -19,6 +19,7 @@ La démonstration ne contient que des données fictives (voir `DONNEES_FICTIVES.
 
 - **Journal d'activité** (`JOURNAL_ACTIVITE.md`) : qui a consulté, modifié ou exporté un dossier ; conservé 12 mois.
 - **Archivage RGPD** (`RGPD_ARCHIVAGE.md`) : dossiers inactifs depuis 3 ans proposés à l'archivage (jamais les dossiers IP ou enfance), masqués et en lecture seule, effacés seulement sur décision d'un administrateur.
+- **Chiffrement des documents** (`CHIFFREMENT_GED.md`) : chaque fichier de la GED est chiffré (AES-256-GCM, une clé par fichier) ; la clé maîtresse est confiée à la DSI (variable d'environnement ou gestionnaire de clés OpenBao / Vault). Désactivé sur la démo.
 
 ## Échanges avec d'autres services
 
