@@ -13,3 +13,4 @@ venv/
 commandes
 *.token
 *.secret
+.venv-openfisca

@@ -1,0 +1,7 @@
+# requirements-openfisca.txt
+# Moteur de simulation des droits OpenFisca, installé dans un ENVIRONNEMENT SÉPARÉ (.venv-openfisca) :
+# ses dépendances (gunicorn < 23, Flask…) sont incompatibles avec celles de CID (requirements.txt).
+#   python -m venv .venv-openfisca && .venv-openfisca/bin/pip install -r requirements-openfisca.txt
+# Mise à jour : remplacer la version par la dernière publiée sur pypi.org/project/openfisca-france
+# (la législation évolue ; publication plusieurs fois par mois).
+openfisca-france==176.1.10
