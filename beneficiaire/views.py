@@ -23,6 +23,7 @@ from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 
 from messagerie.models import Message
+from connecteurs.simulation_droits import disponible as simulation_disponible
 
 from .forms import (
     BeneficiaireForm,
@@ -258,6 +259,8 @@ def detail_beneficiaire(request, code_interne):
                 beneficiaire=beneficiaire
             ).select_related('expediteur', 'destinataire')[:10],
             "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],
+            # Simulation des droits (OpenFisca) : bouton affiché si le moteur est installé
+            "simulation_disponible": simulation_disponible(),
             # Situation CAF/MSA et France Travail (API Particulier) : agents de la MDS uniquement
             "situation_externe": tableau_situations(beneficiaire),
             # Passerelle RDV Service Public : bouton affiché seulement si elle est activée

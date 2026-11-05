@@ -6,11 +6,12 @@
 # connecteurs/urls.py
 from django.urls import path
 
-from . import views
+from . import views, views_simulation
 
 app_name = 'connecteurs'
 
 urlpatterns = [
+    path('usager/<str:code_interne>/simulation-droits/', views_simulation.simuler_droits, name='simuler_droits'),
     path('usager/<str:code_interne>/situation/actualiser/', views.actualiser_situation,
          name='actualiser_situation'),
     # Passerelle RDV Service Public (désactivée par défaut)
