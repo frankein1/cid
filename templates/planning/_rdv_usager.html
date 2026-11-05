@@ -7,6 +7,12 @@
         <div class="flex gap-2">
             <a href="{% url 'planning:creer_rdv_depuis_beneficiaire' beneficiaire.id %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50">🏢 Permanence</a>
             <a href="{% url 'planning:nouveau_rdv' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-md hover:bg-blue-800">🏠 VAD, hors permanence…</a>
+            {% if rdvsp_actif %}
+            <form method="post" action="{% url 'connecteurs:rdvsp_planifier' beneficiaire.code_interne %}" id="rdvsp-planifier">
+                {% csrf_token %}
+                <button type="submit" class="text-xs px-3 py-1.5 bg-indigo-700 text-white rounded-md hover:bg-indigo-800">📅 RDV Service Public</button>
+            </form>
+            {% endif %}
             {% if user|a_la_capacite:'planning_convoquer' %}
             <a href="{% url 'planning:nouvelle_reunion' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-orange-600 text-white rounded-md hover:bg-orange-700">👥 Réunion</a>
             {% endif %}

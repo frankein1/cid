@@ -32,6 +32,7 @@ from .forms import (
 )
 from .models import Beneficiaire, DocumentBeneficiaireLink, LienFamilial
 from connecteurs.api_particulier import tableau_situations
+from connecteurs.rdv_service_public import est_actif as rdvsp_est_actif
 from ged.models import DocumentGED, DocumentType
 from ged.storage import SeaweedFSStorage
 try:
@@ -259,6 +260,8 @@ def detail_beneficiaire(request, code_interne):
             "transferts": beneficiaire.transferts.select_related('mds_origine', 'mds_destination', 'demande_par')[:5],
             # Situation CAF/MSA et France Travail (API Particulier) : agents de la MDS uniquement
             "situation_externe": tableau_situations(beneficiaire),
+            # Passerelle RDV Service Public : bouton affiché seulement si elle est activée
+            "rdvsp_actif": rdvsp_est_actif(),
             # Rendez-vous de l'usager (agenda unifié) : détail visible depuis la fiche
             "rdvs_usager": beneficiaire.rdvs.select_related('agent', 'salle').order_by('-date', '-heure_debut')[:15],
         })
