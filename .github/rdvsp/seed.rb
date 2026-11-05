@@ -19,7 +19,8 @@ orga = create(:organisation, territory: territory, name: "MDS TEST 01")
 service = Service.find_by(name: Service::SERVICE_SOCIAL) || create(:service, :social)
 TerritoryService.find_or_create_by!(territory: territory, service: service) if defined?(TerritoryService)
 agent = create(:agent, email: "agent.essai@cid.test", first_name: "Agent", last_name: "Essai",
-                       service: service, admin_role_in_organisations: [orga])
+                       service: service, admin_role_in_organisations: [orga],
+                       role_in_territories: [territory])   # administrateur de l'espace : déclare le webhook
 AgentTerritorialAccessRight.find_or_create_by!(agent: agent, territory: territory)
 
 app = OauthApplication.create!(name: "CID (essai)", uid: "cid-essai", secret: "secret-essai", logo_base64: "",

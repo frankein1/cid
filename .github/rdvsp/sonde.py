@@ -66,7 +66,7 @@ def rails(*args):
     p = subprocess.run(["bin/rails", "runner", "../.github/rdvsp/agir.rb", *map(str, args)], cwd=MRS_DIR,
                        capture_output=True, text=True, timeout=180)
     if p.returncode:
-        raise RuntimeError(p.stderr[-800:])
+        raise RuntimeError((p.stderr or "")[-600:] + " | " + (p.stdout or "")[-300:])
     return json.loads(p.stdout.strip().splitlines()[-1])
 
 
@@ -129,7 +129,7 @@ def main():
             "organisation_id": ORG, "name": "MDS TEST 01 – Accueil", "address": "1 rue des Essais, 13110 Port-de-Bouc",
             "latitude": 43.405, "longitude": 4.987, "availability": "enabled",
             "external_reference": {"external_id": "cid-mds-1"}})
-        ctx["lieu_id"] = (d.get("lieu") or {}).get("id")
+        ctx["lieu_id"] = (d.get("lieu") or d).get("id")
         noter("3. Créer le lieu (MDS) avec la référence CID", c == 200 and ctx["lieu_id"], f"{c} {json.dumps(d)[:250]}")
 
     @etape("4. Créer le motif « Renouvellement RSA » (invités seulement, 48 h – 15 jours)")
@@ -143,7 +143,7 @@ def main():
         if c != 200:   # sans service_id, au cas où il ne serait pas accepté
             corps.pop("service_id")
             c, d = appel("POST", "/motifs", json=corps)
-        m = d.get("motif") or {}
+        m = d.get("motif") or d
         ctx["motif_id"] = m.get("id")
         noter("4. Créer le motif « Renouvellement RSA » (invités seulement, 48 h – 15 jours)", c == 200 and m.get("id"),
               f"{c} bookable_by={m.get('bookable_by')} délais={m.get('min_public_booking_delay')}/"
@@ -245,7 +245,8 @@ def main():
         nouveau = r.json().get("access_token") if r.status_code == 200 else None
         c = appel("GET", "/agents/me", jeton=nouveau)[0] if nouveau else 0
         noter("13. Renouveler le jeton OAuth", r.status_code == 200 and c == 200,
-              f"{r.status_code} expire dans {r.json().get('expires_in') if r.status_code == 200 else '—'} s ; nouveau jeton → {c}")
+              f"{r.status_code} expire dans {r.json().get('expires_in') if r.status_code == 200 else '—'} s ; nouveau jeton → {c}"
+              + ("" if r.status_code == 200 else f" {r.text[:200]}"))
 
     for e in (e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12, e13):
         e()
