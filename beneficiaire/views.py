@@ -83,6 +83,8 @@ def user_peut_valider(user):
 
 def user_peut_agir_sur_beneficiaire(user, beneficiaire):
     """✅ CORRIGÉ CORE : Vérification complète MDS + capacité"""
+    if beneficiaire.statut == 'ARCHIVE':   # dossier archivé (RGPD) : lecture seule
+        return False
     if user.is_superuser:
         return True
     if not beneficiaire.mds:

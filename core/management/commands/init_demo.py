@@ -94,8 +94,13 @@ LIENS = [
     ("FAM12-AUR", "FAM12-GAB", "ENFANT", True), ("FAM12-AUR", "FAM12-LIN", "ENFANT", True),
     ("FAM12-DAV", "FAM12-GAB", "ENFANT", True), ("FAM12-DAV", "FAM12-LIN", "ENFANT", True),
 ]
+# Archivage RGPD : dossiers fictifs sans activité depuis longtemps (code, civilité, nom, prénom, âge,
+# inactif depuis N mois, archivé depuis N mois ou None)
+RGPD_DEMO = [("RGPD1-HUG", "M.", "FERRAND", "Hugo", 44, 40, None),
+             ("RGPD2-YAS", "MME", "OUALI", "Yasmine", 31, 52, None),
+             ("RGPD3-ODI", "MME", "MARCHETTI", "Odile", 67, 60, 14)]
 CODES_DEMO = ["FAM1-JEA", "FAM2-SOP", "FAM2-PAU", "FAM3-CLA", "FAM3-MAR", "API-JUL", "API-FRA"] + \
-             [f"{f}-{p[0]}" for f, ps in FAMILLES.items() for p in ps]
+             [f"{f}-{p[0]}" for f, ps in FAMILLES.items() for p in ps] + [r[0] for r in RGPD_DEMO]
 
 
 def type_aide(code):
@@ -139,11 +144,11 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         from beneficiaire.models import Beneficiaire
         renommer_comptes_demo()
-        if not Beneficiaire.objects.filter(code_interne="FAM1-JEA").exists():
+        if not Beneficiaire.tous.filter(code_interne="FAM1-JEA").exists():
             call_command("init2")
         if opts["reinitialiser"]:
             self.supprimer()
-        elif Beneficiaire.objects.filter(code_interne=MARQUEUR).exists():
+        elif Beneficiaire.tous.filter(code_interne=MARQUEUR).exists():
             self.stdout.write("📌 Jeu de démonstration déjà présent (--reinitialiser pour le recréer).")
             return
         with transaction.atomic():
@@ -156,7 +161,31 @@ class Command(BaseCommand):
             self.ip()
             self.planning()
             self.insertion()
+            self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
+
+    # ------------------------------------------------------------------ archivage RGPD
+    def rgpd(self):
+        """Deux dossiers inactifs (proposés à l'archivage) et un dossier archivé depuis 14 mois (effaçable)."""
+        from beneficiaire.models import Beneficiaire, OperationRGPD
+        maintenant = timezone.now()
+        for code, civ, nom, prenom, age, inactif_mois, archive_mois in RGPD_DEMO:
+            ancien = maintenant - relativedelta(months=inactif_mois)
+            b, _ = Beneficiaire.tous.get_or_create(code_interne=code, defaults={
+                "civilite": civ, "nom": nom, "prenom": prenom, "date_naissance": self.j - relativedelta(years=age),
+                "adresse": "5 rue des Mimosas", "code_postal": "13110", "ville": "Port-de-Bouc", "mds": self.mds1,
+                "statut": "ACTIF", "cree_par": self.ts})
+            champs = {"date_creation": ancien, "date_modification": ancien}   # update() : sans auto_now
+            if archive_mois:
+                champs.update(statut="ARCHIVE", statut_avant_archivage="ACTIF", motif_archivage="SANS_NOUVELLES",
+                              date_archivage=maintenant - relativedelta(months=archive_mois), archive_par=self.cadre)
+            Beneficiaire.tous.filter(pk=b.pk).update(**champs)
+            if archive_mois and not b.operations_rgpd.exists():
+                op = OperationRGPD.objects.create(beneficiaire=b, action=OperationRGPD.ARCHIVAGE,
+                                                  motif="SANS_NOUVELLES", mds=self.mds1, par=self.cadre,
+                                                  derniere_activite=ancien.date())
+                OperationRGPD.objects.filter(pk=op.pk).update(date=maintenant - relativedelta(months=archive_mois))
+        self.stdout.write("✅ Archivage RGPD : 2 dossiers inactifs, 1 dossier archivé (fictifs)")
 
     # ------------------------------------------------------------------ remise à zéro
     @transaction.atomic
@@ -169,7 +198,7 @@ class Command(BaseCommand):
         from django.contrib.contenttypes.models import ContentType
         from messagerie.models import Message
         from protection_enfance.models import ActionIP
-        benefs = Beneficiaire.objects.filter(code_interne__in=CODES_DEMO)
+        benefs = Beneficiaire.tous.filter(code_interne__in=CODES_DEMO)
         aides = list(DemandeAide.objects.filter(beneficiaire__in=benefs).values_list("pk", flat=True))
         ips = InformationPreoccupante.objects.filter(famille__in=benefs).exclude(   # l'IP d'init2 est gardée
             historique_actions__action__startswith="IP de démonstration créée (init2)")
@@ -263,7 +292,7 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ familles
     def familles(self):
         from beneficiaire.models import Beneficiaire, LienFamilial
-        self.b = {c: Beneficiaire.objects.get(code_interne=c) for c in
+        self.b = {c: Beneficiaire.tous.get(code_interne=c) for c in
                   ["FAM1-JEA", "FAM2-SOP", "FAM2-PAU", "FAM3-CLA", "FAM3-MAR", "API-JUL", "API-FRA"]}
         rues = iter(["8 rue des Oliviers", "14 boulevard de la Mer", "3 impasse des Pins", "27 avenue du Port",
                      "9 rue Jean Moulin", "2 allée des Tamaris", "41 chemin des Salins", "6 place de la Liberté",
@@ -273,18 +302,18 @@ class Command(BaseCommand):
             for suffixe, civ, nom, prenom, age, n_mds, cp, ville, statut_marital in personnes:
                 code = f"{fam}-{suffixe}"
                 naissance = self.j - relativedelta(years=age, days=37 * (len(prenom) + age % 7))
-                self.b[code], _ = Beneficiaire.objects.get_or_create(code_interne=code, defaults={
+                self.b[code], _ = Beneficiaire.tous.get_or_create(code_interne=code, defaults={
                     "civilite": civ, "nom": nom, "prenom": prenom, "date_naissance": naissance,
                     "adresse": "12 rue du Rhône" if cp == "84000" else (adresse if n_mds == 1 else "11 rue des Lices"),
                     "code_postal": cp, "ville": ville, "mds": self.mds1 if n_mds == 1 else self.mds2,
                     "statut": "ACTIF", "marital_status": statut_marital, "cree_par": self.ts})
         # Enfants de moins de 6 ans suivis par la PMI : numéro de dossier fictif (le suivi médical reste hors de CID)
         for code, numero in [("FAM8-MIL", "PMI-DEMO-0001"), ("FAM10-ADA", "PMI-DEMO-0002")]:
-            Beneficiaire.objects.filter(code_interne=code).update(numero_dossier_pmi=numero)
+            Beneficiaire.tous.filter(code_interne=code).update(numero_dossier_pmi=numero)
         # Points d'attention (bandeau en haut de la fiche)
-        Beneficiaire.objects.filter(code_interne="FAM12-AUR").update(vff=True)
-        Beneficiaire.objects.filter(code_interne="FAM4-NOL").update(rupture_familiale=True)
-        Beneficiaire.objects.filter(code_interne="FAM9-CEL").update(personne_vulnerable=True)
+        Beneficiaire.tous.filter(code_interne="FAM12-AUR").update(vff=True)
+        Beneficiaire.tous.filter(code_interne="FAM4-NOL").update(rupture_familiale=True)
+        Beneficiaire.tous.filter(code_interne="FAM9-CEL").update(personne_vulnerable=True)
         inverse = {"ENFANT": "PARENT", "CONJOINT": "CONJOINT"}
         for a, c, type_lien, foyer in LIENS:
             LienFamilial.objects.get_or_create(personne_a=self.b[a], personne_b=self.b[c], type_lien=type_lien,

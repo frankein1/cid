@@ -88,3 +88,20 @@ class DocumentBeneficiaireLinkAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
+
+
+from .models import OperationRGPD  # noqa: E402
+
+
+@admin.register(OperationRGPD)
+class OperationRGPDAdmin(admin.ModelAdmin):
+    """Traces des archivages et effacements : consultation seulement."""
+    list_display = ('date', 'action', 'motif', 'mds', 'beneficiaire', 'par')
+    list_filter = ('action', 'motif', 'mds')
+    readonly_fields = [f.name for f in OperationRGPD._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

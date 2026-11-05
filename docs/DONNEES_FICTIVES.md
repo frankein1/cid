@@ -172,6 +172,12 @@ Mila PEREZ (4 ans) et Adam CHERIF (3 ans) ont un **n° de dossier PMI** fictif (
 
 Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`as1_mds1`) à la MDS TEST 01, avec 3 rendez-vous réservés (GARNIER, AMRANI, VIDAL) et 2 créneaux libres. Une semaine plus tard, même permanence avec 5 créneaux libres : de quoi tester « Prendre rendez-vous » depuis une fiche usager (CID propose les créneaux de J+2 à J+17). La convocation IP de la famille PEREZ (dans 6 jours) apparaît aussi dans l'agenda de la MDS.
 
+## Archivage RGPD
+
+Trois dossiers fictifs de la MDS TEST 01, sans aucune activité depuis longtemps :
+- FERRAND Hugo et OUALI Yasmine sont **proposés à l'archivage** (Cadre → Archivage RGPD) ;
+- MARCHETTI Odile est **archivée depuis 14 mois** : masquée dans CID, elle apparaît dans « Dossiers archivés » et, pour l'administrateur, dans **Effacement définitif**.
+
 ## Parcours de test conseillés
 
 1. **Circuit AFASE complet** : `as1_mds1` finalise AMRANI → `chef_mds1` accorde → `chef_mds1` transmet à l'UAGAF → `uagaf_u1` demande le paiement puis l'enregistre.
@@ -180,3 +186,4 @@ Le premier jour ouvré à partir de J : permanence d'**Agent Social 1** (`as1_md
 4. **Deux MDS** : `as1_mds2` peut consulter la fiche d'un usager de la MDS TEST 01 (consultation de tous les usagers), mais pas ses dossiers d'aide ; `chef_mds2` ne décide que les dossiers de la MDS TEST 02 (BENSALEM Karim), et `chef_mds1` ne voit pas ceux de la MDS TEST 02. La famille BENSALEM est répartie entre les deux MDS.
 5. **IP** : `crip_c1` transmet LEGRAND → `chef_mds1` désigne le binôme → `as1_mds1` convoque → rapport → visas → `ief_p1` donne son avis.
 6. **Statistiques** : `chef_mds1`, page des aides financières (mois par mois, recours) et page des IP.
+7. **Archivage RGPD** : `chef_mds1` archive FERRAND Hugo (Cadre → Archivage RGPD) → la fiche disparaît de la liste et de la recherche → il la consulte dans « Dossiers archivés » et la désarchive ; l'administrateur efface MARCHETTI Odile (Admin → Archivage RGPD → Effacement définitif, en tapant EFFACER).
