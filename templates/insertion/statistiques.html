@@ -1,0 +1,79 @@
+<!-- templates/insertion/statistiques.html -->
+{% extends "base.html" %}
+{% block title %}Statistiques RSA{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <a href="{% url 'insertion:accueil' %}" class="text-sm text-blue-700 hover:underline"><i class="fas fa-arrow-left mr-1"></i>RSA – Insertion</a>
+    <div class="flex flex-wrap justify-between items-start gap-3">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-chart-column text-blue-700 mr-2"></i>Statistiques RSA</h1>
+            <p class="text-sm text-gray-500">Périmètre : <b>{{ perimetre.libelle }}</b> · période du {{ debut|date:"d/m/Y" }} au {{ fin|date:"d/m/Y" }} · aucune saisie supplémentaire : tout vient des contrats, prescriptions et réorientations.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="?debut={{ debut|date:'Y-m-d' }}&fin={{ fin|date:'Y-m-d' }}{% if mds_choisie %}&mds={{ mds_choisie }}{% endif %}&export=csv" id="export-csv" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-file-csv mr-1 text-green-700"></i>Exporter (CSV)</a>
+            <a href="{% url 'insertion:file_active' %}" class="px-3 py-2 rounded-lg border border-gray-300 text-sm hover:bg-gray-50"><i class="fas fa-users-viewfinder mr-1 text-blue-700"></i>File active</a>
+        </div>
+    </div>
+    <form method="get" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-wrap gap-3 items-end text-sm" id="filtres">
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Du</label><input type="date" name="debut" value="{{ debut|date:'Y-m-d' }}" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        <div><label class="block text-xs font-semibold text-gray-600 mb-1">Au</label><input type="date" name="fin" value="{{ fin|date:'Y-m-d' }}" class="px-3 py-2 border border-gray-300 rounded-lg"></div>
+        {% if mds_liste|length > 1 %}<div><label class="block text-xs font-semibold text-gray-600 mb-1">MDS</label><select name="mds" class="px-3 py-2 border border-gray-300 rounded-lg"><option value="">Toutes</option>{% for m in mds_liste %}<option value="{{ m.pk }}"{% if m.pk == mds_choisie %} selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select></div>{% endif %}
+        <button class="px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800">Afficher</button>
+    </form>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="indicateurs">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5"><p class="text-xs uppercase text-gray-500">File active (aujourd'hui)</p><p class="text-3xl font-bold text-gray-800">{{ s.file_active }}</p><p class="text-xs text-gray-500">personnes suivies</p></div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5"><p class="text-xs uppercase text-gray-500">Taux de contractualisation</p><p class="text-3xl font-bold text-blue-700">{% if s.taux_contractualisation is not None %}{{ s.taux_contractualisation }} %{% else %}—{% endif %}</p><p class="text-xs text-gray-500">{{ s.en_vigueur }} avec un contrat en vigueur</p></div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5"><p class="text-xs uppercase text-gray-500">Délai transmission → réception</p><p class="text-3xl font-bold text-gray-800">{% if s.delai_reception is not None %}{{ s.delai_reception }} j{% else %}—{% endif %}</p><p class="text-xs text-gray-500">moyenne sur la période</p></div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5"><p class="text-xs uppercase text-gray-500">Délai réception → décision</p><p class="text-3xl font-bold text-gray-800">{% if s.delai_decision is not None %}{{ s.delai_decision }} j{% else %}—{% endif %}</p><p class="text-xs text-gray-500">moyenne sur la période</p></div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-2">Alertes de la file active (aujourd'hui)</h2>
+            {% for a in s.alertes %}<a href="{% url 'insertion:file_active' %}?alerte={{ a.code }}{% if mds_choisie %}&mds={{ mds_choisie }}{% endif %}" class="flex justify-between py-1 text-sm hover:bg-gray-50"><span>{{ a.libelle }}</span><span class="font-semibold">{{ a.nombre }}</span></a>{% endfor %}
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800 mb-2">Nature des contrats en vigueur</h2>
+            {% include "insertion/_barres.html" with lignes=s.natures_en_vigueur %}
+        </div>
+    </div>
+
+    {% if s.par_mds %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto" id="par-mds">
+        <h2 class="font-semibold text-gray-800 px-5 pt-4">Par MDS (aujourd'hui)</h2>
+        <table class="min-w-full text-sm mt-2"><thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-2 text-left">MDS</th><th class="px-3 py-2 text-right">File active</th><th class="px-3 py-2 text-right">Contrat en vigueur</th><th class="px-3 py-2 text-right">Contractualisation</th><th class="px-3 py-2 text-right">À renouveler</th><th class="px-3 py-2 text-right">Échus</th></tr></thead>
+            <tbody class="divide-y divide-gray-100">{% for m in s.par_mds %}<tr><td class="px-5 py-2">{{ m.mds }}</td><td class="px-3 py-2 text-right">{{ m.file_active }}</td><td class="px-3 py-2 text-right">{{ m.en_vigueur }}</td><td class="px-3 py-2 text-right font-semibold">{{ m.taux }} %</td><td class="px-3 py-2 text-right">{{ m.renouveler }}</td><td class="px-3 py-2 text-right">{{ m.echus }}</td></tr>{% endfor %}</tbody></table>
+    </div>
+    {% endif %}
+
+    <h2 class="text-lg font-semibold text-gray-800 pt-2">Sur la période</h2>
+    <div class="grid lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3" id="bloc-contrats">
+            <h3 class="font-semibold text-gray-800">Contrats : {{ s.contrats_etablis }} établi{{ s.contrats_etablis|pluralize }}, {{ s.nb_decisions }} décision{{ s.nb_decisions|pluralize }}</h3>
+            <p class="text-xs uppercase text-gray-500">Type</p>{% include "insertion/_barres.html" with lignes=s.types %}
+            <p class="text-xs uppercase text-gray-500">Décisions de la commission</p>{% include "insertion/_barres.html" with lignes=s.decisions couleur="bg-green-600" %}
+            {% if s.transport %}<p class="text-xs uppercase text-gray-500">Aide aux transports</p>{% include "insertion/_barres.html" with lignes=s.transport couleur="bg-indigo-500" %}{% endif %}
+            <p class="text-sm text-gray-600">Contrats santé : {{ s.sante.contrats }} · avis favorables {{ s.sante.favorables }} · défavorables {{ s.sante.defavorables }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3" id="bloc-reorientation">
+            <h3 class="font-semibold text-gray-800">Réorientations : {{ s.reorientations }} décidée{{ s.reorientations|pluralize }}, {{ s.ajournements }} ajournement{{ s.ajournements|pluralize }}</h3>
+            <p class="text-xs uppercase text-gray-500">Décisions</p>{% include "insertion/_barres.html" with lignes=s.reo_decisions couleur="bg-amber-500" %}
+            <p class="text-xs uppercase text-gray-500">Réorientées vers</p>{% include "insertion/_barres.html" with lignes=s.reo_vers couleur="bg-amber-500" %}
+        </div>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
+            <h3 class="font-semibold text-gray-800">Prescriptions : {{ s.prescriptions }} sur la période</h3>
+            <p class="text-xs uppercase text-gray-500">Freins relevés</p>{% include "insertion/_barres.html" with lignes=s.freins couleur="bg-gray-500" %}
+            <p class="text-xs uppercase text-gray-500">Sorties d'action ({{ s.nb_sorties }})</p>{% include "insertion/_barres.html" with lignes=s.sorties couleur="bg-emerald-600" %}
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto" id="par-action">
+            <h3 class="font-semibold text-gray-800 px-5 pt-4">Prescriptions par action</h3>
+            <table class="min-w-full text-sm mt-2"><thead class="bg-gray-50 text-xs uppercase text-gray-500"><tr><th class="px-5 py-2 text-left">Action</th><th class="px-2 py-2 text-right">Prescrites</th><th class="px-2 py-2 text-right">Intégrées</th><th class="px-2 py-2 text-right">Non intégr.</th><th class="px-2 py-2 text-right">En attente</th><th class="px-3 py-2 text-right">Taux d'intégration</th></tr></thead>
+                <tbody class="divide-y divide-gray-100">{% for a in s.par_action %}<tr><td class="px-5 py-2">{{ a.libelle }} <span class="text-xs text-gray-500">{{ a.code }}</span></td><td class="px-2 py-2 text-right">{{ a.prescrites }}</td><td class="px-2 py-2 text-right">{{ a.integrees }}</td><td class="px-2 py-2 text-right">{{ a.non_integrees }}</td><td class="px-2 py-2 text-right">{{ a.en_attente }}</td><td class="px-3 py-2 text-right font-semibold">{% if a.taux is not None %}{{ a.taux }} %{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="px-5 py-4 text-gray-500">Aucune prescription sur la période.</td></tr>{% endfor %}</tbody></table>
+        </div>
+    </div>
+    <p class="text-xs text-gray-500">Taux de contractualisation : part de la file active qui a un contrat en vigueur aujourd'hui. Taux d'intégration : intégrées / (intégrées + non intégrées), sur les prescriptions de la période. L'export CSV rassemble tous les tableaux en une seule liste « section ; libellé ; nombre ; part ».</p>
+</div>
+{% endblock %}

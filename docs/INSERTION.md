@@ -1,7 +1,7 @@
 <!-- docs/INSERTION.md -->
 # Module RSA – Insertion
 
-Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Étape 3 : les prescriptions. Étape 4 : la commission de réorientation. Les comités de suivi technique et les statistiques viendront ensuite.
+Menu **Accompagnement → RSA – Insertion**. Étape 1 : pôles insertion et référentiel des actions d'insertion. Étape 2 : le contrat, son circuit et la file active. Étape 3 : les prescriptions. Étape 4 : la commission de réorientation. Étape 5 : la file active et les statistiques. Les comités de suivi technique et le suivi des heures d'activité restent à préciser.
 
 ## Pôles insertion
 
@@ -120,6 +120,16 @@ Tous les trimestres, la commission du pôle (un membre de chaque MDS, administra
 - Le pôle ne voit pas les demandes en préparation ; le médecin du pôle ne voit pas les réorientations.
 
 **Comités de suivi technique (CST)** : non développés, faute d'information sur leur fonctionnement (à préciser avec le pôle insertion).
+
+## File active et statistiques (étape 5)
+
+Aucune saisie supplémentaire : tout vient des contrats, des prescriptions et des réorientations (`insertion/services/statistiques.py`).
+
+- **Périmètre** : super-administrateur → tout le département ; agent d'un pôle → les MDS du pôle ; cadre de MDS (`rsa_actions_locales`) → ses MDS ; référent → sa file active (contrats dont il est le référent, prescriptions et réorientations qu'il a faites).
+- **File active** (RSA – Insertion → File active) : personnes qui ont un contrat (hors annulé) ou une prescription adressée, sauf celles réorientées depuis la date d'effet (filtre « Personnes réorientées » pour les voir). Une ligne par personne : contrat en vigueur (sinon le dernier), échéance, actions en cours, alertes (sans contrat en vigueur, à renouveler, échu, validé sauf action, en cours de validation, ajourné, réorientation inscrite). Filtres : recherche, MDS, référent, commune, nature, alerte.
+- **Statistiques** (période, MDS) : file active, **taux de contractualisation** (contrat en vigueur / file active), alertes, comparaison par MDS, contrats établis par type, nature des contrats en vigueur, décisions de la commission, aide aux transports, contrats santé (avis), délais moyens (transmission → réception → décision), prescriptions par action et **taux d'intégration** (intégrées / (intégrées + non intégrées)), freins, sorties d'action, réorientations (décisions, vers qui, ajournements).
+- **Export CSV** : séparateur « ; », UTF-8 avec BOM (LibreOffice, Excel, autres outils). File active : une ligne par personne, filtres compris. Statistiques : une liste « section ; libellé ; nombre ; part ».
+- **Non fait** : suivi des heures d'activité (à voir avec le nouveau DAPE), statistiques par commune ou par âge.
 
 ## Remise à zéro (démonstration)
 

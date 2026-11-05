@@ -410,3 +410,50 @@ class ReorientationTests(_Base):
         self.assertEqual((d.statut, d.organisme_retenu), (D.ACCEPTEE, ft))
         self.assertEqual(cl.get(f"/insertion/reorientations/{d.pk}/notification.pdf").status_code, 200)
         self.assertEqual(cl.get(f"/insertion/commissions/{c.pk}/ordre-du-jour.pdf").status_code, 200)
+
+
+class FileActiveTests(_Base):
+    def test_perimetres_alertes_et_contractualisation(self):
+        from insertion.services import statistiques as st
+        c = self._pret()
+        circuit.transmettre(c, self.ts)
+        debut = timezone.localdate() - timedelta(days=170)
+        circuit.decider(c, self.cadre, decision=C.VALIDE, date_decision=debut, date_debut=debut, duree_mois=6)
+        for u, attendu in ((self.ts, 1), (self.ts_b, 0), (self.cadre, 1), (self.medecin, 1)):
+            self.assertEqual(len(st.file_active(st.Perimetre(u))), attendu, u.username)
+        ligne = st.file_active(st.Perimetre(self.ts))[0]
+        self.assertIn("renouveler", ligne["alertes"])
+        s = st.statistiques(st.Perimetre(self.cadre), debut, timezone.localdate())
+        self.assertEqual((s["file_active"], s["en_vigueur"], s["taux_contractualisation"]), (1, 1, 100))
+        self.assertEqual(s["decisions"][0]["nombre"], 1)
+
+    def test_reorientee_sort_de_la_file_active(self):
+        from insertion.models import DemandeReorientation as D, OrganismeOrientation
+        from insertion.services import reorientation_circuit as rc, statistiques as st
+        self._pret()
+        self.assertEqual(len(st.file_active(st.Perimetre(self.ts))), 1)
+        ft = OrganismeOrientation.objects.create(nom="FT essai", categorie="FRANCE_TRAVAIL")
+        d = rc.creer(self.benef, self.ts)
+        d.motif, d.orientation_proposee = "Emploi", "FRANCE_TRAVAIL"
+        d.save()
+        rc.inscrire(d, self.ts)
+        com, _ = rc.creer_commission(self.pole, self.admin, date=timezone.localdate())
+        d.refresh_from_db()
+        rc.decider(d, self.admin, decision=D.ACCEPTEE, organisme_retenu=ft, date_effet=timezone.localdate())
+        rc.cloturer(com, self.admin)
+        self.assertEqual(len(st.file_active(st.Perimetre(self.ts))), 0)
+        self.assertEqual(len(st.file_active(st.Perimetre(self.ts), inclure_reorientes=True)), 1)
+
+    def test_pages_et_exports_csv(self):
+        self._pret()
+        cl = Client(HTTP_HOST="localhost")
+        cl.force_login(self.ts)
+        r = cl.get("/insertion/file-active/?export=csv")
+        self.assertEqual(r.status_code, 200)
+        texte = r.content.decode("utf-8")
+        self.assertTrue(texte.startswith("\ufeffMDS;Code;Nom"))
+        self.assertIn("ESSAI;Lucie", texte)
+        self.assertEqual(cl.get("/insertion/statistiques/?export=csv").status_code, 200)
+        self.assertEqual(cl.get("/insertion/statistiques/?debut=2026-01-01&fin=2026-12-31").status_code, 200)
+        cl.force_login(self.ts_b)
+        self.assertNotIn("ESSAI", cl.get("/insertion/file-active/?export=csv").content.decode())

@@ -42,9 +42,13 @@
                 {% if nb_reo_attente %}<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800">{{ nb_reo_attente }} en attente d'une commission</span>{% endif %}
             </p>
         {% if gere_commissions %}</a>{% else %}</div>{% endif %}
-        <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-5">
-            <h2 class="font-semibold text-gray-500"><i class="fas fa-route mr-2"></i>À venir</h2>
-            <p class="text-sm text-gray-500 mt-1">Comités de suivi technique (à préciser), file active complète, statistiques.</p>
+        <div id="tuile-file-active" class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-users-viewfinder text-blue-700 mr-2"></i>File active et statistiques</h2>
+            <p class="text-sm text-gray-600 mt-1">Toutes les personnes suivies, leurs alertes, la contractualisation et l'activité, avec export CSV.</p>
+            <p class="text-sm mt-2 flex flex-wrap gap-3">
+                <a href="{% url 'insertion:file_active' %}" class="text-blue-700 hover:underline"><i class="fas fa-list mr-1"></i>File active</a>
+                <a href="{% url 'insertion:statistiques' %}" class="text-blue-700 hover:underline"><i class="fas fa-chart-column mr-1"></i>Statistiques</a>
+            </p>
         </div>
     </div>
 </div>
