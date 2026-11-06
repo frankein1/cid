@@ -143,4 +143,5 @@ def rdvsp_etat(request):
         'nb_blocages': AbsenceRDVSP.objects.count(),
         'rdvs_sp': RdvRDVSP.objects.select_related('agent', 'beneficiaire')[:15],
         'avis_erreur': AvisRDVSP.objects.exclude(erreur='')[:10],
+        'lieux_non_declares': rdvsp_synchro.lieux_externes_non_declares(),
     })

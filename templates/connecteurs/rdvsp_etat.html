@@ -33,6 +33,11 @@
             <li>Motifs en ligne : {% for m in motifs_sp %}{% if m.actif %}{{ m.nom }} ({{ m.duree_minutes }} min, de {{ m.delai_min_heures }} h à {{ m.delai_max_jours }} jours, {{ m.plafond_demi_journee }} en ligne max. par demi-journée{% if m.sur_invitation %}, sur invitation{% endif %}){% if not forloop.last %} ; {% endif %}{% endif %}{% empty %}<span class="text-amber-700">aucun</span>{% endfor %} — <a href="{% url 'admin:connecteurs_motifrdvsp_changelist' %}" class="text-blue-700 hover:underline">gérer</a></li>
             <li>Permanences publiées : {{ nb_plages }} · blocages envoyés : {{ nb_blocages }} · dernière synchronisation : {{ parametres.derniere_synchro|date:"d/m/Y H:i"|default:"jamais" }}</li>
         </ul>
+        {% if lieux_non_declares %}
+        <p class="text-sm text-amber-800" id="lieux-non-declares">Permanences en lieu externe non publiées, faute d'adresse :
+            {% for mds, nom in lieux_non_declares %}« {{ nom }} » ({{ mds }}){% if not forloop.last %}, {% endif %}{% endfor %}
+            — <a href="{% url 'admin:connecteurs_lieuexternerdvsp_add' %}" class="text-blue-700 hover:underline">déclarer l'adresse</a></p>
+        {% endif %}
         {% if synchro_prete %}
         <div class="flex flex-wrap gap-2">
             <form method="post" action="{% url 'connecteurs:rdvsp_synchroniser' %}">{% csrf_token %}

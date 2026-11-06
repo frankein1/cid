@@ -128,3 +128,12 @@ class InvitationRSAAdmin(_Lecture):
 class ReservationEnLigneAdmin(_Lecture):
     list_display = ('beneficiaire', 'suspendue', 'modifiee_par', 'modifiee_le')
     list_filter = ('suspendue',)
+
+
+from .models import LieuExterneRDVSP  # noqa: E402
+
+
+@admin.register(LieuExterneRDVSP)
+class LieuExterneRDVSPAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'mds_sp', 'adresse', 'lieu_sp_id')
+    list_filter = ('mds_sp',)

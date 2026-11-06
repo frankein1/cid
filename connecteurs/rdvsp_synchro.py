@@ -34,7 +34,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from . import rdv_service_public as api
-from .models import (AbsenceRDVSP, AppelRDVSP, AvisRDVSP, LienUsagerRDVSP, MdsRDVSP, MotifRDVSP,
+from .models import (AbsenceRDVSP, AppelRDVSP, AvisRDVSP, LieuExterneRDVSP, LienUsagerRDVSP, MdsRDVSP, MotifRDVSP,
                      MotifRDVSPPublie, ParametresRDVSP, PlageRDVSP, RdvRDVSP, prefixe_references)
 
 logger = logging.getLogger(__name__)
@@ -144,14 +144,49 @@ def _prochain(jour, jour_semaine):
     return jour + timedelta(days=(jour_semaine - jour.weekday()) % 7)
 
 
+def lieu_externe_de(dj):
+    """Lieu externe déclaré correspondant au nom saisi par l'agent, ou None."""
+    nom = (dj.lieu_externe or "").strip()
+    if not nom:
+        return None
+    return LieuExterneRDVSP.objects.filter(mds_sp__mds_id=dj.mds_id, nom__iexact=nom).first()
+
+
 def demi_journees_a_publier():
+    """Demi-journées en MDS, et en lieu externe déclaré (avec son adresse), des MDS ouvertes en ligne."""
     from mds.models import DemiJourneeReception
-    return (DemiJourneeReception.objects.filter(actif=True, type_lieu="MDS", mds__rdvsp__en_ligne=True)
-            .exclude(agent__email="").select_related("agent", "mds", "mds__rdvsp"))
+    qs = (DemiJourneeReception.objects.filter(actif=True, mds__rdvsp__en_ligne=True)
+          .exclude(agent__email="").select_related("agent", "mds", "mds__rdvsp"))
+    return [dj for dj in qs if dj.type_lieu == "MDS" or lieu_externe_de(dj)]
+
+
+def lieux_externes_non_declares():
+    """Noms de lieux externes saisis par les agents mais sans adresse déclarée : non publiés."""
+    from mds.models import DemiJourneeReception
+    vus = set()
+    for dj in DemiJourneeReception.objects.filter(actif=True, type_lieu="EXTERNE", mds__rdvsp__en_ligne=True) \
+            .select_related("mds"):
+        if dj.lieu_externe.strip() and not lieu_externe_de(dj):
+            vus.add((dj.mds.nom, dj.lieu_externe.strip()))
+    return sorted(vus)
+
+
+def publier_lieux_externes(c, mds_sp):
+    for lieu in mds_sp.lieux_externes.filter(lieu_sp_id__isnull=True):
+        corps = {"organisation_id": mds_sp.organisation_sp_id, "name": lieu.nom, "address": lieu.adresse,
+                 "availability": "enabled", "address_without_geocoding": True,
+                 "external_reference": {"external_id": lieu.reference}}
+        try:
+            l = _corps(c.appel("POST", "/lieux", json=corps), "lieu")
+        except api.RDVSPErreur as e:
+            l = _deja_cree(e, c.get("/lieux").get("lieux", []), mds_sp, lieu.nom)
+        lieu.lieu_sp_id = l["id"]
+        lieu.save(update_fields=["lieu_sp_id"])
 
 
 def _publier_plage(c, dj, debut, semaines):
     mds_sp = dj.mds.rdvsp
+    externe = lieu_externe_de(dj) if dj.type_lieu == "EXTERNE" else None
     premier = _prochain(debut, dj.jour_semaine)
     dernier = premier + timedelta(weeks=semaines - 1)
     motifs = [m.motif.reference(mds_sp) for m in mds_sp.motifs.select_related("motif").filter(motif__actif=True)]
@@ -163,13 +198,14 @@ def _publier_plage(c, dj, debut, semaines):
         "organisation_id": mds_sp.organisation_sp_id, "agent_email": dj.agent.email,
         "title": f"Permanence {dj.get_type_demi_journee_display().lower()} (CID)",
         "first_day": premier.isoformat(), "start_time": dj.heure_debut.strftime("%H:%M"),
-        "end_time": dj.heure_fin.strftime("%H:%M"), "lieu_external_id": mds_sp.reference_lieu,
+        "end_time": dj.heure_fin.strftime("%H:%M"),
+        "lieu_external_id": externe.reference if externe else mds_sp.reference_lieu,
         "motif_external_ids": motifs, "recurrence": json.dumps(recurrence),
         "external_reference": {"external_id": f"{prefixe_references()}-dj-{dj.pk}-{premier.isoformat()}"},
     })
     plage = _corps(reponse, "plage_ouverture")
     return PlageRDVSP.objects.create(
-        demi_journee=dj, mds=dj.mds, agent=dj.agent, jour_semaine=dj.jour_semaine, heure_debut=dj.heure_debut,
+        demi_journee=dj, mds=dj.mds, lieu_externe=externe, agent=dj.agent, jour_semaine=dj.jour_semaine, heure_debut=dj.heure_debut,
         heure_fin=dj.heure_fin, premier_jour=premier, dernier_jour=dernier, plage_sp_id=plage["id"])
 
 
@@ -193,7 +229,8 @@ def _neutraliser(c, plage):
 
 def _identique(plage, dj):
     return (plage.agent_id == dj.agent_id and plage.jour_semaine == dj.jour_semaine
-            and plage.heure_debut == dj.heure_debut and plage.heure_fin == dj.heure_fin and plage.mds_id == dj.mds_id)
+            and plage.heure_debut == dj.heure_debut and plage.heure_fin == dj.heure_fin and plage.mds_id == dj.mds_id
+            and plage.lieu_externe_id == (getattr(lieu_externe_de(dj), "pk", None) if dj.type_lieu == "EXTERNE" else None))
 
 
 def synchroniser(aujourd_hui=None):
@@ -205,7 +242,8 @@ def synchroniser(aujourd_hui=None):
     for mds_sp in MdsRDVSP.objects.filter(en_ligne=True).select_related("mds"):
         try:
             publier_lieu_et_motifs(c, mds_sp)
-        except api.RDVSPErreur as e:
+            publier_lieux_externes(c, mds_sp)
+        except (api.RDVSPErreur, SynchroErreur) as e:
             bilan["erreurs"].append(f"{mds_sp.mds} : {e}")
     # Permanences retirées ou modifiées dans CID
     a_publier = {dj.pk: dj for dj in demi_journees_a_publier()}

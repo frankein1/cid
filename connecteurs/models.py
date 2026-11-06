@@ -203,6 +203,30 @@ class MdsRDVSP(models.Model):
         return f"{prefixe_references()}-mds-{self.mds_id}"
 
 
+class LieuExterneRDVSP(models.Model):
+    """
+    Lieu de permanence hors MDS (CCAS, mairie, école…) publié dans RDV-Solidarités. Une demi-journée de
+    réception « lieu externe » est publiée si son nom de lieu correspond (sans tenir compte des majuscules)
+    à l'un de ces lieux : l'usager voit ainsi une vraie adresse.
+    """
+    mds_sp = models.ForeignKey(MdsRDVSP, on_delete=models.CASCADE, related_name='lieux_externes')
+    nom = models.CharField(max_length=100, help_text="Tel que saisi par les agents dans leurs demi-journées")
+    adresse = models.CharField(max_length=255, help_text="Adresse complète montrée à l'usager")
+    lieu_sp_id = models.PositiveIntegerField(null=True, blank=True, editable=False)
+
+    class Meta:
+        unique_together = ('mds_sp', 'nom')
+        verbose_name = "Lieu externe publié"
+        verbose_name_plural = "Lieux externes publiés"
+
+    def __str__(self):
+        return f"{self.nom} ({self.mds_sp.mds})"
+
+    @property
+    def reference(self):
+        return f"{prefixe_references()}-lieu-{self.pk}"
+
+
 class MotifRDVSP(models.Model):
     """Motif ouvert à la réservation en ligne (étape 1 : « Renouvellement RSA » seulement)."""
     nom = models.CharField(max_length=100, default="Renouvellement RSA")
@@ -247,6 +271,7 @@ class PlageRDVSP(models.Model):
     premier_jour = models.DateField()
     dernier_jour = models.DateField()
     plage_sp_id = models.PositiveIntegerField()
+    lieu_externe = models.ForeignKey(LieuExterneRDVSP, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     neutralisee = models.BooleanField(default=False, help_text="Retirée dans CID : neutralisée par une absence")
     date_creation = models.DateTimeField(auto_now_add=True)
 
