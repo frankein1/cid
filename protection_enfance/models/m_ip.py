@@ -134,6 +134,9 @@ class InformationPreoccupante(models.Model):
     binome_valide_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
                                           blank=True, related_name='ip_binomes_valides')
     date_binome = models.DateTimeField(null=True, blank=True)
+    binome_derogation = models.TextField(
+        "Motif de la dérogation", blank=True,
+        help_text="Renseigné quand le cadre désigne quand même un professionnel qui suit la famille.")
 
     # ------------------------------------------------------------------ circuit et délais
     statut = models.CharField(max_length=20, choices=STATUTS, default='RECUE')
