@@ -17,7 +17,7 @@
       </p>
       {% if s.description %}<p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ s.description }}</p>{% endif %}
     </div>
-    <div class="flex flex-wrap gap-2">
+    <div id="actions-seance" class="flex flex-wrap gap-2">
       <a href="{% url 'planning:seance_atelier_export' s.pk 'pdf' %}" target="_blank" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-file-pdf mr-1 text-red-600"></i>Feuille d'émargement</a>
       <a href="{% url 'planning:seance_atelier_export' s.pk 'csv' %}" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-file-csv mr-1 text-green-700"></i>CSV</a>
       {% if peut_gerer %}
@@ -34,7 +34,7 @@
     {% for libelle, n in bilan.items %}<div class="bg-white rounded-lg shadow p-3"><div class="text-xl font-bold text-gray-900">{{ n }}</div><div class="text-gray-500">{{ libelle }}</div></div>{% endfor %}
   </div>
 
-  <form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="bg-white rounded-lg shadow overflow-x-auto mb-6">
+  <form id="inscrits" method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="bg-white rounded-lg shadow overflow-x-auto mb-6">
     {% csrf_token %}
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50 text-gray-600"><tr><th class="px-3 py-2 text-left">Inscrits</th><th class="px-3 py-2 text-left">Type</th>
@@ -70,7 +70,7 @@
   {% endif %}
 
   {% if peut_gerer and s.statut != 'ANNULEE' %}
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div id="inscrire" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="font-semibold text-gray-800 mb-3"><i class="fas fa-user mr-1 text-orange-600"></i>Inscrire un usager suivi</h2>
       <form method="get" class="flex gap-2 mb-3">
