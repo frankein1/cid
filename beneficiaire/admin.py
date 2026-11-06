@@ -105,3 +105,18 @@ class OperationRGPDAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+from .models import ValeurListe  # noqa: E402
+
+
+@admin.register(ValeurListe)
+class ValeurListeAdmin(admin.ModelAdmin):
+    """Listes de valeurs de la fiche usager : renommer, réordonner, désactiver ou ajouter une valeur."""
+    list_display = ('libelle', 'liste', 'ordre', 'actif')
+    list_editable = ('ordre', 'actif')
+    list_filter = ('liste', 'actif')
+    search_fields = ('libelle',)
+
+    def has_delete_permission(self, request, obj=None):
+        return False   # une valeur déjà utilisée ne se supprime pas : on la désactive

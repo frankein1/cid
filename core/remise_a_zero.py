@@ -41,7 +41,8 @@ CONFIRMATION = "TOUT EFFACER"
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
                      "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration",
                      "core.ModeleCourrier", "insertion.TypeActionInsertion", "insertion.ActionInsertion",
-                     "insertion.QuestionAction", "insertion.ParametresRSA", "insertion.OrganismeOrientation"]
+                     "insertion.QuestionAction", "insertion.ParametresRSA", "insertion.OrganismeOrientation",
+                     "beneficiaire.ValeurListe", "connecteurs.MotifRDVSP"]
 # Lignes conservées d'un modèle (par défaut toutes). Les actions locales, liées à une MDS effacée, ne le sont pas.
 FILTRES_CONSERVES = {"insertion.ActionInsertion": lambda qs: qs.filter(niveau="DEPARTEMENTAL"),
                      "insertion.QuestionAction": lambda qs: qs.filter(action__niveau="DEPARTEMENTAL")}
