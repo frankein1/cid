@@ -112,3 +112,14 @@ class ProfilAdmin(admin.ModelAdmin):
     filter_horizontal = ("capacites",)
 
 from core import admin_courriers  # noqa: E402,F401  (modèles de courriers)
+
+
+from .models import IdentiteProConnect  # noqa: E402
+
+
+@admin.register(IdentiteProConnect)
+class IdentiteProConnectAdmin(admin.ModelAdmin):
+    """Comptes reliés à ProConnect : supprimer la ligne coupe le lien (la personne repasse par son courriel)."""
+    list_display = ('user', 'courriel', 'siret', 'idp_id', 'date_lien', 'derniere_connexion')
+    search_fields = ('user__username', 'courriel', 'siret')
+    readonly_fields = ('sub', 'idp_id', 'siret', 'courriel', 'date_lien', 'derniere_connexion')

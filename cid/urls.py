@@ -17,14 +17,18 @@ from django.contrib.auth import views as auth_views
 from core.views.vins import run_install
 from core import views as core_views
 
+from core import views_proconnect  # noqa: E402
+
 urlpatterns = [
     # ----------------------------------------------------
     # AUTHENTIFICATION
     # Utilise 'login.html' à la racine de /templates/
     # ----------------------------------------------------
     path("init-render/", run_install),
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(template_name='logout.html'), name='logout'),
+    path('login/', views_proconnect.Connexion.as_view(), name='login'),
+    path('logout/', views_proconnect.deconnexion, name='logout'),
+    path('connexion/proconnect/', views_proconnect.connexion, name='proconnect_connexion'),
+    path('connexion/proconnect/retour/', views_proconnect.retour, name='proconnect_retour'),
     
    
     #path(

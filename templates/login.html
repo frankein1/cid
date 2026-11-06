@@ -79,6 +79,16 @@
             </div>
         </form>
 
+        {% if proconnect_actif %}
+        <div class="mt-6 text-center">
+            <p class="text-xs text-gray-500 mb-2">ou</p>
+            <a href="{% url 'proconnect_connexion' %}" class="inline-flex items-center gap-2 px-5 py-3 bg-[#000091] text-white rounded-md text-sm font-medium hover:bg-[#1212ff]">
+                S'identifier avec <b>ProConnect</b>
+            </a>
+            <p class="mt-2"><a href="https://www.proconnect.gouv.fr/" target="_blank" rel="noopener" class="text-xs text-blue-700 hover:underline">Qu'est-ce que ProConnect ?</a></p>
+        </div>
+        {% endif %}
+
         <div class="text-center mt-6 pt-6 border-t border-gray-200">
             <p class="text-sm text-gray-500">
                 Pour toute assistance technique, contactez le support DITAS
