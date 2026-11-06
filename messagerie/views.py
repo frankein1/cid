@@ -36,6 +36,52 @@ def _documents_autorises(ids, user):
             if d.peut_etre_vu_par(user)]
 
 
+MAX_FICHIERS = 10
+
+
+def _categorie(valeur):
+    return valeur if valeur in DocumentCategorie.values else 'divers'
+
+
+def _type_piece_jointe(categorie_ged, avec_usager):
+    """Type GED des fichiers déposés depuis la messagerie (créé au besoin, extensions sans point)."""
+    from ged.models import get_default_extensions
+    if avec_usager:
+        categorie_ged = _categorie(categorie_ged)
+        type_doc = DocumentType.objects.filter(categorie=categorie_ged).first()
+        if not type_doc:
+            type_doc = DocumentType.objects.create(
+                code=f'MESSAGE_{categorie_ged.upper()}',
+                nom=f'Document message - {dict(DocumentCategorie.choices).get(categorie_ged, "Divers")}',
+                categorie=categorie_ged,
+                extensions_autorisees=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xls', 'xlsx', 'odt', 'ods'],
+                taille_max_mb=10)
+        return type_doc
+    return DocumentType.objects.filter(code='MESSAGE_PJ').first() or DocumentType.objects.create(
+        code='MESSAGE_PJ', nom='Pièce jointe message', categorie='divers', extensions_autorisees=get_default_extensions(),
+        taille_max_mb=10)
+
+
+def _erreurs_fichiers(fichiers, type_doc):
+    """Mêmes règles que le dépôt dans la GED (taille, extensions), vérifiées AVANT de créer le message."""
+    from ged.validation import erreurs_fichier
+    if len(fichiers) > MAX_FICHIERS:
+        return [f"{MAX_FICHIERS} fichiers au plus par message."]
+    return [e for f in fichiers for e in erreurs_fichier(f, type_doc)]
+
+
+def _deposer(fichiers, message, type_doc, user, raison, request):
+    """Dépose les fichiers (déjà vérifiés) dans la GED : sur l'usager du message s'il y en a un, sinon sur le message."""
+    for fichier in fichiers:
+        buffer = BytesIO(fichier.read())
+        buffer.name = fichier.name
+        doc = DocumentGED.create_from_buffer(
+            buffer=buffer, filename=fichier.name, content_object=message.beneficiaire or message,
+            type_document=type_doc, user=user, confidentialite='RESTREINT', raison=raison, request=request)
+        message.pieces_jointes.add(doc)
+        buffer.close()
+
+
 @login_required
 def boite_reception(request):
     """Boîte de réception - messages reçus"""
@@ -175,6 +221,14 @@ def nouveau_message(request, beneficiaire_id=None):
                     django_messages.error(request, "Accès refusé à ce bénéficiaire.")
                     return redirect('messagerie:nouveau_message')
             
+            type_pj = _type_piece_jointe(categorie_ged, bool(beneficiaire_obj)) if fichiers_nouveaux else None
+            erreurs = _erreurs_fichiers(fichiers_nouveaux, type_pj) if fichiers_nouveaux else []
+            if erreurs:
+                for e in erreurs:
+                    django_messages.error(request, e)
+                django_messages.warning(request, "Message non envoyé : retirez ou remplacez les fichiers refusés.")
+                return redirect(request.get_full_path())
+
             # Créer le message
             nouveau_msg = Message.objects.create(
                 expediteur=request.user,
@@ -192,70 +246,11 @@ def nouveau_message(request, beneficiaire_id=None):
             if docs_ged_ids:
                 nouveau_msg.pieces_jointes.set(_documents_autorises(docs_ged_ids, request.user))
             
-            # Créer des documents GED pour les nouveaux fichiers
-            if fichiers_nouveaux and beneficiaire_obj:
-                # Trouver ou créer le type de document pour la catégorie choisie
-                type_doc = DocumentType.objects.filter(
-                    categorie=categorie_ged
-                ).first()
-                
-                if not type_doc:
-                    # Créer un type générique pour cette catégorie
-                    type_doc = DocumentType.objects.create(
-                        code=f'MESSAGE_{categorie_ged.upper()}',
-                        nom=f'Document message - {dict(DocumentCategorie.choices).get(categorie_ged, "Divers")}',
-                        categorie=categorie_ged,
-                        extensions_autorisees=['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.xls', '.xlsx'],
-                        taille_max_mb=10,
-                    )
-                
-                for fichier in fichiers_nouveaux:
-                    # ✅ CORRECTION BYTESIO COMPLÈTE
-                    buffer = BytesIO(fichier.read())
-                    buffer.name = fichier.name  # Pour l'extension
-                    
-                    # Créer le document lié AU BÉNÉFICIAIRE (pas au message)
-                    doc = DocumentGED.create_from_buffer(
-                        buffer=buffer,  # ✅ BytesIO maintenant
-                        filename=fichier.name,
-                        content_object=beneficiaire_obj,
-                        type_document=type_doc,
-                        user=request.user,
-                        confidentialite='RESTREINT',
-                        raison=f'Via messagerie - {objet}',
-                        request=request
-                    )
-                    nouveau_msg.pieces_jointes.add(doc)
-                    buffer.close()
-            
-            elif fichiers_nouveaux and not beneficiaire_obj:
-                # Si pas de bénéficiaire, créer quand même les docs (liés au message)
-                type_doc = DocumentType.objects.filter(code='MESSAGE_PJ').first()
-                if not type_doc:
-                    type_doc = DocumentType.objects.create(
-                        code='MESSAGE_PJ',
-                        nom='Pièce jointe message',
-                        categorie='divers'
-                    )
-                
-                for fichier in fichiers_nouveaux:
-                    # ✅ CORRECTION BYTESIO ICI AUSSI
-                    buffer = BytesIO(fichier.read())
-                    buffer.name = fichier.name
-                    
-                    doc = DocumentGED.create_from_buffer(
-                        buffer=buffer,  # ✅ BytesIO
-                        filename=fichier.name,
-                        content_object=nouveau_msg,
-                        type_document=type_doc,
-                        user=request.user,
-                        confidentialite='RESTREINT',
-                        raison=f'Pièce jointe - Message: {objet}',
-                        request=request
-                    )
-                    nouveau_msg.pieces_jointes.add(doc)
-                    buffer.close()
-            
+            # Nouveaux fichiers : dans la GED (déjà vérifiés ci-dessus)
+            if fichiers_nouveaux:
+                _deposer(fichiers_nouveaux, nouveau_msg, type_pj, request.user,
+                         f'Via messagerie - {objet}' if beneficiaire_obj else f'Pièce jointe - Message: {objet}', request)
+
             # Créer les statuts de lecture
             StatutLecture.objects.create(
                 message=nouveau_msg,
@@ -330,6 +325,15 @@ def repondre_message(request, message_id):
         # Déterminer le destinataire
         destinataire = message_original.expediteur if message_original.expediteur != request.user else message_original.destinataire
         
+        type_pj = (_type_piece_jointe(categorie_ged, bool(message_original.beneficiaire))
+                   if fichiers_nouveaux else None)
+        erreurs = _erreurs_fichiers(fichiers_nouveaux, type_pj) if fichiers_nouveaux else []
+        if erreurs:
+            for e in erreurs:
+                django_messages.error(request, e)
+            django_messages.warning(request, "Réponse non envoyée : retirez ou remplacez les fichiers refusés.")
+            return redirect(request.get_full_path())
+
         # Créer la réponse
         reponse = Message.objects.create(
             expediteur=request.user,
@@ -347,62 +351,13 @@ def repondre_message(request, message_id):
         # Documents
         if docs_ged_ids:
             reponse.pieces_jointes.set(_documents_autorises(docs_ged_ids, request.user))
-        
+
+        # Nouveaux fichiers : dans la GED (déjà vérifiés ci-dessus)
         if fichiers_nouveaux:
-            if message_original.beneficiaire:
-                type_doc = DocumentType.objects.filter(categorie=categorie_ged).first()
-                if not type_doc:
-                    type_doc = DocumentType.objects.create(
-                        code=f'MESSAGE_{categorie_ged.upper()}',
-                        nom=f'Document message - {dict(DocumentCategorie.choices).get(categorie_ged, "Divers")}',
-                        categorie=categorie_ged,
-                        extensions_autorisees=['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'],
-                        taille_max_mb=10,
-                    )
-                
-                # ✅ CORRECTION BYTESIO COMPLÈTE DANS repondre_message()
-                for fichier in fichiers_nouveaux:
-                    buffer = BytesIO(fichier.read())
-                    buffer.name = fichier.name
-                    
-                    doc = DocumentGED.create_from_buffer(
-                        buffer=buffer,  # ✅ BytesIO maintenant
-                        filename=fichier.name,
-                        content_object=message_original.beneficiaire,
-                        type_document=type_doc,
-                        user=request.user,
-                        confidentialite='RESTREINT',
-                        raison=f'Via messagerie - Réponse: {message_original.objet}',
-                        request=request
-                    )
-                    reponse.pieces_jointes.add(doc)
-                    buffer.close()
-            else:
-                type_doc = DocumentType.objects.filter(code='MESSAGE_PJ').first()
-                if not type_doc:
-                    type_doc = DocumentType.objects.create(
-                        code='MESSAGE_PJ',
-                        nom='Pièce jointe message',
-                        categorie='divers'
-                    )
-                
-                for fichier in fichiers_nouveaux:
-                    buffer = BytesIO(fichier.read())
-                    buffer.name = fichier.name
-                    
-                    doc = DocumentGED.create_from_buffer(
-                        buffer=buffer,  # ✅ BytesIO
-                        filename=fichier.name,
-                        content_object=reponse,
-                        type_document=type_doc,
-                        user=request.user,
-                        confidentialite='RESTREINT',
-                        raison=f'Pièce jointe - Réponse',
-                        request=request
-                    )
-                    reponse.pieces_jointes.add(doc)
-                    buffer.close()
-        
+            _deposer(fichiers_nouveaux, reponse, type_pj, request.user,
+                     f'Via messagerie - Réponse: {message_original.objet}' if message_original.beneficiaire
+                     else 'Pièce jointe - Réponse', request)
+
         # Statuts de lecture
         StatutLecture.objects.create(
             message=reponse,

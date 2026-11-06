@@ -238,11 +238,25 @@ class DocumentGED(models.Model):
         if user.is_superuser:
             return True
 
+        objet = self.content_object
+        if objet is None:
+            return False      # dossier d'origine introuvable : pas d'accès par défaut
+
+        # Pièce jointe déposée directement sur un message (message sans usager) : seuls l'expéditeur, le destinataire
+        # et la personne en copie de ce message ou d'un message du même fil qui la joint
+        from messagerie.models import Message
+        if isinstance(objet, Message):
+            return any(user.pk in (m.expediteur_id, m.destinataire_id, m.copie_id)
+                       for m in [objet, *self.messages_lies.all()])
+
         # IP : les pièces suivent les droits de l'IP (CRIP, inspecteurs, cadres de la MDS, binôme)
         from protection_enfance.models import InformationPreoccupante
-        if isinstance(self.content_object, InformationPreoccupante):
-            return self.content_object.peut_voir(user)
+        if isinstance(objet, InformationPreoccupante):
+            return objet.peut_voir(user)
 
+        # Dérogations métier (confirmées par Fred, 6/11/2026) : le contrôle AFASE, l'inspecteur enfance-famille et la
+        # régie centrale voient TOUTES les pièces des dossiers qui leur sont transmis, quel que soit leur niveau de
+        # confidentialité, sans barrière territoriale : c'est leur mission de contrôle et de paiement.
         # 0. Service de contrôle AFASE : uniquement les pièces des dossiers qui lui ont été transmis
         if user.a_la_capacite("afase_controle"):
             from AidFi.models.m_generique import PieceJustificative
@@ -270,7 +284,7 @@ class DocumentGED(models.Model):
                 return True
 
         # 1. Vérification territoriale (via le bénéficiaire)
-        if not user.peut_agir_sur_objet(self.content_object, "peut_voir"):
+        if not user.peut_agir_sur_objet(objet, "peut_voir"):
             return False
         
         # 2. Vérification de la confidentialité
