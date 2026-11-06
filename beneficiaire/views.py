@@ -31,6 +31,7 @@ from .forms import (
     SortieBeneficiaireForm,
     LienFamilialForm,
 )
+from .budget import budget_en_cours
 from .models import Beneficiaire, DocumentBeneficiaireLink, LienFamilial
 from connecteurs.api_particulier import tableau_situations
 from connecteurs.rdv_service_public import est_actif as rdvsp_est_actif
@@ -255,6 +256,7 @@ def detail_beneficiaire(request, code_interne):
             ],
             "nb_documents": documents_ged.count(),
             "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
+            "budget_foyer": budget_en_cours(beneficiaire),
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification
             # de base.html, qui afficheraient alors ces messages CID en haut de chaque visite.
             "messages_beneficiaire": Message.objects.filter(

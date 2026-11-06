@@ -79,6 +79,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
     from AidFi.forms.afase_workflow_form import enfants_proposes
     from AidFi.services.aide_decision import referentiel as referentiel_afase
     from AidFi.services import budget_afase
+    budget_repris = None
     if request.method == "POST":
         # Formulaire réaffiché après une erreur : on garde ce qui a été saisi
         ressources, charges, dettes = budget_afase.depuis_post(request.POST)
@@ -88,6 +89,14 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
         charges = budget.charges if budget else {}
         dettes = list(budget.dettes or []) if budget else []
         enfants_lignes = enfants_proposes(beneficiaire, demande)
+        if not budget:
+            # Nouvelle demande : le budget du foyer déjà établi sur la fiche sert de point de départ
+            from beneficiaire.budget import budget_en_cours
+            budget_repris = budget_en_cours(beneficiaire)
+            if budget_repris:
+                ressources, charges = budget_repris.ressources, budget_repris.charges
+                dettes = list(budget_repris.dettes or [])
+                form.initial["nb_personnes_foyer"] = budget_repris.nb_personnes_foyer
     enfants_lignes = list(enfants_lignes) + [
         {"nom": "", "prenom": "", "date_naissance": None, "sexe": "", "situation": "", "a_naitre": False,
          "concerne": False, "beneficiaire_id": None} for _ in range(2)]
@@ -112,6 +121,7 @@ def afase_creer_ou_modifier(request, beneficiaire_id=None, demande_id=None):
             "colonnes_charges": budget_afase.COLONNES_CHARGES,
             "a_preciser": budget_afase.A_PRECISER,
             "ancien_budget": budget.affichage if ancien_budget else None,
+            "budget_repris": budget_repris,
             "referentiel": referentiel_afase(),
             "aides_cochees": (request.POST.getlist("aides_prealables") if request.method == "POST"
                               else (demande.aides_prealables_sollicitees if demande else [])),

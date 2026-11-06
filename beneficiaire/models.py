@@ -467,3 +467,4 @@ class OperationRGPD(models.Model):
 
     def __str__(self):
         return f"{self.get_action_display()} – {self.date:%d/%m/%Y}"
+from .models_budget import BudgetFoyer  # noqa: E402,F401

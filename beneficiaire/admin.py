@@ -120,3 +120,13 @@ class ValeurListeAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False   # une valeur déjà utilisée ne se supprime pas : on la désactive
+
+
+from .models_budget import BudgetFoyer  # noqa: E402
+
+
+@admin.register(BudgetFoyer)
+class BudgetFoyerAdmin(admin.ModelAdmin):
+    list_display = ('beneficiaire', 'date_etabli', 'nb_personnes_foyer', 'reste_a_vivre')
+    raw_id_fields = ('beneficiaire',)
+    readonly_fields = ('reste_a_vivre', 'cree_par', 'modifie_par')

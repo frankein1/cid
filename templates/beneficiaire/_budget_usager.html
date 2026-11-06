@@ -1,0 +1,13 @@
+<!-- /templates/beneficiaire/_budget_usager.html -->
+{# Encart « Budget du foyer » de la fiche usager (dossier complet) #}
+<div id="budget-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div class="flex justify-between items-center gap-2">
+        <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-wallet text-emerald-600 mr-2"></i>Budget du foyer</h2>
+        <a href="{% url 'beneficiaire:budget_foyer' beneficiaire.code_interne %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50">{% if budget_foyer %}Voir le détail{% else %}Établir le budget{% endif %}</a>
+    </div>
+    {% if budget_foyer %}{% with t=budget_foyer.totaux %}
+    <p class="text-sm text-gray-600 mt-2">Au {{ budget_foyer.date_etabli|date:"d/m/Y" }}{% if budget_foyer.beneficiaire_id != beneficiaire.pk %} (fiche de {{ budget_foyer.beneficiaire.prenom }} {{ budget_foyer.beneficiaire.nom }}){% endif %} :
+        ressources {{ t.ressources|floatformat:2 }} €, charges payées {{ t.charges_payees|floatformat:2 }} €,
+        <b>reste à vivre {{ t.reste_a_vivre|floatformat:2 }} € par jour et par personne</b>{% if budget_foyer.total_dettes %}, dettes {{ budget_foyer.total_dettes|floatformat:2 }} €{% endif %}.</p>
+    {% endwith %}{% endif %}
+</div>

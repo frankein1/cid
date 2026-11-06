@@ -1,0 +1,27 @@
+<!-- /templates/beneficiaire/_budget_lecture.html -->
+{# Lecture d'un budget du foyer (variable « budget ») #}
+{% with t=budget.totaux a=budget.affichage %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center mb-6">
+  <div class="p-3 bg-white rounded-lg border"><div class="text-xs text-gray-500">Ressources mensuelles</div><div class="text-xl font-bold text-green-700">{{ t.ressources|floatformat:2 }} €</div></div>
+  <div class="p-3 bg-white rounded-lg border"><div class="text-xs text-gray-500">Charges payées</div><div class="text-xl font-bold text-red-700">{{ t.charges_payees|floatformat:2 }} €</div>{% if t.charges_non_payees %}<div class="text-xs text-amber-700">+ {{ t.charges_non_payees|floatformat:2 }} € non payées</div>{% endif %}</div>
+  <div class="p-3 bg-white rounded-lg border"><div class="text-xs text-gray-500">Dettes</div><div class="text-xl font-bold text-gray-800">{{ budget.total_dettes|floatformat:2 }} €</div></div>
+  <div class="p-3 bg-white rounded-lg border"><div class="text-xs text-gray-500">Reste à vivre / jour / personne ({{ t.nb_personnes }} pers.)</div><div class="text-xl font-bold {% if t.reste_a_vivre < 0 %}text-red-700{% else %}text-blue-700{% endif %}">{{ t.reste_a_vivre|floatformat:2 }} €</div></div>
+</div>
+<div class="grid md:grid-cols-2 gap-6 text-sm">
+  <div>
+    <h3 class="font-semibold text-green-900 mb-2">Ressources</h3>
+    {% for titre, lignes in a.ressources %}<p class="text-xs uppercase text-gray-500 mt-2">{{ titre }}</p>
+      {% for lib, cols in lignes %}<div class="flex justify-between border-b py-1"><span>{{ lib }}</span><span class="text-right whitespace-nowrap">{% for c, m in cols.items %}{% if m %}{{ m|floatformat:2 }} € <span class="text-gray-400 text-xs">{{ c }}</span> {% endif %}{% endfor %}</span></div>{% endfor %}
+    {% empty %}<p class="text-gray-500">Aucune ressource saisie.</p>{% endfor %}
+  </div>
+  <div>
+    <h3 class="font-semibold text-red-900 mb-2">Charges</h3>
+    {% for titre, lignes in a.charges %}<p class="text-xs uppercase text-gray-500 mt-2">{{ titre }}</p>
+      {% for lib, cols in lignes %}<div class="flex justify-between border-b py-1"><span>{{ lib }}</span><span class="text-right whitespace-nowrap">{% if cols.payee %}{{ cols.payee|floatformat:2 }} €{% endif %}{% if cols.non_payee %} <span class="text-amber-700">{{ cols.non_payee|floatformat:2 }} € non payés</span>{% endif %}</span></div>{% endfor %}
+    {% empty %}<p class="text-gray-500">Aucune charge saisie.</p>{% endfor %}
+    {% if budget.dettes %}<h3 class="font-semibold text-gray-800 mt-4 mb-2">Dettes</h3>
+      {% for d in budget.dettes %}<div class="flex justify-between border-b py-1"><span>{{ d.creancier|default:"—" }}</span><span>{{ d.montant }} €</span></div>{% endfor %}{% endif %}
+  </div>
+</div>
+{% if budget.commentaire %}<p class="mt-4 text-sm text-gray-700 whitespace-pre-line"><b>Observations :</b> {{ budget.commentaire }}</p>{% endif %}
+{% endwith %}
