@@ -168,11 +168,17 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
         bilan = inv.envoyer_campagne(campagne)
         self.assertEqual(bilan["erreurs"], 0, list(campagne.invitations.values_list("erreur", flat=True)))
         lien = campagne.invitations.get().lien
-        page = requests.get(lien, timeout=60)   # suit les redirections : connexion de l'usager par son jeton
-        self.assertEqual(page.status_code, 200, page.url)
-        self.assertNotIn("invalide", page.text.lower()[:20000])
-        self.assertIn("Renouvellement RSA", page.text)
-        print(f"✅ Invitation : lien personnel accepté, le motif « Renouvellement RSA » est proposé ({page.url[:60]}…)")
+        # Le jeton accepté, RDV-Solidarités connecte l'usagère et la renvoie vers la recherche de créneaux, sans
+        # le jeton (un jeton refusé renvoie vers l'accueil avec une erreur). Les pages elles-mêmes ne sont pas
+        # affichables sur le banc (interface web non compilée) : on vérifie la redirection.
+        r = requests.get(lien, allow_redirects=False, timeout=60)
+        self.assertIn(r.status_code, (301, 302, 303), r.status_code)
+        cible = r.headers.get("Location", "")
+        self.assertIn("/prendre_rdv", cible, cible)
+        self.assertNotIn("invitation_token", cible)
+        faux = requests.get(lien.replace("invitation_token=", "invitation_token=faux"), allow_redirects=False, timeout=60)
+        self.assertNotIn("/prendre_rdv", faux.headers.get("Location", ""))
+        print(f"✅ Invitation envoyée : lien personnel accepté par RDV-Solidarités (→ {cible[:70]}…), faux lien refusé")
 
         # 8. Demi-journée retirée dans CID → neutralisée dans RDV-Solidarités
         from mds.models import DemiJourneeReception
