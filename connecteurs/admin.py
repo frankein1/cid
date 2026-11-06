@@ -137,3 +137,21 @@ from .models import LieuExterneRDVSP  # noqa: E402
 class LieuExterneRDVSPAdmin(admin.ModelAdmin):
     list_display = ('nom', 'mds_sp', 'adresse', 'lieu_sp_id')
     list_filter = ('mds_sp',)
+
+
+from .models import ImportInclusion, ServiceInclusion  # noqa: E402
+
+
+@admin.register(ServiceInclusion)
+class ServiceInclusionAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'structure_nom', 'commune', 'type', 'frais', 'source', 'date_maj')
+    list_filter = ('source', 'type', 'frais')
+    search_fields = ('nom', 'structure_nom', 'commune')
+
+    def has_add_permission(self, request):
+        return False      # importé depuis data·inclusion
+
+
+@admin.register(ImportInclusion)
+class ImportInclusionAdmin(admin.ModelAdmin):
+    list_display = ('debut', 'fin', 'departements', 'structures', 'services', 'retires', 'erreur')

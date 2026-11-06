@@ -46,7 +46,8 @@ EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.Profil", "core.Capa
           "insertion.ActionInsertion", "insertion.QuestionAction", "insertion.ParametresRSA",
           "insertion.OrganismeOrientation", "insertion.PoleInsertion", "beneficiaire.ValeurListe", "beneficiaire.TypeAccompagnement",
           "connecteurs.MotifRDVSP", "connecteurs.ParametresRDVSP", "connecteurs.MdsRDVSP",
-          "connecteurs.LieuExterneRDVSP", "core.User"}
+          "connecteurs.LieuExterneRDVSP", "connecteurs.ServiceInclusion",
+          "connecteurs.ImportInclusion", "core.User"}
 # Champs courts qui portent une donnée personnelle, où qu'ils soient
 CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "numero_caf", "numero_france_travail",
                   "numero_fiscal", "numero_genesis", "numero_dossier_pmi", "code_insee_naissance",

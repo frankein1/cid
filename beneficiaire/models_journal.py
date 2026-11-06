@@ -22,6 +22,10 @@ class TypeAccompagnement(models.Model):
     description = models.TextField(blank=True)
     ordre = models.PositiveSmallIntegerField(default=100)
     actif = models.BooleanField(default=True)
+    thematiques_inclusion = models.JSONField(
+        "Thématiques data·inclusion", default=list, blank=True,
+        help_text="Catégories du référentiel national (ex. « logement-hebergement ») proposées pour chercher un service "
+                  "d'orientation à partir de ce type.")
 
     class Meta:
         verbose_name = "Type d'accompagnement"

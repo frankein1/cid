@@ -10,7 +10,12 @@ from . import views, views_invitations, views_rdvsp_synchro, views_simulation
 
 app_name = 'connecteurs'
 
+from . import views_inclusion  # noqa: E402
+
 urlpatterns = [
+    path('inclusion/', views_inclusion.recherche, name='inclusion_recherche'),
+    path('inclusion/<int:pk>/ajouter-annuaire/', views_inclusion.ajouter_annuaire, name='inclusion_ajouter'),
+    path('inclusion/mise-a-jour/', views_inclusion.etat, name='inclusion_etat'),
     path('usager/<str:code_interne>/simulation-droits/', views_simulation.simuler_droits, name='simuler_droits'),
     path('usager/<str:code_interne>/situation/actualiser/', views.actualiser_situation,
          name='actualiser_situation'),

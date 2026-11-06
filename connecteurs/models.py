@@ -415,3 +415,71 @@ class InvitationRSA(models.Model):
         unique_together = ('campagne', 'beneficiaire')
         verbose_name = "Invitation RSA"
         verbose_name_plural = "Invitations RSA"
+
+
+# =============================================================================
+# data·inclusion : offre d'insertion du territoire (fichiers ouverts, Licence Ouverte 2.0)
+# =============================================================================
+class ServiceInclusion(models.Model):
+    """Un service d'insertion du référentiel national data·inclusion, importé pour les départements choisis.
+    Données publiques sur des structures (aucune donnée sur les usagers)."""
+    di_id = models.CharField("Identifiant data·inclusion", max_length=255, unique=True)
+    source = models.CharField(max_length=60)
+    structure_id = models.CharField(max_length=255, blank=True)
+    structure_nom = models.CharField("Structure", max_length=255, blank=True)
+    structure_siret = models.CharField(max_length=14, blank=True)
+    nom = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=40, blank=True)
+    thematiques = models.JSONField(default=list, blank=True)
+    publics = models.JSONField(default=list, blank=True)
+    frais = models.CharField(max_length=20, blank=True)
+    modes_accueil = models.JSONField(default=list, blank=True)
+    conditions_acces = models.TextField(blank=True)
+    adresse = models.CharField(max_length=255, blank=True)
+    code_postal = models.CharField(max_length=5, blank=True)
+    commune = models.CharField(max_length=100, blank=True)
+    code_insee = models.CharField(max_length=5, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    telephone = models.CharField(max_length=40, blank=True)
+    courriel = models.CharField(max_length=255, blank=True)
+    horaires_accueil = models.TextField(blank=True)
+    lien_source = models.URLField(max_length=2083, blank=True)
+    lien_mobilisation = models.URLField(max_length=2083, blank=True)
+    zone_eligibilite = models.JSONField(default=list, blank=True)
+    date_maj = models.DateField(null=True, blank=True)
+    importe_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Service d'insertion (data·inclusion)"
+        verbose_name_plural = "Services d'insertion (data·inclusion)"
+        indexes = [models.Index(fields=['code_postal']), models.Index(fields=['commune'])]
+
+    def __str__(self):
+        return f"{self.nom} – {self.structure_nom}" if self.structure_nom else self.nom
+
+    @property
+    def categories(self):
+        return sorted({t.split('--')[0] for t in self.thematiques or []})
+
+
+class ImportInclusion(models.Model):
+    """Trace de chaque mise à jour depuis data·inclusion."""
+    debut = models.DateTimeField(auto_now_add=True)
+    fin = models.DateTimeField(null=True, blank=True)
+    departements = models.CharField(max_length=100)
+    structures = models.PositiveIntegerField(default=0)
+    services = models.PositiveIntegerField(default=0)
+    retires = models.PositiveIntegerField(default=0)
+    erreur = models.TextField(blank=True)
+    lance_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    class Meta:
+        ordering = ['-debut']
+        verbose_name = "Mise à jour data·inclusion"
+        verbose_name_plural = "Mises à jour data·inclusion"
+
+    @property
+    def en_cours(self):
+        return self.fin is None
