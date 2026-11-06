@@ -16,7 +16,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'cap-demander', 'cap-decider', 'cap-coffre', 'regie-demander', 'regie-decider',
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
-         'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs',
+         'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
          'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
@@ -31,7 +31,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
                                                            'regie-demander', 'regie-decider']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
-             ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs']),
+             ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
                                   'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
@@ -93,6 +93,7 @@ TITRES = {
     'journal-accompagnement': ("Le journal de l'accompagnement : entretiens et suites", "Travailleurs sociaux, agents de MDS"),
     'budget-foyer': ("Établir le budget du foyer", "Travailleurs sociaux, agents de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
+    'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
 }
 
 
@@ -1183,6 +1184,33 @@ page('ateliers-collectifs', qui="Agents de la MDS (consultation) ; agents avec l
      savoir=["La participation apparaît sur la fiche de l'usager (encart « Ateliers collectifs ») et dans son journal.",
              "Une séance annulée n'accepte plus d'inscription ; elle peut être rétablie."],
      ensuite=['journal-accompagnement'])
+
+page('statistiques-accompagnement', qui="Cadres de MDS (leur MDS, détail par agent) ; direction (tout le département, sans détail par agent)", ou="Menu Accompagnement → Statistiques de l'accompagnement", duree="2 minutes",
+     intro="Une page pour trois usages : piloter l'équipe de la MDS, préparer le rapport d'activité annuel, comparer les MDS. Elle compte les entretiens du journal, le public accompagné, les budgets du foyer et les ateliers.",
+     etapes=[
+         ("Choisir la période", [fig('statistiques-accompagnement', '01', "Les chiffres clés de la période.")],
+          ["Par défaut : du 1er janvier à aujourd'hui. Changez les dates, ou cliquez une année après <b>Rapport annuel</b>.",
+           "Les cartes du haut : entretiens, heures, <b>file active</b> (personnes vues), personnes vues pour la première fois, part d'accompagnement <b>légal</b>, suites en retard.",
+           "<span class=\"clic\">Imprimer / PDF</span> donne une page propre pour le rapport ; <span class=\"clic\">CSV</span> ouvre les chiffres dans un tableur."], []),
+         ("Lire l'activité", [fig('statistiques-accompagnement', '02', "Types d'accompagnement, modes d'entretien, orientations.")],
+          ["Par type d'accompagnement : nombre d'entretiens et de personnes. Par mode : rendez-vous, téléphone, visite à domicile…",
+           "Les <b>orientations</b> montrent vers quels partenaires la MDS oriente le plus."], []),
+         ("Piloter l'équipe (cadre de MDS)", [fig('statistiques-accompagnement', '03', "Le détail par agent, réservé au cadre de la MDS.")],
+          ["Pour chaque agent : entretiens, heures, personnes vues, suites en retard.",
+           "Ce tableau n'apparaît que pour le cadre de la MDS : la direction ne le voit jamais."], []),
+         ("Budgets et ateliers", [fig('statistiques-accompagnement', '04', "Reste à vivre, impayés, dettes.")],
+          ["Budgets : le dernier budget de chaque foyer établi sur la période, réparti par tranches de reste à vivre, avec la médiane, les impayés et les dettes.",
+           "Ateliers : séances, remplissage, présence, et la <b>liste d'attente</b>, qui mesure un besoin non couvert."], []),
+         ("Comparer les MDS (direction)", [fig('statistiques-accompagnement', '05', "Une ligne par MDS.")],
+          ["Avec le droit « statistiques du département », la page couvre toutes les MDS et ajoute le tableau de comparaison.",
+           "Choisissez une MDS dans la liste pour voir son détail (sans le détail par agent)."], []),
+     ],
+     savoir=["<b>Secret statistique</b> : de 1 à 4 personnes ou foyers, la page affiche « &lt; 5 », sans pourcentage qui permettrait de retrouver le chiffre.",
+             "Aucun texte libre n'est compté : ni les synthèses, ni les synthèses privées.",
+             "Les chiffres valent ce que vaut la saisie : un entretien non noté dans le journal n'existe pas pour les statistiques.",
+             "Un entretien est compté dans la MDS actuelle de l'usager.",
+             "Rendez-vous, aides, RSA et IP gardent leurs propres pages de statistiques."],
+     ensuite=['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs'])
 
 # =============================================================================
 # Sommaire

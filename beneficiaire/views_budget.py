@@ -15,7 +15,7 @@ from django.utils import timezone
 from AidFi.models.m_afase import nb_personnes_au_foyer
 from AidFi.services import budget_afase as ref
 
-from .budget import budget_en_cours, dernier_budget_afase, membres_du_foyer
+from .budget import budget_en_cours, dernier_budget_afase, foyer_meme_mds
 from .models import Beneficiaire
 from .models_budget import BudgetFoyer
 from .views import user_peut_agir_sur_beneficiaire
@@ -43,7 +43,7 @@ def budget_foyer(request, code_interne):
     b, refus = _usager(request, code_interne)
     if refus:
         return refus
-    foyer = membres_du_foyer(b)
+    foyer = foyer_meme_mds(b)
     historique = BudgetFoyer.objects.filter(beneficiaire_id__in=foyer | {b.pk}).select_related('beneficiaire', 'cree_par')
     return render(request, 'beneficiaire/budget_foyer.html', {
         'beneficiaire': b, 'budget': budget_en_cours(b), 'historique': historique,

@@ -19,12 +19,20 @@ def membres_du_foyer(beneficiaire):
     return ids
 
 
+def foyer_meme_mds(beneficiaire):
+    """Membres du foyer suivis par la même MDS : seuls leurs budgets sont partagés (une famille répartie entre deux
+    MDS ne fait pas passer le budget établi dans l'une aux agents de l'autre)."""
+    from .models import Beneficiaire
+    return set(Beneficiaire.tous.filter(pk__in=membres_du_foyer(beneficiaire), mds_id=beneficiaire.mds_id)
+               .values_list('pk', flat=True))
+
+
 def budget_en_cours(beneficiaire):
-    """Le budget le plus récent de l'usager ; à défaut, celui d'une personne de son foyer (le budget est commun)."""
+    """Le budget le plus récent de l'usager ; à défaut, celui d'une personne de son foyer suivie par la même MDS."""
     propre = BudgetFoyer.objects.filter(beneficiaire=beneficiaire).first()
     if propre:
         return propre
-    return BudgetFoyer.objects.filter(beneficiaire_id__in=membres_du_foyer(beneficiaire)).first()
+    return BudgetFoyer.objects.filter(beneficiaire_id__in=foyer_meme_mds(beneficiaire)).first()
 
 
 def dernier_budget_afase(beneficiaire):

@@ -12,6 +12,7 @@ from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from core.models import User
@@ -41,8 +42,10 @@ class EntretienForm(forms.ModelForm):
                    'types': forms.CheckboxSelectMultiple, 'personnes_presentes': forms.CheckboxSelectMultiple,
                    'synthese': forms.Textarea(attrs={'rows': 6}), 'synthese_privee': forms.Textarea(attrs={'rows': 3})}
 
-    def __init__(self, *args, beneficiaire=None, **kwargs):
+    def __init__(self, *args, beneficiaire=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance.pk and user is not None and not self.instance.peut_lire_prive(user):
+            del self.fields['synthese_privee']      # un administrateur qui corrige ne lit pas les notes de l'auteur
         self.fields['types'].queryset = TypeAccompagnement.objects.filter(actif=True)
         self.fields['personnes_presentes'].queryset = Beneficiaire.objects.filter(pk__in=membres_du_foyer(beneficiaire))
         self.fields['co_intervenants'].queryset = (User.objects.filter(is_active=True, profils_mds__mds=beneficiaire.mds,
@@ -97,7 +100,7 @@ def entretien_form(request, code_interne, pk=None):
                        'duree_minutes': creneau.duree_minutes,
                        'objet': f"Rendez-vous – {creneau.get_nature_display().lower()}",
                        'co_intervenants': list(creneau.co_intervenants.all())}
-    form = EntretienForm(request.POST or None, instance=e, beneficiaire=b, initial=initial)
+    form = EntretienForm(request.POST or None, instance=e, beneficiaire=b, user=request.user, initial=initial)
     if request.method == 'POST' and form.is_valid():
         ent = form.save(commit=False)
         if not ent.pk:
@@ -131,4 +134,8 @@ def suite_faite(request, pk):
     e.suite_faite = True
     e.save(update_fields=['suite_faite'])
     messages.success(request, "Suite marquée comme faite.")
-    return redirect(request.POST.get('retour') or 'beneficiaire:mes_suites')
+    retour = request.POST.get('retour', '')
+    if retour and url_has_allowed_host_and_scheme(retour, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return redirect(retour)
+    return redirect('beneficiaire:mes_suites')
