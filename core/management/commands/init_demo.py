@@ -162,6 +162,7 @@ class Command(BaseCommand):
             self.planning()
             self.ateliers()
             self.budgets()
+            self.journal()
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
@@ -790,6 +791,31 @@ class Command(BaseCommand):
                           f"le {prochaine.date:%d/%m/%Y} (3 dossiers), une demande en préparation")
 
     # ------------------------------------------------------------------ planning
+    def journal(self):
+        """Entretiens fictifs : une suite à donner, une synthèse privée (visible du seul auteur), un accompagnement légal."""
+        from beneficiaire.models import EntretienSocial as E, TypeAccompagnement as T
+        E.objects.filter(beneficiaire__code_interne__in=CODES_DEMO).delete()
+        t = {x.code: x for x in T.objects.all()}
+
+        def entretien(code, il_y_a, mode, objet, types, synthese, prive="", suite="", echeance=None, faite=False):
+            e = E.objects.create(beneficiaire=self.b[code], date=self.j - timedelta(days=il_y_a), heure=time(10),
+                                 mode=mode, duree_minutes=45, auteur=self.ts, cree_par=self.ts, objet=objet,
+                                 synthese=synthese, synthese_privee=prive, suite_a_donner=suite,
+                                 echeance=self.j + timedelta(days=echeance) if echeance is not None else None,
+                                 suite_faite=faite)
+            e.types.set([t[c] for c in types if c in t])
+        entretien("FAM5-SAR", 40, E.RDV, "Premier entretien", ["acces-droits", "rsa"],
+                  "Point sur la situation et les droits. Contrat RSA à préparer.", suite="Préparer le contrat RSA",
+                  echeance=-20, faite=True)
+        entretien("FAM5-SAR", 9, E.TELEPHONE, "Facture d'électricité", ["budget"],
+                  "Facture de régularisation reçue. Budget du foyer mis à jour. Demande d'échéancier à faire auprès du "
+                  "fournisseur.", prive="Penser à vérifier le chèque énergie à la prochaine rencontre.",
+                  suite="Rappeler pour savoir si l'échéancier est accordé", echeance=5)
+        entretien("FAM2-SOP", 25, E.VAD, "Visite à domicile", ["logement", "parentalite"],
+                  "Logement trop petit pour la famille. Demande de logement social à renouveler.",
+                  suite="Vérifier le renouvellement de la demande de logement social", echeance=-2)
+        self.stdout.write("✅ Journal de l'accompagnement fictif ajouté")
+
     def budgets(self):
         """Budgets du foyer fictifs : deux budgets successifs (historique) et un budget partagé par un couple."""
         from beneficiaire.models import BudgetFoyer

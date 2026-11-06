@@ -1,0 +1,51 @@
+<!-- /templates/beneficiaire/journal.html -->
+{% extends "base.html" %}
+{% block title %}Journal — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ beneficiaire.prenom }} {{ beneficiaire.nom }}</a>
+  <div class="flex flex-wrap items-center justify-between gap-3 mt-2 mb-4">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-book-open text-indigo-600 mr-2"></i>Journal de l'accompagnement</h1>
+    {% if peut_saisir %}<a href="{% url 'beneficiaire:entretien_nouveau' beneficiaire.code_interne %}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"><i class="fas fa-plus mr-1"></i>Nouvel entretien</a>{% endif %}
+  </div>
+  <form method="get" class="bg-white rounded-lg shadow p-3 mb-6 flex flex-wrap gap-3 items-center text-sm">
+    {% for g, lib in genres %}<label class="inline-flex items-center gap-1"><input type="checkbox" name="genre" value="{{ g }}" {% if g in genres_choisis %}checked{% endif %}> {{ lib }}</label>{% endfor %}
+    <select name="type" class="px-2 py-1 border rounded"><option value="">Tous les types d'accompagnement</option>
+      {% for t in types %}<option value="{{ t.code }}" {% if t.code == type_choisi %}selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+    <button class="px-3 py-1 border rounded">Filtrer</button>
+    {% if genres_choisis or type_choisi %}<a href="?" class="text-gray-500 hover:underline">Tout afficher</a>{% endif %}
+  </form>
+  <ol class="relative border-l-2 border-indigo-100 ml-3 space-y-4">
+  {% for l in lignes %}
+    <li class="ml-6">
+      <span class="absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-white {% if l.genre == 'entretien' %}bg-indigo-600{% elif l.genre == 'rdv' %}bg-blue-400{% elif l.genre == 'aide' %}bg-yellow-500{% elif l.genre == 'rsa' %}bg-teal-500{% elif l.genre == 'atelier' %}bg-orange-500{% else %}bg-emerald-500{% endif %}"></span>
+      <div class="bg-white rounded-lg shadow-sm border p-4">
+        <div class="flex flex-wrap justify-between gap-2">
+          <div>
+            <span class="text-xs text-gray-500">{{ l.jour|date:"d/m/Y" }}{% if l.heure %} {{ l.heure|time:"H:i" }}{% endif %}</span>
+            <p class="font-semibold text-gray-900">{% if l.url %}<a href="{{ l.url }}" class="hover:underline">{{ l.titre }}</a>{% else %}{{ l.titre }}{% endif %}
+              {% if l.legal %}<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">légal</span>{% endif %}</p>
+            <p class="text-sm text-gray-600">{{ l.detail }}{% if l.auteur %} · {{ l.auteur }}{% endif %}</p>
+          </div>
+          <div class="flex gap-2 items-start">
+            {% if l.creneau and peut_saisir %}<a href="{% url 'beneficiaire:entretien_nouveau' beneficiaire.code_interne %}?creneau={{ l.creneau.pk }}" class="text-xs px-2 py-1 border rounded hover:bg-gray-50">Rédiger le compte rendu</a>{% endif %}
+            {% if l.entretien and l.entretien.auteur_id == user.pk %}<a href="{% url 'beneficiaire:entretien_modifier' beneficiaire.code_interne l.entretien.pk %}" class="text-xs px-2 py-1 border rounded hover:bg-gray-50"><i class="fas fa-pen"></i></a>{% endif %}
+          </div>
+        </div>
+        {% with e=l.entretien %}{% if e %}
+          {% if l.types %}<p class="mt-1">{% for t in l.types %}<span class="text-xs mr-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800">{{ t.libelle }}</span>{% endfor %}</p>{% endif %}
+          {% if e.personnes_presentes.all or e.co_intervenants.all %}<p class="text-xs text-gray-500 mt-1">
+            {% if e.personnes_presentes.all %}Avec : {% for p in e.personnes_presentes.all %}{{ p.prenom }} {{ p.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}. {% endif %}
+            {% if e.co_intervenants.all %}Co-intervenant(s) : {% for u in e.co_intervenants.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</p>{% endif %}
+          {% if e.synthese %}<p class="text-sm text-gray-800 mt-2 whitespace-pre-line">{{ e.synthese }}</p>{% endif %}
+          {% if e.synthese_privee and e.auteur_id == user.pk %}<div class="mt-2 p-2 rounded bg-gray-50 border border-dashed text-sm text-gray-700 whitespace-pre-line"><i class="fas fa-lock text-gray-400 mr-1" title="Visible par vous seul(e)"></i>{{ e.synthese_privee }}</div>{% endif %}
+          {% if e.orientation or e.orientation_precision %}<p class="text-sm mt-2"><i class="fas fa-share text-gray-400 mr-1"></i>Orientation : {{ e.orientation|default:"" }}{% if e.orientation_precision %} — {{ e.orientation_precision }}{% endif %}</p>{% endif %}
+          {% if e.suite_a_donner %}<p class="text-sm mt-2 {% if e.suite_faite %}text-gray-400 line-through{% else %}text-amber-800{% endif %}"><i class="fas fa-flag mr-1"></i>{{ e.suite_a_donner }}{% if e.echeance %} (pour le {{ e.echeance|date:"d/m/Y" }}){% endif %}</p>{% endif %}
+        {% endif %}{% endwith %}
+      </div>
+    </li>
+  {% empty %}<li class="ml-6 text-gray-500 text-sm">Rien dans le journal pour l'instant.</li>{% endfor %}
+  </ol>
+  <p class="text-xs text-gray-500 mt-6">Les informations préoccupantes et la protection de l'enfance n'apparaissent pas ici : elles restent dans leur module, avec leurs propres droits.</p>
+</div>
+{% endblock %}

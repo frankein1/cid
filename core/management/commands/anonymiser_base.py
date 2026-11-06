@@ -44,7 +44,7 @@ EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.Profil", "core.Capa
           "AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
           "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "insertion.TypeActionInsertion",
           "insertion.ActionInsertion", "insertion.QuestionAction", "insertion.ParametresRSA",
-          "insertion.OrganismeOrientation", "insertion.PoleInsertion", "beneficiaire.ValeurListe",
+          "insertion.OrganismeOrientation", "insertion.PoleInsertion", "beneficiaire.ValeurListe", "beneficiaire.TypeAccompagnement",
           "connecteurs.MotifRDVSP", "connecteurs.ParametresRDVSP", "connecteurs.MdsRDVSP",
           "connecteurs.LieuExterneRDVSP", "core.User"}
 # Champs courts qui portent une donnée personnelle, où qu'ils soient
@@ -58,7 +58,8 @@ CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "num
 CHAMPS_NOM = {"nom", "nom_usage", "nom_famille"}
 CHAMPS_PRENOM = {"prenom"}
 CHAMPS_TEXTE_COURT = {"objet", "commentaire", "objet_libelle", "utilisateur_nom", "titre", "adresse", "resume",
-                      "conclusion", "motif_non_retenue", "motif_non_integration", "preconisation"}
+                      "conclusion", "motif_non_retenue", "motif_non_integration", "preconisation",
+                      "suite_a_donner", "orientation_precision"}
 
 NOMS = ["ARNAUD", "BARRE", "BLANC", "BONNET", "BRUN", "CARON", "CHEVALIER", "CLÉMENT", "COLIN", "DAVID", "DUMAS",
         "FAURE", "FONTAINE", "GAUTIER", "GIRARD", "GUÉRIN", "HENRY", "JOLY", "LACROIX", "LAMBERT", "LEGRAND",
