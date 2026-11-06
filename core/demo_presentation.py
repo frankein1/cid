@@ -169,6 +169,10 @@ def creer(cmd):
                     res["aah"] = 1016
                 if len(enfants) >= 2:
                     res["familiales"] = 148 if len(enfants) == 2 else 338
+                if profil == "monoparentale" and r.random() < 0.5:
+                    res["asf"] = 199 * len(enfants)
+                if not rsa and profil != "senior" and r.random() < 0.3:
+                    res["prime_activite"] = r.randint(90, 260)
                 res["logement"] = r.randint(220, 420) if rsa else r.randint(80, 300)
                 loyer = r.randint(480, 860)
                 elec = r.randint(45, 130)

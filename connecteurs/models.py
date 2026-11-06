@@ -520,12 +520,13 @@ class EcartSituation(models.Model):
 class PrestationRelevee(models.Model):
     """Montant d'une prestation relevé par un agent sur l'accès partenaire CAF (saisie facultative)."""
     PRESTATIONS = [
-        ('RSA', "RSA", 'rsa'), ('PRIME_ACTIVITE', "Prime d'activité", 'autres_prestations'),
-        ('AL', "Aide au logement (AL, APL, ALS, ALF)", 'logement'), ('AF', "Allocations familiales", 'familiales'),
-        ('CF', "Complément familial", 'familiales'), ('ASF', "Allocation de soutien familial", 'familiales'),
-        ('PAJE', "PAJE (allocation de base, CMG…)", 'familiales'), ('PREPARE', "PreParE", 'prepare'),
-        ('AAH', "AAH (et complément)", 'aah'), ('AEEH', "AEEH (et complément)", 'aah'),
-        ('AUTRE', "Autre prestation CAF", 'autres_prestations'),
+        ('RSA', "RSA", 'rsa'), ('PRIME_ACTIVITE', "Prime d'activité", 'prime_activite'),
+        ('AL', "Aides au logement (AL, APL, ALS, ALF)", 'logement'), ('AF', "Allocations familiales", 'familiales'),
+        ('CF', "Complément familial", 'complement_familial'), ('ASF', "Allocation de soutien familial", 'asf'),
+        ('PAJE', "PAJE (allocation de base, prime à la naissance, mode de garde)", 'paje'),
+        ('PREPARE', "PreParE", 'prepare'), ('AAH', "AAH et complément", 'aah'), ('AEEH', "AEEH et complément", 'aeeh'),
+        ('PCH', "PCH (versée par le Département, pas par la CAF)", 'pch'),
+        ('AUTRE', "Autre prestation (à préciser dans le budget)", 'autres_prestations'),
     ]
     beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE, related_name='prestations_relevees')
     prestation = models.CharField(max_length=20, choices=[(c, l) for c, l, _ in PRESTATIONS])

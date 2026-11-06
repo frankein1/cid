@@ -30,11 +30,12 @@ L'agent corrige la fiche puis clique **Réglé** (commentaire facultatif) : rég
 - Bouton **« Accès partenaire CAF »** : ouvre le site de la CAF dans un nouvel onglet (habilitation personnelle de
   l'agent). CID n'y lit rien. Adresse : variable `CAF_PARTENAIRE_URL` ou paramètre `CAF_PARTENAIRE_URL` de
   l'administration (par défaut https://partenaires.caf.fr/).
-- **« Actualiser les aides »** (facultatif) : fenêtre avec les prestations (RSA, prime d'activité, aide au logement,
-  allocations familiales, complément familial, ASF, PAJE, PreParE, AAH, AEEH, autre) ; l'agent coche celles qu'il a
+- **« Actualiser les aides »** (facultatif) : fenêtre avec les prestations (RSA, prime d'activité, aides au logement,
+  allocations familiales, complément familial, ASF, PAJE, PreParE, AAH, AEEH, PCH — versée par le Département —,
+  autre) ; l'agent coche celles qu'il a
   vérifiées et saisit le montant mensuel. Chaque relevé est daté et signé ; le dernier de chaque prestation s'affiche.
-- **Budget du foyer** : « Reprendre dans un nouveau budget du foyer » pré-remplit les lignes correspondantes avec les
-  montants relevés et la ligne chômage avec la moyenne France Travail ; l'agent vérifie avant d'enregistrer.
+- **Budget du foyer** : « Reprendre dans un nouveau budget du foyer » pré-remplit **la ligne de chaque aide** (une ligne
+  par prestation dans la grille, depuis novembre 2026) avec les montants relevés et la ligne chômage avec la moyenne France Travail ; l'agent vérifie avant d'enregistrer.
 
 ## 4. Réseau familial
 Sous l'encart, chaque personne du réseau familial qui a une fiche (conjoint, grands-parents tiers digne de confiance,

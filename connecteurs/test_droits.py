@@ -117,12 +117,16 @@ class DroitsTests(TestCase):
         self.actualiser(["FT_PAIEMENTS"])
         self.c.post("/connecteurs/usager/DR-1/situation/aides/", {
             "date_releve": "2026-11-05", "p_RSA": "1", "m_RSA": "635,70", "p_AL": "1", "m_AL": "280",
+            "p_PRIME_ACTIVITE": "1", "m_PRIME_ACTIVITE": "187,40", "p_ASF": "1", "m_ASF": "199",
             "m_AF": "999"})                                                         # non cochée : ignorée
-        self.assertEqual(PrestationRelevee.objects.count(), 2)
+        self.assertEqual(PrestationRelevee.objects.count(), 4)
         r = self.c.get("/beneficiaire/DR-1/budget/nouveau/?depuis=caf")
         self.assertContains(r, "montants CAF relevés le 05/11/2026")
         self.assertContains(r, 'value="635.70"')
         self.assertContains(r, 'value="900.00"')                                  # chômage = moyenne FT
+        # une ligne par aide : prime d'activité et ASF ont chacune la leur
+        self.assertContains(r, 'name="r__prime_activite__demandeur" value="187.40"')
+        self.assertContains(r, 'name="r__asf__demandeur" value="199.00"')
 
     def test_reseau_familial_et_bouton_caf(self):
         r = self.c.get("/beneficiaire/DR-1/")
