@@ -17,6 +17,8 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy
 from django.http import FileResponse, HttpResponseForbidden
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.views import View
@@ -317,17 +319,18 @@ class DocumentDeleteView(LoginRequiredMixin, DeleteView):
 # VALIDATION (CADRES)
 # =============================================================================
 
+@login_required
+@require_POST
 def validate_document(request, pk):
-    """Validation manuelle réservée à la capacité 'peut_valider'."""
-    if request.method != 'POST':
-        return HttpResponseForbidden("Requête invalide.")
-
+    """Validation manuelle réservée à la capacité 'peut_valider', sur un document que le cadre peut voir (MDS)."""
     document = get_object_or_404(DocumentGED, pk=pk)
 
     if not request.user.a_la_capacite('peut_valider'):
         return HttpResponseForbidden(
             "Capacité de validation requise."
         )
+    if not document.peut_etre_vu_par(request.user):
+        return HttpResponseForbidden("Ce document ne relève pas de vos MDS.")
 
     document.statut = 'VALIDE'
     document.save()

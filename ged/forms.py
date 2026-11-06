@@ -86,14 +86,10 @@ class DocumentGEDForm(forms.ModelForm):
         
         # Validation dynamique basée sur les règles du Type de Document
         if file and type_doc:
-            # Vérification de la taille (Mo -> Octets)
-            if file.size > type_doc.taille_max_mb * 1024 * 1024:
-                self.add_error('file', f"Le fichier est trop volumineux pour ce type (max {type_doc.taille_max_mb} Mo).")
-            
-            # Vérification de l'extension
-            ext = file.name.split('.')[-1].lower()
-            if type_doc.extensions_autorisees and ext not in type_doc.extensions_autorisees:
-                self.add_error('file', f"Extension .{ext} non autorisée. Autorisées : {', '.join(type_doc.extensions_autorisees)}")
+            # Taille, extension autorisée par le type, extensions dangereuses : règle commune (ged/validation.py)
+            from .validation import erreurs_fichier
+            for erreur in erreurs_fichier(file, type_doc):
+                self.add_error('file', erreur)
         
         return cleaned_data
 
