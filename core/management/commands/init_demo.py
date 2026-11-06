@@ -161,6 +161,7 @@ class Command(BaseCommand):
             self.ip()
             self.planning()
             self.ateliers()
+            self.budgets()
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
@@ -789,6 +790,31 @@ class Command(BaseCommand):
                           f"le {prochaine.date:%d/%m/%Y} (3 dossiers), une demande en préparation")
 
     # ------------------------------------------------------------------ planning
+    def budgets(self):
+        """Budgets du foyer fictifs : deux budgets successifs (historique) et un budget partagé par un couple."""
+        from beneficiaire.models import BudgetFoyer
+        BudgetFoyer.objects.filter(beneficiaire__code_interne__in=CODES_DEMO).delete()
+
+        def budget(code, il_y_a, nb, r, c, dettes=(), commentaire=""):
+            BudgetFoyer.objects.create(
+                beneficiaire=self.b[code], date_etabli=self.j - timedelta(days=il_y_a), nb_personnes_foyer=nb,
+                cree_par=self.ts, commentaire=commentaire,
+                ressources={"v": 2, "lignes": {k: {"demandeur": str(v[0]), "conjoint": str(v[1]), "autres": "0"}
+                                               for k, v in r.items()}, "precisions": {}},
+                charges={"v": 2, "lignes": {k: {"payee": str(v[0]), "non_payee": str(v[1])} for k, v in c.items()},
+                         "precisions": {}},
+                dettes=[{"creancier": n, "montant": str(m)} for n, m in dettes])
+        budget("FAM5-SAR", 200, 1, {"rsa": (635, 0), "logement": (290, 0)},
+               {"loyer": (520, 0), "electricite": (60, 0), "telephone": (35, 0)})
+        budget("FAM5-SAR", 10, 1, {"rsa": (635, 0), "logement": (290, 0)},
+               {"loyer": (540, 0), "electricite": (85, 170), "telephone": (35, 0), "assurances": (20, 0)},
+               dettes=[("Fournisseur d'énergie (fictif)", 170)],
+               commentaire="Facture d'électricité de régularisation en attente d'échéancier.")
+        budget("FAM2-SOP", 30, 4, {"salaire": (1350, 980), "familiales": (150, 0), "logement": (180, 0)},
+               {"loyer": (850, 0), "electricite": (110, 0), "assurance_habitation": (25, 0), "credits": (210, 0),
+                "garde_scolarite": (120, 0), "telephone": (60, 0)})
+        self.stdout.write("✅ Budgets du foyer fictifs ajoutés")
+
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""
         from planning import ateliers as regles

@@ -575,6 +575,7 @@ Demande AFASE — {{ beneficiaire.nom }} {{ beneficiaire.prenom }}
                     Budget du foyer (mensuel)
                 </h2>
                 
+                {% if budget_repris %}<p class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-900"><i class="fas fa-circle-info mr-1"></i>Repris du budget du foyer du {{ budget_repris.date_etabli|date:"d/m/Y" }} : vérifiez et mettez à jour ce qui a changé.</p>{% endif %}
                 {% include "AidFi/includes/_budget_afase.html" %}
             </div>
             
