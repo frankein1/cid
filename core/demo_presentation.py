@@ -214,7 +214,7 @@ def creer(cmd):
                     attente = places is not None and k >= places
                     P.objects.create(seance=s, beneficiaire=b, liste=P.ATTENTE if attente else P.PRINCIPALE,
                                      presence="" if attente else _choix_pondere(r, [P.VENU, P.ABSENT, P.EXCUSE], [78, 12, 10]))
-                if r.random() < 0.4:
+                if r.random() < 0.4 and (places is None or s.inscrits().count() < places):
                     P.objects.create(seance=s, type=P.EXTERNE, prenom=r.choice(PRENOMS_F), nom=r.choice(NOMS),
                                      ville=COMMUNES[num_mds][0][1], presence=P.VENU)
             jour += timedelta(days=r.randint(18, 30))
