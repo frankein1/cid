@@ -25,7 +25,7 @@ Ce qui est fait :
 - agents (hors super-administrateurs) : identifiants et noms fictifs, mots de passe rendus inutilisables ;
 - documents de la GED : métadonnées anonymisées et DÉTACHÉS de leurs fichiers, sans rien supprimer dans le
   stockage (une copie de base pointe souvent vers le même stockage que la production) ;
-- journal d'activité, sessions, jetons RDV-Solidarités : supprimés.
+- journal d'activité, sessions, jetons RDV-Solidarités, liens ProConnect : supprimés.
 """
 import hashlib
 import os
@@ -172,7 +172,7 @@ class Command(BaseCommand):
     # --------------------------------------------------------------- suppressions
     def suppressions(self):
         res = {}
-        for label in ("core.AuditLog", "sessions.Session", "connecteurs.CompteRDVSP"):
+        for label in ("core.AuditLog", "sessions.Session", "connecteurs.CompteRDVSP", "core.IdentiteProConnect"):
             try:
                 M = apps.get_model(label)
             except LookupError:

@@ -37,4 +37,6 @@ __all__ = [
     # Audit
     'AuditLog',
     'ModeleCourrier',
+    'IdentiteProConnect',
 ]
+from .proconnect import IdentiteProConnect  # noqa: E402,F401
