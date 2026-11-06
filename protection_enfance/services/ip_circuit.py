@@ -129,35 +129,54 @@ def proposer_binome(ip):
     du moins chargé au plus chargé, et une proposition de binôme.
     """
     from core.models import User
+
+    from .ip_referents import suivis
     base = (User.objects.filter(is_active=True, profils_mds__mds=ip.mds, profils_mds__actif=True)
             .distinct())
-    def classer(codes):
+    raisons = suivis(ip)
+    exclus = []
+
+    def classer(codes, libelle):
         gens = [u for u in base.filter(profils__code__in=codes, profils__actif=True).distinct()
                 if u.a_la_capacite(CAP_EVALUER)]
+        exclus.extend((u, libelle, raisons[u.pk]) for u in gens if u.pk in raisons)
+        gens = [u for u in gens if u.pk not in raisons]      # qui suit la famille n'évalue pas son IP
         return sorted(((u, charge(u)) for u in gens), key=lambda x: (x[1], x[0].last_name))
-    ts = classer(['MDS_AGENTS_SOCIAUX'])
-    pmi = classer(['MDS_PMI_INFANTILE', 'MDS_PMI_MATERNELLE'])
+    ts = classer(['MDS_AGENTS_SOCIAUX'], "TS")
+    pmi = classer(['MDS_PMI_INFANTILE', 'MDS_PMI_MATERNELLE'], "PMI")
     conseil_pmi = pmi_conseillee(ip)
     proposition = [x[0] for x in ts[:1]]
     if conseil_pmi and pmi:
         proposition.append(pmi[0][0])
     elif len(ts) > 1:
         proposition.append(ts[1][0])
-    return {'ts': ts, 'pmi': pmi, 'pmi_conseillee': conseil_pmi, 'proposition': proposition}
+    return {'ts': ts, 'pmi': pmi, 'pmi_conseillee': conseil_pmi, 'proposition': proposition, 'exclus': exclus}
 
 
 @transaction.atomic
-def designer_binome(ip, u1, u2, cadre):
+def designer_binome(ip, u1, u2, cadre, derogation=""):
+    """Un professionnel qui suit la famille ne peut pas être désigné, sauf dérogation motivée du cadre."""
+    from .ip_referents import conflits
     if ip.statut not in ('TRANSMISE_MDS', 'EN_EVALUATION'):
         raise CircuitError("Le binôme se désigne après réception de l'IP et avant le rapport.")
     if not u1 or not u2 or u1 == u2:
         raise CircuitError("Le binôme compte deux professionnels différents.")
+    derogation = (derogation or "").strip()
+    en_conflit = conflits(ip, [u1, u2])
+    if en_conflit and not derogation:
+        qui = " ; ".join(f"{nom(u)} ({', '.join(r)})" for u, r in en_conflit)
+        raise CircuitError(f"Ne peut pas évaluer l'IP de cette famille, qu'elle ou il suit : {qui}. "
+                           "Pour passer outre, cochez « Forcer » et écrivez le motif.")
     ancien = list(ip.binome)
     ip.binome_1, ip.binome_2 = u1, u2
     ip.binome_valide_par, ip.date_binome = cadre, timezone.now()
+    ip.binome_derogation = derogation if en_conflit else ""
     ip.statut = 'EN_EVALUATION'
     ip.save()
     journal(ip, cadre, "Binôme désigné" if not ancien else "Binôme modifié", f"{nom(u1)} et {nom(u2)}")
+    if en_conflit:
+        journal(ip, cadre, "Dérogation : professionnel qui suit la famille",
+                f"{', '.join(nom(u) for u, _ in en_conflit)} – motif : {derogation}")
     diffuser(cadre, [u1, u2], ip, f"Vous êtes désigné(e) pour l'évaluation : {_entete(ip)}",
              f"{nom(cadre)} vous a désigné(e) avec {nom(u2)} et {nom(u1)} pour évaluer l'IP {ip.numero}.\n"
              f"Échéance : {ip.date_echeance:%d/%m/%Y} (point intermédiaire le {ip.date_intermediaire:%d/%m/%Y}).\n"
