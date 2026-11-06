@@ -155,6 +155,7 @@ class Command(BaseCommand):
             self.j = timezone.localdate()
             self.structures()
             self.familles()
+            self.referents()
             self.parametres()
             self.afase()
             self.cap_regie()
@@ -513,6 +514,27 @@ class Command(BaseCommand):
                                         mds=self.mds1, date_validite=reception.date_validite)
         self.stdout.write("✅ Coffre CAP : régisseur Agent Admin 1, 26 chèques fictifs (480 €)")
 
+    # ------------------------------------------------------------------ référents
+    def referents(self):
+        """Chaque famille a son AS référente. FAM8 et FAM12 (IP en cours) sont suivies par Agent Social 3, FAM11 (IP
+        reçue, binôme à désigner) par Agent Social 1 : la proposition de binôme ne les propose pas."""
+        from beneficiaire.models import Beneficiaire
+        as_mds1 = [self.u(f"as{i}_mds1") for i in (1, 2, 3)]
+        particuliers = {"FAM8": self.u("as3_mds1"), "FAM12": self.u("as3_mds1"), "FAM11": self.u("as1_mds1")}
+        n = 0
+        for b in Beneficiaire.tous.filter(code_interne__in=CODES_DEMO).order_by("code_interne"):
+            famille = b.code_interne.split("-")[0]
+            if b.mds_id == self.mds1.pk:
+                chiffres = "".join(c for c in famille if c.isdigit())
+                b.referent_mds = particuliers.get(famille) or as_mds1[int(chiffres or 0) % 3]
+            elif b.mds_id == self.mds2.pk:
+                b.referent_mds = self.u("as1_mds2")
+            else:
+                continue
+            b.save(update_fields=["referent_mds"])
+            n += 1
+        self.stdout.write(f"✅ Référents MDS attribués ({n} personnes)")
+
     # ------------------------------------------------------------------ IP
     def ip(self):
         from protection_enfance.models import EnfantIP, InformationPreoccupante, TypeDanger
@@ -533,7 +555,9 @@ class Command(BaseCommand):
         ip = creer("FAM8-LAU", 30, "MDS", "Inquiétudes de l'équipe sur le suivi médical de Mila (fictif).",
                    ["FAM8-MIL", "FAM8-NOE"], urgence="RAPIDE")
         ip_circuit.transmettre_mds(ip, self.crip)
-        ip_circuit.designer_binome(ip, self.ts, self.pmi, self.cadre)
+        # Agent Social 1 a instruit l'AFASE de la famille (non recommandé) : le cadre confirme, faute de personnel
+        ip_circuit.designer_binome(ip, self.ts, self.pmi, self.cadre, forcer=True,
+                                   motif="Sous-effectif de l'équipe IP ce mois-ci (fictif).")
         parents = list(ip.adultes.all())
         if parents:
             ip_convocations.programmer_audition(ip, self.ts, "AUDITION_PARENTS", timezone.now() + timedelta(days=6), 60,
@@ -541,7 +565,8 @@ class Command(BaseCommand):
         ip = creer("FAM12-AUR", 75, "EDUCATION", "Absences répétées de Gabriel signalées par l'école (fictif).",
                    ["FAM12-GAB", "FAM12-LIN"])
         ip_circuit.transmettre_mds(ip, self.crip)
-        ip_circuit.designer_binome(ip, self.ts, self.ts_b, self.cadre)
+        # Agent Social 1 (aide d'urgence) et Agent Social 3 (référente) suivent la famille : binôme sans eux
+        ip_circuit.designer_binome(ip, self.ts_b, self.pmi, self.cadre)
         rapport = ip_circuit.rapport_de(ip)
         rapport.composition_familiale = "Couple et deux enfants (fictif)."
         rapport.analyse = "Fatigue scolaire liée à des difficultés d'organisation familiale (fictif)."
@@ -554,7 +579,7 @@ class Command(BaseCommand):
             e.save()
             if e.conclusion == "RISQUE" and danger:
                 e.dangers_constates.add(danger)
-        ip_circuit.soumettre_rapport(ip, self.ts)
+        ip_circuit.soumettre_rapport(ip, self.ts_b)
         self.stdout.write("✅ IP : reçue à la CRIP, en évaluation (convocation prévue), en synthèse "
                           "(+ l'IP d'init2 transmise à la MDS)")
 

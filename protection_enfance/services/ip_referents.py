@@ -5,9 +5,10 @@
 # =============================================================================
 # protection_enfance/services/ip_referents.py
 """
-Règle (Fred, 6/11/2026) : un professionnel qui SUIT la famille ne doit pas évaluer l'IP de cette famille, quelle que
-soit la raison de ce suivi (référent MDS, RSA, AFASE ou autre). Seul le cadre peut passer outre, avec un motif écrit,
-tracé dans le journal de l'IP.
+Règle (Fred, 6/11/2026) : il n'est PAS RECOMMANDÉ qu'un professionnel qui suit la famille évalue l'IP de cette
+famille, quelle que soit la raison de ce suivi (référent MDS, RSA, AFASE ou autre). CID ne le propose pas et prévient
+le cadre ; c'est le cadre qui décide et peut passer outre (sous-effectif, PMI qui connaît déjà la famille…) en le
+confirmant ; la décision est tracée dans le journal de l'IP. L'accès à l'IP et aux documents ne change pas.
 
 « Suivre la famille » = pour l'une des personnes de l'IP (dossier famille, enfants, adultes rattachés dans CID) :
 - être son référent MDS ;

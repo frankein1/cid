@@ -59,11 +59,11 @@ Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mo
 | FAM5 | AMRANI Sarah | Femme enceinte | AFASE avec **enfant à naître** |
 | FAM6 | ROUX Kevin et Romain | Père et fils, à **Avignon (84)** | Alerte « demandeur hors Bouches-du-Rhône » |
 | FAM7 | BENSALEM Nadia / Karim | Parents séparés : Nadia et Ilyes à Port-de-Bouc (MDS 1), Karim et Anissa à Martigues (MDS 2) | Famille sur **deux MDS** ; enfants qui ne vivent pas chez les deux parents |
-| FAM8 | PEREZ Laura | Mère, Noé (hors foyer) et Mila | **Mesure ASE** (assistance éducative) : l'AFASE va à l'inspecteur ; IP en évaluation |
+| FAM8 | PEREZ Laura | Mère, Noé (hors foyer) et Mila | **Mesure ASE** (assistance éducative) : l'AFASE va à l'inspecteur ; IP en évaluation, binôme **confirmé par le cadre** alors qu'Agent Social 1 suit la famille (sous-effectif) |
 | FAM9 | GARNIER Céline | Mère, 2 enfants | Refus d'AFASE avec **recours en cours** |
 | FAM10 | CHERIF Yasmine | Mère, 1 enfant | Refus **réformé** après recours : nouvelle AFASE |
-| FAM11 | LEGRAND Thomas | Père veuf, fille de 16 ans | Refus **confirmé** après recours contentieux ; IP reçue par la CRIP |
-| FAM12 | AUBERT Aurélie et David | Couple marié, 2 enfants | IP en synthèse ; chèques service à décider |
+| FAM11 | LEGRAND Thomas | Père veuf, fille de 16 ans | Refus **confirmé** après recours contentieux ; IP reçue par la CRIP ; référent Agent Social 1, **non proposé** pour le binôme |
+| FAM12 | AUBERT Aurélie et David | Couple marié, 2 enfants | IP en synthèse (binôme Agent Social 2 + PMI : la référente Agent Social 3 et Agent Social 1 ne sont pas proposés) ; chèques service à décider |
 
 ## AFASE : un dossier à chaque étape du circuit
 
@@ -202,3 +202,6 @@ But : montrer les **statistiques de l'accompagnement** avec des effectifs au-des
 6. **Statistiques** : `chef_mds1`, page des aides financières (mois par mois, recours) et page des IP.
 7. **Archivage RGPD** : `chef_mds1` archive FERRAND Hugo (Cadre → Archivage RGPD) → la fiche disparaît de la liste et de la recherche → il la consulte dans « Dossiers archivés » et la désarchive ; l'administrateur efface MARCHETTI Odile (Admin → Archivage RGPD → Effacement définitif, en tapant EFFACER).
 8. **Présentation des statistiques** : `chef_mds1`, Accompagnement → Statistiques de l'accompagnement → « Rapport annuel 2026 » (détail par agent) ; un administrateur voit la comparaison des deux MDS.
+9. **IP et professionnel qui suit la famille** : `chef_mds1`, IP de FAM11 (Thomas LEGRAND) → bloc « Binôme » : Agent Social 1, référent de la famille, n'est pas proposé ; « Désigner quand même… » pour passer outre. IP de FAM8 : binôme confirmé par le cadre, motif affiché.
+
+Chaque famille de démonstration a une AS référente (référent MDS), répartie entre les agents de sa MDS.

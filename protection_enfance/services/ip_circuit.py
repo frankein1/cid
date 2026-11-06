@@ -154,19 +154,20 @@ def proposer_binome(ip):
 
 
 @transaction.atomic
-def designer_binome(ip, u1, u2, cadre, derogation=""):
-    """Un professionnel qui suit la famille ne peut pas être désigné, sauf dérogation motivée du cadre."""
+def designer_binome(ip, u1, u2, cadre, forcer=False, motif=""):
+    """Un professionnel qui suit la famille n'est pas recommandé : le cadre doit confirmer (forcer), motif facultatif."""
     from .ip_referents import conflits
     if ip.statut not in ('TRANSMISE_MDS', 'EN_EVALUATION'):
         raise CircuitError("Le binôme se désigne après réception de l'IP et avant le rapport.")
     if not u1 or not u2 or u1 == u2:
         raise CircuitError("Le binôme compte deux professionnels différents.")
-    derogation = (derogation or "").strip()
+    motif = (motif or "").strip()
     en_conflit = conflits(ip, [u1, u2])
-    if en_conflit and not derogation:
+    if en_conflit and not forcer:
         qui = " ; ".join(f"{nom(u)} ({', '.join(r)})" for u, r in en_conflit)
-        raise CircuitError(f"Ne peut pas évaluer l'IP de cette famille, qu'elle ou il suit : {qui}. "
-                           "Pour passer outre, cochez « Forcer » et écrivez le motif.")
+        raise CircuitError(f"Non recommandé : {qui} suit déjà la famille. "
+                           "Choisissez un autre professionnel, ou cochez « Je confirme » pour passer outre.")
+    derogation = (motif or "Décision du cadre") if en_conflit else ""
     ancien = list(ip.binome)
     ip.binome_1, ip.binome_2 = u1, u2
     ip.binome_valide_par, ip.date_binome = cadre, timezone.now()
@@ -175,8 +176,8 @@ def designer_binome(ip, u1, u2, cadre, derogation=""):
     ip.save()
     journal(ip, cadre, "Binôme désigné" if not ancien else "Binôme modifié", f"{nom(u1)} et {nom(u2)}")
     if en_conflit:
-        journal(ip, cadre, "Dérogation : professionnel qui suit la famille",
-                f"{', '.join(nom(u) for u, _ in en_conflit)} – motif : {derogation}")
+        journal(ip, cadre, "Binôme confirmé malgré le suivi de la famille",
+                f"{', '.join(nom(u) for u, _ in en_conflit)} – {derogation}")
     diffuser(cadre, [u1, u2], ip, f"Vous êtes désigné(e) pour l'évaluation : {_entete(ip)}",
              f"{nom(cadre)} vous a désigné(e) avec {nom(u2)} et {nom(u1)} pour évaluer l'IP {ip.numero}.\n"
              f"Échéance : {ip.date_echeance:%d/%m/%Y} (point intermédiaire le {ip.date_intermediaire:%d/%m/%Y}).\n"

@@ -154,8 +154,8 @@ EnfantFamilleFormSet = inlineformset_factory(InformationPreoccupante, EnfantIP, 
 class BinomeForm(forms.Form):
     referent_1 = forms.ModelChoiceField(queryset=None, label="Référent 1")
     referent_2 = forms.ModelChoiceField(queryset=None, label="Référent 2")
-    forcer = forms.BooleanField(required=False, label="Forcer (professionnel qui suit la famille)")
-    motif_derogation = forms.CharField(required=False, label="Motif de la dérogation",
+    forcer = forms.BooleanField(required=False, label="Je confirme (professionnel qui suit la famille)")
+    motif_derogation = forms.CharField(required=False, label="Motif (facultatif)",
                                        widget=forms.Textarea(attrs={'rows': 2}))
 
     def __init__(self, *args, candidats=None, exclus=None, **kwargs):
@@ -170,10 +170,4 @@ class BinomeForm(forms.Form):
                 lambda u: (u.get_full_name() or u.username) + (" – suit la famille" if u.pk in exclus_ids else ""))
             self.fields[f].widget.attrs['class'] = CSS
         self.fields['motif_derogation'].widget.attrs['class'] = CSS
-
-    def clean(self):
-        d = super().clean()
-        if d.get('forcer') and not (d.get('motif_derogation') or '').strip():
-            self.add_error('motif_derogation', "Écrivez le motif de la dérogation.")
-        return d
 

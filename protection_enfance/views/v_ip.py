@@ -195,13 +195,12 @@ def ip_binome(request, ip_id):
     form = BinomeForm(request.POST, candidats=[u for u, _ in prop['ts']] + [u for u, _ in prop['pmi']],
                       exclus=[u for u, _, _ in prop['exclus']])
     if not form.is_valid():
-        messages.error(request, "Choisissez deux professionnels de la MDS"
-                       + (" et écrivez le motif de la dérogation." if form.errors.get('motif_derogation') else "."))
+        messages.error(request, "Choisissez deux professionnels de la MDS.")
     else:
         try:
             circuit.designer_binome(ip, form.cleaned_data['referent_1'], form.cleaned_data['referent_2'],
-                                    request.user,
-                                    form.cleaned_data['motif_derogation'] if form.cleaned_data['forcer'] else "")
+                                    request.user, forcer=form.cleaned_data['forcer'],
+                                    motif=form.cleaned_data['motif_derogation'])
             messages.success(request, "Binôme validé : les deux professionnels sont prévenus.")
         except CircuitError as e:
             messages.error(request, str(e))
