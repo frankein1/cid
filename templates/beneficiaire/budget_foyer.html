@@ -12,9 +12,8 @@
     </div>{% endif %}
   </div>
   {% if budget %}
-    <div class="bg-white rounded-lg shadow p-6 mb-6">
-      <p class="text-sm text-gray-600 mb-4">Budget établi le <b>{{ budget.date_etabli|date:"d/m/Y" }}</b>{% if budget.cree_par %} par {{ budget.cree_par.get_full_name|default:budget.cree_par.username }}{% endif %}
-        {% if budget.beneficiaire_id != beneficiaire.pk %} sur la fiche de <a class="text-blue-700 hover:underline" href="{% url 'beneficiaire:budget_foyer' budget.beneficiaire.code_interne %}">{{ budget.beneficiaire.prenom }} {{ budget.beneficiaire.nom }}</a> (même foyer){% endif %}.</p>
+    <div id="budget-lecture" class="bg-white rounded-lg shadow p-6 mb-6">
+      <p class="text-sm text-gray-600 mb-4">Budget établi le <b>{{ budget.date_etabli|date:"d/m/Y" }}</b>{% if budget.cree_par %} par {{ budget.cree_par.get_full_name|default:budget.cree_par.username }}{% endif %}{% if budget.beneficiaire_id != beneficiaire.pk %} sur la fiche de <a class="text-blue-700 hover:underline" href="{% url 'beneficiaire:budget_foyer' budget.beneficiaire.code_interne %}">{{ budget.beneficiaire.prenom }} {{ budget.beneficiaire.nom }}</a> (même foyer){% endif %}.</p>
       {% include "beneficiaire/_budget_lecture.html" %}
     </div>
   {% else %}
@@ -22,7 +21,7 @@
       {% if budget_afase %}Le budget de la demande d'AFASE du {{ budget_afase.demande.date_creation|date:"d/m/Y" }} peut servir de point de départ{% if peut_modifier %} : <a class="text-blue-700 hover:underline" href="{% url 'beneficiaire:budget_foyer_nouveau' beneficiaire.code_interne %}?depuis=afase">le reprendre</a>{% endif %}.{% endif %}</div>
   {% endif %}
   {% if historique|length > 1 %}
-  <div class="bg-white rounded-lg shadow p-4">
+  <div id="budget-historique" class="bg-white rounded-lg shadow p-4">
     <h2 class="font-semibold text-gray-800 mb-2">Historique</h2>
     <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">Établi le</th><th class="text-left">Fiche</th><th class="text-right">Ressources</th><th class="text-right">Charges payées</th><th class="text-right">Reste à vivre</th></tr></thead>
       <tbody class="divide-y">{% for h in historique %}<tr {% if h.pk == budget.pk %}class="font-semibold"{% endif %}>

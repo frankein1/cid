@@ -11,7 +11,7 @@
   <div>
     <h3 class="font-semibold text-green-900 mb-2">Ressources</h3>
     {% for titre, lignes in a.ressources %}<p class="text-xs uppercase text-gray-500 mt-2">{{ titre }}</p>
-      {% for lib, cols in lignes %}<div class="flex justify-between border-b py-1"><span>{{ lib }}</span><span class="text-right whitespace-nowrap">{% for c, m in cols.items %}{% if m %}{{ m|floatformat:2 }} € <span class="text-gray-400 text-xs">{{ c }}</span> {% endif %}{% endfor %}</span></div>{% endfor %}
+      {% for lib, cols in lignes %}<div class="flex justify-between border-b py-1"><span>{{ lib }}</span><span class="text-right whitespace-nowrap">{% if cols.demandeur %}{{ cols.demandeur|floatformat:2 }} € <span class="text-gray-400 text-xs">demandeur</span> {% endif %}{% if cols.conjoint %}{{ cols.conjoint|floatformat:2 }} € <span class="text-gray-400 text-xs">conjoint</span> {% endif %}{% if cols.autres %}{{ cols.autres|floatformat:2 }} € <span class="text-gray-400 text-xs">autres</span>{% endif %}</span></div>{% endfor %}
     {% empty %}<p class="text-gray-500">Aucune ressource saisie.</p>{% endfor %}
   </div>
   <div>
@@ -20,7 +20,7 @@
       {% for lib, cols in lignes %}<div class="flex justify-between border-b py-1"><span>{{ lib }}</span><span class="text-right whitespace-nowrap">{% if cols.payee %}{{ cols.payee|floatformat:2 }} €{% endif %}{% if cols.non_payee %} <span class="text-amber-700">{{ cols.non_payee|floatformat:2 }} € non payés</span>{% endif %}</span></div>{% endfor %}
     {% empty %}<p class="text-gray-500">Aucune charge saisie.</p>{% endfor %}
     {% if budget.dettes %}<h3 class="font-semibold text-gray-800 mt-4 mb-2">Dettes</h3>
-      {% for d in budget.dettes %}<div class="flex justify-between border-b py-1"><span>{{ d.creancier|default:"—" }}</span><span>{{ d.montant }} €</span></div>{% endfor %}{% endif %}
+      {% for d in budget.dettes %}<div class="flex justify-between border-b py-1"><span>{{ d.creancier|default:"—" }}</span><span>{{ d.montant|floatformat:2 }} €</span></div>{% endfor %}{% endif %}
   </div>
 </div>
 {% if budget.commentaire %}<p class="mt-4 text-sm text-gray-700 whitespace-pre-line"><b>Observations :</b> {{ budget.commentaire }}</p>{% endif %}
