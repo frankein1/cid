@@ -178,6 +178,20 @@ Trois dossiers fictifs de la MDS TEST 01, sans aucune activité depuis longtemps
 - FERRAND Hugo et OUALI Yasmine sont **proposés à l'archivage** (Cadre → Archivage RGPD) ;
 - MARCHETTI Odile est **archivée depuis 14 mois** : masquée dans CID, elle apparaît dans « Dossiers archivés » et, pour l'administrateur, dans **Effacement définitif**.
 
+## Jeu « présentation » (statistiques)
+
+30 familles fictives de plus (codes `PRES01-A` à `PRES30-…`), créées par `core/demo_presentation.py` à chaque
+réinitialisation, toujours identiques (tirage au sort à graine fixe) :
+- 20 familles à la MDS TEST 01 (Port-de-Bouc, Fos-sur-Mer, Saint-Mitre-les-Remparts), 10 à la MDS TEST 02 (Martigues,
+  Lavéra, Saint-Victoret) ; familles monoparentales, couples avec ou sans enfants, personnes seules, personnes âgées ;
+- environ 150 entretiens depuis le 1er janvier (quelques-uns l'année précédente), par les agents des deux MDS, avec types
+  d'accompagnement (dont RSA, quelques MASP, suivis de mesure et violences intrafamiliales), orientations vers des
+  partenaires fictifs et suites à donner (certaines en retard) ;
+- une trentaine de budgets du foyer (impayés d'énergie ou de loyer, dettes) ;
+- une quinzaine de séances d'ateliers passées, avec présences, liste d'attente et quelques personnes extérieures.
+
+But : montrer les **statistiques de l'accompagnement** avec des effectifs au-dessus du secret statistique.
+
 ## Parcours de test conseillés
 
 1. **Circuit AFASE complet** : `as1_mds1` finalise AMRANI → `chef_mds1` accorde → `chef_mds1` transmet à l'UAGAF → `uagaf_u1` demande le paiement puis l'enregistre.
@@ -187,3 +201,4 @@ Trois dossiers fictifs de la MDS TEST 01, sans aucune activité depuis longtemps
 5. **IP** : `crip_c1` transmet LEGRAND → `chef_mds1` désigne le binôme → `as1_mds1` convoque → rapport → visas → `ief_p1` donne son avis.
 6. **Statistiques** : `chef_mds1`, page des aides financières (mois par mois, recours) et page des IP.
 7. **Archivage RGPD** : `chef_mds1` archive FERRAND Hugo (Cadre → Archivage RGPD) → la fiche disparaît de la liste et de la recherche → il la consulte dans « Dossiers archivés » et la désarchive ; l'administrateur efface MARCHETTI Odile (Admin → Archivage RGPD → Effacement définitif, en tapant EFFACER).
+8. **Présentation des statistiques** : `chef_mds1`, Accompagnement → Statistiques de l'accompagnement → « Rapport annuel 2026 » (détail par agent) ; un administrateur voit la comparaison des deux MDS.

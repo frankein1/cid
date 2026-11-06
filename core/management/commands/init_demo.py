@@ -163,6 +163,8 @@ class Command(BaseCommand):
             self.ateliers()
             self.budgets()
             self.journal()
+            from core.demo_presentation import creer as presentation
+            presentation(self)
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
