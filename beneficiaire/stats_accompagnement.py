@@ -119,7 +119,7 @@ def public(personnes_ids, fin):
             if a is not None and lo <= a <= hi:
                 ages[lib] += 1
     civ = Counter(b.get_civilite_display() for b in gens)
-    villes = Counter((b.ville or "—").strip().title() for b in gens)
+    villes = Counter((b.ville or "—").strip() for b in gens)
     return {"ages": [(lib, masque(ages[lib])) for _, _, lib in TRANCHES_AGE],
             "civilites": [(c, masque(n)) for c, n in civ.most_common()],
             "communes": [(v, masque(n)) for v, n in villes.most_common(10)]}
