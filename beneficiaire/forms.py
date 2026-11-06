@@ -9,6 +9,7 @@
 """
 
 from django import forms
+from django.db.models import Q as models_Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import Beneficiaire, LienFamilial
@@ -48,6 +49,8 @@ class BeneficiaireForm(forms.ModelForm):
             "code_interne", "date_creation", "date_modification", 
             "cree_par", "statut", "est_decede", "date_deces", 
             "date_sortie", "motif_sortie", "detail_sortie",
+            # gérés par l'archivage RGPD, jamais par ce formulaire
+            "date_archivage", "archive_par", "motif_archivage", "statut_avant_archivage",
         ]
         widgets = {
             "adresse": forms.Textarea(attrs={"rows": 2}),
@@ -73,6 +76,20 @@ class BeneficiaireForm(forms.ModelForm):
             if hasattr(field.widget, "attrs"):
                 c = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = f"{c} w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500".strip()
+
+        # Listes de valeurs : seulement les valeurs actives (plus celle déjà choisie, même désactivée)
+        from .models import ValeurListe
+        for champ in ("mode_hebergement", "categorie_socio_pro", "niveau_etudes", "mesure_protection",
+                      "origine_orientation", "mobilites"):
+            if champ in self.fields:
+                f = self.fields[champ]
+                actuelles = []
+                if self.instance.pk:
+                    actuelles = (list(self.instance.mobilites.values_list("pk", flat=True)) if champ == "mobilites"
+                                 else [getattr(self.instance, f"{champ}_id")])
+                f.queryset = f.queryset.filter(models_Q(actif=True) | models_Q(pk__in=[a for a in actuelles if a]))
+        if "mobilites" in self.fields:
+            self.fields["mobilites"].widget = forms.CheckboxSelectMultiple(choices=self.fields["mobilites"].choices)
 
         # Filtrage dynamique des référents si la MDS est connue
         if self.instance and hasattr(self.instance, 'mds') and self.instance.mds:

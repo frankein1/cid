@@ -20,6 +20,31 @@ from django.dispatch import receiver
 from django.db.models import Q
 
 
+class ValeurListe(models.Model):
+    """
+    Listes de valeurs de la fiche usager (reprises de Mon Suivi Social), modifiables en administration :
+    on peut renommer, réordonner, désactiver une valeur ou en ajouter, sans toucher au code.
+    """
+    HEBERGEMENT, MOBILITE, CSP, ETUDES, PROTECTION, ORIENTATION = (
+        'HEBERGEMENT', 'MOBILITE', 'CSP', 'ETUDES', 'PROTECTION', 'ORIENTATION')
+    LISTES = [(HEBERGEMENT, "Mode d'hébergement"), (MOBILITE, "Mobilité"),
+              (CSP, "Catégorie socio-professionnelle"), (ETUDES, "Niveau d'études"),
+              (PROTECTION, "Mesure de protection"), (ORIENTATION, "Origine de l'orientation")]
+    liste = models.CharField(max_length=12, choices=LISTES)
+    libelle = models.CharField(max_length=120)
+    ordre = models.PositiveSmallIntegerField(default=0)
+    actif = models.BooleanField(default=True, help_text="Décoché : n'est plus proposée, reste affichée là où elle est déjà choisie")
+
+    class Meta:
+        ordering = ['liste', 'ordre', 'libelle']
+        unique_together = ('liste', 'libelle')
+        verbose_name = "Valeur de liste (fiche usager)"
+        verbose_name_plural = "Listes de valeurs (fiche usager)"
+
+    def __str__(self):
+        return self.libelle
+
+
 class BeneficiaireManager(models.Manager):
     """
     Gestionnaire par défaut : les dossiers ARCHIVÉS (RGPD) sont masqués partout dans CID
@@ -136,6 +161,21 @@ class Beneficiaire(models.Model):
     detail_sortie = models.TextField(blank=True, null=True)
     est_decede = models.BooleanField(default=False)
     date_deces = models.DateField(null=True, blank=True)
+
+    # Situation sociale (listes de valeurs modifiables en administration)
+    mode_hebergement = models.ForeignKey(ValeurListe, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        limit_choices_to={'liste': 'HEBERGEMENT'}, verbose_name="Mode d'hébergement")
+    mobilites = models.ManyToManyField(ValeurListe, blank=True, related_name='+',
+        limit_choices_to={'liste': 'MOBILITE'}, verbose_name="Mobilité")
+    categorie_socio_pro = models.ForeignKey(ValeurListe, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        limit_choices_to={'liste': 'CSP'}, verbose_name="Catégorie socio-professionnelle")
+    niveau_etudes = models.ForeignKey(ValeurListe, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        limit_choices_to={'liste': 'ETUDES'}, verbose_name="Niveau d'études")
+    mesure_protection = models.ForeignKey(ValeurListe, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        limit_choices_to={'liste': 'PROTECTION'}, verbose_name="Mesure de protection")
+    origine_orientation = models.ForeignKey(ValeurListe, on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        limit_choices_to={'liste': 'ORIENTATION'}, verbose_name="Origine de l'orientation")
+    aidant = models.BooleanField("Aidant (s'occupe d'un proche)", default=False)
 
     # Archivage RGPD (beneficiaire/archivage.py) : dossier masqué et en lecture seule
     date_archivage = models.DateTimeField(null=True, blank=True)
