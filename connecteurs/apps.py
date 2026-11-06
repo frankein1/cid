@@ -12,3 +12,7 @@ class ConnecteursConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'connecteurs'
     verbose_name = "Connecteurs externes"
+
+    def ready(self):
+        from . import signaux_rdvsp
+        signaux_rdvsp.brancher()

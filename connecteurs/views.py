@@ -52,6 +52,9 @@ from django.shortcuts import render  # noqa: E402
 
 from . import rdv_service_public as rdvsp  # noqa: E402
 from .models import AppelRDVSP, CompteRDVSP, LienUsagerRDVSP  # noqa: E402
+from .models import (AbsenceRDVSP, AvisRDVSP, MdsRDVSP, MotifRDVSP, ParametresRDVSP, PlageRDVSP,  # noqa: E402
+                     RdvRDVSP)
+from . import rdvsp_synchro  # noqa: E402
 
 
 def _fiche(code_interne):
@@ -131,4 +134,13 @@ def rdvsp_etat(request):
         'redirect_uri': conf['redirect_uri'] or _retour_oauth(request),
         'nb_comptes': CompteRDVSP.objects.count(), 'nb_liens': LienUsagerRDVSP.objects.count(),
         'appels': AppelRDVSP.objects.select_related('utilisateur', 'beneficiaire')[:20],
+        # Synchronisation des agendas (étape 1)
+        'parametres': ParametresRDVSP.get(), 'synchro_prete': rdvsp_synchro.prete(),
+        'secret_avis': bool(rdvsp_synchro.secret_avis()),
+        'mds_sp': MdsRDVSP.objects.select_related('mds').order_by('mds__nom'),
+        'motifs_sp': MotifRDVSP.objects.all(),
+        'nb_plages': PlageRDVSP.objects.filter(neutralisee=False).count(),
+        'nb_blocages': AbsenceRDVSP.objects.count(),
+        'rdvs_sp': RdvRDVSP.objects.select_related('agent', 'beneficiaire')[:15],
+        'avis_erreur': AvisRDVSP.objects.exclude(erreur='')[:10],
     })

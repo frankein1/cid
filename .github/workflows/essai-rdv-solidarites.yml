@@ -96,9 +96,29 @@ jobs:
           python-version: '3.13'
 
       - name: Essai de l'API
+        id: sonde
+        continue-on-error: true
         run: |
           pip install requests
           python .github/rdvsp/sonde.py
+
+      - name: Dépendances de CID
+        run: pip install -r requirements.txt
+
+      - name: Essai de la synchronisation CID ↔ RDV-Solidarités
+        env:
+          RDVSP_INTEGRATION: "1"
+          ALWAYSDATA_NAME: cid_essai
+          ALWAYSDATA_USER: lapin_development
+          ALWAYSDATA_PASSWORD: lapin_development
+          ALWAYSDATA_HOST: localhost
+          DEBUG: "True"
+          SECRET_KEY: essai-banc-rdv-solidarites
+        run: python manage.py test connecteurs.test_integration_rdvsp --noinput -v 2
+
+      - name: Résultat de l'essai de l'API
+        if: steps.sonde.outcome == 'failure'
+        run: exit 1
 
       - name: Journaux (en cas d'échec)
         if: failure()

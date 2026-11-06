@@ -1,7 +1,7 @@
 <!-- docs/RDV_SERVICE_PUBLIC.md -->
 # Passerelle RDV Service Public
 
-**État : présente, désactivée.** Elle sera prête à l'activation après deux choses : les identifiants OAuth délivrés par l'ANCT, et un test sur leur environnement de démonstration.
+**État : présente, désactivée. Synchronisation des agendas (étape 1) prête et vérifiée sur une vraie copie de RDV-Solidarités.** Elle sera prête à l'activation après deux choses : les identifiants OAuth délivrés par l'ANCT, et un test sur leur environnement de démonstration.
 
 RDV Service Public est l'outil de prise de rendez-vous de l'ANCT. Le fonctionnement de la passerelle est repris de Mon Suivi Social v2 (ANCT, licence MIT).
 
@@ -33,22 +33,49 @@ La page **Admin → Passerelle RDV Service Public** (`/connecteurs/rdv-service-p
 - l'adresse de retour à déclarer à l'ANCT ;
 - les derniers appels.
 
-## Cible : agendas synchronisés (à construire)
+## Synchronisation des agendas (étape 1, faite)
+CID est l'agenda maître. RDV-Solidarités n'est que la vitrine de la réservation en ligne. Le code est dans `connecteurs/rdvsp_synchro.py`.
 
-L'objectif est qu'un rendez-vous existe une seule fois et apparaisse dans les deux agendas, quelle que soit la personne qui l'a pris.
+**Ce que fait la synchronisation :**
+- **Publication :**
+  - Chaque **demi-journée de réception** en MDS (MDS → Demi-journées de réception), dans une MDS ouverte en ligne, devient une **permanence hebdomadaire** dans RDV-Solidarités.
+  - Elle est publiée pour 8 semaines (réglable) et prolongée quand il en reste moins de 3.
+  - Une demi-journée retirée ou modifiée dans CID est **neutralisée** par une absence répétée, puisque l'API ne permet ni de modifier ni de supprimer une permanence. La nouvelle version est republiée.
+- **Blocages :** chacun de ces cas envoie une absence de l'agent à RDV-Solidarités, retirée quand le motif disparaît :
+  - un créneau pris dans CID ;
+  - un **jour bloqué** (fermeture, férié, indisponibilité) ;
+  - le **plafond** de RDV en ligne atteint dans une demi-journée (2 par défaut). Les RDV placés par un agent ne comptent pas dans ce plafond.
+- **Retour des RDV :** chaque RDV pris, modifié ou annulé arrive par un **avis signé** (`/connecteurs/rdv-service-public/avis/`). Il occupe le créneau CID correspondant, rattaché à l'usager s'il est connu, sinon marqué « à rapprocher ».
+  - Une annulation garde son **heure**, ce qui permettra de repérer les annulations tardives à l'étape 2.
+  - Le créneau redevient libre dans CID.
+- **Statuts :** « venu » ou « absent » saisi dans CID est renvoyé à RDV-Solidarités.
 
-| Qui prend le rendez-vous | Comment |
-|---|---|
-| L'agent d'accueil ou le référent | depuis CID (bouton de la fiche) |
-| L'usager lui-même | en ligne sur RDV Service Public, **uniquement pour les motifs ouverts au public** (par exemple « Renouvellement RSA », « Aide financière ») |
+**Quand la synchronisation se fait :**
+- les changements d'agenda (créneaux, jours bloqués, statuts) partent **aussitôt** ;
+- la publication et la prolongation se font **une fois par jour** : à la première connexion sur Render, ou par `python manage.py synchro_rdvsp` à planifier chaque nuit en production ;
+- et à la demande : Admin → Passerelle RDV Service Public → **Synchroniser maintenant**.
 
-Ce qui reste à construire :
-- **Limiter la prise en ligne par l'usager.** Cela se règle dans RDV Service Public même : chaque motif y est déclaré réservable en ligne ou réservé aux agents. Tous les autres motifs restent fermés au public.
-- **Faire revenir les rendez-vous RDV-SP dans l'agenda CID.** RDV-SP prévient CID à chaque création, modification ou annulation, par une notification signée (webhook). CID crée ou met à jour le rendez-vous correspondant (`planning.CreneauRdv`) avec l'agent, l'usager, la date, le lieu et le statut.
-  - Les rendez-vous sans lien avec un usager connu sont mis en attente de rapprochement par l'accueil.
-  - Le format exact des notifications et leur signature sont à confirmer avec l'ANCT.
-- **Éviter les doubles réservations.** Les créneaux ouverts dans RDV-SP sont marqués comme tels dans CID ; un rendez-vous interne ne peut pas les occuper.
-- **Statuts.** Venu et absent saisis dans CID sont renvoyés à RDV-SP (fonction déjà prête).
+**Réglages :**
+- dans Admin → Passerelle RDV Service Public :
+  - le **compte de synchronisation** : un administrateur CID, relié une fois à RDV-Solidarités, et administrateur de l'espace départemental côté RDV-Solidarités ;
+  - l'identifiant du service social ;
+  - pour chaque MDS : son **organisation** RDV-Solidarités et la case « en ligne » ;
+  - le **motif** « Renouvellement RSA » (30 min, de 48 h à 15 jours à l'avance, 2 en ligne au maximum par demi-journée, sur invitation seulement) ;
+- dans les variables d'environnement :
+  - `RDVSP_SECRET_AVIS` : secret partagé pour signer les avis ;
+  - `RDVSP_PREFIXE` : préfixe des références CID, différent pour chaque serveur CID qui partage les mêmes identifiants (défaut `cid`).
+- Puis cliquer sur **Déclarer l'adresse de CID** une fois : RDV-Solidarités saura où envoyer ses avis. Côté ANCT, l'adresse doit aussi être autorisée.
+
+**Pas encore couvert :** les permanences en lieu externe, et tout ce qui relève de l'étape 2 (invitations mensuelles, suspension de la réservation en ligne).
+
+**Vérification :** `.github/workflows/essai-rdv-solidarites.yml` lance une vraie copie de RDV-Solidarités (à partir de github.com/frankein1/MRS) sur GitHub, avec des données fictives, et fait le parcours complet :
+1. publication ;
+2. blocage d'un créneau CID ;
+3. RDV pris en ligne reçu dans CID ;
+4. plafond ;
+5. annulation ;
+6. statut « venu » ;
+7. retrait d'une permanence.
 
 ## Questions pour l'ANCT
 
