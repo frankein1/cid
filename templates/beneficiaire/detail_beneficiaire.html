@@ -315,6 +315,7 @@
             </div>
             
             {% if not acces_restreint %}
+            {% include "beneficiaire/_journal_usager.html" %}
             {% include "planning/_rdv_usager.html" %}
             {% include "beneficiaire/_budget_usager.html" %}
             {% include "planning/_ateliers_usager.html" %}

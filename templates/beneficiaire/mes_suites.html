@@ -1,0 +1,23 @@
+<!-- /templates/beneficiaire/mes_suites.html -->
+{% extends "base.html" %}
+{% block title %}Mes suites à donner{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 mb-6"><i class="fas fa-flag text-amber-600 mr-2"></i>Mes suites à donner</h1>
+  <div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600"><tr><th class="px-3 py-2 text-left">Échéance</th><th class="px-3 py-2 text-left">Usager</th><th class="px-3 py-2 text-left">Suite à donner</th><th class="px-3 py-2 text-left">Entretien du</th><th></th></tr></thead>
+      <tbody class="divide-y">
+      {% for e in suites %}
+        <tr class="{% if e.echeance and e.echeance < aujourd_hui %}bg-red-50{% endif %}">
+          <td class="px-3 py-2 whitespace-nowrap">{{ e.echeance|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-3 py-2"><a class="text-indigo-700 hover:underline" href="{% url 'beneficiaire:journal' e.beneficiaire.code_interne %}">{{ e.beneficiaire.nom }} {{ e.beneficiaire.prenom }}</a></td>
+          <td class="px-3 py-2">{{ e.suite_a_donner }}</td><td class="px-3 py-2">{{ e.date|date:"d/m/Y" }}</td>
+          <td class="px-3 py-2 text-right"><form method="post" action="{% url 'beneficiaire:entretien_suite_faite' e.pk %}">{% csrf_token %}<button class="text-xs px-2 py-1 border rounded hover:bg-gray-50">Fait</button></form></td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">Aucune suite en attente.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

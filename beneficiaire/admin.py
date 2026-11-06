@@ -130,3 +130,24 @@ class BudgetFoyerAdmin(admin.ModelAdmin):
     list_display = ('beneficiaire', 'date_etabli', 'nb_personnes_foyer', 'reste_a_vivre')
     raw_id_fields = ('beneficiaire',)
     readonly_fields = ('reste_a_vivre', 'cree_par', 'modifie_par')
+
+
+from .models_journal import EntretienSocial, TypeAccompagnement  # noqa: E402
+
+
+@admin.register(TypeAccompagnement)
+class TypeAccompagnementAdmin(admin.ModelAdmin):
+    list_display = ('libelle', 'code', 'legal', 'ordre', 'actif')
+    list_editable = ('legal', 'ordre', 'actif')
+    list_filter = ('legal', 'actif')
+    prepopulated_fields = {'code': ('libelle',)}
+
+
+@admin.register(EntretienSocial)
+class EntretienSocialAdmin(admin.ModelAdmin):
+    """Pas de synthèse dans l'administration : la synthèse privée n'est lisible que par son auteur, dans CID."""
+    list_display = ('date', 'beneficiaire', 'objet', 'mode', 'auteur')
+    list_filter = ('mode', 'types')
+    raw_id_fields = ('beneficiaire', 'creneau')
+    exclude = ('synthese_privee',)
+    readonly_fields = ('auteur', 'cree_par', 'modifie_par')

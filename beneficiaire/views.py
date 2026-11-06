@@ -257,6 +257,7 @@ def detail_beneficiaire(request, code_interne):
             "nb_documents": documents_ged.count(),
             "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             "budget_foyer": budget_en_cours(beneficiaire),
+            "derniers_entretiens": beneficiaire.entretiens.select_related("auteur")[:3],
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification
             # de base.html, qui afficheraient alors ces messages CID en haut de chaque visite.
             "messages_beneficiaire": Message.objects.filter(

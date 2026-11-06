@@ -1,0 +1,37 @@
+<!-- /templates/beneficiaire/entretien_form.html -->
+{% extends "base.html" %}
+{% block title %}{% if entretien %}Modifier l'entretien{% else %}Nouvel entretien{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <a href="{% url 'beneficiaire:journal' beneficiaire.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Journal</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1"><i class="fas fa-comments text-indigo-600 mr-2"></i>{% if entretien %}Modifier l'entretien{% else %}Nouvel entretien{% endif %}</h1>
+  <p class="text-sm text-gray-600 mb-4">{{ beneficiaire.nom }} {{ beneficiaire.prenom }} · {{ beneficiaire.code_interne }}{% if creneau %} · compte rendu du rendez-vous du {{ creneau.date|date:"d/m/Y" }} à {{ creneau.heure_debut|time:"H:i" }}{% endif %}</p>
+  <form method="post" class="bg-white rounded-lg shadow p-6 space-y-5">
+    {% csrf_token %}
+    {% if creneau and not entretien %}<input type="hidden" name="creneau" value="{{ creneau.pk }}">{% endif %}
+    {% if form.errors %}<p class="text-sm text-red-600">Vérifiez les champs signalés.</p>{% endif %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {% for f in form %}{% if f.name in "date heure mode duree_minutes" %}<div><label class="block text-sm font-medium text-gray-700 mb-1">{{ f.label }}</label>{{ f }}{% for e in f.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>{% endif %}{% endfor %}
+    </div>
+    <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.objet.label }} *</label>{{ form.objet }}{% for e in form.objet.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+    <div><p class="block text-sm font-medium text-gray-700 mb-1">{{ form.types.label }}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-1 text-sm">{% for c in form.types %}<label class="inline-flex items-center gap-1">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>
+    {% if form.personnes_presentes.field.queryset %}<div><p class="block text-sm font-medium text-gray-700 mb-1">{{ form.personnes_presentes.label }}</p>
+      <div class="flex flex-wrap gap-3 text-sm">{% for c in form.personnes_presentes %}<label class="inline-flex items-center gap-1">{{ c.tag }} {{ c.choice_label }}</label>{% endfor %}</div></div>{% endif %}
+    <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.co_intervenants.label }}</label>{{ form.co_intervenants }}<p class="text-xs text-gray-500 mt-1">Ctrl + clic pour en choisir plusieurs.</p></div>
+    <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.synthese.label }}</label>{{ form.synthese }}<p class="text-xs text-gray-500 mt-1">{{ form.synthese.help_text }}</p></div>
+    <div><label class="block text-sm font-medium text-gray-700 mb-1"><i class="fas fa-lock text-gray-400 mr-1"></i>{{ form.synthese_privee.label }}</label>{{ form.synthese_privee }}<p class="text-xs text-gray-500 mt-1">{{ form.synthese_privee.help_text }}</p></div>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.orientation.label }}</label>{{ form.orientation }}</div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.orientation_precision.label }}</label>{{ form.orientation_precision }}</div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.suite_a_donner.label }}</label>{{ form.suite_a_donner }}</div>
+      <div class="flex gap-4 items-end"><div class="flex-1"><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.echeance.label }}</label>{{ form.echeance }}</div>
+        <label class="inline-flex items-center gap-1 text-sm pb-2">{{ form.suite_faite }} {{ form.suite_faite.label }}</label></div>
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'beneficiaire:journal' beneficiaire.code_interne %}" class="px-4 py-2 border rounded-lg text-sm">Annuler</a>
+      <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Enregistrer</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
