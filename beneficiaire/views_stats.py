@@ -65,7 +65,7 @@ def statistiques_accompagnement(request):
         w.writerow([f"Statistiques de l'accompagnement du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}",
                     mds.nom if mds else ("Département" if direction else ", ".join(m.nom for m in mes_mds))])
         for ligne in st.lignes_csv(r, comparaison):
-            w.writerow(ligne)
+            w.writerow([("'" + v) if isinstance(v, str) and v[:1] in ("=", "+", "-", "@") else v for v in ligne])
         return rep
     return render(request, 'beneficiaire/statistiques_accompagnement.html', {
         'r': r, 'a': r['activite'], 'debut': debut, 'fin': fin, 'choix': choix, 'mds': mds, 'direction': direction,

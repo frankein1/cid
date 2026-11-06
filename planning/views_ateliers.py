@@ -23,6 +23,12 @@ from . import ateliers as regles
 from .models_ateliers import Atelier, ParticipantAtelier as P, SeanceAtelier
 
 
+def _cellule(texte):
+    """Texte saisi exporté en CSV : jamais interprété comme une formule par le tableur."""
+    texte = texte or ""
+    return "'" + texte if texte[:1] in ("=", "+", "-", "@", "\t", "\r") else texte
+
+
 def _mds_ids(u):
     if u.is_superuser or u.a_la_capacite('peut_administrer'):
         return None
@@ -197,8 +203,8 @@ def seance_export(request, pk, format):
         w = csv.writer(r, delimiter=';')
         w.writerow(["Nom", "Type", "Code CID", "Présence", "Paiement reçu", "Commentaire"])
         for p in inscrits:
-            w.writerow([p.nom_complet, p.get_type_display(), p.beneficiaire.code_interne if p.beneficiaire else "",
-                        p.get_presence_display(), "oui" if p.paiement_recu else "", p.commentaire])
+            w.writerow([_cellule(p.nom_complet), p.get_type_display(), p.beneficiaire.code_interne if p.beneficiaire else "",
+                        p.get_presence_display(), "oui" if p.paiement_recu else "", _cellule(p.commentaire)])
         return r
     from .ateliers_pdf import emargement_pdf
     return HttpResponse(emargement_pdf(s, inscrits).getvalue(), content_type='application/pdf',

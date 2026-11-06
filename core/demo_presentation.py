@@ -59,7 +59,9 @@ def creer(cmd):
 
     r = random.Random(GRAINE)
     j = cmd.j
-    Beneficiaire.tous.filter(code_interne__startswith="PRES").delete()
+    # seulement les codes de ce jeu (PRES01-A, PRES12-E2…), créés par les comptes de démonstration
+    Beneficiaire.tous.filter(code_interne__regex=r"^PRES[0-9]{2}-(A|B|E[0-9])$",
+                             cree_par__username__in=["as1_mds1", "as1_mds2"]).delete()
     SeanceAtelier.objects.filter(description__startswith=MARQUE).delete()
     partenaires = [Partenaire.objects.get_or_create(organisme=o, defaults={"thematique": t})[0] for o, t in PARTENAIRES]
     partenaires += list(Partenaire.objects.exclude(organisme__in=[o for o, _ in PARTENAIRES]))

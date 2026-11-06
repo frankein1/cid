@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, time
 
 from django.urls import reverse
+from django.utils import timezone
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ def _aides(b, user):
         url = ""
         if hasattr(d, 'demandeafase'):
             url = reverse('AidFi:afase_detail', args=[d.pk])
-        yield Ligne(d.date_creation.date(), None, "aide", f"Demande d'aide – {d.type_aide}", d.get_statut_display(),
+        yield Ligne(timezone.localtime(d.date_creation).date(), None, "aide", f"Demande d'aide – {d.type_aide}", d.get_statut_display(),
                     url=url, auteur=_nom(d.cree_par))
 
 

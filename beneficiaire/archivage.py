@@ -46,7 +46,7 @@ MOTIFS_DESARCHIVAGE = [
 # Champs qui datent une activité dans les tables liées au dossier (le premier trouvé ne suffit pas :
 # on prend le plus récent de tous ceux présents, y compris la date d'un RDV à venir).
 CHAMPS_ACTIVITE = ('date_modification', 'modifie_le', 'updated_at', 'date_maj', 'date_creation', 'cree_le',
-                   'created_at', 'date', 'date_transfert', 'date_debut')
+                   'created_at', 'date', 'date_transfert', 'date_debut', 'date_inscription')
 # Relations qui ne sont pas une activité de l'usager
 RELATIONS_IGNOREES = {('beneficiaire', 'OperationRGPD')}
 
