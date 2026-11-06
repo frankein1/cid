@@ -132,6 +132,9 @@ def creer(cmd):
         for d in dates:
             mode, _, (dmin, dmax) = _choix_pondere(r, MODES, [m[1] for m in MODES])
             choisis = r.sample(motifs, k=min(len(motifs), r.choice([1, 1, 2])))
+            legal = [m for m in ("rsa", "protection-enfance", "masp") if m in motifs]
+            if legal and r.random() < 0.6 and legal[0] not in choisis:
+                choisis = [legal[0]] + choisis[:1]          # les accompagnements légaux reviennent à chaque rencontre
             suite = r.random() < 0.35
             echeance = d + timedelta(days=r.randint(7, 30)) if suite else None
             e = EntretienSocial.objects.create(
@@ -157,7 +160,7 @@ def creer(cmd):
                 if profil == "senior":
                     res["retraite"] = r.choice([1012, 1100, 1250])
                 elif not rsa:
-                    res["salaire"] = r.randint(900, 1700)
+                    res["salaire"] = r.randint(750, 1450)
                     if nb_adultes == 2 and r.random() < 0.5:
                         res["chomage"] = r.randint(600, 1100)
                 if r.random() < 0.12:
@@ -165,7 +168,7 @@ def creer(cmd):
                 if len(enfants) >= 2:
                     res["familiales"] = 148 if len(enfants) == 2 else 338
                 res["logement"] = r.randint(120, 380)
-                loyer = r.randint(430, 820)
+                loyer = r.randint(480, 860)
                 elec = r.randint(45, 130)
                 ch = {"loyer": [loyer, 0], "electricite": [elec, 0], "telephone": [r.randint(20, 60), 0],
                       "assurance_habitation": [r.randint(12, 30), 0]}
