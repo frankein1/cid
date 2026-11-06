@@ -155,7 +155,26 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
         self.assertTrue(self.attendre(lambda: _rails("statut", r2)["status"] == "seen", 60))
         print("✅ Statut « venu » renvoyé à RDV-Solidarités")
 
-        # 7. Demi-journée retirée dans CID → neutralisée dans RDV-Solidarités
+        # 7. Étape 2 : invitation mensuelle → lien personnel accepté par RDV-Solidarités
+        import requests
+        from connecteurs import rdvsp_invitations as inv
+        from insertion.models import ContratInsertion as C
+        from insertion.services import contrat_circuit
+        contrat = contrat_circuit.creer(self.benef, self.agente)
+        fin = timezone.localdate() + timedelta(days=10)
+        C.objects.filter(pk=contrat.pk).update(statut=C.VALIDE, date_debut=fin - timedelta(days=180), date_fin=fin)
+        campagne, _ = inv.preparer(prevenir=False)
+        self.assertEqual(campagne.invitations.count(), 1)
+        bilan = inv.envoyer_campagne(campagne)
+        self.assertEqual(bilan["erreurs"], 0, list(campagne.invitations.values_list("erreur", flat=True)))
+        lien = campagne.invitations.get().lien
+        page = requests.get(lien, timeout=60)   # suit les redirections : connexion de l'usager par son jeton
+        self.assertEqual(page.status_code, 200, page.url)
+        self.assertNotIn("invalide", page.text.lower()[:20000])
+        self.assertIn("Renouvellement RSA", page.text)
+        print(f"✅ Invitation : lien personnel accepté, le motif « Renouvellement RSA » est proposé ({page.url[:60]}…)")
+
+        # 8. Demi-journée retirée dans CID → neutralisée dans RDV-Solidarités
         from mds.models import DemiJourneeReception
         DemiJourneeReception.objects.all().update(actif=False)
         bilan = sync.synchroniser()
