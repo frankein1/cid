@@ -38,6 +38,10 @@ def actualiser_situation(request, code_interne):
         messages.info(request, f"Situation mise à jour pour {ok} source(s) sur {len(resultats)} : voir le détail.")
     else:
         messages.error(request, "Aucune information reçue : voir le détail dans le tableau.")
+    retour = request.POST.get('retour', '')
+    origine = Beneficiaire.objects.filter(code_interne=retour).first() if retour else None
+    if origine and origine.niveau_acces(request.user) == 'complet':
+        code_interne = origine.code_interne          # actualisé depuis le réseau familial : on revient sur la fiche d'origine
     return redirect(reverse('beneficiaire:detail_beneficiaire', kwargs={'code_interne': code_interne})
                     + '#situation-externe')
 

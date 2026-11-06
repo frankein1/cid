@@ -216,6 +216,19 @@ def modifier_beneficiaire(request, code_interne):
         "action": "Modifier le bénéficiaire"  # ← AJOUTE CETTE LIGNE
     })
 
+def _situation_reseau(beneficiaire, user):
+    """Personnes du réseau familial (grands-parents tiers digne de confiance compris) dont l'agent peut actualiser
+    les droits : une ligne chacune, avec le résumé RSA / AAH / ASF connu."""
+    lignes = []
+    for m in beneficiaire.reseau_familial():
+        p = m['personne']
+        if p.niveau_acces(user) != 'complet':
+            continue
+        droits = [s.resume for s in p.situations_externes.filter(statut_appel='OK', est_beneficiaire=True)[:3]]
+        lignes.append({'personne': p, 'libelle': m['libelle'], 'resume': " ; ".join(droits)})
+    return lignes
+
+
 @login_required
 def detail_beneficiaire(request, code_interne):
     """Détail de la fiche, liens et documents - OPTIMISÉ avec select_related"""
@@ -268,6 +281,7 @@ def detail_beneficiaire(request, code_interne):
             "simulation_disponible": simulation_disponible(),
             # Situation CAF/MSA et France Travail (API Particulier) : agents de la MDS uniquement
             "situation_externe": tableau_situations(beneficiaire),
+            "situation_reseau": _situation_reseau(beneficiaire, request.user),
             # Passerelle RDV Service Public : bouton affiché seulement si elle est activée
             "rdvsp_actif": rdvsp_est_actif(),
             "rdvsp_reservation": _reservation_en_ligne(beneficiaire) if rdvsp_est_actif() else None,

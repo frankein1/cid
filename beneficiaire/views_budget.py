@@ -38,6 +38,46 @@ def _usager(request, code_interne, ecriture=False):
     return b, None
 
 
+class _Source:
+    """Budget de départ construit à partir du budget en cours et des montants connus (CAF relevés, France Travail)."""
+    def __init__(self, base):
+        self.ressources = json_copie(base.ressources) if base else {"v": 2, "lignes": {}, "precisions": {}}
+        self.charges = base.charges if base else {}
+        self.dettes = list(base.dettes or []) if base else []
+        self.nb_personnes_foyer = base.nb_personnes_foyer if base else None
+
+
+def json_copie(d):
+    import json
+    return json.loads(json.dumps(d or {}))
+
+
+def _depuis_caf(b):
+    from connecteurs.models import PrestationRelevee, SituationExterne
+    from connecteurs.views_droits import derniers_releves
+    base = budget_en_cours(b)
+    src = _Source(base)
+    if src.nb_personnes_foyer is None:
+        src.nb_personnes_foyer = nb_personnes_au_foyer(b)
+    lignes = src.ressources.setdefault("lignes", {})
+    sommes, morceaux = {}, []
+    releves = derniers_releves(b)
+    for r in releves:
+        rub = PrestationRelevee.rubrique_budget(r.prestation)
+        sommes[rub] = sommes.get(rub, 0) + r.montant
+    ft = SituationExterne.objects.filter(beneficiaire=b, source='FT_PAIEMENTS', statut_appel='OK').first()
+    if ft and ft.donnees.get('moyenne_mensuelle'):
+        sommes['chomage'] = ft.donnees['moyenne_mensuelle']
+        morceaux.append("moyenne des paiements France Travail sur 6 mois")
+    for rub, montant in sommes.items():
+        lignes.setdefault(rub, {"demandeur": "0", "conjoint": "0", "autres": "0"})["demandeur"] = f"{montant:.2f}"
+    if releves:
+        morceaux.insert(0, f"montants CAF relevés le {max(r.date_releve for r in releves):%d/%m/%Y}")
+    origine = ("prérempli avec les " + " et la ".join(morceaux) + " : vérifiez chaque ligne"
+               if morceaux else "sans montant connu : relevez d'abord les aides sur l'accès partenaire CAF")
+    return src, origine
+
+
 @login_required
 def budget_foyer(request, code_interne):
     b, refus = _usager(request, code_interne)
@@ -60,7 +100,9 @@ def budget_foyer_form(request, code_interne, pk=None):
     budget = get_object_or_404(BudgetFoyer, pk=pk, beneficiaire=b) if pk else None
     source, origine = budget, None
     if budget is None:
-        if request.GET.get('depuis') == 'afase':
+        if request.GET.get('depuis') == 'caf':
+            source, origine = _depuis_caf(b)
+        elif request.GET.get('depuis') == 'afase':
             source = dernier_budget_afase(b)
             origine = f"repris du budget de la demande d'AFASE du {source.demande.date_creation:%d/%m/%Y}" if source else None
         else:
