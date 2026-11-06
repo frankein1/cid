@@ -22,7 +22,8 @@
     <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.synthese.label }}</label>{{ form.synthese }}<p class="text-xs text-gray-500 mt-1">{{ form.synthese.help_text }}</p></div>
     {% if form.synthese_privee %}<div><label class="block text-sm font-medium text-gray-700 mb-1"><i class="fas fa-lock text-gray-400 mr-1"></i>{{ form.synthese_privee.label }}</label>{{ form.synthese_privee }}<p class="text-xs text-gray-500 mt-1">{{ form.synthese_privee.help_text }}</p></div>{% endif %}
     <div class="grid sm:grid-cols-2 gap-4">
-      <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.orientation.label }}</label>{{ form.orientation }}</div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.orientation.label }}</label>{{ form.orientation }}
+        <a id="chercher-service" href="{% url 'connecteurs:inclusion_recherche' %}?usager={{ beneficiaire.code_interne }}" target="_blank" class="text-xs text-teal-700 hover:underline"><i class="fas fa-map-location-dot mr-1"></i>Trouver un service près de chez l'usager (data·inclusion)</a></div>
       <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.orientation_precision.label }}</label>{{ form.orientation_precision }}</div>
       <div><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.suite_a_donner.label }}</label>{{ form.suite_a_donner }}</div>
       <div class="flex gap-4 items-end"><div class="flex-1"><label class="block text-sm font-medium text-gray-700 mb-1">{{ form.echeance.label }}</label>{{ form.echeance }}</div>
@@ -34,4 +35,11 @@
     </div>
   </form>
 </div>
+<script>
+// Le lien de recherche reprend les types d'accompagnement cochés
+document.getElementById('chercher-service').addEventListener('click', function (e) {
+  const types = [...document.querySelectorAll('input[name="types"]:checked')].map(c => 'types=' + c.value).join('&');
+  if (types) { this.href = this.href.split('&types=')[0] + '&' + types; }
+});
+</script>
 {% endblock %}

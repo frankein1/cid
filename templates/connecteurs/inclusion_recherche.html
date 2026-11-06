@@ -1,0 +1,53 @@
+<!-- /templates/connecteurs/inclusion_recherche.html -->
+{% extends "base.html" %}
+{% block title %}Trouver un service d'insertion{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-2">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-map-location-dot text-teal-600 mr-2"></i>Trouver un service d'insertion</h1>
+      <p class="text-sm text-gray-600">Référentiel national data·inclusion{% if dernier %}, mis à jour le {{ dernier.fin|date:"d/m/Y" }}{% endif %}{% if usager %} · pour {{ usager.prenom }} {{ usager.nom }}{% endif %}</p>
+    </div>
+    {% if admin %}<a href="{% url 'connecteurs:inclusion_etat' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-rotate mr-1"></i>Mise à jour</a>{% endif %}
+  </div>
+  {% if vide %}
+    <div class="p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900 mb-6">Le référentiel n'a pas encore été importé.{% if admin %} <a class="underline" href="{% url 'connecteurs:inclusion_etat' %}">Lancer la première mise à jour</a>.{% else %} Un administrateur doit lancer la première mise à jour.{% endif %}</div>
+  {% endif %}
+  <form id="inclusion-filtres" method="get" class="bg-white rounded-lg shadow p-4 mb-6 text-sm space-y-3">
+    {% if usager %}<input type="hidden" name="usager" value="{{ usager.code_interne }}">{% endif %}
+    <div class="flex flex-wrap gap-3 items-end">
+      <label>Commune <input name="commune" value="{{ commune }}" class="px-2 py-1 border rounded w-44"></label>
+      <label>Code postal <input name="cp" value="{{ cp }}" class="px-2 py-1 border rounded w-20"></label>
+      <label>Mots-clés <input name="q" value="{{ q }}" class="px-2 py-1 border rounded w-48"></label>
+      <label class="inline-flex items-center gap-1"><input type="checkbox" name="gratuit" value="1" {% if gratuit %}checked{% endif %}> Gratuit</label>
+      <label class="inline-flex items-center gap-1"><input type="checkbox" name="presentiel" value="1" {% if presentiel %}checked{% endif %}> Accueil sur place</label>
+      <button class="px-4 py-1.5 bg-teal-600 text-white rounded">Chercher</button>
+    </div>
+    <div class="flex flex-wrap gap-x-4 gap-y-1">
+      {% for code, lib in categories %}<label class="inline-flex items-center gap-1"><input type="checkbox" name="cat" value="{{ code }}" {% if code in choisies %}checked{% endif %}> {{ lib }}</label>{% endfor %}
+    </div>
+  </form>
+  {% if not vide %}<p class="text-sm text-gray-600 mb-3">{{ total }} service{{ total|pluralize }}{% if total > services|length %} — les {{ services|length }} plus proches{% endif %}{% if centre %}, du plus proche au plus éloigné de {{ commune }}{% endif %}.</p>{% endif %}
+  <div id="inclusion-resultats" class="space-y-3">
+  {% for s in services %}
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+      <div class="flex flex-wrap justify-between gap-2">
+        <div>
+          <p class="font-semibold text-gray-900">{{ s.nom }}</p>
+          <p class="text-sm text-gray-700">{{ s.structure_nom }}{% if s.commune %} · {{ s.commune }}{% endif %}{% if s.distance is not None %} <span class="text-gray-500">({{ s.distance|floatformat:1 }} km)</span>{% endif %}</p>
+        </div>
+        <div class="flex gap-2 items-start">
+          {% if s.di_id in deja %}<span class="text-xs px-2 py-1 rounded bg-green-50 text-green-800"><i class="fas fa-check mr-1"></i>Dans l'annuaire</span>
+          {% elif peut_creer %}<form method="post" action="{% url 'connecteurs:inclusion_ajouter' s.pk %}">{% csrf_token %}<input type="hidden" name="retour" value="{{ request.get_full_path }}"><button class="text-xs px-2 py-1 border rounded hover:bg-gray-50"><i class="fas fa-address-book mr-1"></i>Ajouter à l'annuaire</button></form>{% endif %}
+          {% if s.lien_mobilisation or s.lien_source %}<a href="{{ s.lien_mobilisation|default:s.lien_source }}" target="_blank" rel="noopener noreferrer" class="text-xs px-2 py-1 border rounded hover:bg-gray-50"><i class="fas fa-arrow-up-right-from-square mr-1"></i>Fiche</a>{% endif %}
+        </div>
+      </div>
+      <p class="mt-1">{% if s.type %}<span class="text-xs mr-1 px-2 py-0.5 rounded bg-gray-100 text-gray-700">{{ s.type_libelle }}</span>{% endif %}{% if s.frais %}<span class="text-xs mr-1 px-2 py-0.5 rounded {% if s.frais == 'gratuit' %}bg-green-50 text-green-800{% else %}bg-amber-50 text-amber-800{% endif %}">{{ s.frais|capfirst }}</span>{% endif %}{% for t in s.libelles %}<span class="text-xs mr-1 px-2 py-0.5 rounded bg-teal-50 text-teal-800">{{ t }}</span>{% endfor %}</p>
+      {% if s.description %}<p class="text-sm text-gray-700 mt-2">{{ s.description|truncatechars:320 }}</p>{% endif %}
+      <p class="text-xs text-gray-500 mt-2">{% if s.publics_libelles %}Publics : {{ s.publics_libelles|join:", " }} · {% endif %}{% if s.telephone %}<i class="fas fa-phone mr-1"></i>{{ s.telephone }} · {% endif %}{% if s.courriel %}<i class="fas fa-envelope mr-1"></i>{{ s.courriel }} · {% endif %}{{ s.adresse }}</p>
+    </div>
+  {% empty %}{% if not vide %}<p class="text-sm text-gray-500">Aucun service ne correspond : élargissez les thématiques ou retirez un filtre.</p>{% endif %}{% endfor %}
+  </div>
+  <p class="text-xs text-gray-500 mt-6">Données publiques data·inclusion (GIP Plateforme de l'inclusion), Licence Ouverte 2.0. La recherche se fait dans CID : rien sur l'usager n'est transmis.</p>
+</div>
+{% endblock %}

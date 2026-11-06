@@ -42,6 +42,8 @@ class Partenaire(models.Model):
     commentaire = models.TextField(blank=True, help_text="Horaires, modalités de contact…")
 
     actif = models.BooleanField(default=True)
+    reference_inclusion = models.CharField("Référence data·inclusion", max_length=255, blank=True, db_index=True,
+                                           help_text="Renseignée quand la fiche vient du référentiel national.")
     mds_origine = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='+', help_text="MDS qui a créé la fiche (pour information)")
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')

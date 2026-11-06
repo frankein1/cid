@@ -1,0 +1,22 @@
+<!-- /templates/connecteurs/inclusion_etat.html -->
+{% extends "base.html" %}
+{% block title %}data·inclusion — mise à jour{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <a href="{% url 'connecteurs:inclusion_recherche' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Trouver un service d'insertion</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-4"><i class="fas fa-rotate text-teal-600 mr-2"></i>Référentiel data·inclusion</h1>
+  <div class="bg-white rounded-lg shadow p-5 mb-6 text-sm space-y-2">
+    <p><b>{{ nb }}</b> services d'insertion en base, pour le{{ departements|pluralize }} département{{ departements|pluralize }} <b>{{ departements }}</b> (variable <code>DATA_INCLUSION_DEPARTEMENTS</code>).</p>
+    <p class="text-gray-600">Source : fichiers ouverts du référentiel national de l'offre d'insertion (data.gouv.fr), republiés chaque lundi. Aucun jeton nécessaire ; rien n'est envoyé. En production, planifier <code>python manage.py importer_data_inclusion</code> chaque mardi.</p>
+    <form method="post">{% csrf_token %}<button class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Mettre à jour maintenant</button></form>
+  </div>
+  <div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="min-w-full text-sm"><thead class="bg-gray-50 text-gray-600"><tr><th class="px-3 py-2 text-left">Lancée le</th><th class="px-3 py-2 text-left">Par</th><th class="px-3 py-2 text-right">Structures</th><th class="px-3 py-2 text-right">Services</th><th class="px-3 py-2 text-right">Retirés</th><th class="px-3 py-2 text-left">État</th></tr></thead>
+      <tbody class="divide-y">{% for i in imports %}<tr>
+        <td class="px-3 py-2">{{ i.debut|date:"d/m/Y H:i" }}</td><td class="px-3 py-2">{{ i.lance_par|default:"tâche planifiée" }}</td>
+        <td class="px-3 py-2 text-right">{{ i.structures }}</td><td class="px-3 py-2 text-right">{{ i.services }}</td><td class="px-3 py-2 text-right">{{ i.retires }}</td>
+        <td class="px-3 py-2">{% if i.en_cours %}<span class="text-blue-700">en cours…</span>{% elif i.erreur %}<span class="text-red-700">{{ i.erreur|truncatechars:120 }}</span>{% else %}<span class="text-green-700">terminée</span>{% endif %}</td>
+      </tr>{% empty %}<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">Aucune mise à jour pour l'instant.</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+{% endblock %}
