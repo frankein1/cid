@@ -314,3 +314,32 @@ class ReprisesTests(_Base):
     def test_prefixe(self):
         with mock.patch.dict(os.environ, {"RDVSP_PREFIXE": "cid13-demo"}):
             self.assertEqual(MdsRDVSP.objects.get(mds=self.mds).reference_lieu, f"cid13-demo-mds-{self.mds.pk}")
+
+
+@mock.patch.dict(os.environ, ENV)
+class LieuxExternesTests(_Base):
+    def setUp(self):
+        super().setUp()
+        self.mardi = DemiJourneeReception.objects.create(
+            agent=self.agent, mds=self.mds, jour_semaine=1, type_demi_journee="APRES_MIDI", heure_debut=time(14),
+            heure_fin=time(16, 30), type_lieu="EXTERNE", lieu_externe="CCAS de Port-de-Bouc")
+
+    def test_non_publie_sans_adresse_puis_publie(self):
+        self.publier()
+        self.assertEqual(PlageRDVSP.objects.count(), 1)                        # seulement le lundi en MDS
+        self.assertEqual(sync.lieux_externes_non_declares(), [("MDS Essai", "CCAS de Port-de-Bouc")])
+        from connecteurs.models import LieuExterneRDVSP
+        lieu = LieuExterneRDVSP.objects.create(mds_sp=self.mds_sp, nom="ccas de port-de-bouc",
+                                               adresse="1 place de la Mairie, 13110 Port-de-Bouc")
+        self.publier()
+        self.assertEqual(sync.lieux_externes_non_declares(), [])
+        p = PlageRDVSP.objects.get(demi_journee=self.mardi)
+        self.assertEqual(p.lieu_externe, lieu)
+        envoi = [a for a in self.mrs.faits("POST", "/lieux") if a[2]["name"] == "ccas de port-de-bouc"][0][2]
+        self.assertEqual(envoi["address"], "1 place de la Mairie, 13110 Port-de-Bouc")
+        plage = self.mrs.faits("POST", "/plage_ouvertures")[-1][2]
+        self.assertEqual(plage["lieu_external_id"], f"cid-lieu-{lieu.pk}")
+        # L'agent change de lieu : la permanence est retirée puis republiée en MDS
+        DemiJourneeReception.objects.filter(pk=self.mardi.pk).update(type_lieu="MDS", lieu_externe="")
+        b = self.publier()
+        self.assertEqual((b["neutralisees"], b["publiees"]), (1, 1))

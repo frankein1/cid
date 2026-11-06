@@ -66,7 +66,9 @@ CID est l'agenda maître. RDV-Solidarités n'est que la vitrine de la réservati
   - `RDVSP_PREFIXE` : préfixe des références CID, différent pour chaque serveur CID qui partage les mêmes identifiants (défaut `cid`).
 - Puis cliquer sur **Déclarer l'adresse de CID** une fois : RDV-Solidarités saura où envoyer ses avis. Côté ANCT, l'adresse doit aussi être autorisée.
 
-**Pas encore couvert :** les permanences en lieu externe.
+**Permanences en lieu externe** (CCAS, mairie, école…) :
+- Elles sont publiées quand leur nom, tel que l'agent le saisit dans ses demi-journées, correspond à un **lieu externe déclaré avec son adresse**, dans Admin → Lieux externes publiés. La comparaison ignore les majuscules.
+- La page d'état liste les lieux saisis par les agents mais pas encore déclarés : ils ne sont pas publiés, pour ne jamais montrer de fausse adresse à l'usager.
 
 ## Invitations et suspension (étape 2, faite)
 Le code est dans `connecteurs/rdvsp_invitations.py`.
