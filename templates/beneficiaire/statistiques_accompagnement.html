@@ -1,0 +1,99 @@
+<!-- /templates/beneficiaire/statistiques_accompagnement.html -->
+{% extends "base.html" %}
+{% block title %}Statistiques de l'accompagnement{% endblock %}
+{% block content %}
+<style>@media print { nav, footer, .no-print { display:none !important } main { padding:0 !important } .carte { break-inside: avoid } }</style>
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-2">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-chart-column text-indigo-600 mr-2"></i>Statistiques de l'accompagnement</h1>
+      <p class="text-sm text-gray-600">{{ perimetre }} · du {{ debut|date:"d/m/Y" }} au {{ fin|date:"d/m/Y" }}</p>
+    </div>
+    <div class="no-print flex gap-2">
+      <a href="?{{ requete }}&format=csv" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-file-csv text-green-700 mr-1"></i>CSV</a>
+      <button onclick="window.print()" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-print mr-1"></i>Imprimer / PDF</button>
+    </div>
+  </div>
+  <form id="stats-filtres" method="get" class="no-print bg-white rounded-lg shadow p-3 mb-6 flex flex-wrap gap-3 items-end text-sm">
+    <label>Du <input type="date" name="debut" value="{{ debut|date:'Y-m-d' }}" class="px-2 py-1 border rounded"></label>
+    <label>au <input type="date" name="fin" value="{{ fin|date:'Y-m-d' }}" class="px-2 py-1 border rounded"></label>
+    <select name="mds" class="px-2 py-1 border rounded">
+      <option value="">{% if direction %}Tout le département{% else %}Toutes mes MDS{% endif %}</option>
+      {% for m in choix %}<option value="{{ m.pk }}" {% if mds and mds.pk == m.pk %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}
+    </select>
+    <button class="px-3 py-1 bg-indigo-600 text-white rounded">Afficher</button>
+    <span class="text-gray-500">Rapport annuel :</span>
+    {% for an in annees %}<a class="text-indigo-700 hover:underline" href="?annee={{ an }}{% if mds %}&mds={{ mds.pk }}{% endif %}">{{ an }}</a>{% endfor %}
+  </form>
+
+  <div id="stats-activite" class="carte grid grid-cols-2 md:grid-cols-6 gap-3 mb-6 text-center">
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold">{{ a.entretiens }}</div><div class="text-xs text-gray-500">entretiens</div></div>
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold">{{ a.heures }}</div><div class="text-xs text-gray-500">heures{% if a.sans_duree %} ({{ a.sans_duree }} sans durée){% endif %}</div></div>
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold">{{ file_active }}</div><div class="text-xs text-gray-500">personnes vues (file active)</div></div>
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold">{{ nouveaux }}</div><div class="text-xs text-gray-500">dont vues pour la 1re fois</div></div>
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold">{{ a.part_legaux }}</div><div class="text-xs text-gray-500">d'accompagnement légal</div></div>
+    <div class="bg-white rounded-lg shadow p-3"><div class="text-2xl font-bold {% if a.suites_retard %}text-red-700{% endif %}">{{ a.suites_retard }}</div><div class="text-xs text-gray-500">suites en retard / {{ a.suites_ouvertes }} ouvertes</div></div>
+  </div>
+
+  {% if comparaison %}
+  <div id="stats-comparaison" class="carte bg-white rounded-lg shadow p-4 mb-6 overflow-x-auto">
+    <h2 class="font-semibold text-gray-800 mb-2">Comparaison des MDS</h2>
+    <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">MDS</th><th class="text-right">Entretiens</th><th class="text-right">Heures</th><th class="text-right">File active</th><th class="text-right">Légal</th><th class="text-right">RAV médian</th><th class="text-right">Foyers avec impayés</th><th class="text-right">Séances d'ateliers</th><th class="text-right">Présence</th></tr></thead>
+      <tbody class="divide-y">{% for l in comparaison %}<tr>{% for v in l %}<td class="py-1 {% if not forloop.first %}text-right{% endif %}">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+    <p class="text-xs text-gray-500 mt-2">Aucun détail par agent au niveau de la direction.</p>
+  </div>
+  {% endif %}
+
+  <div class="grid md:grid-cols-2 gap-6 mb-6">
+    <div id="stats-types" class="carte bg-white rounded-lg shadow p-4">
+      <h2 class="font-semibold text-gray-800 mb-2">Types d'accompagnement</h2>
+      <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">Type</th><th class="text-right">Entretiens</th><th class="text-right">Personnes</th></tr></thead>
+        <tbody class="divide-y">{% for t, n, p in a.par_type %}<tr><td class="py-1">{{ t }}</td><td class="text-right">{{ n }}</td><td class="text-right">{{ p }}</td></tr>{% empty %}<tr><td colspan="3" class="py-2 text-gray-500">Aucun entretien sur la période.</td></tr>{% endfor %}
+        {% if a.sans_type %}<tr><td class="py-1 text-gray-500">Sans type renseigné</td><td class="text-right text-gray-500">{{ a.sans_type }}</td><td></td></tr>{% endif %}</tbody></table>
+    </div>
+    <div class="carte bg-white rounded-lg shadow p-4">
+      <h2 class="font-semibold text-gray-800 mb-2">Modes d'entretien</h2>
+      <table class="min-w-full text-sm"><tbody class="divide-y">{% for m, n in a.par_mode %}<tr><td class="py-1">{{ m }}</td><td class="text-right">{{ n }}</td></tr>{% endfor %}</tbody></table>
+      <h2 class="font-semibold text-gray-800 mt-4 mb-2">Orientations vers les partenaires</h2>
+      <table class="min-w-full text-sm"><tbody class="divide-y">{% for o, n in a.orientations %}<tr><td class="py-1">{{ o }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="py-1 text-gray-500">Aucune orientation notée.</td></tr>{% endfor %}</tbody></table>
+    </div>
+  </div>
+
+  {% if par_agent and a.par_agent %}
+  <div id="stats-agents" class="carte bg-white rounded-lg shadow p-4 mb-6 overflow-x-auto">
+    <h2 class="font-semibold text-gray-800 mb-2">Par agent <span class="text-xs font-normal text-gray-500">(pilotage de l'équipe : visible du cadre de la MDS seulement)</span></h2>
+    <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">Agent</th><th class="text-right">Entretiens</th><th class="text-right">Heures</th><th class="text-right">Personnes</th><th class="text-right">Suites en retard</th></tr></thead>
+      <tbody class="divide-y">{% for l in a.par_agent %}<tr>{% for v in l %}<td class="py-1 {% if not forloop.first %}text-right{% endif %}">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+
+  <div id="stats-public" class="carte bg-white rounded-lg shadow p-4 mb-6">
+    <h2 class="font-semibold text-gray-800 mb-2">Public accompagné <span class="text-xs font-normal text-gray-500">(personnes vues sur la période)</span></h2>
+    <div class="grid md:grid-cols-3 gap-6 text-sm">
+      <table><thead class="text-gray-500"><tr><th class="text-left">Âge (en fin de période)</th><th></th></tr></thead><tbody>{% for l, n in r.public.ages %}<tr><td class="py-0.5 pr-4">{{ l }}</td><td class="text-right">{{ n }}</td></tr>{% endfor %}</tbody></table>
+      <table><thead class="text-gray-500"><tr><th class="text-left">Civilité</th><th></th></tr></thead><tbody>{% for l, n in r.public.civilites %}<tr><td class="py-0.5 pr-4">{{ l }}</td><td class="text-right">{{ n }}</td></tr>{% endfor %}</tbody></table>
+      <table><thead class="text-gray-500"><tr><th class="text-left">Communes (10 premières)</th><th></th></tr></thead><tbody>{% for l, n in r.public.communes %}<tr><td class="py-0.5 pr-4">{{ l }}</td><td class="text-right">{{ n }}</td></tr>{% endfor %}</tbody></table>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-6">
+    <div id="stats-budgets" class="carte bg-white rounded-lg shadow p-4">
+      <h2 class="font-semibold text-gray-800 mb-1">Budgets du foyer</h2>
+      <p class="text-xs text-gray-500 mb-2">Dernier budget de chaque foyer établi sur la période : {{ r.budgets.foyers }} foyer(s).</p>
+      <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">Reste à vivre / jour / personne</th><th class="text-right">Foyers</th><th class="text-right">Part</th></tr></thead>
+        <tbody class="divide-y">{% for l, n, p in r.budgets.tranches %}<tr><td class="py-1">{{ l }}</td><td class="text-right">{{ n }}</td><td class="text-right">{{ p }}</td></tr>{% endfor %}</tbody></table>
+      <p class="text-sm mt-3">Reste à vivre médian : <b>{% if r.budgets.rav_median is not None %}{{ r.budgets.rav_median }} €{% else %}—{% endif %}</b></p>
+      <p class="text-sm">Foyers avec des charges impayées : <b>{{ r.budgets.impayes }}</b> ({{ r.budgets.part_impayes }}){% if r.budgets.postes %} — {% for l, n in r.budgets.postes %}{{ l }} : {{ n }}{% if not forloop.last %} ; {% endif %}{% endfor %}{% endif %}</p>
+      <p class="text-sm">Foyers avec des dettes : <b>{{ r.budgets.dettes }}</b> ({{ r.budgets.part_dettes }}), dette médiane {% if r.budgets.dette_mediane is not None %}{{ r.budgets.dette_mediane }} €{% else %}—{% endif %}</p>
+    </div>
+    <div id="stats-ateliers" class="carte bg-white rounded-lg shadow p-4 overflow-x-auto">
+      <h2 class="font-semibold text-gray-800 mb-2">Ateliers collectifs</h2>
+      <table class="min-w-full text-sm"><thead class="text-gray-500"><tr><th class="text-left py-1">Atelier</th><th class="text-right">Séances</th><th class="text-right">Inscrits</th><th class="text-right">Remplissage</th><th class="text-right">Présence</th><th class="text-right">Attente</th><th class="text-right">Extérieurs</th></tr></thead>
+        <tbody class="divide-y">{% for l in r.ateliers.par_atelier %}<tr>{% for v in l %}<td class="py-1 {% if not forloop.first %}text-right{% endif %}">{{ v }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="7" class="py-2 text-gray-500">Aucune séance sur la période.</td></tr>{% endfor %}
+        {% if r.ateliers.par_atelier|length > 1 %}<tr class="font-semibold">{% for v in r.ateliers.total %}<td class="py-1 {% if not forloop.first %}text-right{% endif %}">{{ v }}</td>{% endfor %}</tr>{% endif %}</tbody></table>
+      <p class="text-xs text-gray-500 mt-2">La liste d'attente mesure un besoin non couvert.</p>
+    </div>
+  </div>
+  <p class="text-xs text-gray-500">Secret statistique : un effectif de 1 à 4 personnes ou foyers est affiché « &lt; 5 ». Seuls les champs structurés sont comptés : aucun texte libre, jamais la synthèse privée. Un entretien est compté dans la MDS actuelle de l'usager.</p>
+</div>
+{% endblock %}
