@@ -430,3 +430,7 @@ class PermanenceExterne(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
 
+
+
+# Ateliers collectifs (planning/models_ateliers.py)
+from .models_ateliers import Atelier, ParticipantAtelier, SeanceAtelier  # noqa: E402,F401

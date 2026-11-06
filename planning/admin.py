@@ -55,3 +55,28 @@ class JourBloqueAdmin(admin.ModelAdmin):
         from planning.utils import generer_jours_feries_annee
         nb = generer_jours_feries_annee(2026)
         self.message_user(request, f"{nb} jours fériés 2026 ont été créés !")
+
+
+from .models_ateliers import Atelier, ParticipantAtelier, SeanceAtelier  # noqa: E402
+
+
+@admin.register(Atelier)
+class AtelierAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'mds', 'actif')
+    list_filter = ('actif', 'mds')
+    search_fields = ('nom',)
+
+
+class ParticipantInline(admin.TabularInline):
+    model = ParticipantAtelier
+    extra = 0
+    raw_id_fields = ('beneficiaire',)
+    fields = ('type', 'beneficiaire', 'prenom', 'nom', 'liste', 'presence', 'paiement_recu')
+
+
+@admin.register(SeanceAtelier)
+class SeanceAtelierAdmin(admin.ModelAdmin):
+    list_display = ('date', 'heure_debut', 'atelier', 'mds', 'places', 'statut')
+    list_filter = ('statut', 'mds', 'atelier')
+    date_hierarchy = 'date'
+    inlines = [ParticipantInline]

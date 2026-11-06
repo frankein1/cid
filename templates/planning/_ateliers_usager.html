@@ -1,0 +1,15 @@
+<!-- /templates/planning/_ateliers_usager.html -->
+{# Participations de l'usager aux ateliers collectifs (affiché seulement s'il y en a) #}
+{% with parts=beneficiaire.participations_ateliers.all %}{% if parts %}
+<div id="ateliers-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <h2 class="font-bold text-gray-800 text-lg mb-3"><i class="fas fa-people-group text-orange-500 mr-2"></i>Ateliers collectifs</h2>
+    <ul class="divide-y text-sm">
+    {% for p in parts|dictsortreversed:"seance.date" %}
+        <li class="py-2 flex justify-between gap-2">
+            <a href="{% url 'planning:seance_atelier' p.seance.pk %}" class="text-orange-700 hover:underline">{{ p.seance.date|date:"d/m/Y" }} — {{ p.seance.titre }}</a>
+            <span class="text-gray-500">{% if p.seance.statut == 'ANNULEE' %}séance annulée{% elif p.liste == 'ATTENTE' %}liste d'attente{% elif p.presence %}{{ p.get_presence_display }}{% else %}inscrit(e){% endif %}</span>
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}{% endwith %}

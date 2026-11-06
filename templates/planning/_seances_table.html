@@ -1,0 +1,19 @@
+<!-- /templates/planning/_seances_table.html -->
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead class="bg-gray-50 text-gray-600"><tr>
+      <th class="px-3 py-2 text-left">Date</th><th class="px-3 py-2 text-left">Atelier</th><th class="px-3 py-2 text-left">Lieu</th>
+      <th class="px-3 py-2 text-left">MDS</th><th class="px-3 py-2 text-center">Inscrits</th><th class="px-3 py-2 text-center">Attente</th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+    {% for s in seances %}
+      <tr class="hover:bg-orange-50 {% if s.statut == 'ANNULEE' %}text-gray-400 line-through{% endif %}">
+        <td class="px-3 py-2 whitespace-nowrap"><a class="text-orange-700 hover:underline" href="{% url 'planning:seance_atelier' s.pk %}">{{ s.date|date:"D d/m/Y" }} {{ s.heure_debut|time:"H:i" }}</a></td>
+        <td class="px-3 py-2">{{ s.titre }}{% if s.payant %} <span class="text-xs text-amber-700">({{ s.tarif }} €)</span>{% endif %}</td>
+        <td class="px-3 py-2">{{ s.lieu|default:"—" }}</td><td class="px-3 py-2">{{ s.mds.nom }}</td>
+        <td class="px-3 py-2 text-center">{{ s.nb_inscrits }}{% if s.places %} / {{ s.places }}{% endif %}</td>
+        <td class="px-3 py-2 text-center">{{ s.nb_attente|default:"" }}</td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="px-3 py-4 text-center text-gray-500">{{ vide }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>

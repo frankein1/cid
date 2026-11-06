@@ -160,6 +160,7 @@ class Command(BaseCommand):
             self.cap_regie()
             self.ip()
             self.planning()
+            self.ateliers()
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
@@ -788,6 +789,36 @@ class Command(BaseCommand):
                           f"le {prochaine.date:%d/%m/%Y} (3 dossiers), une demande en préparation")
 
     # ------------------------------------------------------------------ planning
+    def ateliers(self):
+        """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""
+        from planning import ateliers as regles
+        from planning.models import Atelier, ParticipantAtelier as P, SeanceAtelier
+        budget, _ = Atelier.objects.get_or_create(nom="Gérer son budget au quotidien", mds=None,
+                                                  defaults={"description": "Atelier fictif de démonstration."})
+        cuisine, _ = Atelier.objects.get_or_create(nom="Cuisine à petit prix", mds=self.mds1,
+                                                   defaults={"description": "Atelier fictif de démonstration."})
+        numerique, _ = Atelier.objects.get_or_create(nom="Premiers pas numériques", mds=self.mds1)
+        SeanceAtelier.objects.filter(atelier__in=[budget, cuisine, numerique]).delete()
+
+        def seance(atelier, jours, h, **champs):
+            jour = self.j + timedelta(days=jours)
+            while jour.weekday() >= 5:                     # jamais le week-end
+                jour += timedelta(days=1)
+            return SeanceAtelier.objects.create(atelier=atelier, mds=self.mds1, date=jour,
+                                                heure_debut=time(h), heure_fin=time(h + 2), cree_par=self.ts,
+                                                lieu="Salle polyvalente de la MDS", **champs)
+        passee = seance(budget, -12, 9, animateur="Conseillère ESF de la MDS", places=8)
+        for code in ("FAM2-SOP", "FAM5-SAR", "FAM4-NOL"):
+            regles.inscrire(passee, self.ts, beneficiaire=self.b[code], forcer_age=True)
+        regles.inscrire(passee, self.ts, prenom="Inès", nom="BARRE", ville="Commune fictive")
+        regles.noter_presences(passee, {str(p.pk): v for p, v in zip(passee.inscrits(), [P.VENU, P.VENU, P.ABSENT, P.VENU])})
+        cuis = seance(cuisine, 9, 14, places=3, payant=True, tarif=2, description="Participation aux courses : 2 €.")
+        for code in ("FAM9-CEL", "FAM3-CLA", "FAM1-JEA", "FAM5-SAR"):          # la 4e personne part en liste d'attente
+            regles.inscrire(cuis, self.ts, beneficiaire=self.b[code], forcer_age=True)
+        seance(numerique, 16, 10, places=10, condition_age=SeanceAtelier.PLUS_DE, age_limite=18,
+               description="Créer une adresse de courriel, se repérer sur les sites des administrations.")
+        self.stdout.write("✅ Ateliers collectifs fictifs ajoutés")
+
     def planning(self):
         from mds.models import MDSReception
         from planning.models import CreneauRdv
