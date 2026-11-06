@@ -162,6 +162,13 @@ class ParametresRDVSP(models.Model):
                                                 help_text="Identifiant du service « social » côté RDV-Solidarités")
     semaines_publication = models.PositiveSmallIntegerField(default=8, help_text="Durée de chaque publication")
     derniere_synchro = models.DateTimeField(null=True, blank=True)
+    # Étape 2 : invitations mensuelles (« 1er lundi du mois » est un repère, à fixer par la DITAS / la DSI)
+    JOURS = [(0, "lundi"), (1, "mardi"), (2, "mercredi"), (3, "jeudi"), (4, "vendredi")]
+    jour_preparation = models.PositiveSmallIntegerField(
+        choices=JOURS, default=0, help_text="Les listes sont préparées le 1er de ces jours du mois")
+    jours_avant_envoi = models.PositiveSmallIntegerField(
+        default=1, help_text="Délai laissé aux référents pour décocher (1 = le lendemain)")
+    heure_envoi = models.TimeField(default="18:00", help_text="Sans validation, la liste part telle quelle à cette heure")
 
     class Meta:
         verbose_name = "Réglages RDV-Solidarités"
@@ -326,3 +333,60 @@ class AvisRDVSP(models.Model):
         ordering = ['-recu_le']
         verbose_name = "Avis reçu de RDV-Solidarités"
         verbose_name_plural = "Avis reçus de RDV-Solidarités"
+
+
+# -----------------------------------------------------------------------------
+# Étape 2 : invitations à réserver en ligne et suspension (connecteurs/rdvsp_invitations.py)
+# -----------------------------------------------------------------------------
+class ReservationEnLigne(models.Model):
+    """Case « Réservation en ligne suspendue » de la fiche usager (décision de l'agent, comme pour la PMI)."""
+    beneficiaire = models.OneToOneField('beneficiaire.Beneficiaire', on_delete=models.CASCADE,
+                                        related_name='reservation_en_ligne')
+    suspendue = models.BooleanField(default=False)
+    commentaire = models.CharField(max_length=255, blank=True)
+    modifiee_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    modifiee_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Réservation en ligne d'un usager"
+        verbose_name_plural = "Réservations en ligne des usagers"
+
+
+class CampagneInvitations(models.Model):
+    """Invitations du mois : liste préparée par CID, validée (décochée) par chaque référent, puis envoyée."""
+    mois = models.DateField(unique=True, help_text="1er jour du mois")
+    preparee_le = models.DateTimeField(auto_now_add=True)
+    envoi_prevu = models.DateTimeField()
+    envoyee_le = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-mois']
+        verbose_name = "Campagne d'invitations RSA"
+        verbose_name_plural = "Campagnes d'invitations RSA"
+
+    def __str__(self):
+        return f"Invitations RSA – {self.mois:%m/%Y}"
+
+
+class InvitationRSA(models.Model):
+    COURRIEL, COURRIER = 'COURRIEL', 'COURRIER'
+    MODES = [(COURRIEL, "Courriel (courrier joint)"), (COURRIER, "Courrier à imprimer")]
+    campagne = models.ForeignKey(CampagneInvitations, on_delete=models.CASCADE, related_name='invitations')
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE, related_name='+')
+    contrat = models.ForeignKey('insertion.ContratInsertion', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='+')
+    referent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='invitations_rsa')
+    cochee = models.BooleanField(default=True, help_text="Décochée par le référent : pas d'invitation ce mois-ci")
+    validee_le = models.DateTimeField(null=True, blank=True)
+    envoyee_le = models.DateTimeField(null=True, blank=True)
+    mode = models.CharField(max_length=10, choices=MODES, blank=True)
+    lien = models.URLField(max_length=500, blank=True, help_text="Lien personnel de réservation")
+    courriel_reel = models.BooleanField(default=False, help_text="Expédié par un vrai serveur de courriel")
+    erreur = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ['beneficiaire__nom', 'beneficiaire__prenom']
+        unique_together = ('campagne', 'beneficiaire')
+        verbose_name = "Invitation RSA"
+        verbose_name_plural = "Invitations RSA"

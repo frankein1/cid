@@ -107,3 +107,24 @@ class RdvRDVSPAdmin(_Lecture):
 class AvisRDVSPAdmin(_Lecture):
     list_display = ('recu_le', 'modele', 'evenement', 'objet_sp_id', 'traite', 'erreur')
     list_filter = ('traite', 'modele')
+
+
+from .models import CampagneInvitations, InvitationRSA, ReservationEnLigne  # noqa: E402
+
+
+@admin.register(CampagneInvitations)
+class CampagneInvitationsAdmin(admin.ModelAdmin):
+    list_display = ('mois', 'preparee_le', 'envoi_prevu', 'envoyee_le')
+
+
+@admin.register(InvitationRSA)
+class InvitationRSAAdmin(_Lecture):
+    list_display = ('campagne', 'beneficiaire', 'referent', 'cochee', 'envoyee_le', 'mode', 'erreur')
+    list_filter = ('campagne', 'cochee', 'mode')
+    exclude = ('lien',)   # lien personnel de réservation : pas affiché
+
+
+@admin.register(ReservationEnLigne)
+class ReservationEnLigneAdmin(_Lecture):
+    list_display = ('beneficiaire', 'suspendue', 'modifiee_par', 'modifiee_le')
+    list_filter = ('suspendue',)

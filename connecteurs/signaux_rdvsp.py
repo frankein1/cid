@@ -83,7 +83,10 @@ def connexion(sender, request, user, **kwargs):
     from . import rdvsp_synchro
     from .models import ParametresRDVSP
     p = ParametresRDVSP.get()
-    if not rdvsp_synchro.prete() or (p.derniere_synchro and timezone.now() - p.derniere_synchro < timedelta(hours=24)):
+    if not rdvsp_synchro.prete():
+        return
+    _invitations_si_besoin()
+    if p.derniere_synchro and timezone.now() - p.derniere_synchro < timedelta(hours=24):
         return
     ParametresRDVSP.objects.filter(pk=p.pk).update(derniere_synchro=timezone.now())   # évite les lancements en double
 
@@ -97,6 +100,33 @@ def connexion(sender, request, user, **kwargs):
             from django.db import connection
             connection.close()
     threading.Thread(target=lancer, daemon=True).start()
+
+
+def _invitations_si_besoin():
+    """Étape 2 : préparation (1er lundi) et envoi (le lendemain soir) des invitations, en arrière-plan."""
+    import threading
+    from . import rdvsp_invitations
+    if not rdvsp_invitations.a_traiter():
+        return
+    global _ENVOI_EN_COURS
+    if _ENVOI_EN_COURS:
+        return
+    _ENVOI_EN_COURS = True
+
+    def lancer():
+        global _ENVOI_EN_COURS
+        try:
+            rdvsp_invitations.traiter()
+        except Exception:
+            logger.exception("rdvsp: invitations non traitées")
+        finally:
+            _ENVOI_EN_COURS = False
+            from django.db import connection
+            connection.close()
+    threading.Thread(target=lancer, daemon=True).start()
+
+
+_ENVOI_EN_COURS = False
 
 
 def brancher():
