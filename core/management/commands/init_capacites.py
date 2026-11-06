@@ -15,6 +15,7 @@ CAPACITES = [
     # --- Lecture & Liste ---
     ('peut_voir', 'Voir'),
     ('peut_voir_stats', 'Voir statistiques'),
+    ('stats_departement', "Statistiques de l'accompagnement de tout le département (comparaison des MDS, sans détail par agent)"),
     ('peut_lister', 'Lister'),
     ('peut_consulter_tous_usagers', 'Rechercher un usager dans toutes les MDS (identité, coordonnées, référent, famille)'),
 

@@ -66,8 +66,8 @@ class Command(BaseCommand):
             {"code": "MDS_SECRETARIAT_GENERAL", "nom": "Secrétariat général", "capacites": ['peut_valider_cheque_aidfi']},
 
             # ---------------- DIRECTIONS (DEF, DITAS, PMI...) : droits à définir ----------------
-            {"code": "DIR_DIRECTION", "nom": "Direction (directions centrales)", "capacites": []},
-            {"code": "DIR_CADRE", "nom": "Cadre de direction", "capacites": []},
+            {"code": "DIR_DIRECTION", "nom": "Direction (directions centrales)", "capacites": ['stats_departement']},
+            {"code": "DIR_CADRE", "nom": "Cadre de direction", "capacites": ['stats_departement']},
             {"code": "DIR_SECRETARIAT", "nom": "Secrétariat de direction", "capacites": []},
 
             # ---------------- DGA SOLIDARITÉS : droits à définir ----------------
