@@ -1,0 +1,110 @@
+<!-- /templates/planning/seance_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ s.titre }}{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <a href="{% url 'planning:ateliers' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Ateliers collectifs</a>
+  <div class="flex flex-wrap items-start justify-between gap-3 mt-2 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ s.titre }}{% if s.statut == 'ANNULEE' %} <span class="text-base text-red-600">— annulée</span>{% endif %}</h1>
+      <p class="text-sm text-gray-600 mt-1">{{ s.date|date:"l d F Y" }}, {{ s.heure_debut|time:"H:i" }}–{{ s.heure_fin|time:"H:i" }} · {{ s.lieu|default:s.mds.nom }}{% if s.animateur %} · animé par {{ s.animateur }}{% endif %}</p>
+      <p class="text-sm text-gray-600">
+        {% if s.places %}{{ s.places }} places ({{ s.places_restantes }} restante{{ s.places_restantes|pluralize }}){% else %}Places sans limite{% endif %}
+        {% if s.condition_age_texte %} · {{ s.condition_age_texte }}{% endif %}
+        {% if s.payant %} · payant : {{ s.tarif }} €{% else %} · gratuit{% endif %}
+        {% if s.partenaire %} · avec {{ s.partenaire }}{% endif %}
+        {% if s.action_insertion %} · action d'insertion : {{ s.action_insertion }}{% endif %}
+      </p>
+      {% if s.description %}<p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ s.description }}</p>{% endif %}
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'planning:seance_atelier_export' s.pk 'pdf' %}" target="_blank" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-file-pdf mr-1 text-red-600"></i>Feuille d'émargement</a>
+      <a href="{% url 'planning:seance_atelier_export' s.pk 'csv' %}" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-file-csv mr-1 text-green-700"></i>CSV</a>
+      {% if peut_gerer %}
+        <a href="{% url 'planning:seance_atelier_modifier' s.pk %}" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-pen mr-1"></i>Modifier</a>
+        <form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}">{% csrf_token %}
+          {% if s.statut == 'ANNULEE' %}<button name="action" value="retablir" class="px-3 py-2 border rounded-lg text-sm">Rétablir</button>
+          {% else %}<button name="action" value="annuler" onclick="return confirm('Annuler cette séance ?')" class="px-3 py-2 border border-red-300 text-red-700 rounded-lg text-sm">Annuler la séance</button>{% endif %}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6 text-center text-sm">
+    {% for libelle, n in bilan.items %}<div class="bg-white rounded-lg shadow p-3"><div class="text-xl font-bold text-gray-900">{{ n }}</div><div class="text-gray-500">{{ libelle }}</div></div>{% endfor %}
+  </div>
+
+  <form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="bg-white rounded-lg shadow overflow-x-auto mb-6">
+    {% csrf_token %}
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600"><tr><th class="px-3 py-2 text-left">Inscrits</th><th class="px-3 py-2 text-left">Type</th>
+        <th class="px-3 py-2 text-left">Présence</th>{% if s.payant %}<th class="px-3 py-2 text-center">Payé</th>{% endif %}<th></th></tr></thead>
+      <tbody class="divide-y divide-gray-100">
+      {% for p in inscrits %}
+        <tr>
+          <td class="px-3 py-2">{% if p.beneficiaire %}<a class="text-orange-700 hover:underline" href="{% url 'beneficiaire:detail_beneficiaire' p.beneficiaire.code_interne %}">{{ p.nom_complet }}</a>{% else %}{{ p.nom_complet }}{% if p.telephone %} <span class="text-gray-500">· {{ p.telephone }}</span>{% endif %}{% endif %}</td>
+          <td class="px-3 py-2 text-gray-600">{{ p.get_type_display }}</td>
+          <td class="px-3 py-2">
+            <select name="presence_{{ p.pk }}" class="px-2 py-1 border border-gray-300 rounded text-sm" {% if not peut_gerer %}disabled{% endif %}>
+              <option value="">—</option>{% for v, l in presences %}<option value="{{ v }}" {% if p.presence == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+            </select>
+          </td>
+          {% if s.payant %}<td class="px-3 py-2 text-center"><input type="checkbox" name="paye" value="{{ p.pk }}" {% if p.paiement_recu %}checked{% endif %} {% if not peut_gerer %}disabled{% endif %}></td>{% endif %}
+          <td class="px-3 py-2 text-right">{% if peut_gerer %}<button form="retirer{{ p.pk }}" class="text-red-600 text-xs hover:underline">Désinscrire</button>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">Personne n'est encore inscrit.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    {% if peut_gerer and inscrits %}<div class="p-3 text-right"><button name="action" value="presences" class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700">Enregistrer les présences</button></div>{% endif %}
+  </form>
+  {% for p in inscrits %}<form id="retirer{{ p.pk }}" method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="hidden">{% csrf_token %}<input type="hidden" name="action" value="retirer"><input type="hidden" name="participant" value="{{ p.pk }}"></form>{% endfor %}
+
+  {% if attente %}
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <h2 class="font-semibold text-gray-800 mb-2">Liste d'attente <span class="text-sm font-normal text-gray-500">(la première personne passe automatiquement inscrite si une place se libère)</span></h2>
+    <ol class="list-decimal pl-6 text-sm space-y-1">
+      {% for p in attente %}<li>{{ p.nom_complet }} <span class="text-gray-500">· {{ p.get_type_display }}</span>
+        {% if peut_gerer %}<form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="participant" value="{{ p.pk }}"><button name="action" value="retirer" class="text-red-600 text-xs hover:underline ml-2">Retirer</button></form>{% endif %}</li>{% endfor %}
+    </ol>
+  </div>
+  {% endif %}
+
+  {% if peut_gerer and s.statut != 'ANNULEE' %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="font-semibold text-gray-800 mb-3"><i class="fas fa-user mr-1 text-orange-600"></i>Inscrire un usager suivi</h2>
+      <form method="get" class="flex gap-2 mb-3">
+        <input name="q" value="{{ q }}" placeholder="Nom, prénom ou code CID" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <button class="px-3 py-2 border rounded-lg text-sm">Chercher</button>
+      </form>
+      {% if q %}
+      <ul class="divide-y text-sm">
+        {% for b, alerte in trouves %}
+          <li class="py-2 flex items-center justify-between gap-2">
+            <span>{{ b.nom }} {{ b.prenom }} <span class="text-gray-500">· {{ b.date_naissance|date:"d/m/Y" }}</span>{% if alerte %}<br><span class="text-xs text-amber-700"><i class="fas fa-triangle-exclamation"></i> {{ alerte }}</span>{% endif %}</span>
+            <form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}">{% csrf_token %}
+              <input type="hidden" name="beneficiaire" value="{{ b.pk }}">{% if alerte %}<input type="hidden" name="forcer_age" value="1">{% endif %}
+              <button name="action" value="inscrire_usager" class="px-3 py-1 bg-orange-600 text-white rounded text-xs">{% if alerte %}Inscrire quand même{% else %}Inscrire{% endif %}</button>
+            </form>
+          </li>
+        {% empty %}<li class="py-2 text-gray-500">Aucun usager de la MDS ne correspond (ou il est déjà inscrit).</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="font-semibold text-gray-800 mb-1"><i class="fas fa-user-plus mr-1 text-orange-600"></i>Inscrire une personne extérieure</h2>
+      <p class="text-xs text-gray-500 mb-3">Personne non suivie par la MDS, ou accompagnant d'un usager. Ne saisissez que le nécessaire pour la prévenir.</p>
+      <form method="post" action="{% url 'planning:seance_atelier_action' s.pk %}" class="grid grid-cols-2 gap-2 text-sm">{% csrf_token %}
+        <input name="prenom" placeholder="Prénom" class="px-3 py-2 border border-gray-300 rounded-lg">
+        <input name="nom" placeholder="Nom *" required class="px-3 py-2 border border-gray-300 rounded-lg">
+        <input name="telephone" placeholder="Téléphone" class="px-3 py-2 border border-gray-300 rounded-lg">
+        <input name="email" type="email" placeholder="Courriel" class="px-3 py-2 border border-gray-300 rounded-lg">
+        <input name="ville" placeholder="Commune" class="px-3 py-2 border border-gray-300 rounded-lg">
+        <label class="flex items-center gap-2"><input type="checkbox" name="accompagnant" value="1"> Accompagnant</label>
+        <div class="col-span-2 text-right"><button name="action" value="inscrire_externe" class="px-4 py-2 bg-orange-600 text-white rounded-lg">Inscrire</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

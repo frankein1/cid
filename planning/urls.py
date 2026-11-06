@@ -15,7 +15,16 @@ from . import views, views_agenda
 
 app_name = 'planning'
 
+from . import views_ateliers  # noqa: E402
+
 urlpatterns = [
+    # Ateliers collectifs
+    path('ateliers/', views_ateliers.ateliers_liste, name='ateliers'),
+    path('ateliers/seance/nouvelle/', views_ateliers.seance_form, name='seance_atelier_nouvelle'),
+    path('ateliers/seance/<int:pk>/', views_ateliers.seance_detail, name='seance_atelier'),
+    path('ateliers/seance/<int:pk>/modifier/', views_ateliers.seance_form, name='seance_atelier_modifier'),
+    path('ateliers/seance/<int:pk>/action/', views_ateliers.seance_action, name='seance_atelier_action'),
+    path('ateliers/seance/<int:pk>/emargement.<str:format>', views_ateliers.seance_export, name='seance_atelier_export'),
     # ==========================
     # CALENDRIER PRINCIPAL
     # ==========================
