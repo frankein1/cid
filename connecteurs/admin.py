@@ -155,3 +155,19 @@ class ServiceInclusionAdmin(admin.ModelAdmin):
 @admin.register(ImportInclusion)
 class ImportInclusionAdmin(admin.ModelAdmin):
     list_display = ('debut', 'fin', 'departements', 'structures', 'services', 'retires', 'erreur')
+
+
+from .models import EcartSituation, PrestationRelevee  # noqa: E402
+
+
+@admin.register(EcartSituation)
+class EcartSituationAdmin(admin.ModelAdmin):
+    list_display = ('beneficiaire', 'nature', 'signale_le', 'regle_le')
+    list_filter = ('nature',)
+    raw_id_fields = ('beneficiaire',)
+
+
+@admin.register(PrestationRelevee)
+class PrestationReleveeAdmin(admin.ModelAdmin):
+    list_display = ('beneficiaire', 'prestation', 'montant', 'date_releve', 'saisi_par')
+    raw_id_fields = ('beneficiaire',)

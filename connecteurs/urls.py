@@ -10,7 +10,7 @@ from . import views, views_invitations, views_rdvsp_synchro, views_simulation
 
 app_name = 'connecteurs'
 
-from . import views_inclusion  # noqa: E402
+from . import views_droits, views_inclusion  # noqa: E402
 
 urlpatterns = [
     path('inclusion/', views_inclusion.recherche, name='inclusion_recherche'),
@@ -19,6 +19,8 @@ urlpatterns = [
     path('usager/<str:code_interne>/simulation-droits/', views_simulation.simuler_droits, name='simuler_droits'),
     path('usager/<str:code_interne>/situation/actualiser/', views.actualiser_situation,
          name='actualiser_situation'),
+    path('usager/<str:code_interne>/situation/ecart/<int:pk>/regle/', views_droits.regler_ecart, name='regler_ecart'),
+    path('usager/<str:code_interne>/situation/aides/', views_droits.relever_prestations, name='relever_prestations'),
     # Passerelle RDV Service Public (désactivée par défaut)
     path('rdv-service-public/', views.rdvsp_etat, name='rdvsp_etat'),
     path('rdv-service-public/connexion/', views.rdvsp_connexion, name='rdvsp_connexion'),

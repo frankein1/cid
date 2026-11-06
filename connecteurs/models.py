@@ -24,7 +24,9 @@ SOURCES = [
     ('ASF', "Allocation de soutien familial"),
     ('AAH', "Allocation adulte handicapé"),
     ('C2S', "Complémentaire santé solidaire"),
+    ('AEEH', "Allocation d'éducation de l'enfant handicapé"),
     ('FRANCE_TRAVAIL', "Inscription France Travail"),
+    ('FT_PAIEMENTS', "Paiements France Travail (6 derniers mois)"),
 ]
 
 STATUTS_APPEL = [
@@ -483,3 +485,60 @@ class ImportInclusion(models.Model):
     @property
     def en_cours(self):
         return self.fin is None
+
+
+# =============================================================================
+# Écarts entre la CAF et la fiche, montants relevés sur l'accès partenaire CAF
+# =============================================================================
+class EcartSituation(models.Model):
+    """Trace d'un écart constaté entre un organisme et la fiche CID. Les données de l'organisme ne sont PAS
+    enregistrées : seulement la nature de l'écart, sa date, qui l'a vu et qui l'a réglé."""
+    NATURES = [('ENFANT_INCONNU', "Enfant rattaché chez l'organisme, absent du foyer dans CID"),
+               ('ENFANT_NON_DECLARE', "Enfant du foyer dans CID, non rattaché chez l'organisme"),
+               ('ADRESSE', "Adresse différente")]
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE, related_name='ecarts_situation')
+    source = models.CharField(max_length=20, choices=SOURCES)
+    nature = models.CharField(max_length=20, choices=NATURES)
+    detail = models.CharField(max_length=255, blank=True, help_text="Sans nom ni donnée de l'organisme")
+    signale_le = models.DateTimeField(auto_now_add=True)
+    signale_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    regle_le = models.DateTimeField(null=True, blank=True)
+    regle_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='+')
+    commentaire = models.CharField("Comment l'écart a été réglé", max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-signale_le']
+        verbose_name = "Écart CAF / fiche"
+        verbose_name_plural = "Écarts CAF / fiche"
+
+    @property
+    def ouvert(self):
+        return self.regle_le is None
+
+
+class PrestationRelevee(models.Model):
+    """Montant d'une prestation relevé par un agent sur l'accès partenaire CAF (saisie facultative)."""
+    PRESTATIONS = [
+        ('RSA', "RSA", 'rsa'), ('PRIME_ACTIVITE', "Prime d'activité", 'autres_prestations'),
+        ('AL', "Aide au logement (AL, APL, ALS, ALF)", 'logement'), ('AF', "Allocations familiales", 'familiales'),
+        ('CF', "Complément familial", 'familiales'), ('ASF', "Allocation de soutien familial", 'familiales'),
+        ('PAJE', "PAJE (allocation de base, CMG…)", 'familiales'), ('PREPARE', "PreParE", 'prepare'),
+        ('AAH', "AAH (et complément)", 'aah'), ('AEEH', "AEEH (et complément)", 'aah'),
+        ('AUTRE', "Autre prestation CAF", 'autres_prestations'),
+    ]
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE, related_name='prestations_relevees')
+    prestation = models.CharField(max_length=20, choices=[(c, l) for c, l, _ in PRESTATIONS])
+    montant = models.DecimalField("Montant mensuel", max_digits=9, decimal_places=2)
+    date_releve = models.DateField("Relevé le")
+    saisi_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
+    saisi_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date_releve', '-saisi_le']
+        verbose_name = "Prestation relevée (accès partenaire CAF)"
+        verbose_name_plural = "Prestations relevées (accès partenaire CAF)"
+
+    @classmethod
+    def rubrique_budget(cls, code):
+        return next((r for c, _, r in cls.PRESTATIONS if c == code), 'autres_prestations')

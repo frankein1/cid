@@ -6,6 +6,12 @@
             <i class="fas fa-link text-blue-500 mr-2"></i>Situation CAF / MSA et France Travail
         </h2>
         <div class="flex flex-wrap gap-2">
+        <a id="acces-partenaire-caf" href="{{ situation_externe.url_caf }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 border border-sky-700 text-sky-800 rounded-lg hover:bg-sky-50 transition text-sm" title="Ouvre le site de la CAF (habilitation personnelle) dans un nouvel onglet">
+            <i class="fas fa-arrow-up-right-from-square mr-2"></i>Accès partenaire CAF
+        </a>
+        <button type="button" onclick="document.getElementById('dlg-aides').showModal()" class="inline-flex items-center px-4 py-2 border border-sky-700 text-sky-800 rounded-lg hover:bg-sky-50 transition text-sm">
+            <i class="fas fa-pen-to-square mr-2"></i>Actualiser les aides
+        </button>
         {% if simulation_disponible %}
         <a id="lien-simulation-droits" href="{% url 'connecteurs:simuler_droits' beneficiaire.code_interne %}" class="inline-flex items-center px-4 py-2 border border-blue-700 text-blue-700 rounded-lg hover:bg-blue-50 transition text-sm">
             <i class="fas fa-calculator mr-2"></i>Simuler les droits
@@ -27,6 +33,21 @@
     </p>
     {% endif %}
 
+    {% if situation_externe.ecarts %}
+    <div id="ecarts-caf" class="mb-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-sm">
+        <p class="font-semibold text-orange-900 mb-1"><i class="fas fa-triangle-exclamation mr-1"></i>Écart{{ situation_externe.ecarts|pluralize }} avec la CAF / MSA à vérifier</p>
+        {% for e in situation_externe.ecarts %}
+        <form method="post" action="{% url 'connecteurs:regler_ecart' beneficiaire.code_interne e.pk %}" class="flex flex-wrap items-center gap-2 py-1">
+            {% csrf_token %}
+            <span class="flex-1 min-w-[16rem] text-orange-900">{{ e.get_nature_display }}{% if e.detail %} — {{ e.detail }}{% endif %} <span class="text-xs text-orange-700">(signalé le {{ e.signale_le|date:"d/m/Y" }}{% if e.signale_par %} par {{ e.signale_par.get_full_name|default:e.signale_par.username }}{% endif %})</span></span>
+            <input name="commentaire" placeholder="Comment c'est réglé (facultatif)" class="px-2 py-1 border rounded text-xs w-56">
+            <button class="text-xs px-2 py-1 border border-orange-400 rounded hover:bg-orange-100">Réglé</button>
+        </form>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if situation_externe.ecarts_regles %}<p class="mb-3 text-xs text-gray-500">{{ situation_externe.ecarts_regles }} écart{{ situation_externe.ecarts_regles|pluralize }} déjà réglé{{ situation_externe.ecarts_regles|pluralize }} (trace conservée).</p>{% endif %}
+
     <div class="divide-y divide-gray-100">
         {% for ligne in situation_externe.lignes %}
         {% with s=ligne.situation %}
@@ -42,6 +63,11 @@
                         {% if s.statut_appel == 'INCOMPLET' %}<i class="fas fa-pen text-amber-500 mr-1"></i>{% endif %}
                         {{ s.resume }}
                     </p>
+                    {% if ligne.code == 'FT_PAIEMENTS' and situation_externe.paiements_ft %}
+                    <table class="mt-1 text-xs text-gray-700"><tbody>
+                        {% for pay in situation_externe.paiements_ft %}<tr><td class="pr-3">{{ pay.date|slice:"8:10" }}/{{ pay.date|slice:"5:7" }}/{{ pay.date|slice:":4" }}</td><td class="pr-3 text-right">{{ pay.total|floatformat:2 }} €</td><td class="text-gray-500">{% if pay.aides %}dont aides {{ pay.aides|floatformat:2 }} €{% endif %}{% if pay.autres %} autres {{ pay.autres|floatformat:2 }} €{% endif %}</td></tr>{% endfor %}
+                    </tbody></table>
+                    {% endif %}
                     <p class="text-[11px] text-gray-400">
                         Dernière mise à jour info du {{ s.date_maj|date:"d/m/Y" }} à {{ s.date_maj|date:"H:i" }}
                         {% if s.maj_par %}– {{ s.maj_par.get_full_name|default:s.maj_par.username }}{% endif %}
@@ -62,4 +88,46 @@
         {% endwith %}
         {% endfor %}
     </div>
+
+    {% if situation_externe.releves %}
+    <div id="aides-relevees" class="mt-4 pt-3 border-t">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-1">Montants relevés sur l'accès partenaire CAF</p>
+        <table class="text-sm"><tbody>{% for r in situation_externe.releves %}<tr><td class="pr-4">{{ r.get_prestation_display }}</td><td class="pr-4 text-right font-medium">{{ r.montant|floatformat:2 }} €</td><td class="text-xs text-gray-400">relevé le {{ r.date_releve|date:"d/m/Y" }}{% if r.saisi_par %} – {{ r.saisi_par.get_full_name|default:r.saisi_par.username }}{% endif %}</td></tr>{% endfor %}</tbody></table>
+        <a href="{% url 'beneficiaire:budget_foyer_nouveau' beneficiaire.code_interne %}?depuis=caf" class="text-xs text-blue-700 hover:underline"><i class="fas fa-wallet mr-1"></i>Reprendre dans un nouveau budget du foyer</a>
+    </div>
+    {% endif %}
+
+    {% if situation_reseau %}
+    <div class="mt-4 pt-3 border-t">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-1">Autres personnes du réseau familial</p>
+        {% for m in situation_reseau %}
+        <form method="post" action="{% url 'connecteurs:actualiser_situation' m.personne.code_interne %}" class="flex items-center justify-between gap-2 py-1 text-sm">
+            {% csrf_token %}<input type="hidden" name="retour" value="{{ beneficiaire.code_interne }}">
+            <span><a class="text-blue-700 hover:underline" href="{% url 'beneficiaire:detail_beneficiaire' m.personne.code_interne %}#situation-externe">{{ m.personne.prenom }} {{ m.personne.nom }}</a> <span class="text-gray-500">· {{ m.libelle }}</span>{% if m.resume %} — <span class="text-gray-600">{{ m.resume }}</span>{% endif %}</span>
+            <button class="text-xs px-2 py-1 border rounded hover:bg-gray-50"><i class="fas fa-sync-alt mr-1"></i>Actualiser ses droits</button>
+        </form>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <dialog id="dlg-aides" class="rounded-xl shadow-xl p-0 w-full max-w-xl backdrop:bg-black/40">
+        <form method="post" action="{% url 'connecteurs:relever_prestations' beneficiaire.code_interne %}" class="p-6 space-y-3 text-sm">
+            {% csrf_token %}
+            <div class="flex justify-between items-start"><h3 class="font-bold text-gray-800">Actualiser les aides (accès partenaire CAF)</h3>
+                <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-700" aria-label="Fermer">✕</button></div>
+            <p class="text-xs text-gray-500">Cochez les aides que vous avez vérifiées sur le site de la CAF et indiquez le montant mensuel. Rien n'est obligatoire ; les aides non cochées ne changent pas.</p>
+            <label class="block">Relevé le <input type="date" name="date_releve" value="{% now 'Y-m-d' %}" class="px-2 py-1 border rounded"></label>
+            <table class="w-full"><tbody>
+            {% for p in situation_externe.prestations %}
+                <tr class="border-t"><td class="py-1"><label class="inline-flex items-center gap-2"><input type="checkbox" name="p_{{ p.code }}" value="1"> {{ p.libelle }}</label></td>
+                    <td class="py-1 text-right"><input name="m_{{ p.code }}" inputmode="decimal" placeholder="{% if p.dernier %}{{ p.dernier.montant|floatformat:2 }}{% else %}0,00{% endif %}" class="w-24 px-2 py-1 border rounded text-right" oninput="this.closest('tr').querySelector('input[type=checkbox]').checked = this.value !== ''"> €</td>
+                    <td class="py-1 pl-2 text-xs text-gray-400">{% if p.dernier %}{{ p.dernier.date_releve|date:"d/m/y" }}{% endif %}</td></tr>
+            {% endfor %}
+            </tbody></table>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="this.closest('dialog').close()" class="px-4 py-2 border rounded-lg">Annuler</button>
+                <button class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800">Enregistrer</button>
+            </div>
+        </form>
+    </dialog>
 </div>

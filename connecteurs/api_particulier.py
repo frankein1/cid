@@ -142,18 +142,56 @@ def _lire_france_travail(data):
     return True, resume, utile
 
 
+def _lire_aeeh(data):
+    statut = data.get('status')
+    if statut not in ('allocataire', 'ouvrant_droit'):
+        return False, "Pas de droit AEEH ouvert", {'est_beneficiaire': False}
+    depuis = _date_fr(data.get('date_debut_droit'))
+    qui = "perçoit l'AEEH" if statut == 'allocataire' else "ouvre droit à l'AEEH"
+    return True, qui.capitalize() + (f" depuis le {depuis}" if depuis else ""), {
+        'est_beneficiaire': True, 'statut': statut, 'date_debut_droit': data.get('date_debut_droit')}
+
+
+MOIS_FT = 6
+
+
+def _lire_paiements_ft(data):
+    """Paiements des 6 derniers mois, mois par mois ; la moyenne sert au budget du foyer."""
+    j = timezone.localdate()
+    a, m = j.year, j.month - (MOIS_FT - 1)
+    while m <= 0:
+        a, m = a - 1, m + 12
+    limite = f"{a:04d}-{m:02d}-01"                       # 1er jour du mois, 6 mois calendaires en comptant le mois en cours
+    paiements = sorted((p for p in (data.get('paiements') or []) if (p.get('date_versement') or '') >= limite),
+                       key=lambda p: p.get('date_versement') or '', reverse=True)
+    lignes = [{'date': p.get('date_versement'), 'total': p.get('montant_total') or 0,
+               'allocations': p.get('montant_allocations') or 0, 'aides': p.get('montant_aides') or 0,
+               'autres': p.get('montant_autres') or 0} for p in paiements]
+    if not lignes:
+        return False, f"Aucun paiement sur les {MOIS_FT} derniers mois", {'paiements': [], 'moyenne_mensuelle': 0}
+    moyenne = round(sum(l['total'] for l in lignes) / MOIS_FT, 2)
+    resume = (f"{len(lignes)} paiement{'s' if len(lignes) > 1 else ''} sur {MOIS_FT} mois – moyenne {moyenne:.2f} €/mois"
+              f" – dernier le {_date_fr(lignes[0]['date'])} ({lignes[0]['total']:.2f} €)")
+    return True, resume, {'paiements': lignes, 'moyenne_mensuelle': moyenne}
+
+
 SERVICES = {
     'RSA': {'chemin': '/v3/dss/revenu_solidarite_active/identite',
             'lire': _lire_droit("RSA", 'avec_majoration', "majoré")},
     'PRIME_ACTIVITE': {'chemin': '/v3/dss/prime_activite/identite',
                        'lire': _lire_droit("prime d'activité", 'avec_majoration', "majorée")},
-    'QUOTIENT_FAMILIAL': {'chemin': '/v3/dss/quotient_familial/identite', 'lire': _lire_qf},
+    'QUOTIENT_FAMILIAL': {'chemin': '/v3/dss/quotient_familial/identite', 'lire': _lire_qf, 'controle': True},
     'ASF': {'chemin': '/v3/dss/allocation_soutien_familial/identite', 'lire': _lire_droit("ASF")},
     'AAH': {'chemin': '/v3/dss/allocation_adulte_handicape/identite', 'lire': _lire_droit("AAH")},
     'C2S': {'chemin': '/v3/dss/complementaire_sante_solidaire/identite',
             'lire': _lire_droit("C2S", 'avec_participation', "avec participation financière")},
+    'AEEH': {'chemin': '/v3/dss/allocation_enfant_handicape/identite', 'lire': _lire_aeeh},
     'FRANCE_TRAVAIL': {'chemin': '/v3/france_travail/statut/identifiant', 'lire': _lire_france_travail,
                        'parametres': _parametres_france_travail},
+    # La documentation impose de vérifier que l'identifiant est bien celui de la personne : le statut est donc
+    # toujours interrogé juste avant (voir actualiser)
+    'FT_PAIEMENTS': {'chemin': '/v3/france_travail/indemnites/identifiant', 'lire': _lire_paiements_ft,
+                     'parametres': _parametres_france_travail},
 }
 
 
@@ -188,7 +226,10 @@ def interroger(source, beneficiaire):
         logger.warning("API Particulier %s : HTTP %s", source, r.status_code)
         return 'ERREUR', r.status_code, None, f"Service indisponible (code {r.status_code}).", {}
 
-    est, resume, utile = service['lire'](r.json().get('data') or {})
+    brut = r.json().get('data') or {}
+    est, resume, utile = service['lire'](brut)
+    if service.get('controle'):
+        utile = {**utile, '_brut': brut}      # retiré avant l'enregistrement (contrôle des écarts seulement)
     return 'OK', 200, est, resume, utile
 
 
@@ -196,8 +237,24 @@ def actualiser(beneficiaire, user, sources=None):
     """Interroge les organismes et enregistre la situation avec la date du jour."""
     conf = configuration()
     resultats = []
-    for source in (sources or SERVICES.keys()):
-        statut, code, est, resume, utile = interroger(source, beneficiaire)
+    sources = list(sources or SERVICES.keys())
+    if 'FT_PAIEMENTS' in sources and 'FRANCE_TRAVAIL' not in sources:
+        sources.insert(sources.index('FT_PAIEMENTS'), 'FRANCE_TRAVAIL')
+    statut_ft = None
+    for source in sources:
+        if source == 'FT_PAIEMENTS' and statut_ft != 'OK':
+            # identifiant non vérifié par le statut : on n'interroge pas les paiements
+            statut, code, est, resume, utile = ('INCOMPLET', None, None,
+                                                "Paiements non consultés : l'inscription France Travail n'a pas été "
+                                                "retrouvée avec cet identifiant.", {})
+        else:
+            statut, code, est, resume, utile = interroger(source, beneficiaire)
+        if source == 'FRANCE_TRAVAIL':
+            statut_ft = statut
+        brut = utile.pop('_brut', None) if isinstance(utile, dict) else None
+        if brut is not None and statut == 'OK':
+            from .ecarts import controler_caf
+            controler_caf(beneficiaire, brut, user)
         JournalAppelAPI.objects.create(beneficiaire=beneficiaire, source=source, utilisateur=user,
                                        code_http=code, statut_appel=statut,
                                        environnement=conf['environnement'])
@@ -220,7 +277,21 @@ def tableau_situations(beneficiaire):
     """Pour la fiche usager : toutes les sources, avec la dernière information connue (ou rien)."""
     from .models import SOURCES
     connues = {s.source: s for s in beneficiaire.situations_externes.select_related('maj_par')}
+    from core.models import Configuration
+
+    from .models import PrestationRelevee
+    from .views_droits import derniers_releves
+    releves = derniers_releves(beneficiaire)
+    montants = {r.prestation: r for r in releves}
     return {
         'lignes': [{'code': code, 'libelle': libelle, 'situation': connues.get(code)} for code, libelle in SOURCES],
         'environnement': configuration()['environnement'],
+        'ecarts': list(beneficiaire.ecarts_situation.filter(regle_le__isnull=True).select_related('signale_par')),
+        'ecarts_regles': beneficiaire.ecarts_situation.filter(regle_le__isnull=False).count(),
+        'releves': releves,
+        'prestations': [{'code': c, 'libelle': l, 'dernier': montants.get(c)} for c, l, _ in PrestationRelevee.PRESTATIONS],
+        'url_caf': (os.environ.get('CAF_PARTENAIRE_URL', '').strip()
+                    or Configuration.get('CAF_PARTENAIRE_URL', '') or 'https://partenaires.caf.fr/'),
+        'paiements_ft': (connues['FT_PAIEMENTS'].donnees.get('paiements', [])
+                         if connues.get('FT_PAIEMENTS') and connues['FT_PAIEMENTS'].statut_appel == 'OK' else []),
     }
