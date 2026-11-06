@@ -177,6 +177,27 @@ COURRIERS = {
                   "salutations distinguées."),
         "signature": "{referent}\nRéférent, {mds}",
     },
+    "RSA_INVITATION_RDV": {
+        "rubrique": "RSA – Insertion", "libelle": "Invitation à prendre en ligne le rendez-vous de renouvellement du contrat",
+        "variables": {**_RSA,
+                      "date_fin": ("Fin du contrat en cours", "30/11/2026"),
+                      "lien": ("Lien personnel de réservation (aussi en QR code)", "https://rdv-solidarites.fr/prendre_rdv?…"),
+                      "delai_min": ("Délai minimum de réservation, en heures", "48"),
+                      "delai_max": ("Délai maximum de réservation, en jours", "15")},
+        "conditions": {},
+        "objet": "renouvellement de votre {nom_contrat} : prenez rendez-vous en ligne",
+        "corps": ("{civilite_appel},\n\n"
+                  "Votre {nom_contrat} (n° {numero_contrat}) arrive à échéance le **{date_fin}**. Pour préparer son "
+                  "renouvellement avec {referent}, vous pouvez choisir vous-même votre rendez-vous à la {mds}, "
+                  "en ligne, à l'adresse suivante :\n\n"
+                  "{lien}\n\n"
+                  "ou en scannant le code ci-dessous avec votre téléphone. Le rendez-vous se réserve au moins "
+                  "{delai_min} heures et au plus {delai_max} jours à l'avance.\n\n"
+                  "Ce lien vous est personnel : ne le transmettez pas. Si vous ne pouvez pas réserver en ligne, "
+                  "contactez l'accueil de la {mds}.\n\n"
+                  "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées."),
+        "signature": "{referent}\nRéférent, {mds}",
+    },
     "RSA_NOTIFICATION_DECISION": {
         "rubrique": "RSA – Insertion", "libelle": "Notification au bénéficiaire de la décision sur son contrat",
         "variables": {**_RSA,

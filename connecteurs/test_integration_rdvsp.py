@@ -155,7 +155,32 @@ class IntegrationRDVSolidarites(LiveServerTestCase):
         self.assertTrue(self.attendre(lambda: _rails("statut", r2)["status"] == "seen", 60))
         print("✅ Statut « venu » renvoyé à RDV-Solidarités")
 
-        # 7. Demi-journée retirée dans CID → neutralisée dans RDV-Solidarités
+        # 7. Étape 2 : invitation mensuelle → lien personnel accepté par RDV-Solidarités
+        import requests
+        from connecteurs import rdvsp_invitations as inv
+        from insertion.models import ContratInsertion as C
+        from insertion.services import contrat_circuit
+        contrat = contrat_circuit.creer(self.benef, self.agente)
+        fin = timezone.localdate() + timedelta(days=10)
+        C.objects.filter(pk=contrat.pk).update(statut=C.VALIDE, date_debut=fin - timedelta(days=180), date_fin=fin)
+        campagne, _ = inv.preparer(prevenir=False)
+        self.assertEqual(campagne.invitations.count(), 1)
+        bilan = inv.envoyer_campagne(campagne)
+        self.assertEqual(bilan["erreurs"], 0, list(campagne.invitations.values_list("erreur", flat=True)))
+        lien = campagne.invitations.get().lien
+        # Le jeton accepté, RDV-Solidarités connecte l'usagère et la renvoie vers la recherche de créneaux, sans
+        # le jeton (un jeton refusé renvoie vers l'accueil avec une erreur). Les pages elles-mêmes ne sont pas
+        # affichables sur le banc (interface web non compilée) : on vérifie la redirection.
+        r = requests.get(lien, allow_redirects=False, timeout=60)
+        self.assertIn(r.status_code, (301, 302, 303), r.status_code)
+        cible = r.headers.get("Location", "")
+        self.assertIn("/prendre_rdv", cible, cible)
+        self.assertNotIn("invitation_token", cible)
+        faux = requests.get(lien.replace("invitation_token=", "invitation_token=faux"), allow_redirects=False, timeout=60)
+        self.assertNotIn("/prendre_rdv", faux.headers.get("Location", ""))
+        print(f"✅ Invitation envoyée : lien personnel accepté par RDV-Solidarités (→ {cible[:70]}…), faux lien refusé")
+
+        # 8. Demi-journée retirée dans CID → neutralisée dans RDV-Solidarités
         from mds.models import DemiJourneeReception
         DemiJourneeReception.objects.all().update(actif=False)
         bilan = sync.synchroniser()

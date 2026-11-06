@@ -7,6 +7,19 @@
         <div class="flex gap-2">
             <a href="{% url 'planning:creer_rdv_depuis_beneficiaire' beneficiaire.id %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50">🏢 Permanence</a>
             <a href="{% url 'planning:nouveau_rdv' %}?beneficiaire={{ beneficiaire.id }}" class="text-xs px-3 py-1.5 bg-blue-700 text-white rounded-md hover:bg-blue-800">🏠 VAD, hors permanence…</a>
+            {% if rdvsp_reservation %}
+            <form method="post" action="{% url 'connecteurs:reservation_en_ligne' beneficiaire.code_interne %}" id="reservation-en-ligne"
+                  class="text-xs flex items-center gap-1 {% if rdvsp_reservation.suspendue %}text-red-700{% elif rdvsp_reservation.a_examiner %}text-amber-700{% else %}text-gray-600{% endif %}"
+                  title="{{ rdvsp_reservation.annulations_tardives|length }} annulation(s) à moins de 48 h, {{ rdvsp_reservation.absences|length }} absence(s) sur les RDV pris en ligne">
+                {% csrf_token %}
+                <input type="hidden" name="suspendue" value="{% if rdvsp_reservation.suspendue %}0{% else %}1{% endif %}">
+                <label class="inline-flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" {% if rdvsp_reservation.suspendue %}checked{% endif %} onchange="this.form.submit()">
+                    Réservation en ligne suspendue
+                </label>
+                <span>({{ rdvsp_reservation.annulations_tardives|length }} annul. tardive{{ rdvsp_reservation.annulations_tardives|length|pluralize }}, {{ rdvsp_reservation.absences|length }} absence{{ rdvsp_reservation.absences|length|pluralize }})</span>
+            </form>
+            {% endif %}
             {% if rdvsp_actif %}
             <form method="post" action="{% url 'connecteurs:rdvsp_planifier' beneficiaire.code_interne %}" id="rdvsp-planifier">
                 {% csrf_token %}

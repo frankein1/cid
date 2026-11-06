@@ -1,0 +1,55 @@
+<!-- /templates/connecteurs/invitations_rsa.html -->
+{% extends "base.html" %}
+{% block title %}Invitations RSA du mois{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <h1 class="text-2xl font-bold text-gray-800"><i class="fas fa-envelope-open-text text-blue-600 mr-2"></i>Invitations à prendre rendez-vous en ligne (renouvellement RSA)</h1>
+    <p class="text-sm text-gray-700 bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+        Chaque mois, CID prépare la liste de vos bénéficiaires dont le contrat arrive à échéance. Ceux qui restent cochés
+        reçoivent un lien personnel pour réserver en ligne leur rendez-vous de renouvellement (par courriel, avec le courrier joint ;
+        sinon, courrier à imprimer). <strong>Sans validation, la liste part telle quelle à la date indiquée.</strong>
+        Les usagers dont la réservation en ligne est suspendue n'y figurent pas.
+    </p>
+    {% if not actif %}<p class="text-sm text-amber-900 bg-amber-50 border-l-4 border-amber-400 p-3 rounded">La passerelle RDV-Solidarités n'est pas activée : aucune invitation ne part.</p>{% endif %}
+    {% if not courriel_reel %}<p class="text-xs text-gray-500">Aucun serveur de courriel n'est configuré sur ce serveur : les courriels sont préparés mais pas réellement expédiés.</p>{% endif %}
+
+    {% for campagne, invitations in lignes %}
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" id="campagne-{{ campagne.pk }}">
+        {% csrf_token %}
+        <input type="hidden" name="campagne" value="{{ campagne.pk }}">
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <h2 class="font-bold text-gray-800">{{ campagne.mois|date:"F Y"|capfirst }}</h2>
+            <span class="text-sm {% if campagne.envoyee_le %}text-green-700{% else %}text-amber-700{% endif %}">
+                {% if campagne.envoyee_le %}Envoyée le {{ campagne.envoyee_le|date:"d/m/Y à H:i" }}{% else %}Envoi prévu le {{ campagne.envoi_prevu|date:"d/m/Y à H:i" }}{% endif %}
+            </span>
+        </div>
+        {% if invitations %}
+        <table class="w-full text-sm">
+            <thead class="text-left text-gray-500 border-b"><tr><th class="py-2 pr-2">Inviter</th><th class="py-2 pr-4">Bénéficiaire</th><th class="py-2 pr-4">Fin du contrat</th><th class="py-2 pr-4">Courriel</th><th class="py-2">Suivi</th></tr></thead>
+            <tbody>
+            {% for i in invitations %}
+            <tr class="border-b border-gray-100">
+                <td class="py-2 pr-2"><input type="checkbox" name="ids" value="{{ i.pk }}" {% if i.cochee %}checked{% endif %} {% if i.envoyee_le or campagne.envoyee_le %}disabled{% endif %}></td>
+                <td class="py-2 pr-4"><a href="{% url 'beneficiaire:detail_beneficiaire' i.beneficiaire.code_interne %}" class="text-blue-700 hover:underline">{{ i.beneficiaire.nom|upper }} {{ i.beneficiaire.prenom }}</a>{% if user.is_superuser and i.referent %} <span class="text-gray-400">· {{ i.referent.get_full_name }}</span>{% endif %}</td>
+                <td class="py-2 pr-4">{{ i.contrat.date_fin|date:"d/m/Y"|default:"—" }}</td>
+                <td class="py-2 pr-4">{% if i.beneficiaire.email %}oui{% else %}<span class="text-amber-700">non : courrier</span>{% endif %}</td>
+                <td class="py-2">
+                    {% if i.envoyee_le %}{{ i.get_mode_display }} le {{ i.envoyee_le|date:"d/m H:i" }} · <a href="{% url 'connecteurs:invitation_courrier' i.pk %}" class="text-blue-700 hover:underline">courrier</a>
+                    {% elif i.erreur %}<span class="text-red-700">{{ i.erreur }}</span>
+                    {% elif not i.cochee %}<span class="text-gray-400">non invité</span>
+                    {% elif i.validee_le %}validée{% else %}à valider{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% if not campagne.envoyee_le %}
+        <button type="submit" class="mt-4 px-4 py-2 bg-blue-700 text-white rounded-lg text-sm hover:bg-blue-800">Valider ma liste</button>
+        {% endif %}
+        {% else %}<p class="text-sm text-gray-400 italic">Aucune invitation pour vous ce mois-ci.</p>{% endif %}
+    </form>
+    {% empty %}
+    <p class="text-sm text-gray-400 italic">Aucune liste préparée pour l'instant.</p>
+    {% endfor %}
+</div>
+{% endblock %}

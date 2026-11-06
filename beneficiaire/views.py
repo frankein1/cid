@@ -267,6 +267,7 @@ def detail_beneficiaire(request, code_interne):
             "situation_externe": tableau_situations(beneficiaire),
             # Passerelle RDV Service Public : bouton affiché seulement si elle est activée
             "rdvsp_actif": rdvsp_est_actif(),
+            "rdvsp_reservation": _reservation_en_ligne(beneficiaire) if rdvsp_est_actif() else None,
             # Rendez-vous de l'usager (agenda unifié) : détail visible depuis la fiche
             "rdvs_usager": beneficiaire.rdvs.select_related('agent', 'salle').order_by('-date', '-heure_debut')[:15],
         })
@@ -632,3 +633,9 @@ def transferer_beneficiaire(request, code_interne):
         "aides_principal": aides_en_cours(beneficiaire).count(),
         "responsable_origine": responsable_mds(beneficiaire.mds),
     })
+
+
+def _reservation_en_ligne(beneficiaire):
+    """RDV-Solidarités, étape 2 : case de suspension et incidents (annulations tardives, absences)."""
+    from connecteurs import rdvsp_invitations
+    return {"suspendue": rdvsp_invitations.est_suspendu(beneficiaire), **rdvsp_invitations.incidents(beneficiaire)}

@@ -66,7 +66,31 @@ CID est l'agenda maître. RDV-Solidarités n'est que la vitrine de la réservati
   - `RDVSP_PREFIXE` : préfixe des références CID, différent pour chaque serveur CID qui partage les mêmes identifiants (défaut `cid`).
 - Puis cliquer sur **Déclarer l'adresse de CID** une fois : RDV-Solidarités saura où envoyer ses avis. Côté ANCT, l'adresse doit aussi être autorisée.
 
-**Pas encore couvert :** les permanences en lieu externe, et tout ce qui relève de l'étape 2 (invitations mensuelles, suspension de la réservation en ligne).
+**Pas encore couvert :** les permanences en lieu externe.
+
+## Invitations et suspension (étape 2, faite)
+Le code est dans `connecteurs/rdvsp_invitations.py`.
+
+**La liste mensuelle :**
+- **Préparation :** chaque mois, le **1er lundi** par défaut (réglable : jour, délai, heure), CID prépare pour chaque référent la liste de ses bénéficiaires dont le **contrat arrive à échéance**, avec les mêmes règles que la vue « À renouveler ».
+  - Seules les MDS ouvertes en ligne sont concernées.
+  - Les usagers **suspendus** en sont exclus.
+- **Référents :** chacun est prévenu par la **messagerie de CID**. Sur RSA – Insertion → **Invitations à réserver en ligne**, il **décoche** ceux à ne pas inviter, puis valide.
+- **Sans validation :** la liste part **telle quelle le lendemain à 18 h** (réglable).
+
+**L'envoi :**
+- CID crée l'usager dans RDV-Solidarités s'il n'y est pas encore, puis obtient son **lien personnel**. Le motif « Renouvellement RSA » n'est réservable que sur invitation.
+- **Avec adresse courriel :** CID envoie un **courriel**, avec en pièce jointe le **courrier PDF** et son **QR code**. Le texte du courrier se modifie dans Modèles de courriers → `RSA_INVITATION_RDV`.
+- **Sans adresse courriel :** le courrier est **à imprimer** depuis la liste.
+- **Serveur de courriel :** sans serveur configuré par la DSI, rien n'est réellement expédié. Les variables à renseigner sont `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` et `DEFAULT_FROM_EMAIL`. Les SMS de rappel ne sont pas faits (accréditations).
+
+**La suspension :** une case **« Réservation en ligne suspendue »** dans le bloc Rendez-vous de la fiche usager, cochée par l'agent.
+- Elle affiche à côté les **annulations à moins de 48 h** et les **absences** des RDV pris en ligne. CID ne bloque jamais rien de lui-même.
+- Une personne suspendue entre la préparation et l'envoi n'est pas invitée.
+
+**Quand ça se fait :** à la connexion d'un agent, en arrière-plan, et par `python manage.py synchro_rdvsp` en production.
+
+**Vérification :** sur le banc d'essai, le lien envoyé est **accepté par RDV-Solidarités**, qui connecte l'usagère et ouvre la recherche de créneaux. Un faux lien est refusé.
 
 **Vérification :** `.github/workflows/essai-rdv-solidarites.yml` lance une vraie copie de RDV-Solidarités (à partir de github.com/frankein1/MRS) sur GitHub, avec des données fictives, et fait le parcours complet :
 1. publication ;
