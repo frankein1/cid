@@ -160,14 +160,14 @@ def creer(cmd):
                 if profil == "senior":
                     res["retraite"] = r.choice([1012, 1100, 1250])
                 elif not rsa:
-                    res["salaire"] = r.randint(750, 1450)
+                    res["salaire"] = r.randint(900, 1550)
                     if nb_adultes == 2 and r.random() < 0.5:
                         res["chomage"] = r.randint(600, 1100)
                 if r.random() < 0.12:
                     res["aah"] = 1016
                 if len(enfants) >= 2:
                     res["familiales"] = 148 if len(enfants) == 2 else 338
-                res["logement"] = r.randint(120, 380)
+                res["logement"] = r.randint(220, 420) if rsa else r.randint(80, 300)
                 loyer = r.randint(480, 860)
                 elec = r.randint(45, 130)
                 ch = {"loyer": [loyer, 0], "electricite": [elec, 0], "telephone": [r.randint(20, 60), 0],
