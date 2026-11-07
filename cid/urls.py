@@ -56,6 +56,7 @@ urlpatterns = [
     path('partenaires/', include('partenaires.urls')),
     path('protection-enfance/', include('protection_enfance.urls')),
     path('insertion/', include('insertion.urls')),
+    path('logement/', include('logement.urls')),
 ]
 
 # Servir les fichiers media en développement

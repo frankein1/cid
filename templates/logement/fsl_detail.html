@@ -1,0 +1,73 @@
+<!-- /templates/logement/fsl_detail.html -->
+{% extends "base.html" %}
+{% block title %}Demande FSL — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="fsl-detail">
+  <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-key text-amber-600 mr-2"></i>FSL – aide à l'accès au logement</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if demande.statut == 'ACCORDEE' %}bg-green-100 text-green-800{% elif demande.statut == 'REFUSEE' or demande.statut == 'ABANDONNEE' %}bg-gray-200 text-gray-700{% elif demande.statut == 'A_VALIDER_CADRE' or demande.statut == 'AJOURNEE' %}bg-amber-100 text-amber-800{% else %}bg-blue-100 text-blue-800{% endif %}">{{ demande.get_statut_display }}</span>
+  </div>
+
+  {% for a in alertes %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ a }}</div>{% endfor %}
+
+  <div class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-4 text-sm">
+    <div><div class="text-xs text-gray-500">Gestionnaire</div>{{ demande.gestionnaire|default:"à préciser" }}{% if demande.gestionnaire.transmission %}<div class="text-xs text-gray-500">Envoi : {{ demande.gestionnaire.transmission }}</div>{% endif %}</div>
+    <div><div class="text-xs text-gray-500">Nouveau logement</div>{{ dn.adresse_objet|default:"—" }} {{ dn.cp_commune }}<div class="text-xs text-gray-500">Bailleur {% if dn.bailleur_type == 'PRIVE' %}privé{% elif dn.bailleur_type == 'SOCIAL' %}social{% else %}?{% endif %}</div></div>
+    <div><div class="text-xs text-gray-500">Ressources / taux d'effort</div>{{ total_ressources|floatformat:2 }} € / {{ taux_effort|default:"—" }} %</div>
+    <div><div class="text-xs text-gray-500">Proposition</div>{{ total_propose|floatformat:2 }} € ({% if demande.proposition_pret %}prêt {{ demande.proposition_pret }} €{% endif %}{% if demande.proposition_pret and demande.proposition_subvention %}, {% endif %}{% if demande.proposition_subvention %}subvention {{ demande.proposition_subvention }} €{% endif %}){% if dn.garantie %} + garantie {{ dn.garantie|cut:"_"|slice:":" }}{% endif %}</div>
+    <div><div class="text-xs text-gray-500">Avis du travailleur social</div>{{ demande.get_avis_display|default:"à donner" }}</div>
+    <div><div class="text-xs text-gray-500">Envoi / réponse</div>{% if demande.date_envoi %}envoyée le {{ demande.date_envoi|date:"d/m/Y" }}{% else %}—{% endif %}{% if demande.date_decision %}, réponse le {{ demande.date_decision|date:"d/m/Y" }}{% endif %}
+      {% if demande.montant_accorde_pret or demande.montant_accorde_subvention or demande.garantie_accordee %}<div class="text-xs">Accordé : {% if demande.montant_accorde_pret %}prêt {{ demande.montant_accorde_pret }} € {% endif %}{% if demande.montant_accorde_subvention %}subvention {{ demande.montant_accorde_subvention }} € {% endif %}{{ demande.garantie_accordee }}</div>{% endif %}</div>
+  </div>
+
+  <div class="bg-white rounded-xl border p-5">
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-3"><h2 class="font-bold text-gray-800">Dossier à imprimer et faire signer</h2>
+      <div class="flex gap-2">{% if peut_ecrire and demande.modifiable %}<a href="{% url 'logement:fsl_modifier' demande.pk %}" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-pen mr-1"></i>Compléter</a>{% endif %}
+      <a href="{% url 'logement:fsl_pdf' demande.pk %}" target="_blank" id="fsl-pdf" class="px-3 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-file-pdf mr-1"></i>Dossier PDF</a></div></div>
+    <ul class="text-sm space-y-1">{% for libelle, raison, mode in documents %}<li><i class="fas {% if mode == 'officiel' %}fa-file-circle-check text-green-600{% elif mode == 'trame' %}fa-file-lines text-blue-500{% else %}fa-file text-gray-400{% endif %} mr-1"></i>{{ libelle }} <span class="text-xs text-gray-500">– {{ raison }} ; {% if mode == 'officiel' %}formulaire officiel rempli par CID{% elif mode == 'trame' %}trame CID (formulaire officiel non déposé){% else %}formulaire non déposé dans CID : joindre l'imprimé vierge{% endif %}</span></li>{% endfor %}</ul>
+    <p class="text-xs text-gray-500 mt-2">Les formulaires officiels du gestionnaire se déposent en administration (Logement → Formulaires officiels) : CID écrit alors à leur place, page par page.</p>
+  </div>
+
+  {% if pieces_manquantes %}<div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Pièces à fournir</h2>
+    <ul class="list-disc ml-5 text-sm">{% for p in pieces_manquantes %}<li>{{ p }}</li>{% endfor %}</ul>
+    {% if demande.note_cadre %}<p class="text-sm mt-3"><b>Note du cadre :</b> {{ demande.note_cadre|linebreaksbr }}</p>{% endif %}</div>{% endif %}
+
+  <div class="bg-white rounded-xl border p-5 space-y-4" id="fsl-actions"><h2 class="font-bold text-gray-800">Suite</h2>
+    {% if demande.statut == 'A_VALIDER_CADRE' %}
+      {% if est_cadre %}<form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="space-y-2">{% csrf_token %}
+        <label class="text-sm block">Note explicative du cadre (jointe au dossier)<textarea name="note_cadre" rows="4" class="w-full border rounded p-2 text-sm">{{ demande.note_cadre }}</textarea></label>
+        <button name="action" value="cadre_accepte" class="px-3 py-2 bg-green-600 text-white rounded text-sm">Accepter l'envoi avec cette note</button>
+        <button name="action" value="cadre_renvoie" class="px-3 py-2 border rounded text-sm">Renvoyer à l'agent</button></form>
+      {% else %}<p class="text-sm text-gray-600">En attente de l'avis du cadre.</p>{% endif %}
+    {% endif %}
+    {% if peut_ecrire %}
+      {% if demande.statut == 'BROUILLON' or demande.statut == 'AJOURNEE' or demande.statut == 'VALIDEE_CADRE' %}
+        {% if demande.pieces_manquantes and demande.statut != 'VALIDEE_CADRE' %}
+        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}">{% csrf_token %}<button name="action" value="demander_cadre" class="px-3 py-2 border border-amber-500 text-amber-800 rounded text-sm">Pièces manquantes : demander l'avis du cadre</button></form>
+        {% endif %}
+        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="flex flex-wrap items-end gap-2">{% csrf_token %}
+          <label class="text-sm">Envoyée le<input type="date" name="date_envoi" class="block border rounded px-2 py-1"></label>
+          <button name="action" value="envoyer" class="px-3 py-2 bg-blue-600 text-white rounded text-sm">{% if demande.statut == 'AJOURNEE' %}Renvoyer (pièces complétées){% else %}Enregistrer l'envoi{% endif %}</button></form>
+      {% endif %}
+      {% if demande.statut == 'ENVOYEE' %}
+        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="grid md:grid-cols-3 gap-2 text-sm">{% csrf_token %}
+          <label>Réponse du FSL<select name="issue" class="block w-full border rounded px-2 py-1">{% for c, l in statuts_reponse %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></label>
+          <label>Le<input type="date" name="date_decision" class="block w-full border rounded px-2 py-1"></label>
+          <label>Garantie accordée<input name="garantie" class="block w-full border rounded px-2 py-1" placeholder="4 mois sur 12"></label>
+          <label>Prêt accordé (€)<input name="pret" class="block w-full border rounded px-2 py-1"></label>
+          <label>Subvention accordée (€)<input name="subvention" class="block w-full border rounded px-2 py-1"></label>
+          <label>Commentaire<input name="commentaire" class="block w-full border rounded px-2 py-1" placeholder="Pièces demandées, motif…"></label>
+          <div><button name="action" value="reponse" class="px-3 py-2 bg-green-600 text-white rounded">Enregistrer la réponse</button></div></form>
+      {% endif %}
+      {% if demande.statut != 'ACCORDEE' and demande.statut != 'REFUSEE' and demande.statut != 'ABANDONNEE' %}
+        <details class="text-sm"><summary class="cursor-pointer text-gray-500">Abandonner la demande</summary>
+          <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="mt-2 flex gap-2">{% csrf_token %}<input name="motif" placeholder="Motif" class="border rounded px-2 py-1 flex-1"><button name="action" value="abandonner" class="px-3 py-1 border rounded">Abandonner</button></form></details>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Historique</h2>
+    <ul class="text-sm space-y-1">{% for h in demande.historique reversed %}<li><span class="text-gray-500">{{ h.date }}</span> – {{ h.action }} <span class="text-gray-500">({{ h.qui }})</span>{% if h.detail %} : {{ h.detail }}{% endif %}</li>{% endfor %}</ul></div>
+</div>
+{% endblock %}

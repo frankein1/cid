@@ -1,0 +1,109 @@
+<!-- /templates/logement/fsl_form.html -->
+{% extends "base.html" %}
+{% block title %}Demande FSL accès — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+{% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" num="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <a href="{% url 'logement:fsl_detail' demande.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Demande FSL de {{ b.prenom }} {{ b.nom }}</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2"><i class="fas fa-key text-amber-600 mr-2"></i>FSL – aide à l'accès au logement</h1>
+  <p class="text-sm text-gray-600 mt-1 mb-6">Préremplie le {{ dn.date_preremplissage }} ({{ dn.origine }}). Tout se corrige ici ; le dossier imprimé reprend ces rubriques, à la place prévue sur le formulaire du gestionnaire.</p>
+  <form method="post" class="space-y-6" id="fsl-form">{% csrf_token %}
+
+  <section class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-gray-800 mb-3">Demande</h2>
+    <div class="grid md:grid-cols-3 gap-3 text-sm">
+      <label>Gestionnaire du FSL<select name="gestionnaire" class="{{ inp }}">{% for g in gestionnaires %}<option value="{{ g.pk }}" {% if demande.gestionnaire_id == g.pk %}selected{% endif %}>{{ g.nom }}</option>{% endfor %}</select></label>
+      <label>N° allocataire CAF<input name="num_caf" value="{{ dn.num_caf }}" class="{{ inp }}"></label>
+      <label>Autre n° (MSA…)<input name="autres_numero" value="{{ dn.autres_numero }}" class="{{ inp }}"></label>
+      <div>Bailleur du nouveau logement
+        <div class="flex gap-4 mt-1">
+          <label><input type="radio" name="bailleur_type" value="SOCIAL" {% if dn.bailleur_type == "SOCIAL" %}checked{% endif %}> social</label>
+          <label><input type="radio" name="bailleur_type" value="PRIVE" {% if dn.bailleur_type == "PRIVE" %}checked{% endif %}> privé</label></div></div>
+      <label class="md:col-span-2">Adresse objet de la demande<input name="adresse_objet" value="{{ dn.adresse_objet }}" class="{{ inp }}"></label>
+      <label>Code postal et commune<input name="cp_commune" value="{{ dn.cp_commune }}" class="{{ inp }}" placeholder="13110 Port-de-Bouc"></label>
+      <label class="md:col-span-2">Nom et adresse du nouveau bailleur<textarea name="nouveau_bailleur" rows="2" class="{{ inp }}">{{ dn.nouveau_bailleur }}</textarea></label>
+      <label>Téléphone / courriel du bailleur privé<input name="contact_bailleur" value="{{ dn.contact_bailleur }}" class="{{ inp }}"></label>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-gray-800 mb-3">Situation familiale et composition du foyer</h2>
+    <div class="flex flex-wrap gap-4 text-sm mb-3">{% for c, l in situations %}<label><input type="radio" name="situation_familiale" value="{{ c }}" {% if dn.situation_familiale == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs text-gray-500"><th>Place</th><th>Nom</th><th>Prénom</th><th>Naissance</th><th>Nationalité</th><th>Situation actuelle</th><th>Lien (autres)</th></tr></thead><tbody>
+    {% for i, p in composition %}<tr>
+      <td><select name="comp_{{ i }}_role" class="{{ inp }}">{% for c, l in roles %}<option value="{{ c }}" {% if p.role == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></td>
+      <td><input name="comp_{{ i }}_nom" value="{{ p.nom|default:'' }}" class="{{ inp }}"></td>
+      <td><input name="comp_{{ i }}_prenom" value="{{ p.prenom|default:'' }}" class="{{ inp }}"></td>
+      <td><input name="comp_{{ i }}_date_naissance" value="{{ p.date_naissance|default:'' }}" class="{{ inp }}" placeholder="jj/mm/aaaa"></td>
+      <td><input name="comp_{{ i }}_nationalite" value="{{ p.nationalite|default:'' }}" class="{{ inp }}"></td>
+      <td><input name="comp_{{ i }}_situation" value="{{ p.situation|default:'' }}" class="{{ inp }}"></td>
+      <td><input name="comp_{{ i }}_lien" value="{{ p.lien|default:'' }}" class="{{ inp }}"></td></tr>{% endfor %}
+    </tbody></table></div>
+    <p class="text-xs text-gray-500 mt-1">Repris du réseau familial (personnes qui vivent au foyer). Le formulaire compte 5 enfants et 2 autres personnes au plus.</p>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5" id="ressources">
+    <h2 class="font-bold text-gray-800 mb-1">Ressources mensuelles du foyer</h2>
+    <p class="text-xs text-gray-500 mb-3">Mois précédant la signature du demandeur. Reprises du budget du foyer : vérifiez-les.</p>
+    <table class="w-full text-sm"><thead><tr class="text-xs text-gray-500"><th class="text-left">Ressources</th>{% for c, l in colonnes %}<th>{{ l }}</th>{% endfor %}<th class="text-left">Préciser</th></tr></thead><tbody>
+    {% for code, libelle, cols, prec in ressources %}<tr><td class="pr-2">{{ libelle }}</td>
+      {% for col, v in cols %}<td class="px-1"><input name="res_{{ code }}_{{ col }}" value="{{ v }}" inputmode="decimal" class="{{ num }}"></td>{% endfor %}
+      <td><input name="prec_{{ code }}" value="{{ prec }}" class="{{ inp }}"></td></tr>{% endfor %}
+    </tbody></table>
+    <label class="text-sm mt-3 inline-block">Quotient familial <input name="quotient_familial" value="{{ dn.quotient_familial }}" class="px-2 py-1 border rounded w-28"></label>
+    <span class="text-xs text-gray-500 ml-2">Total et taux d'effort : calculés par CID.</span>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5 grid md:grid-cols-2 gap-6">
+    <div><h2 class="font-bold text-gray-800 mb-3">Logement antérieur au relogement</h2>
+      {% for c, l, v in anterieur %}<label class="block text-sm mb-2">{{ l }}<input name="ant_{{ c }}" value="{{ v }}" class="{{ inp }}"></label>{% endfor %}
+      <div class="text-sm">Caution restituée : <label><input type="radio" name="ant_caution_restituee" value="OUI" {% if dn.logement_anterieur.caution_restituee == "OUI" %}checked{% endif %}> oui</label>
+        <label class="ml-2"><input type="radio" name="ant_caution_restituee" value="NON" {% if dn.logement_anterieur.caution_restituee == "NON" %}checked{% endif %}> non</label></div></div>
+    <div><h2 class="font-bold text-gray-800 mb-3">Logement objet de la demande</h2>
+      {% for c, l, v in nouveau %}<label class="block text-sm mb-2">{{ l }}<input name="nv_{{ c }}" value="{{ v }}" class="{{ inp }}"></label>{% endfor %}
+      <div class="text-sm">Chauffage collectif : <label><input type="radio" name="nv_chauffage_collectif" value="OUI" {% if dn.logement_nouveau.chauffage_collectif == "OUI" %}checked{% endif %}> oui</label>
+        <label class="ml-2"><input type="radio" name="nv_chauffage_collectif" value="NON" {% if dn.logement_nouveau.chauffage_collectif == "NON" %}checked{% endif %}> non</label></div></div>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-gray-800 mb-3">Proposition du travailleur social</h2>
+    <div class="flex flex-wrap gap-4 text-sm mb-3">Garantie de paiement du loyer :{% for c, l in garanties %}<label><input type="radio" name="garantie" value="{{ c }}" {% if dn.garantie == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <div class="grid md:grid-cols-3 gap-3 text-sm">{% for c, l, v in proposition %}<label>{{ l }} (€)<input name="prop_{{ c }}" value="{{ v }}" inputmode="decimal" class="{{ num }}"></label>{% endfor %}</div>
+    <div class="flex flex-wrap gap-4 text-sm mt-3">Équipements :{% for c, l, ok in equipements %}<label><input type="checkbox" name="eq_{{ c }}" {% if ok %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-gray-800 mb-3">Avis motivé et proposition</h2>
+    <div class="flex gap-4 text-sm mb-2">{% for c, l in demande.AVIS %}<label><input type="radio" name="avis" value="{{ c }}" {% if demande.avis == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <textarea name="avis_motive" rows="6" class="{{ inp }}" placeholder="Situation, projet de relogement, capacité à payer le loyer…">{{ demande.avis_motive }}</textarea>
+    <div class="grid md:grid-cols-2 gap-3 text-sm mt-2">
+      <label>Prêt proposé (€)<input name="proposition_pret" value="{{ demande.proposition_pret|default:'' }}" class="{{ num }}"></label>
+      <label>Subvention proposée (€)<input name="proposition_subvention" value="{{ demande.proposition_subvention|default:'' }}" class="{{ num }}"></label></div>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5">
+    <h2 class="font-bold text-gray-800 mb-1">Coordonnées du travailleur social</h2>
+    <p class="text-xs text-gray-500 mb-3">Le courriel proposé est celui de la MDS.</p>
+    <div class="grid md:grid-cols-3 gap-3 text-sm">
+      <label>Nom<input name="ts_nom" value="{{ ts.nom }}" class="{{ inp }}"></label>
+      <label>Prénom<input name="ts_prenom" value="{{ ts.prenom }}" class="{{ inp }}"></label>
+      <label>Qualité (ASS, CESF, éducateur…)<input name="ts_qualite" value="{{ ts.qualite }}" class="{{ inp }}"></label>
+      <label>Téléphone ligne directe<input name="ts_telephone" value="{{ ts.telephone }}" class="{{ inp }}"></label>
+      <label>Téléphone portable<input name="ts_portable" value="{{ ts.portable }}" class="{{ inp }}"></label>
+      <label>Courriel<input name="ts_email" value="{{ ts.email }}" class="{{ inp }}"></label>
+      <label class="md:col-span-3">Nom et adresse de l'organisme<input name="ts_organisme" value="{{ ts.organisme }}" class="{{ inp }}"></label></div>
+  </section>
+
+  <section class="bg-white rounded-xl border p-5" id="pieces">
+    <h2 class="font-bold text-gray-800 mb-1">Pièces du dossier</h2>
+    <p class="text-xs text-gray-500 mb-3">S'il en manque au moment de l'envoi, le cadre rédige une note explicative qui accompagne le dossier.</p>
+    <table class="w-full text-sm">{% for c, l, etat, attendue in pieces %}<tr class="border-t {% if not attendue %}text-gray-400{% endif %}"><td class="py-1 pr-2">{{ l }}</td>
+      <td class="whitespace-nowrap">{% for v, lib in etats_piece %}<label class="ml-3"><input type="radio" name="piece_{{ c }}" value="{{ v }}" {% if etat == v %}checked{% endif %}> {{ lib }}</label>{% endfor %}</td></tr>{% endfor %}</table>
+  </section>
+
+  <div class="flex justify-end gap-3"><a href="{% url 'logement:fsl_detail' demande.pk %}" class="px-4 py-2 border rounded-lg text-sm">Annuler</a>
+    <button class="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700"><i class="fas fa-save mr-1"></i>Enregistrer</button></div>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}
