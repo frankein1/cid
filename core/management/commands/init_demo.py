@@ -155,6 +155,9 @@ def organiser_mds_demo():
         if ump and (ump.fonction != fonction or ump.role_specifique in ("", "Chef de service")):
             ump.fonction, ump.role_specifique = fonction, ""
             ump.save()   # l'intitulé est proposé d'après la fonction ; les accès du CODIR suivent
+    # équipe IP de MDS TEST 01 (fictive), désignée par le cadre : as2_mds1 et l'agent PMI
+    UserMDSProfile.objects.filter(mds=mds1, herite_de__isnull=True,
+                                  user__username__in=["as2_mds1", "pmi_mds1"]).update(equipe_ip=True)
 
 
 COMPTES_INIT2 = ["as1_mds1", "as2_mds1", "as3_mds1", "aa1_mds1", "aa2_mds1", "cadre_mds1", "chef_mds1", "pmi_mds1", "crip_c1", "ief_p1"]

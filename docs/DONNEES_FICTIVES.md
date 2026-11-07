@@ -47,7 +47,7 @@ Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mo
 - **MDS TEST 01**, Port-de-Bouc : **MDS de territoire**, avec ses salles (init2).
 - **MDS TEST 02**, Martigues : **MDS de proximité rattachée à MDS TEST 01**. Ses agents ne voient pas les dossiers de MDS TEST 01 ; le CODIR de MDS TEST 01 (`chef_mds1`, `cadre_mds1`) voit les siens.
 
-Organisation (voir `docs/ORGANISATION_MDS.md`) : la fonction de chaque agent est choisie dans *Gestion des agents de la MDS* ; son intitulé (« Directeur de la MDS de territoire TEST 01 ») est proposé, corrigeable, et repris sous la signature des courriers et PDF.
+Organisation (voir `docs/ORGANISATION_MDS.md`) : la fonction de chaque agent est choisie dans *Gestion des agents de la MDS* ; son intitulé (« Directeur de la MDS de territoire TEST 01 ») est proposé, corrigeable, et repris sous la signature des courriers et PDF. Équipe IP de MDS TEST 01 : `as2_mds1` et `pmi_mds1`.
 
 ## Familles
 

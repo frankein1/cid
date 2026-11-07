@@ -307,10 +307,10 @@
                 {% if conflits_binome %}<div id="binome-conflit" class="mt-2 p-2 text-xs rounded bg-amber-50 border border-amber-200 text-amber-900"><i class="fas fa-circle-info mr-1"></i><b>À savoir</b> : {% for u, raisons in conflits_binome %}{{ u.get_full_name|default:u.username }} suit la famille ({{ raisons|join:", " }}){% if not forloop.last %} ; {% endif %}{% endfor %}.</div>{% endif %}
                 {% if binome_form %}
                 <div class="mt-3 pt-3 border-t">
-                    <p class="text-xs text-gray-600 mb-2">Proposition de CID (le moins chargé d'abord){% if proposition.pmi_conseillee %} – <b class="text-pink-700">PMI conseillée</b>{% endif %} :</p>
+                    <p class="text-xs text-gray-600 mb-2">Proposition de CID ({% if proposition.equipe %}l'équipe IP d'abord, puis {% endif %}le moins chargé d'abord){% if proposition.pmi_conseillee %} – <b class="text-pink-700">PMI conseillée</b>{% endif %} :</p>
                     <ul class="text-xs text-gray-600 mb-2 max-h-32 overflow-y-auto">
-                        {% for u, n in proposition.ts %}<li>{{ u.get_full_name|default:u.username }} (TS) – {{ n }} IP en cours</li>{% endfor %}
-                        {% for u, n in proposition.pmi %}<li class="text-pink-700">{{ u.get_full_name|default:u.username }} (PMI) – {{ n }} IP en cours</li>{% endfor %}
+                        {% for u, n in proposition.ts %}<li>{{ u.get_full_name|default:u.username }} (TS){% if u.pk in proposition.equipe %} <span class="text-[10px] font-bold uppercase text-indigo-700">équipe IP</span>{% endif %} – {{ n }} IP en cours</li>{% endfor %}
+                        {% for u, n in proposition.pmi %}<li class="text-pink-700">{{ u.get_full_name|default:u.username }} (PMI){% if u.pk in proposition.equipe %} <span class="text-[10px] font-bold uppercase text-indigo-700">équipe IP</span>{% endif %} – {{ n }} IP en cours</li>{% endfor %}
                     </ul>
                     {% if proposition.exclus %}
                     <div id="binome-exclus" class="text-xs text-gray-600 mb-2 p-2 rounded bg-gray-50 border">

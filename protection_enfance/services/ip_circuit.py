@@ -125,23 +125,29 @@ def pmi_conseillee(ip):
 
 def proposer_binome(ip):
     """
-    CID propose ; le cadre décide. Retourne les TS et les professionnels de PMI de la MDS,
-    du moins chargé au plus chargé, et une proposition de binôme.
+    CID propose ; le cadre décide. Retourne les TS et les professionnels de PMI de la MDS : l'équipe IP désignée
+    par le cadre d'abord, puis du moins chargé au plus chargé ; et une proposition de binôme.
     """
+    from django.db.models import Q
     from core.models import User
+    from mds.models import UserMDSProfile
 
     from .ip_referents import suivis
     base = (User.objects.filter(is_active=True, profils_mds__mds=ip.mds, profils_mds__actif=True)
             .distinct())
     raisons = suivis(ip)
     exclus = []
+    # équipe IP de la MDS (pour un membre du CODIR de la MDS de territoire : coché sur son rattachement d'origine)
+    equipe = set(UserMDSProfile.objects.filter(mds=ip.mds, actif=True)
+                 .filter(Q(equipe_ip=True, herite_de__isnull=True) | Q(herite_de__equipe_ip=True))
+                 .values_list('user_id', flat=True))
 
     def classer(codes, libelle):
         gens = [u for u in base.filter(profils__code__in=codes, profils__actif=True).distinct()
                 if u.a_la_capacite(CAP_EVALUER)]
         exclus.extend((u, libelle, raisons[u.pk]) for u in gens if u.pk in raisons)
         gens = [u for u in gens if u.pk not in raisons]      # qui suit la famille n'évalue pas son IP
-        return sorted(((u, charge(u)) for u in gens), key=lambda x: (x[1], x[0].last_name))
+        return sorted(((u, charge(u)) for u in gens), key=lambda x: (x[0].pk not in equipe, x[1], x[0].last_name))
     ts = classer(['MDS_AGENTS_SOCIAUX'], "TS")
     pmi = classer(['MDS_PMI_INFANTILE', 'MDS_PMI_MATERNELLE'], "PMI")
     conseil_pmi = pmi_conseillee(ip)
@@ -150,7 +156,8 @@ def proposer_binome(ip):
         proposition.append(pmi[0][0])
     elif len(ts) > 1:
         proposition.append(ts[1][0])
-    return {'ts': ts, 'pmi': pmi, 'pmi_conseillee': conseil_pmi, 'proposition': proposition, 'exclus': exclus}
+    return {'ts': ts, 'pmi': pmi, 'pmi_conseillee': conseil_pmi, 'proposition': proposition, 'exclus': exclus,
+            'equipe': equipe}
 
 
 @transaction.atomic

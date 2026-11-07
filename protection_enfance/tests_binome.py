@@ -86,3 +86,14 @@ class BinomeTests(TestCase):
         self.ip.refresh_from_db()
         self.assertEqual((self.ip.binome_1, self.ip.binome_derogation), (self.referente, "Sous-effectif (fictif)"))
         self.assertContains(c.get(url), "Confirmé par le cadre")
+
+    def test_equipe_ip_proposee_en_premier(self):
+        """Le cadre coche « Équipe IP » : ces professionnels sont proposés en premier, même plus chargés."""
+        UserMDSProfile.objects.filter(user=self.as3, mds=self.mds).update(equipe_ip=True)
+        p = ip_circuit.proposer_binome(self.ip)
+        self.assertEqual(p["ts"][0][0], self.as3)
+        self.assertEqual(p["proposition"][0], self.as3)
+        self.assertIn(self.as3.pk, p["equipe"])
+        # la référente, même dans l'équipe IP, reste non proposée pour sa propre famille
+        UserMDSProfile.objects.filter(user=self.referente, mds=self.mds).update(equipe_ip=True)
+        self.assertNotIn(self.referente, [u for u, _ in ip_circuit.proposer_binome(self.ip)["ts"]])

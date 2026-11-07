@@ -74,14 +74,14 @@ with sync_playwright() as p:
     shot(ca, "ip-binome", "01", "button[data-type=REUNION_IP]")
     soumettre(ca, "form[action$='/demarche/']")
     b = f"form[action$='/ip/{ip}/binome/']"
-    ca.select_option(f"{b} select >> nth=0", label="Agent Social 1")
+    ca.select_option(f"{b} select >> nth=0", label="Agent Social 3")
     ca.select_option(f"{b} select >> nth=1", label="Agent PMI 1")
     shot(ca, "ip-binome", "02", f"{b} button")
     soumettre(ca, f"form[action$='/ip/{ip}/binome/']")
     shot(ca, "ip-binome", "03", "section:has(h2:has-text('Binôme'))")
 
     # ===================== BINÔME : convoquer, présences, démarches, rapport
-    ts = page(nav, "as1_mds1")
+    ts = page(nav, "as3_mds1")
     ts.goto(f"{B}/protection-enfance/ip/{ip}/")
     f = f"form[action$='/ip/{ip}/audition/']"
     ts.evaluate("document.getElementById('nouvelle-audition').open = true")
@@ -137,7 +137,8 @@ with sync_playwright() as p:
     pi.goto(f"{B}/protection-enfance/ip/{ip}/")
     shot(pi, "ip-inspecteur", "03", None, top=True)
 
-    # ===================== SAISINE DU PROCUREUR (IP PEREZ, en évaluation)
+    # ===================== SAISINE DU PROCUREUR (IP PEREZ, en évaluation ; binôme : Agent Social 1 et PMI)
+    ts = page(nav, "as1_mds1")
     ouvrir_ip(ts, "PEREZ")
     perez = numero_ip(ts)
     ts.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")

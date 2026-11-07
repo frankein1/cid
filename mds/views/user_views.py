@@ -92,6 +92,7 @@ def ajouter_utilisateur_mds(request, mds_id):
                     profile.bureau = form.cleaned_data.get('bureau', '')
                     profile.telephone_interne = form.cleaned_data.get('telephone_interne', '')
                     profile.peut_gerer_utilisateurs = form.cleaned_data.get('peut_gerer_utilisateurs', False)
+                    profile.equipe_ip = form.cleaned_data.get('equipe_ip', False)
                     
                     profile.save()
                     
