@@ -24,6 +24,8 @@ from AidFi.services.afase_pdf import draw_page_template, get_ditas_styles
 COCHE, VIDE = "[X]", "[  ]"
 
 
+from mds.fonctions import fonction_de, nom_et_fonction
+
 def _nom(u):
     return (u.get_full_name() or u.username) if u else ""
 
@@ -240,7 +242,7 @@ def formulaire_pdf(demande):
     el.append(KeepTogether([
         _section("DATE ET SIGNATURE DU TRAVAILLEUR SOCIAL ET DU CADRE", st),
         _p(qualites, st),
-        _grille([[f"Travailleur social : {_nom(ts)}", f"Cadre : {_nom(decideur)}"],
+        _grille([[f"Travailleur social : {_nom(ts)}", f"Cadre : {nom_et_fonction(decideur, demande.mds) if decideur else _nom(None)}"],
                  [f"Date : {_d(demande.date_creation)}", f"Décision du : {_d(decision.date_decision) if decision else ''}"],
                  ["Signature et tampon\n\n\n", "Signature et tampon\n\n\n"]], [9 * cm, 9 * cm], entete=False),
     ]))
@@ -287,6 +289,7 @@ def notification_pdf(demande):
         "date_decision": _d(decision.date_decision),
         "enfants": ", ".join(str(e) for e in demande.enfants.filter(concerne=True)) or "vos enfants",
         "signataire": _nom(decision.decide_par),
+        "signataire_fonction": fonction_de(decision.decide_par, mds),
         "fondement_juridique": p.fondement_juridique,
         "voies_recours": p.texte_voies_recours,
     }

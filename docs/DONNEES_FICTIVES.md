@@ -27,12 +27,12 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 | `as1_mds1` | Agent Social 1 | Travailleur social | MDS TEST 01 | Créer et instruire les aides, répondre à un ajournement, évaluer une IP (binôme) |
 | `as2_mds1`, `as3_mds1` | Agent Social 2 et 3 | Travailleur social | MDS TEST 01 | Second membre de binôme IP, travail à plusieurs |
 | `aa1_mds1`, `aa2_mds1` | Agent Admin 1 et 2 | Administratif | MDS TEST 01 | Accueil, réservation de rendez-vous |
-| `chef_mds1` | Chef de service | Cadre, **directeur de la MDS TEST 01** | MDS TEST 01 | Décider les AFASE, CAP et régies, recours, binôme IP, visas, statistiques. Reçoit les messages du cadre. |
-| `cadre_mds1` | Cadre MDS 1 | Cadre | MDS TEST 01 | Second cadre (peut aussi décider) |
+| `chef_mds1` | Responsable MDS 1 | Cadre ; fonction **Directeur** (CODIR) de la MDS de territoire TEST 01 | MDS TEST 01, et MDS TEST 02 par le CODIR | Décider les AFASE, CAP et régies, recours, binôme IP, visas, statistiques. Reçoit les messages du cadre. |
+| `cadre_mds1` | Cadre MDS 1 | Cadre ; fonction **Adjoint prévention** (CODIR) | MDS TEST 01, et MDS TEST 02 par le CODIR | Second cadre (peut aussi décider) |
 | `pmi_mds1` | Agent PMI 1 | PMI (protection infantile) | MDS TEST 01 | Binôme IP avec un TS |
 | `crip_c1` | Agent CRIP 1 | CRIP | (départemental) | Saisir une IP et la transmettre à la MDS |
 | `ief_p1` | Inspecteur Enfance famille 1 | Inspecteur enfance-famille | (départemental) | AFASE des familles avec mesure ASE, avis sur les rapports IP |
-| `chef_mds2` | Cadre MDS 2 | Responsable de MDS | MDS TEST 02 | Cloisonnement entre MDS, famille séparée sur deux MDS |
+| `chef_mds2` | Cadre MDS 2 | Responsable de MDS ; fonction **Cadre de proximité** | MDS TEST 02 | Pilote les IP de la MDS de proximité ; famille séparée sur deux MDS |
 | `as1_mds2` | Agent Social MDS 2 | Travailleur social | MDS TEST 02 | Idem côté travailleur social |
 | `uagaf_u1` | Agent UAGAF 1 | Contrôle des AFASE (UAGAF) | (départemental) | Contrôler un dossier, le renvoyer, enregistrer le paiement |
 | `regie_r1` | Régisseur Central 1 | Régisseur central | (départemental) | Chèques service remis par la paierie, régies d'urgence |
@@ -44,8 +44,10 @@ Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mo
 
 ## MDS
 
-- **MDS TEST 01**, Port-de-Bouc : la MDS principale, avec ses salles (init2).
-- **MDS TEST 02**, Martigues : une seconde MDS, pour tester ce qu'un agent voit ou ne voit pas d'une autre MDS.
+- **MDS TEST 01**, Port-de-Bouc : **MDS de territoire**, avec ses salles (init2).
+- **MDS TEST 02**, Martigues : **MDS de proximité rattachée à MDS TEST 01**. Ses agents ne voient pas les dossiers de MDS TEST 01 ; le CODIR de MDS TEST 01 (`chef_mds1`, `cadre_mds1`) voit les siens.
+
+Organisation (voir `docs/ORGANISATION_MDS.md`) : la fonction de chaque agent est choisie dans *Gestion des agents de la MDS* ; son intitulé (« Directeur de la MDS de territoire TEST 01 ») est proposé, corrigeable, et repris sous la signature des courriers et PDF.
 
 ## Familles
 

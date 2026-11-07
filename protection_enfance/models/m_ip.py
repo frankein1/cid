@@ -74,13 +74,20 @@ DECISIONS_FINALES = [
 
 
 def cadre_ip(mds):
-    """Cadre qui pilote les IP d'une MDS : adjoint enfance famille s'il y en a un, sinon le responsable."""
+    """Cadre qui pilote les IP d'une MDS (Fred, 7/11/2026) :
+    - MDS de proximité : le cadre de proximité ;
+    - MDS de territoire : l'adjoint(e) enfance ;
+    sinon le responsable de la MDS. Les accès hérités du CODIR ne comptent pas."""
     if not mds:
         return None
-    from mds.models import UserMDSProfile
-    ump = (UserMDSProfile.objects.filter(mds=mds, actif=True, user__is_active=True,
-                                         user__profils__code='MDS_ADJOINT_ENFANCE_FAMILLE')
-           .select_related('user').first())
+    from mds.models import UserMDSProfile, MDS
+    directs = UserMDSProfile.objects.filter(mds=mds, actif=True, user__is_active=True,
+                                            herite_de__isnull=True).select_related('user')
+    if mds.type_mds == MDS.PROXIMITE:
+        ump = directs.filter(fonction=UserMDSProfile.CADRE_PROXIMITE).first()
+    else:
+        ump = (directs.filter(fonction=UserMDSProfile.ADJOINT_ENFANCE).first()
+               or directs.filter(user__profils__code='MDS_ADJOINT_ENFANCE_FAMILLE').first())
     if ump:
         return ump.user
     from beneficiaire.transfert import responsable_mds

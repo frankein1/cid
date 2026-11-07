@@ -21,7 +21,7 @@ class MDSForm(forms.ModelForm):
     class Meta:
         model = MDS
         fields = ['code_mds', 'nom', 'adresse', 'code_postal', 'ville', 
-                 'telephone', 'email', 'responsable', 'active',
+                 'telephone', 'email', 'responsable', 'active', 'type_mds', 'mds_territoire',
                  'nb_agents_max', 'services_proposes', 'communes',
                  'latitude', 'longitude', 'configuration']
     
@@ -32,6 +32,8 @@ class MDSForm(forms.ModelForm):
             profils__capacites__code='peut_valider',
             is_active=True
         ).distinct().order_by('last_name')
+        self.fields['mds_territoire'].queryset = MDS.objects.filter(type_mds=MDS.TERRITOIRE).exclude(
+            pk=self.instance.pk).order_by('nom')
     
         common_class = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
         for name, field in self.fields.items():
@@ -69,11 +71,11 @@ class UserMDSProfileForm(forms.ModelForm):
 
     class Meta:
         model = UserMDSProfile
-        fields = ['date_debut', 'date_fin', 'principale', 'actif', 'role_specifique', 
+        fields = ['date_debut', 'date_fin', 'principale', 'actif', 'fonction', 'role_specifique',
                  'bureau', 'telephone_interne', 'peut_gerer_utilisateurs']
         widgets = {
-            'date_debut': forms.DateInput(attrs={'type': 'date'}),
-            'date_fin': forms.DateInput(attrs={'type': 'date'}),
+            'date_debut': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'date_fin': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
     def __init__(self, *args, **kwargs):
@@ -122,11 +124,11 @@ class UserMDSProfileUpdateForm(forms.ModelForm):
     
     class Meta:
         model = UserMDSProfile
-        fields = ['date_debut', 'date_fin', 'principale', 'actif', 'role_specifique', 
+        fields = ['date_debut', 'date_fin', 'principale', 'actif', 'fonction', 'role_specifique',
                  'bureau', 'telephone_interne', 'peut_gerer_utilisateurs']
         widgets = {
-            'date_debut': forms.DateInput(attrs={'type': 'date'}),
-            'date_fin': forms.DateInput(attrs={'type': 'date'}),
+            'date_debut': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'date_fin': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
     def __init__(self, *args, **kwargs):

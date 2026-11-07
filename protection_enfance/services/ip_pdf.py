@@ -25,6 +25,8 @@ from AidFi.services.afase_pdf import draw_page_template, get_ditas_styles
 from protection_enfance.models.m_evaluation import ActionIP
 
 
+from mds.fonctions import fonction_de, nom_et_fonction
+
 def _nom(u):
     return (u.get_full_name() or u.username) if u else "-"
 
@@ -269,7 +271,8 @@ def rapport_pdf(ip):
         avis = rapport.get_avis_pief_display() + (f"\n{rapport.commentaire_pief}" if rapport.commentaire_pief else "")
     vis = Table([
         ["Le cadre de la MDS", "L'assistant(e) social(e)", "L'inspecteur enfance famille"],
-        [f"{_nom(rapport.visa_cadre_par)}\n{_date(rapport.date_visa_cadre)}" if rapport.visa_cadre_par else "",
+        [Paragraph(_txt(f"{nom_et_fonction(rapport.visa_cadre_par, ip.mds, chr(10))}\n{_date(rapport.date_visa_cadre)}"),
+                   st["Normal"]) if rapport.visa_cadre_par else "",
          f"{_nom(rapport.visa_as_par)}\n{_date(rapport.date_visa_as)}" if rapport.visa_as_par else "",
          Paragraph(_txt(f"{_nom(rapport.visa_pief_par)} – {_date(rapport.date_visa_pief)}\n{avis}"), st["Normal"])
          if rapport.visa_pief_par else ""],
@@ -309,14 +312,17 @@ def saisine_pdf(s):
         Paragraph(_txt(s.motif), st["Normal"]),
         Spacer(1, 0.4 * cm),
         Paragraph(f"Proposée par {escape(_nom(s.propose_par))} le {_date(s.date_proposition)} ; "
-                  f"décision du cadre : {escape(_nom(s.cadre))} le {_date(s.date_decision_cadre)}"
+                  f"décision du cadre : {escape(nom_et_fonction(s.cadre, ip.mds, ', ') if s.cadre else '-')} le {_date(s.date_decision_cadre)}"
                   + (f" ; validée par l'inspecteur enfance famille {escape(_nom(s.inspecteur))} le {_date(s.date_decision_pief)}"
                      if s.inspecteur else " ; saisine directe par le cadre (danger grave et imminent)")
                   + ".", st["Normal"]),
     ]
     if hasattr(ip, 'rapport') and ip.rapport.date_soumission:
         el += [Spacer(1, 0.3 * cm), Paragraph("Le rapport d'évaluation est joint.", st["Normal"])]
-    sig = Table([["Le cadre de la MDS", "L'inspecteur enfance famille"], ["\n\n\n", ""]], colWidths=[8.5 * cm] * 2)
+    fonction_cadre = fonction_de(s.cadre, ip.mds) if s.cadre else ""
+    sig = Table([["Le cadre de la MDS", "L'inspecteur enfance famille"],
+                 [Paragraph(_txt(f"{_nom(s.cadre)}\n{fonction_cadre}"), st["Normal"]) if s.cadre else "", ""],
+                 ["\n\n\n", ""]], colWidths=[8.5 * cm] * 2)
     sig.setStyle(TableStyle([('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')]))
     el += [Spacer(1, 0.8 * cm), sig]
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
