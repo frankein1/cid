@@ -143,12 +143,16 @@ def ip_detail(request, ip_id):
         'peut_proposer_saisine': ip.statut in ('TRANSMISE_MDS', 'EN_EVALUATION', 'SYNTHESE')
                                  and (ip.est_binome(user) or ip.peut_piloter(user)),
     }
+    if ip.binome and not ip.binome_derogation and ip.statut not in ('CLOTUREE',):
+        from protection_enfance.services.ip_referents import conflits
+        ctx['conflits_binome'] = conflits(ip, ip.binome)     # suivi commencé après la désignation, par ex.
     if ctx['peut_piloter'] and ip.statut in ('TRANSMISE_MDS', 'EN_EVALUATION'):
         prop = circuit.proposer_binome(ip)
         candidats = [u for u, _ in prop['ts']] + [u for u, _ in prop['pmi']]
         init = {'referent_1': (ip.binome_1 or (prop['proposition'][0] if prop['proposition'] else None)),
                 'referent_2': (ip.binome_2 or (prop['proposition'][1] if len(prop['proposition']) > 1 else None))}
-        ctx.update(proposition=prop, binome_form=BinomeForm(candidats=candidats, initial=init))
+        ctx.update(proposition=prop, binome_form=BinomeForm(candidats=candidats, initial=init,
+                                                            exclus=[u for u, _, _ in prop['exclus']]))
     return render(request, 'protection_enfance/ip_detail.html', ctx)
 
 
@@ -188,13 +192,15 @@ def ip_binome(request, ip_id):
     if not ip.peut_piloter(request.user):
         return _refus()
     prop = circuit.proposer_binome(ip)
-    form = BinomeForm(request.POST, candidats=[u for u, _ in prop['ts']] + [u for u, _ in prop['pmi']])
+    form = BinomeForm(request.POST, candidats=[u for u, _ in prop['ts']] + [u for u, _ in prop['pmi']],
+                      exclus=[u for u, _, _ in prop['exclus']])
     if not form.is_valid():
         messages.error(request, "Choisissez deux professionnels de la MDS.")
     else:
         try:
             circuit.designer_binome(ip, form.cleaned_data['referent_1'], form.cleaned_data['referent_2'],
-                                    request.user)
+                                    request.user, forcer=form.cleaned_data['forcer'],
+                                    motif=form.cleaned_data['motif_derogation'])
             messages.success(request, "Binôme validé : les deux professionnels sont prévenus.")
         except CircuitError as e:
             messages.error(request, str(e))
