@@ -34,10 +34,12 @@ _AFASE = {
     "date_decision": ("Date de la décision", "20/10/2026"),
     "enfants": ("Enfants concernés (ou « vos enfants »)", "Léa EXEMPLE, Tom EXEMPLE"),
     "signataire": ("Nom du cadre qui a décidé", "Cadre Exemple"),
+    "signataire_fonction": ("Fonction du cadre qui a décidé (fiche de l'agent ; vide si non renseignée)",
+                            "Directrice de la MDS de territoire Exemple"),
 }
 _AFASE_CONDITIONS = {"si_recours": "la demande fait suite à un recours"}
 
-_SIGNATURE_AFASE = "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}"
+_SIGNATURE_AFASE = "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}\n{signataire_fonction}"
 _FIN_AFASE = ("[petit]Décision prise en application des textes suivants : {fondement_juridique}[/petit]\n\n"
               "**Voies et délais de recours :** {voies_recours}\n\n"
               "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées.")

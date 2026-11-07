@@ -131,6 +131,32 @@ def renommer_comptes_demo():
             u.save(update_fields=["username"])
 
 
+def organiser_mds_demo():
+    """MDS TEST 01 = MDS de territoire (directeur : chef_mds1, adjoint prévention : cadre_mds1) ;
+    MDS TEST 02 = MDS de proximité rattachée à MDS TEST 01 (cadre de proximité : chef_mds2).
+    Rejouable : corrige aussi un jeu déjà en place (ancien libellé « Chef de service (propriétaire) »)."""
+    from mds.models import MDS, UserMDSProfile
+    mds1 = MDS.objects.filter(code_mds="MDSTEST1").first()
+    mds2 = MDS.objects.filter(code_mds="MDSTEST2").first()
+    if not mds1:
+        return
+    if mds1.type_mds != MDS.TERRITOIRE or mds1.mds_territoire_id:
+        mds1.type_mds, mds1.mds_territoire = MDS.TERRITOIRE, None
+        mds1.save()
+    if mds2 and (mds2.type_mds != MDS.PROXIMITE or mds2.mds_territoire_id != mds1.pk):
+        mds2.type_mds, mds2.mds_territoire = MDS.PROXIMITE, mds1
+        mds2.save()
+    User.objects.filter(username="chef_mds1", last_name__contains="propriétaire").update(
+        first_name="Responsable", last_name="MDS 1")
+    for username, mds, fonction in (("chef_mds1", mds1, UserMDSProfile.DIRECTEUR),
+                                    ("cadre_mds1", mds1, UserMDSProfile.ADJOINT_PREVENTION),
+                                    ("chef_mds2", mds2, UserMDSProfile.CADRE_PROXIMITE)):
+        ump = UserMDSProfile.objects.filter(user__username=username, mds=mds, herite_de__isnull=True).first() if mds else None
+        if ump and (ump.fonction != fonction or ump.role_specifique in ("", "Chef de service")):
+            ump.fonction, ump.role_specifique = fonction, ""
+            ump.save()   # l'intitulé est proposé d'après la fonction ; les accès du CODIR suivent
+
+
 COMPTES_INIT2 = ["as1_mds1", "as2_mds1", "as3_mds1", "aa1_mds1", "aa2_mds1", "cadre_mds1", "chef_mds1", "pmi_mds1", "crip_c1", "ief_p1"]
 
 
@@ -146,6 +172,7 @@ class Command(BaseCommand):
         renommer_comptes_demo()
         if not Beneficiaire.tous.filter(code_interne="FAM1-JEA").exists():
             call_command("init2")
+        organiser_mds_demo()
         if opts["reinitialiser"]:
             self.supprimer()
         elif Beneficiaire.tous.filter(code_interne=MARQUEUR).exists():
@@ -290,6 +317,7 @@ class Command(BaseCommand):
         if not self.mds2.responsable:
             self.mds2.responsable = self.u("chef_mds2")
             self.mds2.save(update_fields=["responsable"])
+        organiser_mds_demo()
         self.ts, self.ts_b, self.cadre, self.cadre2 = self.u("as1_mds1"), self.u("as2_mds1"), self.u("chef_mds1"), self.u("chef_mds2")
         self.ts2, self.uagaf, self.regie = self.u("as1_mds2"), self.u("uagaf_u1"), self.u("regie_r1")
         self.pief, self.crip, self.pmi = self.u("ief_p1"), self.u("crip_c1"), self.u("pmi_mds1")

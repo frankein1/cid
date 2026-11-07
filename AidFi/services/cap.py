@@ -353,6 +353,8 @@ def terminer_inventaire(inventaire, user, commentaire=""):
 # PDF
 # =============================================================================
 
+from mds.fonctions import nom_et_fonction
+
 def _nom(u):
     return (u.get_full_name() or u.username) if u else "-"
 
@@ -374,7 +376,7 @@ def feuille_remise_pdf(demande):
         Paragraph(f"<b>Bénéficiaire :</b> {b.prenom} {b.nom.upper()} ({b.code_interne})"
                   f"{' – né(e) le ' + b.date_naissance.strftime('%d/%m/%Y') if b.date_naissance else ''}", st["Normal"]),
         Paragraph(f"<b>Montant accordé :</b> {demande.montant_accorde} € &nbsp;&nbsp; "
-                  f"<b>Décision :</b> {_nom(demande.decide_par)}"
+                  f"<b>Décision :</b> {nom_et_fonction(demande.decide_par, demande.mds)}"
                   f"{', le ' + timezone.localtime(demande.date_decision).strftime('%d/%m/%Y') if demande.date_decision else ''}",
                   st["Normal"]),
         Spacer(1, 0.5 * cm),

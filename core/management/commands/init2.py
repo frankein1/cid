@@ -84,7 +84,7 @@ class Command(BaseCommand):
             ("aa1_mds1", "Agent Admin 1", "agent_administratif", False),
             ("aa2_mds1", "Agent Admin 2", "agent_administratif", False),
             ("cadre_mds1", "Cadre MDS 1", "cadre", False),
-            ("chef_mds1", "Chef de service (propriétaire)", "cadre", True),
+            ("chef_mds1", "Responsable MDS 1", "cadre", True),
         ]
 
         for username, fullname, profil_key, est_proprietaire in agents_data:
@@ -120,7 +120,7 @@ class Command(BaseCommand):
                     "principale": True,
                     "actif": True,
                     "peut_gerer_utilisateurs": est_proprietaire,
-                    "role_specifique": "Chef de service" if est_proprietaire else "",
+                    # fonction (directeur, adjoint prévention…) : posée par init_demo.organiser_mds_demo
                 }
             )
             ump.save()  # déclenche l'auto-attribution des droits locaux pour les cadres
