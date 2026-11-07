@@ -99,6 +99,15 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Effectif max. d'agents</label>
                     {{ form.nb_agents_max }}
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.type_mds.label }}</label>
+                    {{ form.type_mds }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.mds_territoire.label }}</label>
+                    {{ form.mds_territoire }}
+                    <p class="mt-1 text-xs text-gray-500">MDS de proximité seulement : son CODIR verra les dossiers de cette MDS.</p>
+                </div>
             </div>
 
             <div class="flex items-center p-3 bg-purple-50 rounded border border-purple-100">

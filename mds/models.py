@@ -82,12 +82,36 @@ class MDS(AuditedMixin):
     services_proposes = models.JSONField(default=list, blank=True)
     configuration = models.JSONField(default=dict, blank=True)
 
+    # Organisation (Fred, 7/11/2026) : la MDS de territoire a son CODIR (directeur, adjoint enfance, adjoint
+    # prévention, médecin PMI, secrétaire générale) ; la MDS de proximité, un cadre et un adjoint de proximité, et
+    # dépend d'une MDS de territoire, dont le CODIR voit ses dossiers.
+    TERRITOIRE, PROXIMITE = 'TERRITOIRE', 'PROXIMITE'
+    TYPES = [(TERRITOIRE, "MDS de territoire"), (PROXIMITE, "MDS de proximité")]
+    type_mds = models.CharField("Type de MDS", max_length=10, choices=TYPES, default=TERRITOIRE)
+    mds_territoire = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True, related_name='mds_proximite',
+        limit_choices_to={'type_mds': 'TERRITOIRE'}, verbose_name="MDS de territoire de rattachement",
+        help_text="Pour une MDS de proximité seulement.")
+
     class Meta:
         ordering = ['code_mds']
         indexes = [
             models.Index(fields=['code_mds']),
             models.Index(fields=['ville', 'active']),
         ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.type_mds == self.PROXIMITE and not self.mds_territoire_id:
+            raise ValidationError({'mds_territoire': "Une MDS de proximité dépend d'une MDS de territoire."})
+        if self.type_mds == self.TERRITOIRE:
+            self.mds_territoire = None
+        if self.mds_territoire_id and self.mds_territoire_id == self.pk:
+            raise ValidationError({'mds_territoire': "Une MDS ne peut pas dépendre d'elle-même."})
+
+    @property
+    def libelle_type(self):
+        return "MDS de territoire" if self.type_mds == self.TERRITOIRE else "MDS de proximité"
 
     def __str__(self):
         return f"{self.code_mds} - {self.nom} ({self.ville})"
@@ -246,7 +270,32 @@ class UserMDSProfile(AuditedMixin):
     date_debut = models.DateField(default=timezone.now)
     date_fin = models.DateField(null=True, blank=True)
     
-    role_specifique = models.CharField(max_length=100, blank=True, help_text="Ex: Référent RSA")
+    # Fonction dans cette MDS : choisie dans la liste, et son intitulé tel qu'il apparaît sur les courriers
+    DIRECTEUR, ADJOINT_ENFANCE, ADJOINT_PREVENTION = 'DIRECTEUR', 'ADJOINT_ENFANCE', 'ADJOINT_PREVENTION'
+    MEDECIN_PMI, SECRETAIRE_GENERAL = 'MEDECIN_PMI', 'SECRETAIRE_GENERAL'
+    CADRE_PROXIMITE, ADJOINT_PROXIMITE, AUTRE = 'CADRE_PROXIMITE', 'ADJOINT_PROXIMITE', 'AUTRE'
+    FONCTIONS = [
+        ('', "—"),
+        (DIRECTEUR, "Directeur / directrice (CODIR)"), (ADJOINT_ENFANCE, "Adjoint(e) enfance (CODIR)"),
+        (ADJOINT_PREVENTION, "Adjoint(e) prévention (CODIR)"), (MEDECIN_PMI, "Médecin PMI (CODIR)"),
+        (SECRETAIRE_GENERAL, "Secrétaire général(e) (CODIR)"),
+        (CADRE_PROXIMITE, "Cadre de proximité"), (ADJOINT_PROXIMITE, "Adjoint(e) de proximité"),
+        (AUTRE, "Autre (intitulé libre)"),
+    ]
+    CODIR = {DIRECTEUR, ADJOINT_ENFANCE, ADJOINT_PREVENTION, MEDECIN_PMI, SECRETAIRE_GENERAL}
+    FONCTIONS_PROXIMITE = {CADRE_PROXIMITE, ADJOINT_PROXIMITE}
+    INTITULES = {DIRECTEUR: "Directeur de la", ADJOINT_ENFANCE: "Adjoint enfance de la",
+                 ADJOINT_PREVENTION: "Adjoint prévention de la", MEDECIN_PMI: "Médecin PMI de la",
+                 SECRETAIRE_GENERAL: "Secrétaire général de la", CADRE_PROXIMITE: "Cadre de proximité de la",
+                 ADJOINT_PROXIMITE: "Adjoint de proximité de la"}
+    fonction = models.CharField("Fonction", max_length=20, choices=FONCTIONS, blank=True)
+    role_specifique = models.CharField(
+        "Intitulé de la fonction (sur les courriers)", max_length=150, blank=True,
+        help_text="Proposé d'après la fonction (ex. « Directrice de la MDS de territoire de Martigues ») : "
+                  "à corriger (féminin, précision) si besoin.")
+    herite_de = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name='acces_herites',
+        help_text="Accès donné automatiquement à un membre du CODIR de la MDS de territoire sur ses MDS de proximité.")
     bureau = models.CharField(max_length=50, blank=True)
     telephone_interne = models.CharField(max_length=20, blank=True)
 
@@ -259,6 +308,29 @@ class UserMDSProfile(AuditedMixin):
 
     def __str__(self):
         return f"{self.user.username} @ {self.mds.code_mds}"
+
+    def intitule_propose(self):
+        debut = self.INTITULES.get(self.fonction)
+        if not debut:
+            return ""
+        nom = self.mds.nom.strip()
+        if nom.upper().startswith("MDS "):
+            nom = nom[4:]
+        type_ = "MDS de territoire" if self.mds.type_mds == MDS.TERRITOIRE else "MDS de proximité"
+        return f"{debut} {type_} {nom}"
+
+    @property
+    def intitule(self):
+        """Ce qui s'affiche et se signe : l'intitulé saisi, sinon celui de la fonction ; pour un accès hérité,
+        la fonction exercée dans la MDS de territoire."""
+        if self.herite_de_id:
+            return self.herite_de.intitule
+        return self.role_specifique or self.intitule_propose()
+
+    def save(self, *args, **kwargs):
+        if self.fonction and self.fonction != self.AUTRE and not self.role_specifique:
+            self.role_specifique = self.intitule_propose()
+        super().save(*args, **kwargs)
 
     @property
     def est_actif(self):
@@ -463,6 +535,9 @@ def auto_cadre_peut_gerer(sender, instance, **kwargs):
     gérer les utilisateurs et voir les statistiques.
     S'exécute à la création ET à chaque modification du profil MDS.
     """
+    # Un accès hérité du CODIR ne donne pas la gestion des comptes de la MDS de proximité
+    if instance.herite_de_id:
+        return
     # CORE : un cadre est un utilisateur ayant la capacité 'peut_valider'
     if instance.user.est_cadre:
         # Mise à jour directe en base pour éviter les boucles infinies
@@ -477,3 +552,43 @@ def auto_cadre_peut_gerer(sender, instance, **kwargs):
     #         peut_gerer_utilisateurs=False,
     #         peut_voir_statistiques=False
     #     )
+
+
+# ==========================================================================
+# 7. CODIR DE LA MDS DE TERRITOIRE : accès aux MDS de proximité rattachées
+# ==========================================================================
+
+def synchroniser_acces_codir(profil):
+    """Crée, met à jour ou retire les accès hérités d'un profil sur les MDS de proximité de sa MDS de territoire.
+    Un agent déjà rattaché lui-même à la MDS de proximité (médecin PMI sur les deux MDS…) garde son propre profil."""
+    if profil.herite_de_id:
+        return
+    voulu = (profil.fonction in UserMDSProfile.CODIR and profil.mds.type_mds == MDS.TERRITOIRE)
+    cibles = set(profil.mds.mds_proximite.values_list('pk', flat=True)) if voulu else set()
+    for h in profil.acces_herites.all():
+        if h.mds_id not in cibles:
+            h.delete()
+    for mds_id in cibles:
+        direct = UserMDSProfile.objects.filter(user=profil.user, mds_id=mds_id, herite_de__isnull=True).exists()
+        if direct:
+            continue
+        UserMDSProfile.objects.update_or_create(
+            user=profil.user, mds_id=mds_id,
+            defaults={'herite_de': profil, 'actif': profil.actif, 'date_fin': profil.date_fin, 'principale': False,
+                      'fonction': '', 'role_specifique': '', 'peut_gerer_utilisateurs': False,
+                      'peut_voir_statistiques': profil.peut_voir_statistiques})
+
+
+@receiver(post_save, sender=UserMDSProfile)
+def acces_codir_profil(sender, instance, **kwargs):
+    synchroniser_acces_codir(instance)
+
+
+@receiver(post_save, sender=MDS)
+def acces_codir_mds(sender, instance, **kwargs):
+    """Une MDS change de type ou de rattachement : on recalcule les accès du CODIR concerné."""
+    UserMDSProfile.objects.filter(mds=instance, herite_de__isnull=False).exclude(
+        herite_de__mds_id=instance.mds_territoire_id or 0).delete()
+    for territoire in MDS.objects.filter(pk__in=[instance.pk, instance.mds_territoire_id or 0]):
+        for p in UserMDSProfile.objects.filter(mds=territoire, herite_de__isnull=True, fonction__in=UserMDSProfile.CODIR):
+            synchroniser_acces_codir(p)

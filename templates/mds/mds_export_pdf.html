@@ -177,7 +177,7 @@
                 <tr>
                     <th>Agent</th>
                     <th>Matricule</th>
-                    <th>Rôle MDS</th>
+                    <th>Fonction</th>
                     <th>Affectation</th>
                 </tr>
             </thead>
@@ -186,7 +186,7 @@
                 <tr>
                     <td><strong>{{ profile.user.last_name|upper }}</strong> {{ profile.user.first_name }}</td>
                     <td><code>{{ profile.user.matricule|default:"-" }}</code></td>
-                    <td>{{ profile.role_specifique|default:"Agent" }}</td>
+                    <td>{{ profile.intitule|default:"Agent" }}</td>
                     <td>
                         {% if profile.principale %}
                         <span class="badge bg-success">Principale</span>

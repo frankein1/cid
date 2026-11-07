@@ -83,7 +83,7 @@
                         <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Identité de l'agent</th>
                         <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Compétences / Profils</th>
                         <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-center">Type Affectation</th>
-                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Role Spécifique</th>
+                        <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Fonction</th>
                         <th class="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                 </thead>
@@ -125,10 +125,18 @@
                         </td>
                         <td class="px-6 py-4">
                             <span class="text-xs font-medium text-gray-600">
-                                {{ profile.role_specifique|default:"—" }}
+                                {{ profile.intitule|default:"—" }}
                             </span>
+                            {% if profile.herite_de_id %}
+                            <div class="mt-1 text-[10px] font-bold uppercase text-indigo-600" title="Accès donné automatiquement : membre du CODIR de la MDS de territoire">
+                                <i class="fas fa-sitemap mr-1"></i>CODIR {{ profile.herite_de.mds.code_mds }}
+                            </div>
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
+                            {% if profile.herite_de_id %}
+                            <span class="text-[11px] italic text-gray-400">Géré depuis {{ profile.herite_de.mds.nom }}</span>
+                            {% else %}
                             <a href="{% url 'mds:modifier_profil_utilisateur' mds.id profile.user.id %}" 
                                class="inline-flex items-center justify-center h-8 w-8 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition shadow-sm"
                                title="Modifier les droits">
@@ -140,6 +148,7 @@
                                title="Retirer l'affectation">
                                 <i class="fas fa-user-minus text-xs"></i>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

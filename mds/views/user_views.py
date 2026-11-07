@@ -86,6 +86,8 @@ def ajouter_utilisateur_mds(request, mds_id):
                     profile.date_debut = form.cleaned_data.get('date_debut')
                     profile.date_fin = form.cleaned_data.get('date_fin')
                     profile.principale = form.cleaned_data.get('principale', False)
+                    profile.herite_de = None  # un accès hérité du CODIR devient un rattachement propre
+                    profile.fonction = form.cleaned_data.get('fonction', '')
                     profile.role_specifique = form.cleaned_data.get('role_specifique', '')
                     profile.bureau = form.cleaned_data.get('bureau', '')
                     profile.telephone_interne = form.cleaned_data.get('telephone_interne', '')
@@ -124,6 +126,9 @@ def modifier_profil_utilisateur(request, mds_id, user_id):
     """Modification profil agent"""
     mds = get_object_or_404(MDS, id=mds_id)
     profile = get_object_or_404(UserMDSProfile, mds=mds, user_id=user_id)
+    if profile.herite_de_id:
+        messages.info(request, "Cet accès vient du CODIR de la MDS de territoire : il se gère depuis celle-ci.")
+        return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
     
     if not mds.peut_gerer_comptes(request.user):
         messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
@@ -175,6 +180,9 @@ def supprimer_utilisateur_mds(request, mds_id, user_id):
     """Détachement agent"""
     mds = get_object_or_404(MDS, id=mds_id)
     profile = get_object_or_404(UserMDSProfile, mds=mds, user_id=user_id)
+    if profile.herite_de_id:
+        messages.info(request, "Cet accès vient du CODIR de la MDS de territoire : il se gère depuis celle-ci.")
+        return redirect("mds:gestion_utilisateurs_mds", mds_id=mds.id)
     
     if not mds.peut_gerer_comptes(request.user):
         messages.error(request, "Gestion des comptes réservée aux gestionnaires de cette MDS.")
