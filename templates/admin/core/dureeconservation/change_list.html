@@ -1,0 +1,14 @@
+{% extends "admin/change_list.html" %}
+{# templates/admin/core/dureeconservation/change_list.html #}
+{% block object-tools-items %}
+  <li><a href="{% url 'admin:core_dureeconservation_modele' %}">Télécharger le modèle (CSV)</a></li>
+  <li><a href="{% url 'admin:core_dureeconservation_importer' %}">Importer le CSV</a></li>
+  {{ block.super }}
+{% endblock %}
+{% block content %}
+  <p style="max-width:62em">Durées de conservation, traitement par traitement, <b>en mois</b>. Le délégué à la
+    protection des données remplit le modèle CSV ; l'administrateur l'importe. Une durée suivie de « (CID) » est le
+    réglage d'origine de CID, en attendant celle du DPO. « Appliqué par CID » : CID propose l'archivage ou purge
+    lui-même ces données ; sinon la durée est seulement documentée.</p>
+  {{ block.super }}
+{% endblock %}

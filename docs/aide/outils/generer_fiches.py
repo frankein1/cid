@@ -1100,7 +1100,7 @@ page('journal-activite', qui="Cadres de MDS (dossiers de leur MDS), super-admini
          ("Chercher et exporter", [fig('journal-activite', '03', "Les filtres.")],
           ["Filtrez par usager, agent, action et période (les 30 derniers jours par défaut). <span class=\"clic\">Exporter (CSV)</span> reprend la sélection."], []),
      ],
-     savoir=["Le journal est conservé 12 mois, puis effacé automatiquement (durée réglable : clé JOURNAL_DUREE_MOIS de la configuration).",
+     savoir=["Le journal est conservé 12 mois, puis effacé automatiquement. La durée se règle en administration : Durées de conservation (JOURNAL_ACTIVITE), à partir du tableau rempli par le DPO. Les recherches dans l'annuaire des usagers peuvent avoir une durée plus courte (ANNUAIRE_RECHERCHES).",
              "Une même page rouverte par le même agent dans les 10 minutes n'est notée qu'une fois.",
              "Un cadre ne voit que ce qui touche aux dossiers de sa MDS."],
      ensuite=['beneficiaire-modifier'])
@@ -1121,7 +1121,7 @@ page('archivage-rgpd', qui="Cadres de MDS (dossiers de leur MDS), super-administ
           ["Réservé aux super-administrateurs : <span class=\"clic\">Admin → Archivage RGPD → Effacement définitif</span> liste les dossiers <b>archivés depuis au moins 12 mois</b>, avec ce qui sera effacé.",
            "Cochez, tapez <b>EFFACER</b>, confirmez. C'est <b>irréversible</b> : il ne reste qu'une trace anonyme (MDS, dates, motif)."], []),
      ],
-     savoir=["Durées réglables dans la configuration : RGPD_ARCHIVAGE_ANS (3 ans) et RGPD_EFFACEMENT_MOIS (12 mois).",
+     savoir=["Durées en mois, réglées en administration : Durées de conservation (USAGER_DOSSIER : 36 mois sans activité avant l'archivage, 12 mois avant l'effacement, tant que le DPO n'a rien fixé). Le DPO remplit le modèle CSV, l'administrateur l'importe.",
              "Avant d'effacer, vérifier les durées de conservation propres à certaines pièces (comptables notamment) : l'effacement supprime aussi les aides du dossier.",
              "Les rendez-vous passés restent dans l'agenda de la MDS, sans l'usager ; le journal d'activité perd son nom."],
      ensuite=['journal-activite'])

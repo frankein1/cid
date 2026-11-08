@@ -204,9 +204,19 @@ def statistiques(user, annee=None):
         'par_cloture': [(dict(D.MOTIFS_CLOTURE).get(r['motif_cloture'], "—"), r['n'])
                         for r in qs.filter(statut=D.CLOS).values('motif_cloture').annotate(n=Count('pk')).order_by('-n')],
         'departemental': stats_departementales(user),
+        'a_verser': _a_verser() if stats_departementales(user) else 0,
+        'anonymises': qs.filter(anonymise_le__isnull=False).count(),
     }
 
 
 def _moyenne(valeurs):
     valeurs = list(valeurs)
     return round(sum(valeurs) / len(valeurs)) if valeurs else None
+
+
+def _a_verser():
+    from .conservation import a_verser
+    try:
+        return a_verser().count()
+    except Exception:      # noqa: BLE001
+        return 0

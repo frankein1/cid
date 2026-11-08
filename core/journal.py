@@ -259,20 +259,35 @@ class JournalConsultationMiddleware:
 
 # ---------------------------------------------------------------------- purge
 def duree_conservation_mois():
-    from core.models import Configuration
-    c = Configuration.objects.filter(cle="JOURNAL_DUREE_MOIS").first()
+    """Durée du journal : importée du DPO (JOURNAL_ACTIVITE, base active + archivage), sinon JOURNAL_DUREE_MOIS,
+    sinon 12 mois."""
+    from core.conservation import mois
     try:
-        return max(1, int(c.valeur)) if c and c.valeur else DUREE_CONSERVATION_MOIS
-    except ValueError:
+        total = (mois('JOURNAL_ACTIVITE', 'base', 'JOURNAL_DUREE_MOIS') or DUREE_CONSERVATION_MOIS) \
+            + (mois('JOURNAL_ACTIVITE', 'archivage') or 0)
+        return max(1, total)
+    except Exception:      # noqa: BLE001
         return DUREE_CONSERVATION_MOIS
+
+
+def duree_recherches_mois():
+    """Recherches dans l'annuaire des usagers (ANNUAIRE_RECHERCHES) : jamais plus que le journal lui-même."""
+    from core.conservation import mois
+    try:
+        total = (mois('ANNUAIRE_RECHERCHES', 'base') or 0) + (mois('ANNUAIRE_RECHERCHES', 'archivage') or 0)
+        return max(1, min(total, duree_conservation_mois())) if total else duree_conservation_mois()
+    except Exception:      # noqa: BLE001
+        return duree_conservation_mois()
 
 
 def purger(maintenant=None):
     from dateutil.relativedelta import relativedelta
     from core.models import AuditLog
-    limite = (maintenant or timezone.now()) - relativedelta(months=duree_conservation_mois())
-    n, _ = AuditLog.objects.filter(timestamp__lt=limite).delete()
-    return n
+    maintenant = maintenant or timezone.now()
+    n, _ = AuditLog.objects.filter(timestamp__lt=maintenant - relativedelta(months=duree_conservation_mois())).delete()
+    m, _ = AuditLog.objects.filter(description__startswith="Annuaire des usagers",
+                                   timestamp__lt=maintenant - relativedelta(months=duree_recherches_mois())).delete()
+    return n + m
 
 
 def purger_si_besoin():
@@ -286,6 +301,11 @@ def purger_si_besoin():
                       "description": "Date de la dernière purge du journal d'activité (automatique)."})
         if c.valeur != aujourd_hui:
             n = purger()
+            try:
+                from logement.services.conservation import purger as purger_expulsions
+                purger_expulsions()
+            except Exception as e:   # noqa: BLE001 – la purge du journal ne dépend pas du reste
+                logger.error("Durées de conservation (expulsions) : %s", e)
             Configuration.objects.filter(pk=c.pk).update(valeur=aujourd_hui)
             if n:
                 logger.info("Journal d'activité : %s ligne(s) purgée(s)", n)

@@ -1,0 +1,24 @@
+﻿code;traitement;donnees_concernees;actuel_base_active (en mois);actuel_archivage_intermediaire (en mois);actuel_point_de_depart;duree_base_active (en mois);point_de_depart;duree_archivage_intermediaire (en mois);sort_final;base_legale_ou_reference;commentaire_dpo
+USAGER_DOSSIER;Dossier usager;Identité, coordonnées, famille, MDS de rattachement, référent;36;12;dernière activité du dossier (archivage, puis effacement);;;;;;
+USAGER_JOURNAL;Journal d'accompagnement;Entretiens, observations, suites à donner;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+USAGER_BUDGET;Budget du foyer;Ressources, charges, dettes;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+GED_DOCUMENTS;Documents de l'usager (GED);Pièces justificatives, courriers, rapports;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+PLANNING_RDV;Rendez-vous;Date, agent, usager, issue du rendez-vous;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+MESSAGERIE;Messagerie interne;Messages entre agents (peuvent citer un usager);;;pas de durée propre;;;;;;
+ATELIERS;Ateliers collectifs;Inscriptions, présences;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+AFASE;Aides financières (AFASE);Demande, évaluation, décision, paiement, recours;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+CAP;Chèques service (CAP);Demande, décision, remise, feuille signée;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+REGIE_URGENCE;Régie d'urgence;Demande, décision, versement;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+IP;Informations préoccupantes;IP, évaluation, rapports, visas, saisine du procureur;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+RSA_CONTRATS;RSA : contrats, prescriptions, réorientations;Contrats, actions prescrites, décisions;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+RSA_SANTE;RSA : contrat santé;Avis du médecin du pôle (jamais le certificat);36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+FSL;Fonds de solidarité logement;Demande, avis, visa du cadre, décision;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+LOGEMENT_DEMANDE;Demande de logement social;NUD, DALO, mutation, Al'In, souhaits;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+COPP;Commission des publics prioritaires;Saisine, motifs, rapport social, décision;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
+EXPULSION_DOSSIER;Prévention des expulsions : dossier;Fiche de liaison, fiche CAF, bailleur, dette, audience, décision, étapes;;;clôture du dossier;;;;;;
+EXPULSION_DSF;Prévention des expulsions : diagnostic;DSF (Cerfa 16227), bordereau de carence, convocations, questionnaire bailleur;;;clôture du dossier;;;;;;
+ANNUAIRE_RECHERCHES;Annuaire des usagers : recherches;Qui a cherché quoi (critères, codes trouvés);12;;date de la recherche;;;;;;
+JOURNAL_ACTIVITE;Journal d'activité (traçabilité);Consultations, modifications, connexions des agents;12;;date de l'action;;;;;;
+CONNECTEURS_API;Appels aux services de l'État (CAF, impôts, France Travail);Journal des appels et réponses;;;pas de durée propre;;;;;;
+COMPTES_AGENTS;Comptes des agents;Identité, profils, MDS, fonction;;;pas de durée propre (compte désactivé au départ);;;;;;
+SIGNATURES_AGENTS;Signatures numérisées des cadres;Image de la signature;;;pas de durée propre;;;;;;

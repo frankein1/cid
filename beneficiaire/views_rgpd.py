@@ -59,7 +59,7 @@ def rgpd_archivage(request):
     mds_liste = MDS.objects.order_by('nom') if ids is None else MDS.objects.filter(pk__in=ids).order_by('nom')
     return render(request, 'beneficiaire/rgpd_archivage.html', {
         'candidats': rgpd.candidats(filtre), 'archives': rgpd.archives(filtre).order_by('-date_archivage')[:200],
-        'motifs': rgpd.MOTIFS, 'delai_ans': rgpd.delai_archivage_ans(), 'delai_mois': rgpd.delai_effacement_mois(),
+        'motifs': rgpd.MOTIFS, 'delai_archivage_mois': rgpd.delai_archivage_mois(), 'delai_mois': rgpd.delai_effacement_mois(),
         'mds_liste': mds_liste, 'mds_choisie': request.GET.get('mds', ''), 'tout': _tout(u),
         'nb_effacables': rgpd.effacables().count() if _tout(u) else 0,
     })

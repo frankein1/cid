@@ -40,7 +40,7 @@ from django.db import models, transaction
 APPS = ["core", "beneficiaire", "ged", "messagerie", "planning", "AidFi", "connecteurs", "protection_enfance",
         "insertion"]
 # Paramétrage et référentiels (pas de données personnelles) : jamais modifiés
-EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.Profil", "core.Capacite", "ged.DocumentType",
+EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.DureeConservation", "core.Profil", "core.Capacite", "ged.DocumentType",
           "AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
           "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "insertion.TypeActionInsertion",
           "insertion.ActionInsertion", "insertion.QuestionAction", "insertion.ParametresRSA",
