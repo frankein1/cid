@@ -3,7 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
-# logement/models.py
+# logement/models/m_fsl.py
 """Logement : demandes d'aide au fonds de solidarité pour le logement (FSL).
 
 Générique : le gestionnaire du FSL dépend de la commune (Métropole, Département…), ses formulaires officiels sont
@@ -65,6 +65,7 @@ class FormulaireOfficiel(models.Model):
     FORMULAIRE_EAU, FORMULAIRE_ENERGIE = 'FSL_EAU', 'FSL_ENERGIE'
     AVIS_FLUIDES, ARGUMENTAIRE_FLUIDES = 'FSL_AVIS_FLUIDES', 'FSL_ARGU_FLUIDES'
     FORMULAIRE_MAINTIEN, ARGUMENTAIRE_MAINTIEN = 'FSL_MAINTIEN', 'FSL_ARGU_MAINTIEN'
+    COPP_FICHE_1, COPP_FICHE_2 = 'COPP_FICHE_1', 'COPP_FICHE_2'
     ENGAGEMENTS, CONVENTION_CONCORDAT, LISTE_PIECES_MAINTIEN = 'FSL_ENGAGEMENTS', 'FSL_CONCORDAT', 'FSL_PIECES_MAINTIEN'
     CODES = [
         (FORMULAIRE_ACCES, "Demande d'aide à l'accès au logement"),
@@ -86,6 +87,8 @@ class FormulaireOfficiel(models.Model):
         (ENGAGEMENTS, "Engagements du locataire et du bailleur"),
         (CONVENTION_CONCORDAT, "Concordat – convention de résorption de dette locative"),
         (LISTE_PIECES_MAINTIEN, "Liste des pièces à fournir (maintien)"),
+        (COPP_FICHE_1, "Commission publics prioritaires (COPP) – fiche de saisine, page 1"),
+        (COPP_FICHE_2, "Commission publics prioritaires (COPP) – fiche de saisine, page 2"),
     ]
     gestionnaire = models.ForeignKey(GestionnaireFSL, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='formulaires',
@@ -124,8 +127,8 @@ class DemandeFSL(models.Model):
     ENVOYEE, AJOURNEE, ACCORDEE, REFUSEE, ABANDONNEE = 'ENVOYEE', 'AJOURNEE', 'ACCORDEE', 'REFUSEE', 'ABANDONNEE'
     STATUTS = [
         (BROUILLON, "En préparation"),
-        (A_VALIDER, "Pièces manquantes : avis du cadre demandé"),
-        (VALIDEE, "Pièces manquantes : envoi accepté par le cadre"),
+        (A_VALIDER, "Visa du cadre demandé"),
+        (VALIDEE, "Visée par le cadre : prête à envoyer"),
         (ENVOYEE, "Envoyée au FSL"),
         (AJOURNEE, "Ajournée (pièces demandées)"),
         (ACCORDEE, "Accordée"),
@@ -152,7 +155,7 @@ class DemandeFSL(models.Model):
     proposition_pret = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
     proposition_subvention = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
     # Cadre (pièces manquantes)
-    note_cadre = models.TextField("Note explicative du cadre", blank=True)
+    note_cadre = models.TextField("Note explicative du cadre (pièces manquantes)", blank=True)
     cadre = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                               related_name='fsl_valides')
     date_validation_cadre = models.DateTimeField(null=True, blank=True)
@@ -184,7 +187,7 @@ class DemandeFSL(models.Model):
     @property
     def montant_dette(self):
         """Énergie, eau : montant de la facture ou des dettes d'électricité et de gaz."""
-        from .services.fsl import d
+        from ..services.fsl import d
         dn = self.donnees or {}
         if self.type_aide == self.EAU:
             return d(dn.get('montant_facture'))

@@ -3,7 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
-# logement/views.py
+# logement/views/v_fsl.py
 """Demandes FSL (accès au logement) depuis la fiche usager."""
 from datetime import datetime
 
@@ -16,9 +16,9 @@ from django.views.decorators.http import require_POST
 from beneficiaire.models import Beneficiaire
 from beneficiaire.views import user_peut_agir_sur_beneficiaire
 
-from .models import DemandeFSL, GestionnaireFSL
-from .services import circuit, fsl
-from .services.fsl_pdf import documents_du_dossier, dossier
+from ..models import DemandeFSL, GestionnaireFSL
+from ..services import circuit, fsl
+from ..services.fsl_pdf import documents_du_dossier, dossier
 
 MAX_COMPOSITION = 9
 
@@ -151,8 +151,8 @@ def fsl_detail(request, pk):
     demande, voir, ecrire, cadre = _demande(request, pk)
     if not voir:
         return HttpResponseForbidden("Dossier complet de la MDS de l'usager.")
-    from .models import FormulaireOfficiel
-    from .services.fsl_pdf import TRAME as trame
+    from ..models import FormulaireOfficiel
+    from ..services.fsl_pdf import TRAME as trame
     docs = [(dict(FormulaireOfficiel.CODES)[c], r,
              'officiel' if FormulaireOfficiel.pour(c, demande.gestionnaire) else ('trame' if c in trame else 'vierge'))
             for c, r in documents_du_dossier(demande)]
