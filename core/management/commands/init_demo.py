@@ -193,6 +193,7 @@ class Command(BaseCommand):
             self.planning()
             self.ateliers()
             self.budgets()
+            self.logement()
             self.journal()
             from core.demo_presentation import creer as presentation
             presentation(self)
@@ -898,6 +899,72 @@ class Command(BaseCommand):
                {"loyer": (850, 0), "electricite": (110, 0), "assurance_habitation": (25, 0), "credits": (210, 0),
                 "garde_scolarite": (120, 0), "telephone": (60, 0)})
         self.stdout.write("✅ Budgets du foyer fictifs ajoutés")
+
+    def logement(self):
+        """FSL accès fictif : gestionnaires de démonstration (sans formulaire officiel : trame CID), une demande en
+        attente de l'avis du cadre (bail manquant) et une demande accordée."""
+        from logement.models import DemandeFSL, GestionnaireFSL
+        from logement.services import circuit, fsl
+        metro, _ = GestionnaireFSL.objects.get_or_create(
+            nom="FSL – gestionnaire métropolitain (démo)",
+            defaults={"adresse": "1 place de l'Exemple, 13000 Ville-Exemple (fictif)", "codes_postaux": "13110, 13500",
+                      "transmission": "par le service du logement du Département (démo)",
+                      "parametres": {"plafond_acces": 1500, "plafond_equipement_seul": 400,
+                                     "plafond_equipement_famille": 700}})
+        GestionnaireFSL.objects.get_or_create(
+            nom="FSL – Département (démo)", defaults={"par_defaut": True, "adresse": "Adresse fictive"})
+        DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP"]).delete()
+
+        def creer(code, maj, type_aide="ACCES", auteur=None):
+            b, auteur = self.b[code], auteur or self.ts
+            d = DemandeFSL.objects.create(beneficiaire=b, mds=b.mds, gestionnaire=metro, cree_par=auteur,
+                                          type_aide=type_aide, donnees=fsl.preremplir(b, auteur, type_aide),
+                                          pieces={c: "FOURNIE" for c, _, fac in fsl.liste_pieces(type_aide) if not fac})
+            d.donnees.update(maj)
+            d.tracer(self.ts, "Demande créée", "préremplie")
+            d.save()
+            return d
+        d = creer("FAM5-SAR", {
+            "bailleur_type": "PRIVE", "adresse_objet": "8 impasse des Tests, 1er étage", "cp_commune": "13110 Port-de-Bouc",
+            "nouveau_bailleur": "M. Bailleur EXEMPLE\n4 rue Fictive 13110 Port-de-Bouc", "contact_bailleur": "04 00 00 00 99",
+            "logement_anterieur": {"bailleur": "Bailleur privé (fictif)", "nature": "Logement du secteur privé",
+                                   "typologie": "T1", "statut": "Locataire", "loyer": "540", "al": "290",
+                                   "loyer_residuel": "250", "motif": "Trop petit", "caution_restituee": "NON"},
+            "logement_nouveau": {"bailleur": "M. Bailleur EXEMPLE", "typologie": "T2", "classe_energetique": "D",
+                                 "loyer": "480", "charges": "40", "chauffage_collectif": "NON", "montant_caution": "480",
+                                 "al_previsionnel": "260", "loyer_residuel": "260"},
+            "proposition": {"caution": "480", "premier_loyer": "520", "compteurs": "60", "equipements": "330"},
+            "equipements": ["refrigerateur", "table_cuisson"]})
+        d.avis, d.proposition_subvention, d.proposition_pret = "FAVORABLE", 1090, 300
+        d.avis_motive = ("Madame quitte un hébergement chez un tiers devenu trop petit. Le loyer résiduel est compatible "
+                         "avec ses ressources (fictif).")
+        d.pieces.update({"bail": "MANQUANTE", "ident_logement": "MANQUANTE", "garantie": "SANS_OBJET",
+                         "situation_precedente": "FOURNIE"})
+        d.save()
+        circuit.demander_avis_cadre(d, self.ts)
+        d = creer("FAM2-SOP", {
+            "bailleur_type": "SOCIAL", "adresse_objet": "Résidence Exemple, bâtiment B", "cp_commune": "13500 Martigues",
+            "nouveau_bailleur": "Bailleur social EXEMPLE", "garantie": "4_12",
+            "logement_nouveau": {"bailleur": "Bailleur social EXEMPLE", "typologie": "T4", "loyer": "690", "charges": "90",
+                                 "al_previsionnel": "180", "loyer_residuel": "600"},
+            "proposition": {"caution": "690", "premier_loyer": "780"}})
+        d.avis, d.proposition_subvention, d.avis_motive = "FAVORABLE", 1470, "Relogement dans un logement adapté (fictif)."
+        d.save()
+        circuit.envoyer(d, self.ts, self.j - timedelta(days=40))
+        circuit.enregistrer_reponse(d, self.ts, DemandeFSL.ACCORDEE, self.j - timedelta(days=12), subvention=1470,
+                                    garantie="4 mois sur 12", commentaire="Accord (fictif).")
+        # Énergie : facture de régularisation de moins de 500 €, instruite par un agent administratif, envoyée
+        admin = User.objects.get(username="aa1_mds1")
+        d = creer("FAM5-SAR", {"distributeur": "Fournisseur d'énergie EXEMPLE", "participation": "OUI",
+                               "surendettement": "NON", "commentaire_administratif": "Facture de régularisation (fictif)."},
+                  "ENERGIE", admin)
+        d.instruction_administrative = True
+        d.save()
+        circuit.envoyer(d, admin, self.j - timedelta(days=3))
+        # Eau : en préparation par le travailleur social
+        creer("FAM2-SOP", {"distributeur": "Distributeur d'eau EXEMPLE", "date_facture": (self.j - timedelta(days=20)).strftime("%d/%m/%Y"),
+                           "montant_facture": "286", "surendettement": "NON"}, "EAU")
+        self.stdout.write("✅ Demandes FSL fictives ajoutées")
 
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""

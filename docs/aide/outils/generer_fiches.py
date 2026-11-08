@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -32,6 +32,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
+             ("Logement", ['fsl-acces']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -94,6 +95,7 @@ TITRES = {
     'mds-organisation': ("Organiser la MDS : fonctions, équipe IP, MDS de proximité", "Cadres de MDS"),
     'journal-accompagnement': ("Le journal de l'accompagnement : entretiens et suites", "Travailleurs sociaux, agents de MDS"),
     'budget-foyer': ("Établir le budget du foyer", "Travailleurs sociaux, agents de MDS"),
+    'fsl-acces': ("FSL : accès au logement, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
 }
@@ -1242,10 +1244,45 @@ page('mds-organisation', qui="Cadres de MDS (agents de leur MDS) ; super-adminis
              "L'adresse mail des agents reste interne : elle n'apparaît sur aucun courrier."],
      ensuite=['ip-binome'])
 
+page('fsl-acces', qui="Agents de la MDS de l'usager (saisie : agents avec le droit de création, dont les administratifs pour l'énergie et l'eau) ; cadre de la MDS (pièces manquantes)",
+     ou="Fiche usager → encart « Logement – FSL »", duree="15 minutes",
+     intro="CID prépare la demande au FSL (accès au logement, impayés d'énergie ou d'eau) avec ce qu'il connaît déjà, imprime le dossier sur les formulaires du gestionnaire (ou une trame CID) et suit l'envoi et la réponse.",
+     avant=["Mettez à jour le <b>budget du foyer</b> et le <b>réseau familial</b> : la demande en reprend les ressources et la composition."],
+     etapes=[
+         ("Créer la demande", [fig('fsl-acces', '01', "Les boutons de l'encart « Logement – FSL ».")],
+          ["Sur la fiche, encart <b>Logement – FSL</b>, cliquez sur <span class=\"clic\">FSL accès</span>, <span class=\"clic\">FSL énergie</span> ou <span class=\"clic\">FSL eau</span>.",
+           "CID ouvre la demande préremplie : n° CAF, situation familiale, personnes du foyer, ressources du budget, loyer et aide au logement actuels, vos coordonnées (courriel de la MDS)."], []),
+         ("Compléter et vérifier", [fig('fsl-acces', '02', "Les ressources reprises du budget du foyer."),
+                                   fig('fsl-acces', '03', "Les pièces : fournie, à fournir, sans objet.")],
+          ["Vérifiez chaque rubrique : ressources par personne, logement antérieur, <b>nouveau logement</b> (bailleur social ou privé, loyer, caution, AL prévisionnelle).",
+           "Indiquez la <b>proposition</b> : garantie de paiement, caution, 1<sup>er</sup> loyer, compteurs, assurance, équipements ; puis l'<b>avis motivé</b> et le prêt ou la subvention proposés.",
+           "Cochez l'état de chaque <b>pièce</b>, puis <span class=\"clic\">Enregistrer</span>."],
+          [("astuce", "CID calcule le total des ressources et un taux d'effort indicatif, et prévient si un plafond du règlement est dépassé.")]),
+         ("Imprimer le dossier", [fig('fsl-acces', '04', "La demande et la liste des documents du dossier."),
+                                  fig('fsl-acces', '05', "Le dossier PDF (ici la trame CID).", petite=True)],
+          ["<span class=\"clic\">Dossier PDF</span> : CID assemble les documents qui concernent la demande (contrat de prêt si prêt, fiche du logement si bailleur privé…).",
+           "Quand les formulaires du gestionnaire sont déposés dans CID, ils sont remplis <b>à leur place</b>, page par page ; sinon CID produit une trame avec les mêmes rubriques et signale les imprimés à joindre vierges.",
+           "Faites signer, ajoutez le cachet de la structure."], []),
+         ("S'il manque des pièces : l'avis du cadre", [fig('fsl-acces', '06', "Le cadre rédige la note explicative.")],
+          ["L'agent clique sur <span class=\"clic\">Pièces manquantes : demander l'avis du cadre</span> : le cadre reçoit un message CID.",
+           "Le cadre rédige la <b>note explicative</b> (elle accompagne le dossier) et accepte l'envoi, ou renvoie la demande à l'agent."], []),
+         ("Envoi et réponse du FSL", [],
+          ["<span class=\"clic\">Enregistrer l'envoi</span> (date). Le circuit de transmission du gestionnaire est rappelé sur la demande.",
+           "À réception de la réponse : accordée (montants, garantie), ajournée (pièces demandées : complétez puis renvoyez) ou refusée."], []),
+         ("Énergie et eau", [fig('fsl-acces', '07', "Une demande d'aide aux impayés d'énergie instruite par un agent administratif.")],
+          ["Même démarche : CID préremplit l'adresse, le loyer, le foyer, les ressources et, pour l'énergie, la dette d'électricité non payée du budget du foyer.",
+           "Indiquez le fournisseur ou le distributeur, la facture ou les dettes, la participation du ménage et le plan proposé par le fournisseur.",
+           "Pour une facture de <b>moins de 500 €</b>, un <b>agent administratif</b> peut instruire la demande : cochez « Instruite par un agent administratif » et ajoutez un commentaire si besoin ; l'avis du travailleur social n'est alors pas demandé. Au-delà, CID demande l'avis d'un travailleur social."], []),
+     ],
+     savoir=["Les formulaires officiels se déposent vierges en administration (Logement → Formulaires officiels), avec un aperçu sur données fictives. Ils ne sont jamais publiés avec CID.",
+             "Tout est daté dans l'historique de la demande."],
+     ensuite=['budget-foyer', 'beneficiaire-famille'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance", "Logement"])
+                  ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
+                   "Logement – FSL maintien, prévention des expulsions locatives"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

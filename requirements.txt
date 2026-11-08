@@ -35,6 +35,11 @@ pycparser==3.0
 
 # Génération de PDF
 reportlab==5.1.0
+# Formulaires officiels (FSL…) : écrire sur le PDF vierge en gardant sa pagination (logement/services/pdf_officiel.py)
+pypdf==5.9.0
+pdfplumber==0.11.10
+pdfminer.six==20260107
+pypdfium2==5.13.0
 
 # Future: Microsoft Graph API (quand vous aurez les accès)
 # msal==1.28.0

@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'partenaires',
     'protection_enfance',
     'insertion',
+    'logement',
 ]
 
 # ============================================================
