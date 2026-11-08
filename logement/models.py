@@ -62,6 +62,8 @@ class FormulaireOfficiel(models.Model):
     CONTRAT_PRET, CONTRAT_GARANTIE, PRELEVEMENT = 'FSL_PRET', 'FSL_GARANTIE', 'FSL_PRELEVEMENT'
     CONVENTION_ACCES, IDENTIFICATION_LOGEMENT = 'FSL_CONVENTION', 'FSL_IDENT_LOGEMENT'
     LISTE_PIECES, VERSEMENT_DIRECT_AL = 'FSL_PIECES', 'CERFA_11362'
+    FORMULAIRE_EAU, FORMULAIRE_ENERGIE = 'FSL_EAU', 'FSL_ENERGIE'
+    AVIS_FLUIDES, ARGUMENTAIRE_FLUIDES = 'FSL_AVIS_FLUIDES', 'FSL_ARGU_FLUIDES'
     CODES = [
         (FORMULAIRE_ACCES, "Demande d'aide à l'accès au logement"),
         (AVIS_MOTIVE, "Avis motivé et proposition du travailleur social"),
@@ -73,6 +75,10 @@ class FormulaireOfficiel(models.Model):
         (IDENTIFICATION_LOGEMENT, "Fiche d'identification du logement (bailleur privé)"),
         (LISTE_PIECES, "Liste des pièces à fournir"),
         (VERSEMENT_DIRECT_AL, "Demande de versement direct de l'allocation de logement (Cerfa 11362)"),
+        (FORMULAIRE_EAU, "Demande d'aide aux impayés d'eau"),
+        (FORMULAIRE_ENERGIE, "Demande d'aide aux impayés d'électricité, de gaz"),
+        (AVIS_FLUIDES, "Avis motivé du travailleur social (énergie, eau)"),
+        (ARGUMENTAIRE_FLUIDES, "Argumentaire de pièces manquantes, énergie et eau (note du cadre)"),
     ]
     gestionnaire = models.ForeignKey(GestionnaireFSL, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='formulaires',
@@ -103,8 +109,9 @@ class FormulaireOfficiel(models.Model):
 
 
 class DemandeFSL(models.Model):
-    ACCES = 'ACCES'
-    TYPES = [(ACCES, "Accès au logement")]
+    ACCES, EAU, ENERGIE = 'ACCES', 'EAU', 'ENERGIE'
+    TYPES = [(ACCES, "Accès au logement"), (EAU, "Impayés d'eau"), (ENERGIE, "Impayés d'électricité, de gaz")]
+    FLUIDES = {EAU, ENERGIE}
     BROUILLON, A_VALIDER, VALIDEE = 'BROUILLON', 'A_VALIDER_CADRE', 'VALIDEE_CADRE'
     ENVOYEE, AJOURNEE, ACCORDEE, REFUSEE, ABANDONNEE = 'ENVOYEE', 'AJOURNEE', 'ACCORDEE', 'REFUSEE', 'ABANDONNEE'
     STATUTS = [
@@ -130,6 +137,9 @@ class DemandeFSL(models.Model):
     donnees = models.JSONField(default=dict, blank=True)
     pieces = models.JSONField(default=dict, blank=True, help_text="{code: 'FOURNIE' | 'MANQUANTE' | 'SANS_OBJET'}")
     avis = models.CharField(max_length=12, choices=AVIS, blank=True)
+    instruction_administrative = models.BooleanField(
+        "Instruite par un agent administratif", default=False,
+        help_text="Énergie, eau : factures de moins de 500 €, sans avis motivé d'un travailleur social.")
     avis_motive = models.TextField("Avis motivé", blank=True)
     proposition_pret = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
     proposition_subvention = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
@@ -158,6 +168,21 @@ class DemandeFSL(models.Model):
 
     def __str__(self):
         return f"FSL {self.get_type_aide_display().lower()} – {self.beneficiaire} ({self.get_statut_display()})"
+
+    @property
+    def est_fluides(self):
+        return self.type_aide in self.FLUIDES
+
+    @property
+    def montant_dette(self):
+        """Énergie, eau : montant de la facture ou des dettes d'électricité et de gaz."""
+        from .services.fsl import d
+        dn = self.donnees or {}
+        if self.type_aide == self.EAU:
+            return d(dn.get('montant_facture'))
+        if self.type_aide == self.ENERGIE:
+            return d(dn.get('dette_electricite')) + d(dn.get('dette_gaz'))
+        return d(0)
 
     @property
     def modifiable(self):

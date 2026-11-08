@@ -915,11 +915,11 @@ class Command(BaseCommand):
             nom="FSL – Département (démo)", defaults={"par_defaut": True, "adresse": "Adresse fictive"})
         DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP"]).delete()
 
-        def creer(code, maj):
-            b = self.b[code]
-            d = DemandeFSL.objects.create(beneficiaire=b, mds=b.mds, gestionnaire=metro, cree_par=self.ts,
-                                          donnees=fsl.preremplir(b, self.ts),
-                                          pieces={c: "FOURNIE" for c, _, fac in fsl.PIECES if not fac})
+        def creer(code, maj, type_aide="ACCES", auteur=None):
+            b, auteur = self.b[code], auteur or self.ts
+            d = DemandeFSL.objects.create(beneficiaire=b, mds=b.mds, gestionnaire=metro, cree_par=auteur,
+                                          type_aide=type_aide, donnees=fsl.preremplir(b, auteur, type_aide),
+                                          pieces={c: "FOURNIE" for c, _, fac in fsl.liste_pieces(type_aide) if not fac})
             d.donnees.update(maj)
             d.tracer(self.ts, "Demande créée", "préremplie")
             d.save()
@@ -953,6 +953,17 @@ class Command(BaseCommand):
         circuit.envoyer(d, self.ts, self.j - timedelta(days=40))
         circuit.enregistrer_reponse(d, self.ts, DemandeFSL.ACCORDEE, self.j - timedelta(days=12), subvention=1470,
                                     garantie="4 mois sur 12", commentaire="Accord (fictif).")
+        # Énergie : facture de régularisation de moins de 500 €, instruite par un agent administratif, envoyée
+        admin = User.objects.get(username="aa1_mds1")
+        d = creer("FAM5-SAR", {"distributeur": "Fournisseur d'énergie EXEMPLE", "participation": "OUI",
+                               "surendettement": "NON", "commentaire_administratif": "Facture de régularisation (fictif)."},
+                  "ENERGIE", admin)
+        d.instruction_administrative = True
+        d.save()
+        circuit.envoyer(d, admin, self.j - timedelta(days=3))
+        # Eau : en préparation par le travailleur social
+        creer("FAM2-SOP", {"distributeur": "Distributeur d'eau EXEMPLE", "date_facture": (self.j - timedelta(days=20)).strftime("%d/%m/%Y"),
+                           "montant_facture": "286", "surendettement": "NON"}, "EAU")
         self.stdout.write("✅ Demandes FSL fictives ajoutées")
 
     def ateliers(self):

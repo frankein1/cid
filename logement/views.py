@@ -43,10 +43,11 @@ def fsl_nouvelle(request, code_interne):
     b = get_object_or_404(Beneficiaire.tous.select_related('mds'), code_interne=code_interne)
     if not user_peut_agir_sur_beneficiaire(request.user, b) or b.niveau_acces(request.user) != 'complet':
         return HttpResponseForbidden("Réservé aux agents de la MDS de l'usager.")
-    donnees = fsl.preremplir(b, request.user)
+    type_aide = request.POST.get('type_aide') if request.POST.get('type_aide') in dict(DemandeFSL.TYPES) else DemandeFSL.ACCES
+    donnees = fsl.preremplir(b, request.user, type_aide)
     demande = DemandeFSL.objects.create(beneficiaire=b, mds=b.mds, gestionnaire=GestionnaireFSL.pour_code_postal(b.code_postal),
-                                        donnees=donnees, cree_par=request.user,
-                                        pieces={c: 'MANQUANTE' for c, _, fac in fsl.PIECES if not fac})
+                                        donnees=donnees, cree_par=request.user, type_aide=type_aide,
+                                        pieces={c: 'MANQUANTE' for c, _, fac in fsl.liste_pieces(type_aide) if not fac})
     demande.tracer(request.user, "Demande créée", f"préremplie : {donnees.get('origine')}")
     demande.save()
     messages.success(request, "Demande préremplie avec ce que CID connaît : vérifiez chaque rubrique.")
@@ -82,6 +83,13 @@ def _lire(post, demande):
     dn['logement_nouveau']['chauffage_collectif'] = post.get('nv_chauffage_collectif', '')
     dn['proposition'] = {c: str(fsl.d(post.get(f'prop_{c}'))) for c, _ in fsl.PROPOSITION if fsl.d(post.get(f'prop_{c}'))}
     dn['equipements'] = [c for c, _ in fsl.EQUIPEMENTS if post.get(f'eq_{c}')]
+    for cle in ('distributeur', 'adresse', 'situation_logement', 'montant_loyer', 'date_facture', 'montant_facture',
+                'dette_electricite', 'dette_gaz', 'participation', 'plan_fournisseur', 'charges_exceptionnelles',
+                'surendettement', 'commentaire_administratif'):
+        if cle in post:
+            dn[cle] = (post.get(cle) or '').strip()
+    if demande.est_fluides:
+        demande.instruction_administrative = bool(post.get('instruction_administrative'))
     dn['ts'] = {k: (post.get(f'ts_{k}') or '').strip()
                 for k in ('nom', 'prenom', 'qualite', 'telephone', 'portable', 'email', 'organisme')}
     demande.donnees = dn
@@ -89,7 +97,7 @@ def _lire(post, demande):
     demande.avis_motive = (post.get('avis_motive') or '').strip()
     demande.proposition_pret = fsl.d(post.get('proposition_pret')) or None
     demande.proposition_subvention = fsl.d(post.get('proposition_subvention')) or None
-    demande.pieces = {c: post.get(f'piece_{c}') for c, _, _ in fsl.PIECES
+    demande.pieces = {c: post.get(f'piece_{c}') for c, _, _ in fsl.liste_pieces(demande.type_aide)
                       if post.get(f'piece_{c}') in ('FOURNIE', 'MANQUANTE', 'SANS_OBJET')}
     g = post.get('gestionnaire')
     if g:
@@ -126,7 +134,8 @@ def fsl_modifier(request, pk):
         'proposition': [(c, l, (dn.get('proposition') or {}).get(c, '')) for c, l in fsl.PROPOSITION],
         'equipements': [(c, l, c in (dn.get('equipements') or [])) for c, l in fsl.EQUIPEMENTS],
         'pieces': [(c, l, (demande.pieces or {}).get(c, 'MANQUANTE' if c in attendues else 'SANS_OBJET'), c in attendues)
-                   for c, l, _ in fsl.PIECES],
+                   for c, l, _ in fsl.liste_pieces(demande.type_aide)],
+        'situations_logement': fsl.SITUATIONS_LOGEMENT, 'seuil_administratif': fsl.SEUIL_INSTRUCTION_ADMINISTRATIVE,
         'etats_piece': fsl.ETATS_PIECE, 'gestionnaires': GestionnaireFSL.objects.filter(actif=True),
         'ts': dn.get('ts') or {},
     })
@@ -138,8 +147,7 @@ def fsl_detail(request, pk):
     if not voir:
         return HttpResponseForbidden("Dossier complet de la MDS de l'usager.")
     from .models import FormulaireOfficiel
-    trame = {FormulaireOfficiel.FORMULAIRE_ACCES, FormulaireOfficiel.AVIS_MOTIVE, FormulaireOfficiel.ARGUMENTAIRE,
-             FormulaireOfficiel.LISTE_PIECES}
+    from .services.fsl_pdf import TRAME as trame
     docs = [(dict(FormulaireOfficiel.CODES)[c], r,
              'officiel' if FormulaireOfficiel.pour(c, demande.gestionnaire) else ('trame' if c in trame else 'vierge'))
             for c, r in documents_du_dossier(demande)]
@@ -149,7 +157,7 @@ def fsl_detail(request, pk):
         'demande': demande, 'b': demande.beneficiaire, 'dn': dn, 'peut_ecrire': ecrire, 'est_cadre': cadre,
         'alertes': fsl.alertes(demande), 'documents': docs, 'total_ressources': total,
         'taux_effort': fsl.taux_effort(dn), 'total_propose': demande.total_propose,
-        'pieces_manquantes': [l for c, l, _ in fsl.PIECES if c in demande.pieces_manquantes],
+        'pieces_manquantes': [l for c, l, _ in fsl.liste_pieces(demande.type_aide) if c in demande.pieces_manquantes],
         'statuts_reponse': [(DemandeFSL.ACCORDEE, "Accordée"), (DemandeFSL.AJOURNEE, "Ajournée (pièces demandées)"),
                             (DemandeFSL.REFUSEE, "Refusée")],
     })
@@ -162,7 +170,8 @@ def fsl_pdf(request, pk):
         return HttpResponseForbidden("Dossier complet de la MDS de l'usager.")
     pdf, _ = dossier(demande)
     rep = HttpResponse(pdf, content_type='application/pdf')
-    rep['Content-Disposition'] = f'inline; filename="FSL_acces_{demande.beneficiaire.code_interne}_{demande.pk}.pdf"'
+    rep['Content-Disposition'] = (f'inline; filename="FSL_{demande.type_aide.lower()}_'
+                                  f'{demande.beneficiaire.code_interne}_{demande.pk}.pdf"')
     return rep
 
 

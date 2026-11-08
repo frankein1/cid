@@ -23,9 +23,20 @@ from .fsl import (COLONNES, EQUIPEMENTS, GARANTIES, LOGEMENT_ANTERIEUR, LOGEMENT
 from .pdf_officiel import remplir
 
 
+TRAME = {F.FORMULAIRE_ACCES, F.AVIS_MOTIVE, F.ARGUMENTAIRE, F.LISTE_PIECES, F.FORMULAIRE_EAU, F.FORMULAIRE_ENERGIE,
+         F.AVIS_FLUIDES, F.ARGUMENTAIRE_FLUIDES}
+
+
 def documents_du_dossier(demande):
     """[(code, raison)] dans l'ordre du dossier, selon la demande."""
     dn = demande.donnees or {}
+    if demande.est_fluides:
+        out = [(F.FORMULAIRE_EAU if demande.type_aide == 'EAU' else F.FORMULAIRE_ENERGIE, "toujours")]
+        if not demande.instruction_administrative:
+            out.append((F.AVIS_FLUIDES, "avis du travailleur social"))
+        if demande.pieces_manquantes and demande.date_validation_cadre:
+            out.append((F.ARGUMENTAIRE_FLUIDES, "pièces manquantes"))
+        return out
     pret = bool(d(demande.proposition_pret))
     garantie = bool(dn.get('garantie'))
     out = [(F.FORMULAIRE_ACCES, "toujours"), (F.AVIS_MOTIVE, "toujours")]
@@ -56,11 +67,11 @@ def dossier(demande):
         libelle = dict(F.CODES)[code]
         modele = F.pour(code, demande.gestionnaire)
         if modele:
-            pdf, r = remplir(bytes(modele.contenu), placements_fsl.placements(code),
+            pdf, r = remplir(bytes(modele.contenu), placements_fsl.placements(code, demande.type_aide),
                              placements_fsl.valeurs(demande, code), modele.reglages)
             manque = [k for k, v in r.items() if v not in ('ok', 'vide')]
             rapport.append((libelle, 'officiel', f"{len(manque)} champ(s) non placé(s)" if manque else ""))
-        elif code in (F.FORMULAIRE_ACCES, F.AVIS_MOTIVE, F.ARGUMENTAIRE, F.LISTE_PIECES):
+        elif code in TRAME:
             if generique_fait:
                 rapport.append((libelle, 'trame CID', "dans la trame"))
                 continue
@@ -103,10 +114,22 @@ def trame_generique(demande):
                             bottomMargin=2 * cm, title="Demande FSL accès", author="CID")
     P = lambda texte, style="Normal": Paragraph(texte, st[style])  # noqa: E731
     COCHE = lambda ok: "[X]" if ok else "[  ]"  # noqa: E731
-    el = [P("DEMANDE D'AIDE À L'ACCÈS AU LOGEMENT – FONDS DE SOLIDARITÉ POUR LE LOGEMENT", "TitreOfficiel"),
+    titres = {'ACCES': "DEMANDE D'AIDE À L'ACCÈS AU LOGEMENT", 'EAU': "DEMANDE D'AIDE AUX IMPAYÉS D'EAU",
+              'ENERGIE': "DEMANDE D'AIDE AUX IMPAYÉS D'ÉLECTRICITÉ, DE GAZ"}
+    el = [P(f"{titres[demande.type_aide]} – FONDS DE SOLIDARITÉ POUR LE LOGEMENT", "TitreOfficiel"),
           P(f"<b>Gestionnaire :</b> {_t(demande.gestionnaire or 'à préciser')} &nbsp; "
             f"<i>(trame générique CID : le formulaire officiel du gestionnaire n'est pas déposé)</i>"), Spacer(1, 6)]
-    el.append(_grille([
+    if demande.est_fluides:
+        from .fsl import SITUATIONS_LOGEMENT
+        el.append(_grille([
+            [P(f"<b>{'Distributeur' if demande.type_aide == 'EAU' else 'Fournisseur d’énergie'} :</b> {_t(dn.get('distributeur'))}"),
+             P(f"<b>N° allocataire CAF :</b> {_t(dn.get('num_caf'))} &nbsp; <b>Autres :</b> {_t(dn.get('autres_numero'))}")],
+            [P(f"<b>Adresse :</b> {_t(dn.get('adresse'))} {_t(dn.get('cp_commune'))}"),
+             P(f"<b>Loyer et charges ou mensualité du prêt :</b> {montant(dn.get('montant_loyer'))} €")],
+        ], [9 * cm, 9 * cm], entete=False))
+        el.append(P(" &nbsp; ".join(f"{COCHE(dn.get('situation_logement') == c)} {l}" for c, l in SITUATIONS_LOGEMENT)))
+    else:
+        el.append(_grille([
         [P(f"{COCHE(dn.get('bailleur_type') == 'SOCIAL')} Bailleur social &nbsp; {COCHE(dn.get('bailleur_type') == 'PRIVE')} Bailleur privé"),
          P(f"<b>N° allocataire CAF :</b> {_t(dn.get('num_caf'))} &nbsp; <b>Autres :</b> {_t(dn.get('autres_numero'))}")],
         [P(f"<b>Adresse objet de la demande :</b> {_t(dn.get('adresse_objet'))} {_t(dn.get('cp_commune'))}"),
@@ -133,7 +156,10 @@ def trame_generique(demande):
     lignes.append(["TOTAL"] + [montant(par_col[c]) for c, _ in COLONNES])
     el.append(_grille(lignes, [6 * cm, 4 * cm, 4 * cm, 4 * cm]))
     el.append(P(f"<b>Total des ressources :</b> {montant(total)} € &nbsp; <b>Quotient familial :</b> "
-                f"{_t(dn.get('quotient_familial'))} &nbsp; <b>Taux d'effort (indicatif) :</b> {taux_effort(dn)} %"))
+                f"{_t(dn.get('quotient_familial'))}"
+                + ("" if demande.est_fluides else f" &nbsp; <b>Taux d'effort (indicatif) :</b> {taux_effort(dn)} %")))
+    if demande.est_fluides:
+        return _fin_fluides(demande, dn, el, P, COCHE, doc)
     ant, nv = dn.get('logement_anterieur') or {}, dn.get('logement_nouveau') or {}
     lignes = [["Logement antérieur au relogement", "", "Logement objet de la demande", ""]]
     a = [(l, ant.get(c)) for c, l in LOGEMENT_ANTERIEUR] + [("Caution restituée", ant.get('caution_restituee'))]
@@ -182,3 +208,48 @@ def trame_generique(demande):
     el.append(P(f"<i>Édité par CID le {timezone.localdate():%d/%m/%Y}.</i>"))
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     return buf.getvalue()
+
+
+def _fin_fluides(demande, dn, el, P, COCHE, doc):
+    from AidFi.services.afase_pdf import draw_page_template
+    from .fsl import PIECES_FLUIDES
+    el += [Spacer(1, 6), P("Dette", "SectionHeader")]
+    if demande.type_aide == 'EAU':
+        el.append(P(f"<b>Facture du :</b> {_t(dn.get('date_facture'))} &nbsp; <b>Montant :</b> {montant(dn.get('montant_facture'))} €"))
+    else:
+        el.append(P(f"<b>Dette d'électricité :</b> {montant(dn.get('dette_electricite')) or '–'} € &nbsp; "
+                    f"<b>Dette de gaz :</b> {montant(dn.get('dette_gaz')) or '–'} € &nbsp; "
+                    f"<b>Participation du ménage :</b> {COCHE(dn.get('participation') == 'OUI')} oui "
+                    f"{COCHE(dn.get('participation') == 'NON')} non"))
+        if dn.get('plan_fournisseur'):
+            el.append(P(f"<b>Plan de financement du fournisseur :</b> {_t(dn.get('plan_fournisseur'))}"))
+    el.append(P(f"<b>Charges exceptionnelles :</b> {_t(dn.get('charges_exceptionnelles'))}<br/>"
+                f"<b>Facture incluse dans un dossier de surendettement :</b> {COCHE(dn.get('surendettement') == 'OUI')} oui "
+                f"{COCHE(dn.get('surendettement') == 'NON')} non"))
+    ts = dn.get('ts') or {}
+    el += [Spacer(1, 6), P("Coordonnées de l'agent instructeur", "SectionHeader"),
+           P(f"{_t(ts.get('prenom'))} {_t(ts.get('nom'))} – {_t(ts.get('qualite'))}<br/>"
+             f"Tél. {_t(ts.get('telephone'))} {_t(ts.get('portable'))} – {_t(ts.get('email'))}<br/>{_t(ts.get('organisme'))}")]
+    if demande.instruction_administrative:
+        el += [P("<b>Instruite par un agent administratif</b> (facture de moins de 500 €)"),
+               P(_t(dn.get('commentaire_administratif')))]
+    else:
+        el += [Spacer(1, 6), P("Avis motivé du travailleur social", "SectionHeader"),
+               P(" &nbsp; ".join(f"{COCHE(demande.avis == c)} {l}" for c, l in demande.AVIS)), P(_t(demande.avis_motive))]
+    el += [Spacer(1, 6), P("Je m'engage à régler le solde qui restera à ma charge et mes futures consommations."),
+           _grille([["Date et signature du demandeur", "Date et signature de l'agent instructeur", "Cachet de la structure"],
+                    ["\n\n\n", "", ""]], [6 * cm, 6 * cm, 6 * cm])]
+    etats = demande.pieces or {}
+    lignes = [["Pièce", "État"]]
+    for c, l, _ in PIECES_FLUIDES:
+        if c in etats:
+            lignes.append([P(_t(l)), {'FOURNIE': "Fournie", 'MANQUANTE': "À fournir", 'SANS_OBJET': "Sans objet"}[etats[c]]])
+    el += [Spacer(1, 6), P("Pièces du dossier", "SectionHeader"), _grille(lignes, [14 * cm, 4 * cm])]
+    if demande.note_cadre:
+        from mds.fonctions import nom_et_fonction
+        el += [Spacer(1, 6), P("Note explicative du cadre (pièces manquantes)", "SectionHeader"), P(_t(demande.note_cadre)),
+               P(f"Le {demande.date_validation_cadre:%d/%m/%Y} – {_t(nom_et_fonction(demande.cadre, demande.mds))}"
+                 if demande.date_validation_cadre and demande.cadre else "")]
+    el.append(P(f"<i>Édité par CID le {timezone.localdate():%d/%m/%Y}.</i>"))
+    doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
+    return doc.filename.getvalue()

@@ -55,6 +55,12 @@ class _Recherche:
             res = [m for m in self.toutes(p, ancre)
                    if champ.get('x_min', -1) <= m['x0'] <= champ.get('x_max', 1e6)
                    and champ.get('top_min', -1) <= m['top'] <= champ.get('top_max', 1e6)]
+            if champ.get('ligne_de'):          # sur la même ligne qu'un autre libellé, à sa droite
+                refs = self.toutes(p, champ['ligne_de'])
+                if not refs:
+                    continue
+                ref = refs[0]
+                res = [m for m in res if abs(m['top'] - ref['top']) < 6 and m['x0'] > ref['x0']]
             if len(res) > occ:
                 return p, res[occ]
         return None, None

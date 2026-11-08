@@ -119,6 +119,72 @@ def _formulaire_acces():
     return c
 
 
+def _composition_et_ressources():
+    """Situation familiale, composition (page 1) et ressources (page 2) : identiques sur les formulaires FSL."""
+    return [x for x in _formulaire_acces()
+            if x['cle'].startswith(('sf_', 'comp_', 'res_', 'prec_', 'total_'))
+            or x['cle'] in ('num_caf', 'autres_numero', 'demandeur', 'cp_commune', 'quotient_familial', 'taux_effort')]
+
+
+ANCRES_SITUATION_LOGEMENT = {'LOCATAIRE': 'Locataire', 'PROPRIETAIRE': 'Propriétaire', 'ACCESSION': 'En accession',
+                             'HEBERGEMENT_TEMPORAIRE': 'En hébergement temporaire',
+                             'RESIDENCE_SOCIALE': 'En résidence sociale', 'HEBERGE_TIERS': 'Hébergé par un tiers'}
+
+
+def _formulaire_fluides(eau):
+    c = [dict(x, dx=-1) if x['cle'].startswith('sf_') else x for x in _composition_et_ressources()
+         if x['cle'] != 'taux_effort']
+    c += [{'cle': 'distributeur', 'page': 0, 'ancre': 'Nom du distributeur' if eau else "Nom fournisseur d'énergie",
+           'dx': 6},
+          {'cle': 'adresse', 'page': 0, 'ancre': 'Adresse :', 'x_min': D, 'mode': 'dessous', 'dy': 2, 'largeur': 480,
+           'lignes': 2, 'interligne': 22},
+          {'cle': 'montant_loyer', 'page': 0, 'ancre': 'mensualité du prêt', 'dx': 20}]
+    for code, ancre in ANCRES_SITUATION_LOGEMENT.items():
+        c.append({'cle': f'sl_{code}', 'page': 0, 'ancre': ancre, 'x_min': D, 'mode': 'case', 'dx': -6})
+    c += [
+        {'cle': 'ts_nom', 'page': 1, 'ancre': "Nom de l'agent instructeur", 'dx': 12},
+        {'cle': 'ts_prenom', 'page': 1, 'ancre': 'Prénom :', 'x_min': D, 'top_max': 200, 'dx': 4},
+        {'cle': 'ts_qualite', 'page': 1, 'ancre': 'agent administratif) :', 'dx': 6},
+        {'cle': 'ts_telephone', 'page': 1, 'ancre': 'ligne directe', 'dx': 10},
+        {'cle': 'ts_portable', 'page': 1, 'ancre': 'téléphone portable', 'dx': 10},
+        {'cle': 'ts_email', 'page': 1, 'ancre': 'Adresse mail TS/agent administratif', 'dx': 10},
+        {'cle': 'ts_organisme', 'page': 1, 'ancre': "Nom et adresse de l'organisme", 'mode': 'dessous', 'dy': 2,
+         'largeur': 520, 'lignes': 3, 'interligne': 18},
+        {'cle': 'charges_exceptionnelles', 'page': 1, 'ancre': 'Charges exceptionnelles avec justificatifs', 'dx': 92,
+         'largeur': 330, 'taille': 8},
+        {'cle': 'surendettement_oui', 'page': 1, 'ancre': 'Oui', 'ligne_de': 'Surendettement', 'mode': 'case'},
+        {'cle': 'surendettement_non', 'page': 1, 'ancre': 'Non', 'ligne_de': 'Surendettement', 'mode': 'case'},
+        {'cle': 'commentaire_administratif', 'page': 1, 'ancre': 'Commentaire (si besoin)', 'mode': 'dessous', 'dy': 2,
+         'largeur': 330, 'lignes': 6, 'interligne': 14, 'taille': 8},
+    ]
+    if eau:
+        c += [{'cle': 'date_facture', 'page': 1, 'ancre': 'Date de la facture sur relevé', 'dx': 10},
+              {'cle': 'montant_facture', 'page': 1, 'ancre': 'Montant de la facture', 'dx': 10}]
+    else:
+        c += [{'cle': 'dette_electricite', 'page': 1, 'ancre': "Montant de la dette d'électricité", 'dx': 10},
+              {'cle': 'dette_gaz', 'page': 1, 'ancre': 'Montant de la dette de gaz', 'dx': 10},
+              {'cle': 'participation_oui', 'page': 1, 'ancre': 'Oui', 'ligne_de': 'ticipation du ménage', 'mode': 'case'},
+              {'cle': 'participation_non', 'page': 1, 'ancre': 'Non', 'ligne_de': 'ticipation du ménage', 'mode': 'case'},
+              {'cle': 'plan_fournisseur', 'page': 1, 'ancre': 'ciser la proposition de plan de financement', 'dx': -12,
+               'mode': 'dessous', 'dy': 0, 'largeur': 520, 'lignes': 3, 'interligne': 13, 'taille': 8}]
+    return c
+
+
+def _argumentaire_fluides(eau):
+    """Liste à deux colonnes (énergie à gauche, eau à droite) : on coche dans la colonne du type de demande."""
+    c = _identite_simple(caf='N° CAF :')
+    x = {'x_min': 300} if eau else {'x_max': 300}
+    for code, ancre in [('formulaire', 'Imprimé'), ('facture', 'Dernière facture impayée'),
+                        ('identite', 'Copie de toutes pièces'), ('ressources', 'Justificatifs de ressources'),
+                        ('quittance', 'Quittance de loyer'), ('surendettement', 'Plan conventionnel')]:
+        c.append(dict({'cle': f'piece_{code}', 'ancre': ancre, 'mode': 'case', 'dx': -11, 'dy': -2}, **x))
+    c += [{'cle': 'note_cadre', 'ancre': 'NOTE EXPLICATIVE DU CADRE', 'mode': 'dessous', 'dx': -150, 'dy': 6,
+           'largeur': 480, 'lignes': 14},
+          {'cle': 'date', 'ancre': 'Fait le :', 'dx': 4},
+          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3}]
+    return c
+
+
 def _identite_simple(prefixe_nom="Nom :", prenom="Prénom :", caf=None):
     c = [{'cle': 'nom', 'ancre': prefixe_nom, 'dx': 4}, {'cle': 'prenom', 'ancre': prenom, 'dx': 4}]
     if caf:
@@ -230,12 +296,16 @@ def _cerfa_11362():
             {'cle': 'num_caf', 'ancre': "N° d'allocataire", 'dx': 30}]
 
 
-def placements(code):
+def placements(code, type_aide=None):
     from logement.models import FormulaireOfficiel as F
+    if code == F.ARGUMENTAIRE_FLUIDES:
+        return _argumentaire_fluides(type_aide == 'EAU')
     return {F.FORMULAIRE_ACCES: _formulaire_acces, F.AVIS_MOTIVE: _avis, F.CONTRAT_PRET: _contrat,
             F.CONTRAT_GARANTIE: _contrat, F.PRELEVEMENT: _prelevement, F.CONVENTION_ACCES: _convention,
             F.IDENTIFICATION_LOGEMENT: _ident_logement, F.LISTE_PIECES: _liste_pieces,
-            F.ARGUMENTAIRE: _argumentaire, F.VERSEMENT_DIRECT_AL: _cerfa_11362}[code]()
+            F.ARGUMENTAIRE: _argumentaire, F.VERSEMENT_DIRECT_AL: _cerfa_11362,
+            F.FORMULAIRE_EAU: lambda: _formulaire_fluides(True), F.FORMULAIRE_ENERGIE: lambda: _formulaire_fluides(False),
+            F.AVIS_FLUIDES: _avis, F.ARGUMENTAIRE_FLUIDES: lambda: _argumentaire_fluides(False)}[code]()
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -302,6 +372,23 @@ def valeurs(demande, code, aujourdhui=None):
         for cle in ('nom', 'prenom', 'qualite', 'telephone', 'portable', 'email', 'organisme'):
             v[f'ts_{cle}'] = ts.get(cle)
         return v
+    if code in (F.FORMULAIRE_EAU, F.FORMULAIRE_ENERGIE):
+        v = valeurs(demande, F.FORMULAIRE_ACCES, aujourdhui)
+        v = {k: x for k, x in v.items() if not k.startswith(('prop_', 'case_', 'eq_', 'garantie_', 'ant_', 'nv_'))}
+        v.update({'distributeur': dn.get('distributeur'), 'adresse': dn.get('adresse'),
+                  'montant_loyer': montant(dn.get('montant_loyer')), f"sl_{dn.get('situation_logement')}": bool(dn.get('situation_logement')),
+                  'charges_exceptionnelles': dn.get('charges_exceptionnelles'),
+                  'surendettement_oui': dn.get('surendettement') == 'OUI', 'surendettement_non': dn.get('surendettement') == 'NON',
+                  'commentaire_administratif': dn.get('commentaire_administratif') if demande.instruction_administrative else '',
+                  'date_facture': dn.get('date_facture'), 'montant_facture': montant(dn.get('montant_facture')),
+                  'dette_electricite': montant(dn.get('dette_electricite')), 'dette_gaz': montant(dn.get('dette_gaz')),
+                  'participation_oui': dn.get('participation') == 'OUI', 'participation_non': dn.get('participation') == 'NON',
+                  'plan_fournisseur': dn.get('plan_fournisseur')})
+        return v
+    if code == F.AVIS_FLUIDES:
+        code = F.AVIS_MOTIVE
+    if code == F.ARGUMENTAIRE_FLUIDES:
+        code = F.ARGUMENTAIRE
     if code == F.AVIS_MOTIVE:
         return {'nom': dem.get('nom'), 'prenom': dem.get('prenom'), 'num_caf': dn.get('num_caf'),
                 f'avis_{demande.avis}': bool(demande.avis), 'avis_texte': demande.avis_motive,

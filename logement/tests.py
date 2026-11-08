@@ -20,7 +20,7 @@ from mds.models import MDS, UserMDSProfile
 
 from .models import DemandeFSL, FormulaireOfficiel, GestionnaireFSL
 from .services import circuit, fsl
-from .services.fsl_pdf import dossier
+from .services.fsl_pdf import documents_du_dossier, dossier
 from .services.pdf_officiel import remplir
 
 
@@ -173,7 +173,7 @@ class FSLTests(TestCase):
 
     def test_encart_fiche(self):
         r = self.client_de(self.ts).get("/beneficiaire/FL-1/")
-        self.assertContains(r, "FSL accès au logement")
+        self.assertContains(r, "FSL énergie")
 
     def test_apercu_administration(self):
         admin = User.objects.create_superuser("adm", password="x", matricule="ADM")
@@ -182,3 +182,36 @@ class FSLTests(TestCase):
         r = self.client_de(admin).get(f"/admin/logement/formulaireofficiel/{f.pk}/apercu/")
         self.assertEqual(r["Content-Type"], "application/pdf")
         self.assertIn("adresse_objet", r["X-CID-Champs-Non-Places"])     # libellé absent du faux formulaire
+
+    def test_energie_instruction_administrative(self):
+        BudgetFoyer.objects.update(charges={"v": 2, "lignes": {"loyer": {"payee": "600", "non_payee": "0"},
+                                                               "electricite": {"payee": "60", "non_payee": "180"}},
+                                            "precisions": {}})
+        r = self.client_de(self.ts).post("/logement/fsl/nouvelle/FL-1/", {"type_aide": "ENERGIE"})
+        self.assertEqual(r.status_code, 302)
+        d = DemandeFSL.objects.get(type_aide="ENERGIE")
+        self.assertEqual(d.donnees["dette_electricite"], "180")
+        self.assertEqual(d.donnees["situation_logement"], "LOCATAIRE")
+        self.assertIn("facture", d.pieces)
+        post = {"distributeur": "Fournisseur fictif", "dette_electricite": "180", "dette_gaz": "0",
+                "instruction_administrative": "on", "commentaire_administratif": "Régularisation (fictif).",
+                **{f"piece_{c}": "FOURNIE" for c, _, _ in fsl.PIECES_FLUIDES}}
+        self.client_de(self.ts).post(f"/logement/fsl/{d.pk}/modifier/", post)
+        d.refresh_from_db()
+        self.assertTrue(d.instruction_administrative)
+        self.assertEqual([c for c, _ in documents_du_dossier(d)], [FormulaireOfficiel.FORMULAIRE_ENERGIE])
+        circuit.envoyer(d, self.ts)                       # sans avis : instruction administrative < 500 €
+        self.assertEqual(d.statut, DemandeFSL.ENVOYEE)
+        pdf, rapport = dossier(d)
+        self.assertTrue(pdf.startswith(b"%PDF"))
+
+    def test_eau_au_dela_du_seuil_administratif(self):
+        self.client_de(self.ts).post("/logement/fsl/nouvelle/FL-1/", {"type_aide": "EAU"})
+        d = DemandeFSL.objects.get(type_aide="EAU")
+        d.donnees["montant_facture"] = "620"
+        d.instruction_administrative = True
+        d.pieces = {c: "FOURNIE" for c in d.pieces}
+        d.save()
+        self.assertTrue(any("500" in a for a in fsl.alertes(d)))
+        with self.assertRaises(circuit.CircuitError):
+            circuit.envoyer(d, self.ts)

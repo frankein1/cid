@@ -91,6 +91,23 @@ PIECES = [
     ('versement_direct', "Demande de versement direct de l'AL / APL", None),
     ('surendettement', "Plan conventionnel de surendettement, le cas échéant", 'facultatif'),
 ]
+# Énergie, eau
+SITUATIONS_LOGEMENT = [('LOCATAIRE', "Locataire"), ('PROPRIETAIRE', "Propriétaire"),
+                       ('ACCESSION', "En accession à la propriété"), ('HEBERGEMENT_TEMPORAIRE', "En hébergement temporaire"),
+                       ('RESIDENCE_SOCIALE', "En résidence sociale"), ('HEBERGE_TIERS', "Hébergé par un tiers")]
+PIECES_FLUIDES = [
+    ('formulaire', "Formulaire complété et signé par le demandeur et l'agent instructeur", None),
+    ('avis', "Avis motivé du travailleur social (s'il intervient)", 'ts'),
+    ('facture', "Dernière facture impayée recto verso au nom du demandeur (énergie : moins de 3 mois sur "
+                "consommation réelle ou moins d'un an pour une régularisation ; eau : sur relevé de consommation)", None),
+    ('identite', "Pièces d'identité de toutes les personnes majeures du foyer (titre de séjour en cours de validité)", None),
+    ('etat_civil_mineurs', "Mineurs : extrait d'acte de naissance ou livret de famille", None),
+    ('ressources', "Justificatifs des ressources du foyer, mois précédant la signature", None),
+    ('ressources_majeurs', "Enfants majeurs : justificatifs de ressources ou de non-ressources", None),
+    ('quittance', "Quittance de loyer ou avis d'échéance", None),
+    ('surendettement', "Plan conventionnel de surendettement, le cas échéant", 'facultatif'),
+]
+SEUIL_INSTRUCTION_ADMINISTRATIVE = 500
 ETATS_PIECE = [('MANQUANTE', "À fournir"), ('FOURNIE', "Fournie"), ('SANS_OBJET', "Sans objet")]
 
 
@@ -198,7 +215,7 @@ def coordonnees_ts(user, mds):
             'organisme': f"{mds.nom} – {adresse}" if mds else ''}
 
 
-def preremplir(beneficiaire, user):
+def preremplir(beneficiaire, user, type_aide='ACCES'):
     from beneficiaire.budget import budget_en_cours
     from connecteurs.models import SituationExterne
     budget = budget_en_cours(beneficiaire)
@@ -210,7 +227,23 @@ def preremplir(beneficiaire, user):
     loyer = d(charges.get('loyer', {}).get('payee')) + d(charges.get('loyer', {}).get('non_payee'))
     al = sum((d(v) for v in ((budget.ressources or {}).get('lignes', {}).get('logement', {}) if budget else {}).values()),
              Decimal(0))
-    return {
+    fluides = {}
+    if type_aide in ('EAU', 'ENERGIE'):
+        elec = charges.get('electricite', {})
+        gaz = charges.get('combustibles', {})
+        fluides = {'adresse': f"{beneficiaire.adresse}", 'cp_commune': f"{beneficiaire.code_postal} {beneficiaire.ville}",
+                   'situation_logement': 'LOCATAIRE' if loyer else '',
+                   'montant_loyer': str(loyer) if loyer else '',
+                   'dette_electricite': str(d(elec.get('non_payee'))) if d(elec.get('non_payee')) else '',
+                   'dette_gaz': str(d(gaz.get('non_payee'))) if d(gaz.get('non_payee')) else '',
+                   'distributeur': '', 'date_facture': '', 'montant_facture': '', 'surendettement': '',
+                   'participation': '', 'plan_fournisseur': '', 'charges_exceptionnelles': '',
+                   'commentaire_administratif': ''}
+        dettes = ", ".join(f"{x.get('creancier')} {montant(x.get('montant'))} €" for x in (budget.dettes or [])
+                           if x.get('creancier')) if budget else ''
+        if dettes:
+            fluides['charges_exceptionnelles'] = dettes
+    base = {
         'num_caf': beneficiaire.numero_caf or '',
         'autres_numero': '',
         'bailleur_type': '',
@@ -230,11 +263,21 @@ def preremplir(beneficiaire, user):
                    + (", quotient familial CAF" if qf else ""),
         'date_preremplissage': timezone.localdate().strftime('%d/%m/%Y'),
     }
+    base.update(fluides)
+    return base
+
+
+def liste_pieces(type_aide):
+    from logement.models import DemandeFSL
+    return PIECES_FLUIDES if type_aide in DemandeFSL.FLUIDES else PIECES
 
 
 def pieces_attendues(demande):
     """Pièces qui concernent cette demande (bailleur privé, garantie, équipements…)."""
     donnees = demande.donnees or {}
+    if demande.est_fluides:
+        return [(c, l, cond == 'facultatif') for c, l, cond in PIECES_FLUIDES
+                if not (cond == 'ts' and demande.instruction_administrative)]
     prive = donnees.get('bailleur_type') == 'PRIVE'
     garantie = bool(donnees.get('garantie'))
     equipements = bool(d((donnees.get('proposition') or {}).get('equipements')))
@@ -257,6 +300,14 @@ def alertes(demande):
     donnees = demande.donnees or {}
     prop = donnees.get('proposition') or {}
     out = []
+    if demande.est_fluides:
+        if demande.instruction_administrative and demande.montant_dette > SEUIL_INSTRUCTION_ADMINISTRATIVE:
+            out.append(f"Instruction par un agent administratif : réservée aux factures de moins de "
+                       f"{SEUIL_INSTRUCTION_ADMINISTRATIVE} € (ici {montant(demande.montant_dette)} €). "
+                       f"Un travailleur social doit donner son avis.")
+        if not donnees.get('distributeur'):
+            out.append("Indiquez le " + ("distributeur d'eau." if demande.type_aide == 'EAU' else "fournisseur d'énergie."))
+        return out
     total = sum((d(v) for v in prop.values()), Decimal(0))
     if p.get('plafond_acces') and total > d(p['plafond_acces']):
         out.append(f"Le total proposé ({montant(total)} €) dépasse le plafond de l'aide à l'accès "

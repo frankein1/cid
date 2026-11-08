@@ -1,11 +1,11 @@
 <!-- /templates/logement/fsl_form.html -->
 {% extends "base.html" %}
-{% block title %}Demande FSL accès — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block title %}Demande FSL — {{ b.nom }} {{ b.prenom }}{% endblock %}
 {% block content %}
 {% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" num="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right" %}
 <div class="max-w-6xl mx-auto px-4 py-8">
   <a href="{% url 'logement:fsl_detail' demande.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Demande FSL de {{ b.prenom }} {{ b.nom }}</a>
-  <h1 class="text-2xl font-bold text-gray-900 mt-2"><i class="fas fa-key text-amber-600 mr-2"></i>FSL – aide à l'accès au logement</h1>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2"><i class="fas {% if demande.est_fluides %}fa-bolt{% else %}fa-key{% endif %} text-amber-600 mr-2"></i>FSL – {{ demande.get_type_aide_display|lower }}</h1>
   <p class="text-sm text-gray-600 mt-1 mb-6">Préremplie le {{ dn.date_preremplissage }} ({{ dn.origine }}). Tout se corrige ici ; le dossier imprimé reprend ces rubriques, à la place prévue sur le formulaire du gestionnaire.</p>
   <form method="post" class="space-y-6" id="fsl-form">{% csrf_token %}
 
@@ -15,6 +15,14 @@
       <label>Gestionnaire du FSL<select name="gestionnaire" class="{{ inp }}">{% for g in gestionnaires %}<option value="{{ g.pk }}" {% if demande.gestionnaire_id == g.pk %}selected{% endif %}>{{ g.nom }}</option>{% endfor %}</select></label>
       <label>N° allocataire CAF<input name="num_caf" value="{{ dn.num_caf }}" class="{{ inp }}"></label>
       <label>Autre n° (MSA…)<input name="autres_numero" value="{{ dn.autres_numero }}" class="{{ inp }}"></label>
+      {% if demande.est_fluides %}
+      <label>{% if demande.type_aide == "EAU" %}Distributeur d'eau{% else %}Fournisseur d'énergie{% endif %}<input name="distributeur" value="{{ dn.distributeur }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Adresse<input name="adresse" value="{{ dn.adresse }}" class="{{ inp }}"></label>
+      <label>Code postal et commune<input name="cp_commune" value="{{ dn.cp_commune }}" class="{{ inp }}"></label>
+      <div class="md:col-span-3">Situation par rapport au logement
+        <div class="flex flex-wrap gap-4 mt-1">{% for c, l in situations_logement %}<label><input type="radio" name="situation_logement" value="{{ c }}" {% if dn.situation_logement == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div></div>
+      <label>Loyer et charges ou mensualité du prêt (€)<input name="montant_loyer" value="{{ dn.montant_loyer }}" class="{{ num }}"></label>
+      {% else %}
       <div>Bailleur du nouveau logement
         <div class="flex gap-4 mt-1">
           <label><input type="radio" name="bailleur_type" value="SOCIAL" {% if dn.bailleur_type == "SOCIAL" %}checked{% endif %}> social</label>
@@ -23,6 +31,7 @@
       <label>Code postal et commune<input name="cp_commune" value="{{ dn.cp_commune }}" class="{{ inp }}" placeholder="13110 Port-de-Bouc"></label>
       <label class="md:col-span-2">Nom et adresse du nouveau bailleur<textarea name="nouveau_bailleur" rows="2" class="{{ inp }}">{{ dn.nouveau_bailleur }}</textarea></label>
       <label>Téléphone / courriel du bailleur privé<input name="contact_bailleur" value="{{ dn.contact_bailleur }}" class="{{ inp }}"></label>
+      {% endif %}
     </div>
   </section>
 
@@ -54,6 +63,32 @@
     <span class="text-xs text-gray-500 ml-2">Total et taux d'effort : calculés par CID.</span>
   </section>
 
+  {% if demande.est_fluides %}
+  <section class="bg-white rounded-xl border p-5" id="dette">
+    <h2 class="font-bold text-gray-800 mb-3">Dette</h2>
+    <div class="grid md:grid-cols-3 gap-3 text-sm">
+      {% if demande.type_aide == "EAU" %}
+      <label>Date de la facture (sur relevé)<input name="date_facture" value="{{ dn.date_facture }}" class="{{ inp }}" placeholder="jj/mm/aaaa"></label>
+      <label>Montant de la facture (€)<input name="montant_facture" value="{{ dn.montant_facture }}" class="{{ num }}"></label>
+      {% else %}
+      <label>Dette d'électricité (€)<input name="dette_electricite" value="{{ dn.dette_electricite }}" class="{{ num }}"></label>
+      <label>Dette de gaz (€)<input name="dette_gaz" value="{{ dn.dette_gaz }}" class="{{ num }}"></label>
+      <div>Participation du ménage à la résorption de la dette<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="participation" value="OUI" {% if dn.participation == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="participation" value="NON" {% if dn.participation == "NON" %}checked{% endif %}> non</label></div></div>
+      <label class="md:col-span-3">Plan de financement proposé par le fournisseur<textarea name="plan_fournisseur" rows="2" class="{{ inp }}">{{ dn.plan_fournisseur }}</textarea></label>
+      {% endif %}
+      <label class="md:col-span-2">Charges exceptionnelles avec justificatifs (crédits, dettes…)<input name="charges_exceptionnelles" value="{{ dn.charges_exceptionnelles }}" class="{{ inp }}"></label>
+      <div>Facture incluse dans un dossier de surendettement<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="surendettement" value="OUI" {% if dn.surendettement == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="surendettement" value="NON" {% if dn.surendettement == "NON" %}checked{% endif %}> non</label></div></div>
+    </div>
+  </section>
+  <section class="bg-white rounded-xl border p-5">
+    <label class="text-sm font-semibold"><input type="checkbox" name="instruction_administrative" {% if demande.instruction_administrative %}checked{% endif %}> Instruite par un agent administratif (facture de moins de {{ seuil_administratif }} €, sans avis d'un travailleur social)</label>
+    <label class="block text-sm mt-2">Commentaire de l'agent administratif (si besoin)<textarea name="commentaire_administratif" rows="3" class="{{ inp }}">{{ dn.commentaire_administratif }}</textarea></label>
+  </section>
+  {% else %}
   <section class="bg-white rounded-xl border p-5 grid md:grid-cols-2 gap-6">
     <div><h2 class="font-bold text-gray-800 mb-3">Logement antérieur au relogement</h2>
       {% for c, l, v in anterieur %}<label class="block text-sm mb-2">{{ l }}<input name="ant_{{ c }}" value="{{ v }}" class="{{ inp }}"></label>{% endfor %}
@@ -71,18 +106,19 @@
     <div class="grid md:grid-cols-3 gap-3 text-sm">{% for c, l, v in proposition %}<label>{{ l }} (€)<input name="prop_{{ c }}" value="{{ v }}" inputmode="decimal" class="{{ num }}"></label>{% endfor %}</div>
     <div class="flex flex-wrap gap-4 text-sm mt-3">Équipements :{% for c, l, ok in equipements %}<label><input type="checkbox" name="eq_{{ c }}" {% if ok %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
   </section>
+  {% endif %}
 
   <section class="bg-white rounded-xl border p-5">
-    <h2 class="font-bold text-gray-800 mb-3">Avis motivé et proposition</h2>
+    <h2 class="font-bold text-gray-800 mb-3">Avis motivé{% if not demande.est_fluides %} et proposition{% endif %}</h2>
     <div class="flex gap-4 text-sm mb-2">{% for c, l in demande.AVIS %}<label><input type="radio" name="avis" value="{{ c }}" {% if demande.avis == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
     <textarea name="avis_motive" rows="6" class="{{ inp }}" placeholder="Situation, projet de relogement, capacité à payer le loyer…">{{ demande.avis_motive }}</textarea>
-    <div class="grid md:grid-cols-2 gap-3 text-sm mt-2">
+    {% if not demande.est_fluides %}<div class="grid md:grid-cols-2 gap-3 text-sm mt-2">
       <label>Prêt proposé (€)<input name="proposition_pret" value="{{ demande.proposition_pret|default:'' }}" class="{{ num }}"></label>
-      <label>Subvention proposée (€)<input name="proposition_subvention" value="{{ demande.proposition_subvention|default:'' }}" class="{{ num }}"></label></div>
+      <label>Subvention proposée (€)<input name="proposition_subvention" value="{{ demande.proposition_subvention|default:'' }}" class="{{ num }}"></label></div>{% endif %}
   </section>
 
   <section class="bg-white rounded-xl border p-5">
-    <h2 class="font-bold text-gray-800 mb-1">Coordonnées du travailleur social</h2>
+    <h2 class="font-bold text-gray-800 mb-1">Coordonnées {% if demande.est_fluides %}de l'agent instructeur{% else %}du travailleur social{% endif %}</h2>
     <p class="text-xs text-gray-500 mb-3">Le courriel proposé est celui de la MDS.</p>
     <div class="grid md:grid-cols-3 gap-3 text-sm">
       <label>Nom<input name="ts_nom" value="{{ ts.nom }}" class="{{ inp }}"></label>

@@ -42,7 +42,8 @@ def demander_avis_cadre(demande, user):
     demande.tracer(user, "Avis du cadre demandé (pièces manquantes)", f"{len(demande.pieces_manquantes)} pièce(s)")
     demande.save()
     _message(user, responsable_mds(demande.mds), demande, f"FSL : pièces manquantes, votre avis – {_usager(demande)}",
-             f"La demande FSL accès de {_usager(demande)} part avec des pièces manquantes. "
+             f"La demande FSL ({demande.get_type_aide_display().lower()}) de {_usager(demande)} part avec des "
+             f"pièces manquantes. "
              f"Rédigez la note explicative pour qu'elle puisse être envoyée, ou renvoyez-la à l'agent.")
 
 
@@ -70,7 +71,12 @@ def envoyer(demande, user, date_envoi=None):
         raise CircuitError("Cette demande ne peut pas être envoyée dans son état actuel.")
     if demande.pieces_manquantes and demande.statut != D.VALIDEE:
         raise CircuitError("Des pièces manquent : demandez d'abord l'avis du cadre (note explicative).")
-    if not demande.avis:
+    from .fsl import SEUIL_INSTRUCTION_ADMINISTRATIVE
+    if demande.est_fluides and demande.instruction_administrative:
+        if demande.montant_dette > SEUIL_INSTRUCTION_ADMINISTRATIVE:
+            raise CircuitError(f"Au-delà de {SEUIL_INSTRUCTION_ADMINISTRATIVE} €, l'avis d'un travailleur social est "
+                               f"nécessaire : décochez « instruite par un agent administratif ».")
+    elif not demande.avis:
         raise CircuitError("Indiquez l'avis du travailleur social (favorable, réservé, défavorable).")
     renvoi = demande.statut == D.AJOURNEE
     demande.statut, demande.date_envoi = D.ENVOYEE, date_envoi or timezone.localdate()

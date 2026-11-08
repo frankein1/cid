@@ -5,7 +5,7 @@
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="fsl-detail">
   <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-key text-amber-600 mr-2"></i>FSL – aide à l'accès au logement</h1>
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas {% if demande.est_fluides %}fa-bolt{% else %}fa-key{% endif %} text-amber-600 mr-2"></i>FSL – {{ demande.get_type_aide_display|lower }}</h1>
     <span class="px-3 py-1 rounded-full text-sm font-semibold {% if demande.statut == 'ACCORDEE' %}bg-green-100 text-green-800{% elif demande.statut == 'REFUSEE' or demande.statut == 'ABANDONNEE' %}bg-gray-200 text-gray-700{% elif demande.statut == 'A_VALIDER_CADRE' or demande.statut == 'AJOURNEE' %}bg-amber-100 text-amber-800{% else %}bg-blue-100 text-blue-800{% endif %}">{{ demande.get_statut_display }}</span>
   </div>
 
@@ -13,10 +13,19 @@
 
   <div class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-4 text-sm">
     <div><div class="text-xs text-gray-500">Gestionnaire</div>{{ demande.gestionnaire|default:"à préciser" }}{% if demande.gestionnaire.transmission %}<div class="text-xs text-gray-500">Envoi : {{ demande.gestionnaire.transmission }}</div>{% endif %}</div>
+    {% if demande.est_fluides %}
+    <div><div class="text-xs text-gray-500">{% if demande.type_aide == 'EAU' %}Distributeur{% else %}Fournisseur{% endif %}</div>{{ dn.distributeur|default:"—" }}</div>
+    {% else %}
     <div><div class="text-xs text-gray-500">Nouveau logement</div>{{ dn.adresse_objet|default:"—" }} {{ dn.cp_commune }}<div class="text-xs text-gray-500">Bailleur {% if dn.bailleur_type == 'PRIVE' %}privé{% elif dn.bailleur_type == 'SOCIAL' %}social{% else %}?{% endif %}</div></div>
-    <div><div class="text-xs text-gray-500">Ressources / taux d'effort</div>{{ total_ressources|floatformat:2 }} € / {{ taux_effort|default:"—" }} %</div>
+    {% endif %}
+    <div><div class="text-xs text-gray-500">Ressources{% if not demande.est_fluides %} / taux d'effort{% endif %}</div>{{ total_ressources|floatformat:2 }} €{% if not demande.est_fluides %} / {{ taux_effort|default:"—" }} %{% endif %}</div>
+    {% if demande.est_fluides %}
+    <div><div class="text-xs text-gray-500">Dette</div>{{ demande.montant_dette|floatformat:2 }} €</div>
+    <div><div class="text-xs text-gray-500">Instruction</div>{% if demande.instruction_administrative %}agent administratif{% else %}avis du travailleur social : {{ demande.get_avis_display|default:"à donner" }}{% endif %}</div>
+    {% else %}
     <div><div class="text-xs text-gray-500">Proposition</div>{{ total_propose|floatformat:2 }} € ({% if demande.proposition_pret %}prêt {{ demande.proposition_pret }} €{% endif %}{% if demande.proposition_pret and demande.proposition_subvention %}, {% endif %}{% if demande.proposition_subvention %}subvention {{ demande.proposition_subvention }} €{% endif %}){% if dn.garantie %} + garantie {{ dn.garantie|cut:"_"|slice:":" }}{% endif %}</div>
     <div><div class="text-xs text-gray-500">Avis du travailleur social</div>{{ demande.get_avis_display|default:"à donner" }}</div>
+    {% endif %}
     <div><div class="text-xs text-gray-500">Envoi / réponse</div>{% if demande.date_envoi %}envoyée le {{ demande.date_envoi|date:"d/m/Y" }}{% else %}—{% endif %}{% if demande.date_decision %}, réponse le {{ demande.date_decision|date:"d/m/Y" }}{% endif %}
       {% if demande.montant_accorde_pret or demande.montant_accorde_subvention or demande.garantie_accordee %}<div class="text-xs">Accordé : {% if demande.montant_accorde_pret %}prêt {{ demande.montant_accorde_pret }} € {% endif %}{% if demande.montant_accorde_subvention %}subvention {{ demande.montant_accorde_subvention }} € {% endif %}{{ demande.garantie_accordee }}</div>{% endif %}</div>
   </div>
@@ -54,7 +63,7 @@
         <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="grid md:grid-cols-3 gap-2 text-sm">{% csrf_token %}
           <label>Réponse du FSL<select name="issue" class="block w-full border rounded px-2 py-1">{% for c, l in statuts_reponse %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></label>
           <label>Le<input type="date" name="date_decision" class="block w-full border rounded px-2 py-1"></label>
-          <label>Garantie accordée<input name="garantie" class="block w-full border rounded px-2 py-1" placeholder="4 mois sur 12"></label>
+          {% if not demande.est_fluides %}<label>Garantie accordée<input name="garantie" class="block w-full border rounded px-2 py-1" placeholder="4 mois sur 12"></label>{% endif %}
           <label>Prêt accordé (€)<input name="pret" class="block w-full border rounded px-2 py-1"></label>
           <label>Subvention accordée (€)<input name="subvention" class="block w-full border rounded px-2 py-1"></label>
           <label>Commentaire<input name="commentaire" class="block w-full border rounded px-2 py-1" placeholder="Pièces demandées, motif…"></label>

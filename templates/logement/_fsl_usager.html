@@ -3,8 +3,10 @@
 <div id="fsl-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex justify-between items-center gap-2">
         <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Logement – FSL</h2>
-        {% if peut_creer_fsl %}<form method="post" action="{% url 'logement:fsl_nouvelle' beneficiaire.code_interne %}">{% csrf_token %}
-            <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL accès au logement</button></form>{% endif %}
+        {% if peut_creer_fsl %}<form method="post" action="{% url 'logement:fsl_nouvelle' beneficiaire.code_interne %}" class="flex flex-wrap gap-1">{% csrf_token %}
+            <button name="type_aide" value="ACCES" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL accès</button>
+            <button name="type_aide" value="ENERGIE" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL énergie</button>
+            <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>{% endif %}
     </div>
     {% if demandes_fsl %}<ul class="mt-3 text-sm divide-y">{% for f in demandes_fsl %}
         <li class="py-2 flex justify-between gap-2"><a href="{% url 'logement:fsl_detail' f.pk %}" class="text-blue-700 hover:underline">{{ f.get_type_aide_display }} – {{ f.date_creation|date:"d/m/Y" }}</a>
