@@ -27,7 +27,7 @@ with sync_playwright() as p:
     sl = page(nav, "agent_sl1")
     sl.goto(B + "/logement/expulsions/")
     shot(sl, "expulsions", "01", "#expulsion-nouveau", top=True)
-    sl.goto(B + "/beneficiaire/annuaire/?nom=garnier&prenom=c%C3%A9line")
+    sl.goto(B + "/beneficiaire/annuaire/?nom=garnie&prenom=seline")
     shot(sl, "expulsions", "02", "#annuaire", top=True)
     sl.goto(B + "/logement/expulsions/nouveau/")
     sl.fill("input[name=code_usager]", "FAM9-CEL")

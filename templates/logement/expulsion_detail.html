@@ -80,8 +80,9 @@
         <div><div class="text-xs text-gray-500">MDS</div>{{ d.mds.nom|default:"<span class='text-red-700'>à affecter</span>" }}</div>
         {% if peut_affecter and d.statut == 'EN_COURS' %}
         <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="flex gap-2">{% csrf_token %}
-          <select name="mds" class="border rounded px-2 py-1 flex-1">{% for m in mds_liste %}<option value="{{ m.pk }}" {% if m.pk == d.mds_id %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select>
-          <button name="action" value="affecter" class="px-3 py-1 bg-gray-800 text-white rounded">{% if d.mds %}Réaffecter{% else %}Affecter{% endif %}</button></form>{% endif %}
+          <select name="mds" class="border rounded px-2 py-1 flex-1">{% if not d.mds and not mds_secteur %}<option value="">Choisir la MDS…</option>{% endif %}{% for m in mds_liste %}<option value="{{ m.pk }}" {% if m.pk == d.mds_id or m in mds_secteur|slice:":1" and not d.mds %}selected{% endif %}>{{ m.nom }}{% if m in mds_secteur %} (secteur){% endif %}</option>{% endfor %}</select>
+          <button name="action" value="affecter" class="px-3 py-1 bg-gray-800 text-white rounded">{% if d.mds %}Réaffecter{% else %}Affecter{% endif %}</button></form>
+        {% if mds_secteur %}<p class="text-xs text-blue-800" id="expulsion-secteur"><i class="fas fa-map-pin mr-1"></i>D'après l'adresse ({{ d.code_postal }} {{ d.ville }}), le secteur est celui de {% for m in mds_secteur %}{{ m.nom }}{% if not forloop.last %} ou {% endif %}{% endfor %}. À vous de confirmer.</p>{% endif %}{% endif %}
         <div><div class="text-xs text-gray-500">Référent social</div>{{ d.referent.get_full_name|default:"à désigner" }}</div>
         {% if d.mds and d.statut == 'EN_COURS' %}
           {% if peut_designer %}
@@ -104,14 +105,15 @@
               <input name="nom" value="{{ c.nom|default:d.nom }}" placeholder="Nom" class="border rounded px-2 py-1">
               <input name="prenom" value="{{ c.prenom|default:d.prenom }}" placeholder="Prénom" class="border rounded px-2 py-1">
               <input type="date" name="date_naissance" class="border rounded px-2 py-1">
+              <input name="adresse" value="{{ c.adresse }}" placeholder="Adresse (même incomplète)" class="border rounded px-2 py-1 col-span-2">
               <button class="px-2 py-1 border rounded"><i class="fas fa-search mr-1"></i>Chercher</button></form>
             {% if message_recherche %}<p class="mt-1 text-xs text-amber-800">{{ message_recherche }}</p>{% endif %}
             <ul class="mt-2 space-y-2">{% for u in usagers %}{% with b=u.b %}<li class="flex items-center justify-between gap-2">
-              <span><b>{{ b.nom|upper }} {{ b.prenom }}</b>{% if b.nom_naissance %} (né{% if b.civilite == 'MME' %}e{% endif %} {{ b.nom_naissance|upper }}){% endif %}
+              <span><b>{{ b.nom|upper }} {{ b.prenom }}</b>{% if b.proche %} <span class="text-xs px-1 rounded bg-amber-100 text-amber-800">orthographe proche</span>{% endif %}{% if b.nom_naissance %} (né{% if b.civilite == 'MME' %}e{% endif %} {{ b.nom_naissance|upper }}){% endif %}
                 <span class="block text-xs text-gray-500">{{ b.date_naissance|date:"d/m/Y" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %} – {{ b.code_interne }} – {{ b.mds.nom|default:"sans MDS" }}</span></span>
               {% if u.possible %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<input type="hidden" name="beneficiaire" value="{{ b.pk }}"><button name="action" value="rattacher" class="text-xs px-2 py-1 bg-blue-600 text-white rounded">Rattacher</button></form>
               {% else %}<span class="text-xs text-gray-500">autre MDS : le Service Logement réaffecte</span>{% endif %}</li>
-              {% endwith %}{% empty %}<li class="text-gray-400 text-xs">Aucune proposition : cherchez par code usager, n° CAF, ou deux éléments parmi nom, prénom, date de naissance.</li>{% endfor %}</ul>
+              {% endwith %}{% empty %}<li class="text-gray-400 text-xs">Aucune proposition : cherchez par code usager ou n° CAF, ou deux éléments parmi nom, prénom, date de naissance, adresse.</li>{% endfor %}</ul>
           {% else %}<span class="text-gray-400">non rattaché</span>{% endif %}
         </div>
       </div>

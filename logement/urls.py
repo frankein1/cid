@@ -26,6 +26,7 @@ urlpatterns = [
     path('expulsions/', views.expulsion_liste, name='expulsion_liste'),
     path('expulsions/nouveau/', views.expulsion_nouveau, name='expulsion_nouveau'),
     path('expulsions/statistiques/', views.expulsion_stats, name='expulsion_stats'),
+    path('expulsions/secteur/', views.expulsion_secteur, name='expulsion_secteur'),
     path('expulsions/<int:pk>/', views.expulsion_detail, name='expulsion_detail'),
     path('expulsions/<int:pk>/modifier/', views.expulsion_modifier, name='expulsion_modifier'),
     path('expulsions/<int:pk>/action/', views.expulsion_action, name='expulsion_action'),

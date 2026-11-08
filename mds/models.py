@@ -78,7 +78,10 @@ class MDS(AuditedMixin):
     # Coordonnées & Secteur
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    communes = models.JSONField(default=list, blank=True, help_text="Liste des codes INSEE")
+    communes = models.JSONField(
+        "Secteur", default=list, blank=True,
+        help_text="Villes, arrondissements ou codes postaux couverts (ex. « Port-de-Bouc », « 13001 », « Marseille 3e ») ; "
+                  "les codes INSEE sont aussi reconnus. Sert à proposer la MDS d'après une adresse.")
     
     services_proposes = models.JSONField(default=list, blank=True)
     configuration = models.JSONField(default=dict, blank=True)
@@ -113,6 +116,33 @@ class MDS(AuditedMixin):
     @property
     def libelle_type(self):
         return "MDS de territoire" if self.type_mds == self.TERRITOIRE else "MDS de proximité"
+
+    @staticmethod
+    def _norme(texte):
+        import re
+        import unicodedata
+        t = "".join(c for c in unicodedata.normalize("NFD", str(texte or "")) if unicodedata.category(c) != "Mn")
+        t = re.sub(r"[^A-Z0-9]+", " ", t.upper()).strip()
+        return re.sub(r"\b(ST|STE)\b", lambda m: "SAINT" if m.group(1) == "ST" else "SAINTE", t)
+
+    def couvre(self, code_postal, ville):
+        """Le secteur couvre-t-il cette adresse ? Marseille : par arrondissement (13001 = « Marseille 1er » = INSEE
+        13201) ; ailleurs : par ville ou code postal."""
+        import re
+        cp, v = (code_postal or "").strip(), self._norme(ville)
+        cles = {cp, v} - {""}
+        if re.fullmatch(r"130(0[1-9]|1[0-6])", cp):          # arrondissements de Marseille
+            n = int(cp[-2:])
+            cles |= {f"132{cp[-2:]}", f"MARSEILLE {n}", f"MARSEILLE {n}E", f"MARSEILLE {n}ER", f"MARSEILLE {n}EME"}
+            cles.discard("MARSEILLE")
+        return any(self._norme(c) in cles for c in (self.communes or []))
+
+    @classmethod
+    def pour_adresse(cls, code_postal, ville):
+        if not (code_postal or ville):
+            return []
+        return [m for m in cls.objects.filter(active=True).exclude(communes=[]).order_by('type_mds', 'nom')
+                if m.couvre(code_postal, ville)]
 
     def __str__(self):
         return f"{self.code_mds} - {self.nom} ({self.ville})"

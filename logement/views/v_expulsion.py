@@ -140,13 +140,15 @@ def expulsion_detail(request, pk):
             usagers, message_recherche = rechercher(**c)
         else:   # proposition automatique : n° allocataire, puis nom et prénom
             usagers = (rechercher(caf=d.numero_allocataire)[0] if d.numero_allocataire else []) \
-                or (rechercher(nom=d.nom, prenom=d.prenom)[0] if d.prenom else [])
+                or (rechercher(nom=d.nom, prenom=d.prenom)[0] if d.prenom else []) \
+                or (rechercher(nom=d.nom, adresse=d.adresse)[0] if d.adresse else [])
     return render(request, 'logement/expulsion_detail.html', {
         'd': d, 'etapes': d.etapes.select_related('saisi_par'), 'alertes': d.alertes(),
         'peut_ecrire': X.peut_ecrire(user, d), 'peut_affecter': X.peut_affecter(user),
         'peut_designer': X.peut_designer_referent(user, d), 'peut_prendre': X.peut_prendre(user, d),
         'peut_supprimer': X.peut_supprimer(user), 'peut_rattacher': peut_rattacher,
         'mds_liste': _mds_possibles(user) if X.peut_affecter(user) else [],
+        'mds_secteur': MDS.pour_adresse(d.code_postal, d.ville) if X.peut_affecter(user) and not d.mds_id else [],
         'referents': X.referents_possibles(d), 'etape_form': EtapeExpulsionForm(initial={'date': timezone.localdate()}),
         'usagers': [{'b': b, 'possible': X.peut_rattacher(user, d, b)} for b in usagers], 'c': c,
         'message_recherche': message_recherche, 'acces_fiche': bool(d.beneficiaire and d.beneficiaire.niveau_acces(user)), 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
@@ -254,6 +256,16 @@ def expulsion_action(request, pk):
 
 
 @login_required
+def expulsion_secteur(request):
+    """MDS dont le secteur couvre l'adresse (arrondissement à Marseille, ville ailleurs) : une proposition au SL."""
+    if not X.peut_affecter(request.user):
+        return HttpResponseForbidden(REFUS)
+    from django.http import JsonResponse
+    return JsonResponse({'mds': [{'pk': m.pk, 'nom': m.nom} for m in
+                                 MDS.pour_adresse(request.GET.get('cp', ''), request.GET.get('ville', ''))]})
+
+
+@login_required
 def expulsion_pdf(request, pk):
     d, voir = _dossier(request, pk)
     if not voir:
@@ -282,4 +294,4 @@ def dossiers_usager(beneficiaire, user):
 
 
 __all__ = ['expulsion_liste', 'expulsion_nouveau', 'expulsion_modifier', 'expulsion_detail', 'expulsion_action',
-           'expulsion_pdf', 'expulsion_stats']
+           'expulsion_pdf', 'expulsion_stats', 'expulsion_secteur']

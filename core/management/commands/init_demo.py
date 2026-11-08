@@ -308,6 +308,9 @@ class Command(BaseCommand):
         self.mds2, _ = MDS.objects.get_or_create(code_mds="MDSTEST2", defaults={
             "nom": "MDS TEST 02", "adresse": "5 avenue des Platanes", "code_postal": "13500", "ville": "Martigues",
             "telephone": "0442000000", "email": "mds.test2@example.com", "active": True, "date_ouverture": self.j})
+        # Secteurs fictifs : le Service Logement s'en sert pour proposer la MDS d'après l'adresse
+        MDS.objects.filter(pk=self.mds1.pk, communes=[]).update(communes=["Port-de-Bouc", "Saint-Mitre-les-Remparts"])
+        MDS.objects.filter(pk=self.mds2.pk, communes=[]).update(communes=["Martigues"])
         MDSReception.objects.get_or_create(mds=self.mds2, nom="Bureau 1", defaults={
             "capacite": 3, "type_salle": "BUREAU", "actif": True, "horaire_debut": time(9), "horaire_fin": time(17),
             "disponible_lundi": True, "disponible_mardi": True, "disponible_mercredi": True,

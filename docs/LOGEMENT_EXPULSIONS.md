@@ -20,17 +20,21 @@ Trois profils pour le SL, attribués dans *Comptes & droits* :
 
 - **Ce qui s'affiche :** l'identité de base, c'est-à-dire nom, prénom, nom de naissance, date et lieu de naissance, code usager CID et MDS de rattachement. Rien d'autre : ni adresse, ni dossier.
 - **Comment chercher :**
-  - par un identifiant exact (code usager CID ou n° CAF) ;
-  - ou par deux éléments parmi le nom (d'usage ou de naissance), le prénom et la date de naissance (nom + prénom, prénom + date de naissance…).
+  - par un identifiant exact, qui suffit seul : code usager CID, n° CAF ou téléphone (fixe ou portable, quelle que soit l'écriture : 06 12…, +33 6…) ;
+  - ou par deux éléments parmi le nom (d'usage ou de naissance), le prénom, la date de naissance et l'adresse, même incomplète (« rue Montmirail » sans le numéro). Exemples : nom + prénom, prénom + date de naissance, nom + adresse.
+- **Orthographes proches :** après les réponses exactes, CID propose les usagers dont le nom ou le prénom **se prononce pareil**. Par exemple, « Frederik » trouve Frédéric, Frederick et Frédérique. Ces réponses sont signalées « orthographe proche » : on vérifie avec la date de naissance.
+  - Comment ça marche : une clé phonétique française est calculée à l'enregistrement de l'usager (`core/phonetique.py`, champs indexés). La recherche reste rapide, et aucune extension PostgreSQL n'est nécessaire.
+  - Limite : seules les fautes « qui se prononcent pareil » sont rattrapées (k/c/qu, ph/f, lettres doublées, accents, finales muettes…). Une lettre oubliée ou inversée (« Fredreic ») ne l'est pas.
 
   On ne peut pas parcourir l'annuaire, et la recherche s'arrête à 20 réponses.
-- **Journal :** chaque recherche est inscrite au journal d'activité. Le n° CAF n'y est pas recopié.
+- **Journal :** chaque recherche est inscrite au journal d'activité. Le n° CAF et le téléphone n'y sont pas recopiés.
 - **Accès à la fiche :** un agent qui a déjà accès à la fiche peut l'ouvrir depuis l'annuaire.
 
 **Dans le dossier d'expulsion,** le SL saisit le **code usager CID**, ou CID retrouve l'usager par le **n° allocataire** s'il est unique.
 - Le dossier est alors rattaché à l'usager et part à **sa MDS** : nom et prénom se remplissent seuls.
 - Depuis le dossier, le SL peut aussi chercher l'usager (code, n° CAF, ou deux éléments parmi nom, prénom, date de naissance). CID propose d'office les correspondances sur le n° allocataire ou sur nom + prénom.
 - **Le SL ouvre et affecte les dossiers** : par arrondissement à Marseille, par ville ailleurs. Une MDS n'ouvre pas de dossier et ne change pas l'affectation.
+- **Secteur des MDS** : chaque MDS indique les villes, arrondissements ou codes postaux qu'elle couvre (fiche de la MDS → *Secteur*, par ex. « Port-de-Bouc, Saint-Mitre-les-Remparts », ou « 13001, 13002 » à Marseille ; « Marseille 3e » et les codes INSEE sont aussi reconnus). Pour un usager inconnu, CID **propose** la MDS du secteur d'après l'adresse de la fiche, dans le formulaire comme sur le dossier. Le SL confirme ou choisit une autre MDS : il garde le dernier mot.
 - **Usager inconnu de CID** : la MDS reçoit les informations minimales de la fiche du SL et fait la **mise à disposition** prévue par la procédure. Si le ménage est ensuite suivi et créé dans CID, la MDS peut rattacher le dossier à cet usager de sa MDS ; l'affectation, elle, reste au SL.
 
 Côté MDS :

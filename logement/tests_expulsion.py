@@ -225,3 +225,29 @@ class AnnuaireEtRattachementTests(_Base):
         self.assertContains(c.get("/beneficiaire/annuaire/?prenom=clara&date_naissance=1990-01-01"), "EX-1")
         self.assertEqual(c.get("/beneficiaire/annuaire/?prenom=clara").context["lignes"], [])
         self.assertEqual(c.get("/beneficiaire/annuaire/?date_naissance=1990-01-01").context["lignes"], [])
+
+    def test_annuaire_telephone_adresse_et_orthographes_proches(self):
+        self.b.telephone_mobile, self.b.prenom = "06 12 34 56 78", "Frédérique"
+        self.b.save()
+        c = self.client_de(self.sl_agent)
+        self.assertContains(c.get("/beneficiaire/annuaire/?telephone=%2B33612345678"), "EX-1")
+        self.assertContains(c.get("/beneficiaire/annuaire/?adresse=rue+C&prenom=Fr%C3%A9d%C3%A9rique"), "EX-1")
+        self.assertEqual(c.get("/beneficiaire/annuaire/?adresse=rue+C").context["lignes"], [])   # l'adresse seule ne suffit pas
+        r = c.get("/beneficiaire/annuaire/?nom=essai&prenom=frederik")
+        self.assertContains(r, "EX-1")
+        self.assertContains(r, "orthographe proche")
+
+    def test_secteur_propose_la_mds(self):
+        self.mds.communes = ["Port-de-Bouc", "13001"]
+        self.mds.save()
+        self.assertEqual(MDS.pour_adresse("13110", "PORT DE BOUC"), [self.mds])
+        self.assertEqual(MDS.pour_adresse("13001", "Marseille"), [self.mds])
+        self.assertEqual(MDS.pour_adresse("13002", "Marseille"), [])
+        self.nouveau(code_postal="13110", ville="Port-de-Bouc", nom="INCONNU", prenom="")
+        d = D.objects.get()
+        self.assertIsNone(d.mds)                         # le SL garde le dernier mot
+        r = self.client_de(self.sl_agent).get(f"/logement/expulsions/{d.pk}/")
+        self.assertEqual(r.context["mds_secteur"], [self.mds])
+        self.assertEqual(self.client_de(self.sl_agent).get(
+            "/logement/expulsions/secteur/?cp=13110&ville=Port-de-Bouc").json()["mds"][0]["pk"], self.mds.pk)
+        self.assertEqual(self.client_de(self.ts).get("/logement/expulsions/secteur/?cp=13110").status_code, 403)

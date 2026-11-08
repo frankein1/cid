@@ -73,3 +73,28 @@
   </form>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Le Service Logement garde le dernier mot : la MDS du secteur n'est proposée que si aucune n'est choisie.
+document.addEventListener('DOMContentLoaded', function () {
+  const cp = document.getElementById('id_code_postal'), ville = document.getElementById('id_ville'),
+        mds = document.getElementById('id_mds');
+  if (!cp || !ville || !mds || mds.options.length < 2) return;
+  const aide = document.createElement('p');
+  aide.className = 'mt-1 text-xs text-blue-800';
+  mds.parentNode.appendChild(aide);
+  function proposer() {
+    if (!cp.value && !ville.value) return;
+    fetch(`{% url 'logement:expulsion_secteur' %}?cp=${encodeURIComponent(cp.value)}&ville=${encodeURIComponent(ville.value)}`)
+      .then(r => r.json()).then(d => {
+        if (!d.mds.length) { aide.textContent = ''; return; }
+        aide.textContent = 'Secteur : ' + d.mds.map(m => m.nom).join(' ou ') + '.';
+        if (!mds.value) mds.value = d.mds[0].pk;
+      }).catch(() => {});
+  }
+  cp.addEventListener('change', proposer);
+  ville.addEventListener('change', proposer);
+});
+</script>
+{% endblock %}

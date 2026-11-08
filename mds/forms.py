@@ -35,11 +35,24 @@ class MDSForm(forms.ModelForm):
         ).distinct().order_by('last_name')
         self.fields['mds_territoire'].queryset = MDS.objects.filter(type_mds=MDS.TERRITOIRE).exclude(
             pk=self.instance.pk).order_by('nom')
+        self.fields['secteur'] = forms.CharField(
+            label="Secteur (villes, arrondissements)", required=False,
+            initial=", ".join(self.instance.communes or []),
+            widget=forms.Textarea(attrs={'rows': 2, 'placeholder': "ex. Port-de-Bouc, Saint-Mitre-les-Remparts – ou 13001, 13002"}),
+            help_text="Séparés par des virgules. Le Service Logement s'en sert pour proposer la MDS d'après l'adresse.")
     
         common_class = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500'
         for name, field in self.fields.items():
             if not isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({'class': common_class})
+
+    def save(self, commit=True):
+        m = super().save(commit=False)
+        if 'secteur' in self.data:     # absent du formulaire envoyé : le secteur existant est gardé
+            m.communes = [c.strip() for c in self.cleaned_data.get('secteur', '').replace('\n', ',').split(',') if c.strip()]
+        if commit:
+            m.save()
+        return m
 
 # ================================================================
 # 2. FORMULAIRE AJOUT AGENT (HYBRIDE : EXISTANT OU NOUVEAU)
