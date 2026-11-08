@@ -94,6 +94,8 @@ class DossierExpulsion(models.Model):
     ville = models.CharField(max_length=100, blank=True)
     # Propriétaire et bail
     proprietaire = models.TextField("Propriétaire (nom, adresse)", blank=True)
+    proprietaire_email = models.EmailField("Mail du bailleur", blank=True,
+                                           help_text="Pour lui envoyer le questionnaire par mail plutôt que par courrier.")
     type_bailleur = models.CharField(max_length=15, choices=BAILLEURS, blank=True)
     date_signature_bail = models.DateField("Date de signature du bail", null=True, blank=True)
     loyer_total = models.DecimalField("Montant mensuel total du loyer", max_digits=9, decimal_places=2, null=True, blank=True)
@@ -103,6 +105,8 @@ class DossierExpulsion(models.Model):
     dette_au = models.DateField("Dette arrêtée au", null=True, blank=True)
     # Observations CAF
     numero_allocataire = models.CharField("N° allocataire", max_length=20, blank=True)
+    numero_exploc = models.CharField("N° de dossier EXPLOC", max_length=30, blank=True,
+                                     help_text="Numéro de la procédure dans l'application de la préfecture.")
     observation_caf = models.CharField(max_length=20, choices=OBSERVATIONS_CAF, blank=True)
     retour_le = models.DateField("Retour le", null=True, blank=True)
     association = models.BooleanField(default=False)
@@ -119,6 +123,9 @@ class DossierExpulsion(models.Model):
     motif_cloture = models.CharField(max_length=15, choices=MOTIFS_CLOTURE, blank=True)
     date_cloture = models.DateField(null=True, blank=True)
     observations = models.TextField("Observations du Service Logement", blank=True)
+    questionnaire_bailleur_le = models.DateField("Questionnaire envoyé au bailleur le", null=True, blank=True)
+    questionnaire_retour_avant = models.DateField("Retour du questionnaire souhaité avant le", null=True, blank=True)
+    questionnaire_bailleur_retour = models.DateField("Questionnaire du bailleur reçu le", null=True, blank=True)
     historique = models.JSONField(default=list, blank=True)
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name='+')
@@ -213,7 +220,9 @@ class EtapeExpulsion(models.Model):
         ('SIGNALEMENT', "Signalement (CCAPEX, CAF, bailleur)", None),
         ('COMMANDEMENT_PAYER', "Commandement de payer", 42),        # délai pour régler : 6 semaines
         ('ASSIGNATION', "Assignation", None),
+        ('QUESTIONNAIRE_BAILLEUR', "Questionnaire envoyé au bailleur", None),
         ('DSF', "Diagnostic social et financier transmis", None),
+        ('CARENCE', "Bordereau de carence transmis", None),
         ('AUDIENCE', "Audience", None),
         ('JUGEMENT', "Jugement", None),
         ('SIGNIFICATION', "Signification du jugement", None),
@@ -251,3 +260,100 @@ class EtapeExpulsion(models.Model):
     def echeance_proposee(cls, type_etape, jour):
         d = cls.DELAIS.get(type_etape)
         return jour + timedelta(days=d) if d and jour else None
+
+
+# ---------------------------------------------------------------------------------------------------------- MDS
+class ConvocationExpulsion(models.Model):
+    """Rendez-vous proposé au ménage pour le diagnostic social et financier (DSF). Deux sans réponse → carence."""
+    DSF_1, DSF_2 = 'DSF_1', 'DSF_2'
+    TYPES = [(DSF_1, "1re convocation (DSF)"), (DSF_2, "2e et dernière convocation (DSF)")]
+    PREVUE, VENU, ABSENT, ANNULE = 'PREVUE', 'VENU', 'ABSENT', 'ANNULE'
+    STATUTS = [(PREVUE, "Prévue"), (VENU, "Venu"), (ABSENT, "Absent"), (ANNULE, "Annulée ou reportée")]
+
+    dossier = models.ForeignKey(DossierExpulsion, on_delete=models.CASCADE, related_name='convocations')
+    type_convocation = models.CharField(max_length=6, choices=TYPES, default=DSF_1)
+    date_courrier = models.DateField("Courrier du", default=timezone.localdate)
+    date_rdv = models.DateTimeField("Rendez-vous le")
+    lieu = models.CharField(max_length=255, blank=True, help_text="Vide : la MDS")
+    agent = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                              related_name='+', verbose_name="Reçu par")
+    rdv = models.ForeignKey('planning.CreneauRdv', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    statut = models.CharField(max_length=7, choices=STATUTS, default=PREVUE)
+    cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name='+')
+    cree_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Convocation (prévention des expulsions)"
+        verbose_name_plural = "Convocations (prévention des expulsions)"
+        ordering = ['date_rdv']
+
+    def __str__(self):
+        return f"{self.get_type_convocation_display()} – {timezone.localtime(self.date_rdv):%d/%m/%Y %H:%M}"
+
+
+class DiagnosticExpulsion(models.Model):
+    """Diagnostic social et financier (Cerfa 16227*01) ou, si le ménage ne s'est jamais présenté, bordereau de
+    carence. Visa du cadre en un clic, puis envoi par mail au tribunal et à la préfecture."""
+    DSF, CARENCE = 'DSF', 'CARENCE'
+    TYPES = [(DSF, "Diagnostic social et financier"), (CARENCE, "Bordereau de carence")]
+    BROUILLON, A_VISER, VISE, ENVOYE = 'BROUILLON', 'A_VISER', 'VISE', 'ENVOYE'
+    STATUTS = [(BROUILLON, "En rédaction"), (A_VISER, "Visa du cadre demandé"),
+               (VISE, "Visé par le cadre : prêt à envoyer"), (ENVOYE, "Transmis")]
+
+    dossier = models.ForeignKey(DossierExpulsion, on_delete=models.CASCADE, related_name='diagnostics')
+    type_document = models.CharField(max_length=8, choices=TYPES, default=DSF)
+    donnees = models.JSONField(default=dict, blank=True)
+    statut = models.CharField(max_length=10, choices=STATUTS, default=BROUILLON)
+    redacteur = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                  related_name='+')
+    cadre = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                              related_name='+', verbose_name="Visé par")
+    date_validation_cadre = models.DateTimeField("Visé le", null=True, blank=True)
+    date_envoi = models.DateField(null=True, blank=True)
+    historique = models.JSONField(default=list, blank=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+    tracer = DossierExpulsion.tracer
+
+    class Meta:
+        verbose_name = "Diagnostic social et financier (ou carence)"
+        verbose_name_plural = "Diagnostics sociaux et financiers (ou carences)"
+        ordering = ['-cree_le']
+
+    def __str__(self):
+        return f"{self.get_type_document_display()} – {self.dossier.numero}"
+
+    @property
+    def beneficiaire(self):
+        return self.dossier.beneficiaire
+
+    @property
+    def mds(self):
+        return self.dossier.mds
+
+
+class DestinataireExpulsion(models.Model):
+    """Adresses de transmission, réglées en administration : greffe du tribunal, préfecture (boîte de la
+    responsable), CCAPEX… Proposées à l'envoi du DSF ou du bordereau de carence."""
+    TRIBUNAL, PREFECTURE, AUTRE = 'TRIBUNAL', 'PREFECTURE', 'AUTRE'
+    TYPES = [(TRIBUNAL, "Greffe du tribunal"), (PREFECTURE, "Préfecture, sous-préfecture"), (AUTRE, "Autre")]
+    nom = models.CharField(max_length=150, help_text="Ex. « Tribunal judiciaire de … – greffe des contentieux de la protection »")
+    type_destinataire = models.CharField(max_length=10, choices=TYPES, default=TRIBUNAL)
+    email = models.EmailField()
+    mds = models.ManyToManyField('mds.MDS', blank=True, related_name='destinataires_expulsion',
+                                 help_text="MDS qui transmettent à cette adresse ; vide : toutes.")
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Destinataire des diagnostics (expulsions)"
+        verbose_name_plural = "Destinataires des diagnostics (expulsions)"
+        ordering = ['type_destinataire', 'nom']
+
+    def __str__(self):
+        return f"{self.nom} <{self.email}>"
+
+    @classmethod
+    def pour(cls, mds):
+        qs = cls.objects.filter(actif=True)
+        return [d for d in qs.prefetch_related('mds') if not d.mds.all() or mds in d.mds.all()]

@@ -31,6 +31,56 @@
         {% if decision %}<ul class="list-disc pl-5">{% for l in decision %}<li>{{ l }}</li>{% endfor %}</ul>{% else %}<p class="text-gray-400">Pas encore saisie.</p>{% endif %}
       </div>
 
+      {% if d.mds %}
+      <div class="bg-white rounded-xl border p-5 text-sm space-y-4" id="expulsion-dsf">
+        <h2 class="font-bold text-gray-800">Diagnostic social et financier</h2>
+        <div id="expulsion-convocations">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase mb-1">Convocations</h3>
+          <ul class="space-y-1">{% for c in convocations %}
+            <li class="flex flex-wrap items-center gap-2"><span><b>{{ c.date_rdv|date:"d/m/Y à H:i" }}</b> – {{ c.get_type_convocation_display }}{% if c.agent %}, avec {{ c.agent.get_full_name }}{% endif %}</span>
+              <span class="text-xs px-2 py-0.5 rounded {% if c.statut == 'VENU' %}bg-green-100 text-green-800{% elif c.statut == 'ABSENT' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700{% endif %}">{{ c.get_statut_display }}</span>
+              <a href="{% url 'logement:convocation_pdf' c.pk %}" target="_blank" class="text-xs text-blue-700 hover:underline"><i class="fas fa-file-pdf mr-1"></i>courrier</a>
+              {% if peut_ecrire and c.statut == 'PREVUE' %}<form method="post" action="{% url 'logement:convocation_noter' c.pk %}" class="inline-flex gap-1">{% csrf_token %}
+                <button name="statut" value="VENU" class="text-xs px-2 py-0.5 border rounded">Venu</button>
+                <button name="statut" value="ABSENT" class="text-xs px-2 py-0.5 border rounded">Absent</button>
+                <button name="statut" value="ANNULE" class="text-xs px-2 py-0.5 border rounded">Annulée</button></form>{% endif %}</li>
+            {% empty %}<li class="text-gray-400">Aucune convocation.</li>{% endfor %}</ul>
+          {% if peut_ecrire and d.statut == 'EN_COURS' and convocations|length < 2 %}
+          <form method="post" action="{% url 'logement:expulsion_convoquer' d.pk %}" class="mt-2 grid md:grid-cols-5 gap-2 items-end" id="convocation-ajout">{% csrf_token %}
+            <label class="block">Date<input type="date" name="date" class="w-full border rounded px-2 py-1"></label>
+            <label class="block">Heure<input type="time" name="heure" class="w-full border rounded px-2 py-1"></label>
+            <label class="block">Reçu par<select name="agent" class="w-full border rounded px-2 py-1">{% for r in referents %}<option value="{{ r.pk }}" {% if r.pk == d.referent_id or not d.referent_id and r.pk == user.pk %}selected{% endif %}>{{ r.get_full_name|default:r.username }}</option>{% endfor %}</select></label>
+            <label class="block">Lieu (si pas à la MDS)<input name="lieu" class="w-full border rounded px-2 py-1"></label>
+            <button class="px-3 py-1.5 bg-blue-600 text-white rounded"><i class="fas fa-envelope mr-1"></i>{% if convocations %}2e et dernière convocation{% else %}Convoquer{% endif %}</button>
+          </form>
+          <p class="text-xs text-gray-500 mt-1">Le rendez-vous est posé dans l'agenda de l'agent ; le courrier (texte modifiable en administration) s'ouvre pour l'impression.</p>{% endif %}
+        </div>
+        <div id="expulsion-bailleur">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase mb-1">Questionnaire au bailleur</h3>
+          {% if d.questionnaire_bailleur_le %}<p>Envoyé le {{ d.questionnaire_bailleur_le|date:"d/m/Y" }}{% if d.questionnaire_retour_avant %}, retour souhaité avant le {{ d.questionnaire_retour_avant|date:"d/m/Y" }}{% endif %}.
+            {% if d.questionnaire_bailleur_retour %}<b>Reçu le {{ d.questionnaire_bailleur_retour|date:"d/m/Y" }}.</b>{% elif peut_ecrire %}<form method="post" action="{% url 'logement:questionnaire_recu' d.pk %}" class="inline">{% csrf_token %}<button class="text-xs px-2 py-0.5 border rounded">Retour reçu</button></form>{% endif %}</p>{% endif %}
+          {% if peut_ecrire and d.statut == 'EN_COURS' %}
+          <form method="post" action="{% url 'logement:questionnaire_preparer' d.pk %}" class="mt-1 grid md:grid-cols-3 gap-2 items-end">{% csrf_token %}
+            <label class="block">Retour souhaité avant le<input type="date" name="retour" value="{{ retour_propose|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>
+            <label class="block">Mail du bailleur (facultatif)<input type="email" name="email" value="{{ d.proprietaire_email }}" class="w-full border rounded px-2 py-1"></label>
+            <button class="px-3 py-1.5 border rounded"><i class="fas fa-paper-plane mr-1"></i>{% if d.questionnaire_bailleur_le %}Renvoyer{% else %}Préparer l'envoi{% endif %}</button>
+          </form>{% endif %}
+        </div>
+        <div id="expulsion-diagnostics">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase mb-1">Diagnostic ou bordereau de carence</h3>
+          <ul class="space-y-1">{% for g in diagnostics %}
+            <li><a href="{% url 'logement:diagnostic_detail' g.pk %}" class="text-blue-700 hover:underline">{{ g.get_type_document_display }}</a> – <span class="text-gray-600">{{ g.get_statut_display }}{% if g.date_envoi %} le {{ g.date_envoi|date:"d/m/Y" }}{% endif %}</span></li>
+            {% empty %}<li class="text-gray-400">Pas encore établi.</li>{% endfor %}</ul>
+          {% if peut_ecrire and d.statut == 'EN_COURS' %}
+          <form method="post" action="{% url 'logement:diagnostic_nouveau' d.pk %}" class="mt-2 flex flex-wrap gap-2">{% csrf_token %}
+            <button name="type_document" value="DSF" class="px-3 py-1.5 bg-red-600 text-white rounded"><i class="fas fa-file-signature mr-1"></i>Diagnostic social et financier</button>
+            <button name="type_document" value="CARENCE" class="px-3 py-1.5 {% if carence_possible %}bg-amber-500 text-white{% else %}border{% endif %} rounded" title="Le ménage ne s'est présenté à aucune des deux convocations">Bordereau de carence</button>
+          </form>
+          {% if carence_possible %}<p class="text-xs text-amber-800 mt-1">Deux convocations sans réponse : le bordereau de carence remplace le diagnostic.</p>{% endif %}{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       {% if caf %}
       <details class="bg-white rounded-xl border p-5 text-sm"><summary class="font-bold text-gray-800 cursor-pointer">Fiche CAF</summary>
         {% for rubrique, lignes in caf.items %}<h3 class="mt-3 text-xs font-semibold text-gray-500 uppercase">{{ rubrique }}</h3>
@@ -134,4 +184,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if courrier %}<script>window.addEventListener('load', function () { window.open("{% url 'logement:convocation_pdf' courrier %}", "_blank"); });</script>{% endif %}
 {% endblock %}

@@ -31,6 +31,7 @@
       <h2 class="md:col-span-3 font-bold text-gray-800">Propriétaire et logement</h2>
       <label class="block md:col-span-2">Propriétaire (nom, adresse){{ form.proprietaire }}</label>
       <label class="block">Type de bailleur{{ form.type_bailleur }}</label>
+      <label class="block">Mail du bailleur{{ form.proprietaire_email }}</label>
       <label class="block">Date de signature du bail{{ form.date_signature_bail }}</label>
       <label class="block">Loyer mensuel total{{ form.loyer_total }}</label>
       <label class="block">Loyer{{ form.loyer }}</label>
@@ -41,6 +42,7 @@
     <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-4 text-sm">
       <h2 class="md:col-span-3 font-bold text-gray-800">Observations CAF</h2>
       <label class="block">N° allocataire{{ form.numero_allocataire }}</label>
+      <label class="block">N° de dossier EXPLOC{{ form.numero_exploc }}</label>
       <label class="block">Observation{{ form.observation_caf }}</label>
       <label class="block">Retour le{{ form.retour_le }}</label>
       <label class="flex items-center">{{ form.association }}Association</label>

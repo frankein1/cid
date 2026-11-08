@@ -10,8 +10,9 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .models import (CommissionPublicsPrioritaires, DemandeFSL, DemandeLogementSocial, DossierExpulsion, EnvoiDossier,
-                     EtapeExpulsion, FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
+from .models import (CommissionPublicsPrioritaires, ConvocationExpulsion, DemandeFSL, DemandeLogementSocial,
+                     DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
+                     FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 
 
 @admin.register(GestionnaireFSL)
@@ -77,7 +78,12 @@ class FormulaireOfficielAdmin(admin.ModelAdmin):
         from .services.pdf_officiel import remplir
         from .services.placements_fsl import placements, valeurs
         obj = FormulaireOfficiel.objects.get(pk=pk)
-        pdf, rapport = remplir(bytes(obj.contenu), placements(obj.code), valeurs(demande_fictive(), obj.code), obj.reglages)
+        if obj.code.startswith('EXP_'):
+            from .services.expulsion_apercu import apercu
+            pdf, rapport = apercu(obj)
+        else:
+            pdf, rapport = remplir(bytes(obj.contenu), placements(obj.code), valeurs(demande_fictive(), obj.code),
+                                   obj.reglages)
         manque = [k for k, v in rapport.items() if v not in ('ok', 'vide')]
         if manque:
             messages.warning(request, f"Champs non placés : {', '.join(manque)}")
@@ -141,3 +147,24 @@ class DossierExpulsionAdmin(admin.ModelAdmin):
     search_fields = ['numero', 'nom', 'prenom', 'numero_allocataire']
     raw_id_fields = ['beneficiaire', 'referent', 'cree_par']
     inlines = [EtapeExpulsionInline]
+
+
+@admin.register(DestinataireExpulsion)
+class DestinataireExpulsionAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'type_destinataire', 'email', 'actif']
+    list_filter = ['type_destinataire', 'actif']
+    filter_horizontal = ['mds']
+
+
+@admin.register(DiagnosticExpulsion)
+class DiagnosticExpulsionAdmin(admin.ModelAdmin):
+    list_display = ['dossier', 'type_document', 'statut', 'redacteur', 'cadre', 'date_envoi']
+    list_filter = ['type_document', 'statut']
+    raw_id_fields = ['dossier', 'redacteur', 'cadre']
+
+
+@admin.register(ConvocationExpulsion)
+class ConvocationExpulsionAdmin(admin.ModelAdmin):
+    list_display = ['dossier', 'type_convocation', 'date_rdv', 'agent', 'statut']
+    list_filter = ['type_convocation', 'statut']
+    raw_id_fields = ['dossier', 'agent', 'rdv', 'cree_par']

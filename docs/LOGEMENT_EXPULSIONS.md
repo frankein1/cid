@@ -99,15 +99,51 @@ Chaque étape a une date, une échéance éventuelle et un commentaire.
 
 Le SL et son secrétariat voient tout le Département ; une MDS voit ses dossiers. **Aucun chiffre par agent.**
 
+## Travail de la MDS : convocations, questionnaire bailleur, DSF, carence (2e PR)
+
+Bloc **Diagnostic social et financier** du dossier (`logement/views/v_expulsion_mds.py`, `services/expulsion_mds.py`).
+
+**Convocations** (`ConvocationExpulsion`)
+- Une 1re convocation, puis une 2e et dernière. Chacune pose un rendez-vous (`planning.CreneauRdv`, réservé, hors permanence) dans l'agenda de l'agent qui reçoit.
+- Venu, absent ou annulé : la convocation et le rendez-vous suivent.
+- Courriers `EXP_CONVOCATION_DSF` et `EXP_CONVOCATION_DSF_2`, textes génériques modifiables dans *Admin → Modèles de courriers*. Ils sont signés par le responsable de la MDS. On n'y met jamais le mail d'un agent, seulement le téléphone de la MDS.
+
+**Questionnaire au bailleur**
+- On fixe une date de retour (CID propose 15 jours, au plus tard une semaine avant l'audience) et le mail du bailleur s'il est connu.
+- Le courrier `EXP_QUESTIONNAIRE_BAILLEUR` et le questionnaire partent par « Envoi par mail » ou « Imprimer pour envoi ».
+- Le questionnaire local se dépose en administration (code `EXP_QUEST_BAILLEUR`) ; sinon CID produit une trame aux mêmes rubriques, avec l'adresse de la MDS.
+- « Retour reçu » note la date de réception.
+
+**DSF** (`DiagnosticExpulsion`, type DSF)
+- Le Cerfa 16227*01 (formulaire national) est **livré avec CID** (`logement/formulaires/`). Une version plus récente peut être déposée en administration (code `EXP_DSF`).
+- Les données sont saisies dans CID sous les noms des champs du Cerfa (`services/dsf.py`), puis le Cerfa est rempli :
+  - la notice (5 pages) est retirée ;
+  - totaux, reste à vivre et taux d'effort sont calculés par CID ;
+  - les dates et l'heure « en peigne » sont gérées ;
+  - les cases cochées sont retrouvées même quand leurs noms sont mal encodés dans le PDF.
+- **Prérempli** depuis :
+  - le dossier : identité, adresse, dette, loyer et charges, bail, type de bailleur, audience ;
+  - la fiche usager et sa composition familiale ;
+  - le budget du foyer (mêmes rubriques que le Cerfa) ;
+  - le FSL maintien et la demande de logement social ;
+  - le rédacteur (mail de la MDS).
+
+**Bordereau de carence** (`DiagnosticExpulsion`, type CARENCE)
+- Il est proposé quand deux convocations sont restées sans réponse.
+- CID reprend les dates non honorées, le **n° EXPLOC** (nouveau champ du dossier) et le n° allocataire.
+- Formulaire local en administration (code `EXP_CARENCE`), sinon trame CID.
+
+**Visa et transmission**
+- Visa du cadre en un clic, comme pour le FSL : « Visa initiales le jj/mm/aaaa » en bas du document, et signature numérisée si elle est validée.
+- Une modification après le visa annule le visa.
+- L'envoi est réservé aux documents visés. Les adresses du greffe et de la préfecture se règlent dans *Admin → Destinataires des diagnostics*, éventuellement par MDS.
+- Le Service Logement est prévenu ; l'étape « DSF transmis » ou « Bordereau de carence transmis » s'ajoute au journal.
+- Chaque envoi par mail compte dans le papier économisé.
+
 ## Suite
 
-- **PR B** :
-  - convocations avec suivi « venu / pas venu » ;
-  - DSF prérempli (Cerfa) et questionnaire bailleur, ou bordereau de carence ;
-  - visa du cadre en un clic ;
-  - envoi par mail au greffe du tribunal (adresse paramétrable) et à la préfecture (boîte de la responsable). Fini le circuit imprimer, signer, scanner.
 - **PR C** :
-  - CAPEX locale (Martigues / Port-de-Bouc) et commission préfectorale : séances, ordre du jour, avis ;
+  - CAPEX locale (Martigues / Port-de-Bouc) et commission préfectorale : séances, ordre du jour, convocations, actualisation, avis ;
   - statistiques complétées ;
   - passerelles vers FSL maintien, COPP et logement social.
 

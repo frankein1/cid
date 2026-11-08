@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'fsl-acces', 'copp', 'expulsions', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -32,7 +32,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
-             ("Logement", ['fsl-acces', 'copp', 'expulsions']),
+             ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -98,6 +98,7 @@ TITRES = {
     'copp': ("Demande de logement et commission des publics prioritaires", "Travailleurs sociaux de la MDS"),
     'fsl-acces': ("FSL : accès, maintien, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
     'expulsions': ("Prévention des expulsions", "Service Logement, agents et cadres de MDS"),
+    'expulsions-dsf': ("Expulsions : convocations, diagnostic social et financier, carence", "Travailleurs sociaux et cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
 }
@@ -1357,14 +1358,49 @@ page('expulsions', qui="Service Logement du Département (agents administratifs,
              "Clore un dossier demande un motif (dette apurée ou plan respecté, désistement, relogement, départ, expulsion…) ; il peut être rouvert.",
              "Le <b>secteur</b> de chaque MDS (villes, arrondissements ou codes postaux) se règle sur la fiche de la MDS : c'est lui qui permet de proposer la MDS d'après l'adresse.",
              "Les coordonnées du Service Logement imprimées sur la fiche PDF se règlent en administration (paramètre SERVICE_LOGEMENT_COORDONNEES).",
-             "À venir : convocations, diagnostic social et financier prérempli, envoi au tribunal et à la préfecture, CAPEX locale."],
+             "À venir : CAPEX locale et commission préfectorale (ordre du jour, actualisation, avis)."],
      ensuite=['fsl-acces', 'copp'])
+
+page('expulsions-dsf', qui="Travailleurs sociaux de la MDS chargée du dossier ; cadre de la MDS pour le visa",
+     ou="Dossier de prévention des expulsions → bloc « Diagnostic social et financier »", duree="30 minutes",
+     intro="Avant l'audience, la MDS convoque le ménage, interroge le bailleur et établit le diagnostic social et financier (DSF) sur le Cerfa 16227*01, prérempli par CID. Le cadre vise en un clic, puis le DSF part par mail au greffe du tribunal et à la préfecture : plus besoin d'imprimer, signer et scanner. Si le ménage ne vient à aucune des deux convocations, le bordereau de carence remplace le DSF.",
+     etapes=[
+         ("Convoquer le ménage", [fig('expulsions-dsf', '01', "Les convocations du dossier."),
+                                  fig('expulsions-dsf', '02', "Le courrier de convocation, prêt à imprimer.")],
+          ["Bloc <b>Convocations</b> : date, heure, agent qui reçoit (et lieu si ce n'est pas la MDS), puis <span class=\"clic\">Convoquer</span>. Le rendez-vous est posé dans l'agenda de l'agent et le courrier s'ouvre pour l'impression.",
+           "Après le rendez-vous, cliquez sur <span class=\"clic\">Venu</span>, <span class=\"clic\">Absent</span> ou <span class=\"clic\">Annulée</span> : l'agenda suit.",
+           "Sans réponse, la <b>2e et dernière convocation</b> rappelle la première date et prévient que l'absence sera signalée au juge."],
+          [("astuce", "Le texte des courriers se modifie en administration : Modèles de courriers → Logement – prévention des expulsions.")]),
+         ("Interroger le bailleur", [fig('expulsions-dsf', '03', "Le questionnaire au bailleur.")],
+          ["Bloc <b>Questionnaire au bailleur</b> : choisissez la date de retour (CID propose 15 jours, au plus tard une semaine avant l'audience) et, si vous l'avez, le mail du bailleur, puis <span class=\"clic\">Préparer l'envoi</span>.",
+           "Le courrier et le questionnaire partent par mail ou s'impriment pour un envoi postal. À réception, cliquez sur <span class=\"clic\">Retour reçu</span> et rangez la réponse dans la GED."], []),
+         ("Établir le diagnostic", [fig('expulsions-dsf', '04', "Les rubriques du Cerfa, préremplies."),
+                                    fig('expulsions-dsf', '05', "Le bilan : ressources, charges, reste à vivre, taux d'effort.")],
+          ["<span class=\"clic\">Diagnostic social et financier</span> : les rubriques suivent le Cerfa 16227*01. CID a déjà repris l'identité, l'adresse, la composition du ménage, les ressources et charges du budget du foyer, la dette et le loyer du dossier, le FSL et la demande de logement social, l'audience et vos coordonnées (le mail de la MDS, jamais le vôtre).",
+           "Complétez les causes de l'impayé, la reprise du loyer, la capacité de remboursement, le logement, l'aide juridictionnelle et l'<b>évaluation sociale</b>. Le bilan (reste à vivre, taux d'effort) se recalcule à chaque enregistrement."],
+          [("attention", "Modifier un diagnostic déjà visé annule le visa : il faut le redemander.")]),
+         ("Le Cerfa rempli", [fig('expulsions-dsf', '06', "Le Cerfa 16227*01 tel qu'il part au tribunal.")],
+          ["<span class=\"clic\">Cerfa rempli (PDF)</span> : les cinq pages du formulaire, sans la notice ; les totaux sont calculés par CID. Le PDF reste modifiable par le greffe s'il le faut."], []),
+         ("Le visa du cadre", [fig('expulsions-dsf', '07', "Un clic pour viser.")],
+          ["Le travailleur social clique sur <span class=\"clic\">Demander le visa du cadre</span> : le responsable de la MDS est prévenu dans CID.",
+           "Le cadre ouvre le document et clique sur <span class=\"clic\">Viser</span> : ses initiales et la date s'inscrivent en bas du Cerfa (et sa signature numérisée, si elle a été validée en administration)."], []),
+         ("Transmettre", [fig('expulsions-dsf', '08', "Greffe et préfecture proposés.")],
+          ["<span class=\"clic\">Envoi par mail</span> : le greffe du tribunal et la préfecture réglés en administration sont proposés ; l'objet est prérempli ; les pièces de la GED se cochent. Le Service Logement est prévenu et l'étape s'ajoute à la procédure.",
+           "<span class=\"clic\">Imprimer pour envoi</span> seulement si le destinataire l'exige. Chaque envoi par mail compte dans le papier économisé."], []),
+         ("Le bordereau de carence", [fig('expulsions-dsf', '09', "Deux convocations sans réponse.")],
+          ["Si le ménage n'est venu à aucune des deux convocations, le bouton <span class=\"clic\">Bordereau de carence</span> passe en orange. CID reprend les dates des convocations non honorées, le n° EXPLOC et le n° allocataire du dossier.",
+           "Même circuit que le DSF : visa du cadre, puis envoi par mail ou impression."], []),
+     ],
+     savoir=["Le Cerfa 16227*01 est livré avec CID ; une version plus récente se dépose en administration (Formulaires officiels, code EXP_DSF). Le questionnaire bailleur et le bordereau de carence de votre département se déposent de la même façon ; sinon CID imprime une trame aux mêmes rubriques.",
+             "Les adresses du greffe et de la préfecture se règlent en administration : Logement → Destinataires des diagnostics.",
+             "Le ménage n'est pas encore connu de CID ? Le diagnostic et le bordereau se font quand même, à partir de la fiche du Service Logement."],
+     ensuite=['expulsions', 'fsl-acces'])
 
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
                   ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – convocations et diagnostic social et financier (expulsions)"])
+                   "Logement – CAPEX locale et commission préfectorale (expulsions)"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

@@ -1053,7 +1053,13 @@ class Command(BaseCommand):
         anciens = D.objects.filter(numero__startswith="DEMO-EXP-")
         Message.objects.filter(content_type=ContentType.objects.get_for_model(D),
                                object_id__in=list(anciens.values_list("pk", flat=True))).delete()
-        anciens.delete()
+        from logement.models import ConvocationExpulsion, DestinataireExpulsion, DiagnosticExpulsion
+        from planning.models import CreneauRdv
+        CreneauRdv.objects.filter(pk__in=list(ConvocationExpulsion.objects.filter(dossier__in=anciens)
+                                             .values_list("rdv_id", flat=True))).delete()
+        _effacer_envois(DiagnosticExpulsion.objects.filter(dossier__in=anciens))
+        _effacer_envois(D.objects.filter(pk__in=list(anciens.values_list("pk", flat=True))))
+        DestinataireExpulsion.objects.filter(nom__endswith="(fictif)").delete()
         sl, j = self.u("agent_sl1"), self.j
 
         def dossier(n, nom, prenom, mds, **champs):
@@ -1102,7 +1108,6 @@ class Command(BaseCommand):
                     decision={"present": True, "suspension_clause": True, "accord_delai": True, "duree_delai": "24",
                               "delais_paiement": True})
         etape(d, "ASSIGNATION", 120)
-        etape(d, "DSF", 75, "Diagnostic social et financier transmis au tribunal (fictif).", par=self.ts)
         etape(d, "AUDIENCE", 60)
         etape(d, "JUGEMENT", 60, "Clause résolutoire suspendue, 24 mois pour apurer la dette.")
         etape(d, "PLAN_APUREMENT", 40, "Reprise du loyer courant + 90 € par mois (fictif).", par=self.ts)
@@ -1127,7 +1132,62 @@ class Command(BaseCommand):
                     date_audience=j - timedelta(days=250), date_decision=j - timedelta(days=250),
                     decision={"present": True, "rejet": True})
         etape(d, "JUGEMENT", 250, "Dette réglée avec l'aide du FSL maintien (fictif) : demande rejetée.")
+        self.expulsions_mds(D)
         self.stdout.write("✅ Prévention des expulsions : 6 dossiers fictifs (Service Logement et MDS)")
+
+    def expulsions_mds(self, D):
+        """Côté MDS : convocations, questionnaire bailleur, DSF à viser, carence, DSF transmis."""
+        from datetime import datetime, time
+        from logement.models import ConvocationExpulsion as C, DestinataireExpulsion, DiagnosticExpulsion as G
+        from logement.models import EnvoiDossier
+        from logement.services import envoi, expulsion_mds as M
+        j = self.j
+        greffe = DestinataireExpulsion.objects.create(nom="Greffe du tribunal judiciaire (fictif)",
+                                                      email="greffe.tribunal@example.com")
+        DestinataireExpulsion.objects.create(nom="Sous-préfecture – prévention des expulsions (fictif)",
+                                             type_destinataire=DestinataireExpulsion.PREFECTURE,
+                                             email="expulsions.prefecture@example.com")
+        greffe.mds.add(self.mds1)
+
+        def quand(jours, h=10):
+            return timezone.make_aware(datetime.combine(j + timedelta(days=jours), time(h, 0)))
+        # PEREZ Laura : venue à la 1re convocation, questionnaire envoyé, DSF à viser par chef_mds1
+        d = D.objects.get(numero="DEMO-EXP-001")
+        c = M.convoquer(d, self.ts, quand(-6), agent=self.ts)
+        M.noter(c, C.VENU, self.ts)
+        d.questionnaire_retour_avant, d.proprietaire_email = j + timedelta(days=8), "gestion@sci-des-pins.example.com"
+        d.save()
+        M.questionnaire_envoye(d, self.ts, d.questionnaire_retour_avant)
+        g = M.nouveau_diagnostic(d, self.ts, G.DSF)
+        g.donnees.update({
+            "Situation professionnelle": "Agent d'entretien à temps partiel (fictif)", "Salaire_net_1": "980",
+            "Allocations_logement_1": "210", "Autres_allocations_1": "170", "Mutuelle": "35", "Abonnements": "40",
+            "présence garantie": "Non", "Perte emploi": True, "Difficulté gestion": True,
+            "reprise de loyer": "Oui partiellement", "Oui partiellement à raison de": "450",
+            "capacite de rembourser": "oui", "montant": "80", "mois": "36", "FSL": "en cours de constitution",
+            "assurance habitation": "oui", "rester": "oui", "locataire participe DSF": "oui",
+            "Locataire informé": True, "Locataire informé 1": True, "aide juridictionnelle": "demandée",
+            "CCAPEX": "non",
+            "Evaluation sociale": ("Situation fictive de démonstration. Mme PEREZ vit seule avec sa fille de 4 ans. "
+                                   "Une baisse de son temps de travail a entraîné les premiers impayés. Elle a repris "
+                                   "partiellement le paiement du loyer et prépare avec la MDS une demande de FSL "
+                                   "maintien ; elle souhaite rester dans le logement et propose un échéancier.")})
+        g.save()
+        M.demander_visa(g, self.ts)
+        # BERNARD Inès : deux convocations sans réponse → bordereau de carence possible
+        d = D.objects.get(numero="DEMO-EXP-002")
+        for jours in (-20, -9):
+            M.noter(M.convoquer(d, self.ts, quand(jours, 14), agent=self.ts), C.ABSENT, self.ts)
+        # LEGRAND Thomas : DSF visé et transmis au greffe par mail (avant l'audience)
+        d = D.objects.get(numero="DEMO-EXP-003")
+        g = M.nouveau_diagnostic(d, self.ts, G.DSF)
+        g.donnees["Evaluation sociale"] = "Situation fictive de démonstration : diagnostic transmis avant l'audience."
+        g.save()
+        M.viser(g, self.cadre)
+        M.marquer_transmis(g, self.ts, "MAIL")
+        G.objects.filter(pk=g.pk).update(date_envoi=j - timedelta(days=75))
+        d.etapes.filter(type_etape="DSF", saisi_par=self.ts, date=j).update(date=j - timedelta(days=75))
+        envoi.enregistrer(g, "DSF", d.mds, EnvoiDossier.MAIL, 5)
 
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""
