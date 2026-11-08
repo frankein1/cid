@@ -1,0 +1,42 @@
+<!-- /templates/logement/logement_social_form.html -->
+{% extends "base.html" %}
+{% block title %}Demande de logement — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+{% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2 mb-1"><i class="fas fa-house text-amber-600 mr-2"></i>Demande de logement social</h1>
+  <p class="text-sm text-gray-600 mb-5">Ce que la MDS sait de la demande (numéro unique, DALO, mutation, Al'In). Repris dans la saisine de la commission des publics prioritaires et le diagnostic social et financier.</p>
+  <form method="post" class="space-y-5" id="logement-social-form">{% csrf_token %}
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
+      <label>Numéro unique (NUD)<input name="nud" value="{{ dl.nud }}" class="{{ inp }}"></label>
+      <label>Date de création<input type="date" name="date_creation" value="{{ dl.date_creation|date:'Y-m-d' }}" class="{{ inp }}"></label>
+      <label>Dernier renouvellement<input type="date" name="date_renouvellement" value="{{ dl.date_renouvellement|date:'Y-m-d' }}" class="{{ inp }}"></label>
+      {% if dl.date_creation %}<p class="md:col-span-3 text-xs text-gray-500">Ancienneté : {{ dl.anciennete }} ; prochain renouvellement : {{ dl.prochain_renouvellement|date:"d/m/Y" }}.</p>{% endif %}
+    </section>
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
+      <label class="md:col-span-3"><input type="checkbox" name="dalo_depose" {% if dl.dalo_depose %}checked{% endif %}> Recours DALO déposé</label>
+      <label>Déposé le<input type="date" name="dalo_date" value="{{ dl.dalo_date|date:'Y-m-d' }}" class="{{ inp }}"></label>
+      <label>État<select name="dalo_etat" class="{{ inp }}"><option value="">—</option>{% for c, l in etats %}<option value="{{ c }}" {% if dl.dalo_etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <span></span>
+      <label class="md:col-span-3"><input type="checkbox" name="mutation_deposee" {% if dl.mutation_deposee %}checked{% endif %}> Demande de mutation déposée</label>
+      <label>Déposée le<input type="date" name="mutation_date" value="{{ dl.mutation_date|date:'Y-m-d' }}" class="{{ inp }}"></label>
+      <label>État<select name="mutation_etat" class="{{ inp }}"><option value="">—</option>{% for c, l in etats %}<option value="{{ c }}" {% if dl.mutation_etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <span></span>
+      <label class="md:col-span-3"><input type="checkbox" name="alin_inscrit" {% if dl.alin_inscrit %}checked{% endif %}> Inscrit(e) sur Al'In</label>
+      <label>Inscrit(e) le<input type="date" name="alin_date" value="{{ dl.alin_date|date:'Y-m-d' }}" class="{{ inp }}"></label>
+      <label>État<select name="alin_etat" class="{{ inp }}"><option value="">—</option>{% for c, l in etats_alin %}<option value="{{ c }}" {% if dl.alin_etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    </section>
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
+      <div class="md:col-span-3 font-semibold">Logement souhaité</div>
+      {% for c in communes %}<label>Commune {{ forloop.counter }}<input name="communes" value="{{ c }}" class="{{ inp }}"></label>{% endfor %}
+      <label>Typologie<input name="typologie_souhaitee" value="{{ dl.typologie_souhaitee }}" class="{{ inp }}" placeholder="T3"></label>
+      <label>Étage<input name="etage_souhaite" value="{{ dl.etage_souhaite }}" class="{{ inp }}"></label>
+      <label class="self-end"><input type="checkbox" name="pmr" {% if dl.pmr %}checked{% endif %}> Logement pour personne à mobilité réduite</label>
+      <label class="md:col-span-3">Précisions<textarea name="precisions" rows="3" class="{{ inp }}">{{ dl.precisions }}</textarea></label>
+    </section>
+    <div class="flex justify-end"><button class="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-save mr-1"></i>Enregistrer</button></div>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}

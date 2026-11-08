@@ -57,3 +57,43 @@ class DemiJourneeReceptionAdmin(admin.ModelAdmin):
     list_display = ("agent", "mds", "jour_semaine", "type_demi_journee", "actif")
     list_filter = ("mds", "agent", "jour_semaine", "actif")
     list_editable = ("actif",)
+
+
+
+from django import forms  # noqa: E402
+
+from .models import SignatureAgent  # noqa: E402
+
+
+class SignatureAgentForm(forms.ModelForm):
+    fichier = forms.ImageField(required=False, label="Image de la signature (PNG ou JPG, fond blanc)")
+
+    class Meta:
+        model = SignatureAgent
+        fields = ['user', 'validee']
+
+    def clean_fichier(self):
+        f = self.cleaned_data.get('fichier')
+        if f and f.size > 1024 * 1024:
+            raise forms.ValidationError("Image trop lourde (1 Mo au plus).")
+        if not f and not (self.instance.pk and self.instance.image):
+            raise forms.ValidationError("Déposez l'image de la signature.")
+        return f
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        f = self.cleaned_data.get('fichier')
+        if f:
+            obj.image, obj.type_image = f.read(), getattr(f, 'content_type', 'image/png') or 'image/png'
+        if commit:
+            obj.save()
+        return obj
+
+
+@admin.register(SignatureAgent)
+class SignatureAgentAdmin(admin.ModelAdmin):
+    """Signature numérisée d'un cadre : apposée avec son visa seulement une fois « usage validé »."""
+    form = SignatureAgentForm
+    list_display = ['user', 'validee', 'date_depot']
+    list_filter = ['validee']
+    autocomplete_fields = ['user']

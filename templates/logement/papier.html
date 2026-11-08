@@ -1,0 +1,25 @@
+<!-- /templates/logement/papier.html -->
+{% extends "base.html" %}
+{% block title %}Papier économisé{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-5" id="papier">
+  <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-leaf text-green-600 mr-2"></i>Papier économisé</h1>
+  <form method="get" class="text-sm"><label>Périmètre <select name="mds" onchange="this.form.submit()" class="border rounded px-2 py-1">
+    <option value="">Tout le Département</option>{% for m in liste_mds %}<option value="{{ m.pk }}" {% if mds_choisie and mds_choisie.pk == m.pk %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select></label></form>
+  <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+    <div class="text-4xl font-bold text-green-800">{{ stats.pages_evitees }}</div>
+    <div class="text-green-900 mt-1">pages économisées par rapport aux anciens usages{% if mds_choisie %} – {{ mds_choisie.nom }}{% endif %}</div>
+    <div class="text-sm text-green-800 mt-2">soit environ {{ ramettes }} ramette{{ ramettes|pluralize }} de 500 feuilles, {{ kilos }} kg de papier</div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-4 text-sm">
+    <div class="bg-white border rounded-xl p-4"><div class="text-gray-500">Dossiers envoyés par mail</div><div class="text-2xl font-bold">{{ stats.envois_mail }}</div></div>
+    <div class="bg-white border rounded-xl p-4"><div class="text-gray-500">Dossiers imprimés pour un envoi papier</div><div class="text-2xl font-bold">{{ stats.envois_imprimes }}</div><div class="text-xs text-gray-500">{{ stats.pages_imprimees }} pages</div></div>
+  </div>
+  {% if stats.par_nature %}<div class="bg-white border rounded-xl p-4 text-sm"><h2 class="font-bold mb-2">Par type de dossier</h2>
+    <table class="w-full"><tr class="text-xs text-gray-500 text-left"><th>Dossier</th><th>Envoi</th><th class="text-right">Dossiers</th><th class="text-right">Pages</th></tr>
+    {% for l in stats.par_nature %}<tr class="border-t"><td>{{ l.nature }}</td><td>{% if l.mode == 'MAIL' %}par mail{% else %}imprimé{% endif %}</td><td class="text-right">{{ l.n }}</td><td class="text-right">{{ l.pages }}</td></tr>{% endfor %}</table></div>{% endif %}
+  {% if not mds_choisie and stats.par_mds %}<div class="bg-white border rounded-xl p-4 text-sm"><h2 class="font-bold mb-2">Par MDS (pages économisées)</h2>
+    <table class="w-full">{% for l in stats.par_mds %}<tr class="border-t"><td>{{ l.mds__nom|default:"—" }}</td><td class="text-right">{{ l.pages }}</td></tr>{% endfor %}</table></div>{% endif %}
+  <p class="text-xs text-gray-500">Chaque dossier envoyé par mail depuis CID compte ses pages (un A3 vaut deux A4) et celles des pièces jointes. Statistique collective : elle n'est jamais calculée par agent.</p>
+</div>
+{% endblock %}

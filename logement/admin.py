@@ -10,7 +10,8 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .models import DemandeFSL, FormulaireOfficiel, GestionnaireFSL
+from .models import (CommissionPublicsPrioritaires, DemandeFSL, DemandeLogementSocial, EnvoiDossier,
+                     FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 
 
 @admin.register(GestionnaireFSL)
@@ -92,3 +93,36 @@ class DemandeFSLAdmin(admin.ModelAdmin):
     list_filter = ['statut', 'type_aide', 'mds', 'gestionnaire']
     search_fields = ['beneficiaire__nom', 'beneficiaire__code_interne']
     raw_id_fields = ['beneficiaire', 'cadre', 'cree_par']
+
+
+@admin.register(CommissionPublicsPrioritaires)
+class CommissionPublicsPrioritairesAdmin(admin.ModelAdmin):
+    list_display = ['date', 'date_limite_depot', 'nom', 'territoire', 'lieu', 'horaire']
+    list_filter = ['territoire']
+    filter_horizontal = ['mds']
+
+
+@admin.register(SaisineCOPP)
+class SaisineCOPPAdmin(admin.ModelAdmin):
+    list_display = ['beneficiaire', 'mds', 'commission', 'statut', 'date_creation']
+    list_filter = ['statut', 'mds']
+    raw_id_fields = ['beneficiaire', 'cree_par', 'pieces']
+
+
+@admin.register(DemandeLogementSocial)
+class DemandeLogementSocialAdmin(admin.ModelAdmin):
+    list_display = ['beneficiaire', 'nud', 'date_creation', 'dalo_depose', 'dalo_etat']
+    raw_id_fields = ['beneficiaire']
+
+
+@admin.register(EnvoiDossier)
+class EnvoiDossierAdmin(admin.ModelAdmin):
+    """Lecture seule : le compteur de papier évité se remplit tout seul."""
+    list_display = ['date', 'nature', 'mds', 'mode', 'pages']
+    list_filter = ['mode', 'nature', 'mds']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

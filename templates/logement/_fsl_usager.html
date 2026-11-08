@@ -1,16 +1,33 @@
 <!-- /templates/logement/_fsl_usager.html -->
-{# Encart « Logement – FSL » de la fiche usager (dossier complet) #}
+{# Encart « Logement » de la fiche usager (dossier complet) : demande de logement social, FSL, commission des publics prioritaires #}
 <div id="fsl-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex justify-between items-center gap-2">
-        <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Logement – FSL</h2>
-        {% if peut_creer_fsl %}<form method="post" action="{% url 'logement:fsl_nouvelle' beneficiaire.code_interne %}" class="flex flex-wrap gap-1">{% csrf_token %}
-            <button name="type_aide" value="ACCES" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL accès</button>
-            <button name="type_aide" value="MAINTIEN" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL maintien</button>
-            <button name="type_aide" value="ENERGIE" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL énergie</button>
-            <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>{% endif %}
+        <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Logement</h2>
+        {% if peut_creer_fsl %}<a href="{% url 'logement:logement_social' beneficiaire.code_interne %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-pen mr-1"></i>Demande de logement</a>{% endif %}
     </div>
-    {% if demandes_fsl %}<ul class="mt-3 text-sm divide-y">{% for f in demandes_fsl %}
-        <li class="py-2 flex justify-between gap-2"><a href="{% url 'logement:fsl_detail' f.pk %}" class="text-blue-700 hover:underline">{{ f.get_type_aide_display }} – {{ f.date_creation|date:"d/m/Y" }}</a>
-            <span class="text-xs text-gray-600">{{ f.get_statut_display }}</span></li>{% endfor %}</ul>
-    {% else %}<p class="text-sm text-gray-400 mt-2">Aucune demande.</p>{% endif %}
+    {% with dl=beneficiaire.demande_logement %}
+    <div id="demande-logement" class="mt-2 text-sm">
+    {% if dl and dl.nud %}
+        <p>NUD <b>{{ dl.nud }}</b>{% if dl.date_creation %} du {{ dl.date_creation|date:"d/m/Y" }} ({{ dl.anciennete }}){% endif %}
+        {% if dl.alerte_renouvellement %}<span class="ml-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">à renouveler avant le {{ dl.prochain_renouvellement|date:"d/m/Y" }}</span>{% endif %}</p>
+        <p class="text-xs text-gray-600">{% if dl.dalo_depose %}DALO déposé{% if dl.dalo_date %} le {{ dl.dalo_date|date:"d/m/Y" }}{% endif %}{% if dl.dalo_etat %} ({{ dl.get_dalo_etat_display|lower }}){% endif %}{% else %}Pas de DALO{% endif %}
+            {% if dl.mutation_deposee %} · mutation {{ dl.get_mutation_etat_display|lower|default:"déposée" }}{% endif %}{% if dl.alin_inscrit %} · Al'In {{ dl.get_alin_etat_display|lower|default:"inscrit(e)" }}{% endif %}
+            {% if dl.communes_souhaitees %} · souhaits : {{ dl.communes_souhaitees|join:", " }}{% endif %}</p>
+    {% else %}<p class="text-gray-400">Pas de demande de logement social renseignée.</p>{% endif %}
+    </div>
+    {% endwith %}
+    {% if peut_creer_fsl %}<form method="post" action="{% url 'logement:fsl_nouvelle' beneficiaire.code_interne %}" class="flex flex-wrap gap-1 mt-3">{% csrf_token %}
+        <span class="text-xs text-gray-500 self-center mr-1">FSL :</span>
+        <button name="type_aide" value="ACCES" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL accès</button>
+        <button name="type_aide" value="MAINTIEN" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL maintien</button>
+        <button name="type_aide" value="ENERGIE" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL énergie</button>
+        <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>
+    <form method="post" action="{% url 'logement:copp_nouvelle' beneficiaire.code_interne %}" class="mt-1" id="copp-nouvelle">{% csrf_token %}
+        <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>{% endif %}
+    {% if demandes_fsl or saisines_copp %}<ul class="mt-3 text-sm divide-y">
+        {% for f in demandes_fsl %}<li class="py-2 flex justify-between gap-2"><a href="{% url 'logement:fsl_detail' f.pk %}" class="text-blue-700 hover:underline">FSL – {{ f.get_type_aide_display }} – {{ f.date_creation|date:"d/m/Y" }}</a>
+            <span class="text-xs text-gray-600">{{ f.get_statut_display }}</span></li>{% endfor %}
+        {% for s in saisines_copp %}<li class="py-2 flex justify-between gap-2"><a href="{% url 'logement:copp_detail' s.pk %}" class="text-blue-700 hover:underline">COPP – {{ s.date_creation|date:"d/m/Y" }}{% if s.commission %} (séance du {{ s.commission.date|date:"d/m/Y" }}){% endif %}</a>
+            <span class="text-xs text-gray-600">{{ s.get_statut_display }}</span></li>{% endfor %}</ul>
+    {% endif %}
 </div>

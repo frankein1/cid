@@ -20,6 +20,7 @@ POLICE = "Helvetica"
 
 
 def _motif(ancre):
+    """Le libellé tel qu'il est imprimé, en tolérant les coupures que Word glisse dans les mots (« soci al »)."""
     morceaux = []
     for c in ancre:
         if c in "'’":
@@ -27,7 +28,7 @@ def _motif(ancre):
         elif c == ' ':
             morceaux.append(r"\s*")
         else:
-            morceaux.append(re.escape(c))
+            morceaux.append(re.escape(c) + r" ?")
     return "".join(morceaux)
 
 

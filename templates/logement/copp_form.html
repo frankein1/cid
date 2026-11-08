@@ -1,0 +1,105 @@
+<!-- /templates/logement/copp_form.html -->
+{% extends "base.html" %}
+{% block title %}Saisine COPP — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+{% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <a href="{% url 'logement:copp_detail' s.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Saisine de {{ b.prenom }} {{ b.nom }}</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2"><i class="fas fa-people-roof text-amber-600 mr-2"></i>Commission des publics prioritaires – fiche de saisine</h1>
+  <p class="text-sm text-gray-600 mt-1 mb-5">Préremplie le {{ dn.date_saisie }} ({{ dn.origine }}). Tout se corrige ici ; le PDF reprend ces rubriques sur la fiche officielle.</p>
+  <form method="post" enctype="multipart/form-data" class="space-y-5" id="copp-form">{% csrf_token %}
+  <section class="bg-white rounded-xl border p-5 grid md:grid-cols-4 gap-3 text-sm">
+    <label class="md:col-span-2">Séance<select name="commission" class="{{ inp }}"><option value="">— à préciser —</option>{% for c in commissions %}<option value="{{ c.pk }}" {% if s.commission_id == c.pk %}selected{% endif %}>{{ c.date|date:"d/m/Y" }} – dépôt avant le {{ c.date_limite_depot|date:"d/m/Y" }}{% if c.lieu %} – {{ c.lieu }}{% endif %}</option>{% endfor %}</select></label>
+    <label>Date de saisie<input name="date_saisie" value="{{ dn.date_saisie }}" class="{{ inp }}"></label><span></span>
+    <label>Référent<input name="ref_nom" value="{{ dn.referent.nom }}" class="{{ inp }}"></label>
+    <label>Téléphone<input name="ref_telephone" value="{{ dn.referent.telephone }}" class="{{ inp }}"></label>
+    <label>Courriel<input name="ref_courriel" value="{{ dn.referent.courriel }}" class="{{ inp }}"></label>
+    <label>Structure<input name="ref_structure" value="{{ dn.referent.structure }}" class="{{ inp }}"></label>
+    <label>NUD<input name="nud" value="{{ dn.nud }}" class="{{ inp }}"></label>
+    <label>Date de création<input name="date_creation_nud" value="{{ dn.date_creation_nud }}" class="{{ inp }}"></label>
+    <label>Ancienneté<input name="anciennete" value="{{ dn.anciennete }}" class="{{ inp }}"></label>
+  </section>
+  <section class="bg-white rounded-xl border p-5 text-sm">
+    <h2 class="font-bold text-gray-800 mb-3">Ménage</h2>
+    <table class="w-full"><tr class="text-xs text-gray-500"><th></th><th>Demandeur</th><th>Co-demandeur ou conjoint</th></tr>
+    <tr><td class="pr-2">Nom</td><td><input name="demandeur_nom" value="{{ dn.demandeur.nom }}" class="{{ inp }}"></td><td><input name="conjoint_nom" value="{{ dn.conjoint.nom }}" class="{{ inp }}"></td></tr>
+    <tr><td>Prénom</td><td><input name="demandeur_prenom" value="{{ dn.demandeur.prenom }}" class="{{ inp }}"></td><td><input name="conjoint_prenom" value="{{ dn.conjoint.prenom }}" class="{{ inp }}"></td></tr>
+    <tr><td>Date de naissance</td><td><input name="demandeur_date_naissance" value="{{ dn.demandeur.date_naissance }}" class="{{ inp }}"></td><td><input name="conjoint_date_naissance" value="{{ dn.conjoint.date_naissance }}" class="{{ inp }}"></td></tr>
+    <tr><td>Téléphone</td><td><input name="demandeur_telephone" value="{{ dn.demandeur.telephone }}" class="{{ inp }}"></td><td><input name="conjoint_telephone" value="{{ dn.conjoint.telephone }}" class="{{ inp }}"></td></tr>
+    <tr><td>Courriel</td><td><input name="demandeur_courriel" value="{{ dn.demandeur.courriel }}" class="{{ inp }}"></td><td><input name="conjoint_courriel" value="{{ dn.conjoint.courriel }}" class="{{ inp }}"></td></tr>
+    <tr><td>N° de sécurité sociale</td><td><input name="demandeur_nir" value="{{ dn.demandeur.nir }}" class="{{ inp }}"></td><td><input name="conjoint_nir" value="{{ dn.conjoint.nir }}" class="{{ inp }}"></td></tr></table>
+    <div class="flex flex-wrap gap-3 mt-3">Situation de famille :{% for c, l in situations %}<label><input type="radio" name="situation_famille" value="{{ c }}" {% if dn.situation_famille == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <p class="text-xs text-gray-500 mt-2">Enfants du foyer (réseau familial) : {{ dn.enfants|default:"aucun" }}</p>
+    <div class="grid md:grid-cols-4 gap-3 mt-2">
+      <label>Garçons (nombre)<input name="garcons" value="{{ dn.garcons }}" class="{{ inp }}"></label>
+      <label>Années de naissance<input name="annees_garcons" value="{{ dn.annees_garcons }}" class="{{ inp }}"></label>
+      <label>Filles (nombre)<input name="filles" value="{{ dn.filles }}" class="{{ inp }}"></label>
+      <label>Années de naissance<input name="annees_filles" value="{{ dn.annees_filles }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Modalités de garde<input name="modalites_garde" value="{{ dn.modalites_garde }}" class="{{ inp }}"></label>
+      <label>Naissance attendue<input name="naissance_attendue" value="{{ dn.naissance_attendue }}" class="{{ inp }}"></label></div>
+  </section>
+  <section class="bg-white rounded-xl border p-5 text-sm">
+    <h2 class="font-bold text-gray-800 mb-3">Logement actuel et ressources</h2>
+    <div class="flex flex-wrap gap-3 mb-2">{% for c, l in logements %}<label><input type="radio" name="logement_actuel" value="{{ c }}" {% if dn.logement_actuel == c %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <div class="grid md:grid-cols-4 gap-3">
+      <label class="md:col-span-2">Adresse<input name="adresse" value="{{ dn.adresse }}" class="{{ inp }}"></label>
+      <label>Typologie<input name="typologie" value="{{ dn.typologie }}" class="{{ inp }}"></label>
+      <label>Bailleur<input name="bailleur" value="{{ dn.bailleur }}" class="{{ inp }}"></label>
+      <label>Loyer (€)<input name="loyer" value="{{ dn.loyer }}" class="{{ inp }}"></label>
+      <label>Charges (€)<input name="charges" value="{{ dn.charges }}" class="{{ inp }}"></label>
+      <label>APL (€)<input name="apl" value="{{ dn.apl }}" class="{{ inp }}"></label><span></span>
+      <label>Taux d'effort<input name="taux_effort" value="{{ dn.taux_effort }}" class="{{ inp }}"></label>
+      <label>Reste à vivre par personne et par jour<input name="reste_a_vivre" value="{{ dn.reste_a_vivre }}" class="{{ inp }}"></label><span></span><span></span>
+      <label class="md:col-span-2">Ressources du demandeur (nature)<input name="nature_ressources_demandeur" value="{{ dn.nature_ressources_demandeur }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Ressources du conjoint (nature)<input name="nature_ressources_conjoint" value="{{ dn.nature_ressources_conjoint }}" class="{{ inp }}"></label>
+      <label>Montant demandeur (€)<input name="montant_ressources_demandeur" value="{{ dn.montant_ressources_demandeur }}" class="{{ inp }}"></label><span></span>
+      <label>Montant conjoint (€)<input name="montant_ressources_conjoint" value="{{ dn.montant_ressources_conjoint }}" class="{{ inp }}"></label><span></span>
+      <label>RFR N-1 demandeur<input name="rfr_n1_demandeur" value="{{ dn.rfr_n1_demandeur }}" class="{{ inp }}"></label>
+      <label>RFR N-2 demandeur<input name="rfr_n2_demandeur" value="{{ dn.rfr_n2_demandeur }}" class="{{ inp }}"></label>
+      <label>RFR N-1 conjoint<input name="rfr_n1_conjoint" value="{{ dn.rfr_n1_conjoint }}" class="{{ inp }}"></label>
+      <label>RFR N-2 conjoint<input name="rfr_n2_conjoint" value="{{ dn.rfr_n2_conjoint }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Plafonds de ressources (PLAI, PLUS…)<input name="plafonds_ressources" value="{{ dn.plafonds_ressources }}" class="{{ inp }}"></label>
+      <div>Endettement<div class="flex gap-3 mt-1"><label><input type="radio" name="endettement" value="OUI" {% if dn.endettement == "OUI" %}checked{% endif %}> oui</label><label><input type="radio" name="endettement" value="NON" {% if dn.endettement == "NON" %}checked{% endif %}> non</label></div></div>
+      <label>Montant des dettes (€)<input name="montant_dettes" value="{{ dn.montant_dettes }}" class="{{ inp }}"></label>
+      <label class="md:col-span-4">Démarches effectuées<input name="demarches_dettes" value="{{ dn.demarches_dettes }}" class="{{ inp }}"></label></div>
+  </section>
+  <section class="bg-white rounded-xl border p-5 text-sm">
+    <h2 class="font-bold text-gray-800 mb-3">DALO, mutation, Al'In et logement souhaité</h2>
+    <div class="grid md:grid-cols-3 gap-3">
+    {% with b1=dn.dalo b2=dn.mutation b3=dn.alin %}
+      <div><div class="font-semibold">DALO</div><select name="dalo_depose" class="{{ inp }}"><option value="">—</option><option value="OUI" {% if b1.depose == "OUI" %}selected{% endif %}>Déposé</option><option value="NON" {% if b1.depose == "NON" %}selected{% endif %}>Non déposé</option></select>
+        <input name="dalo_date" value="{{ b1.date }}" placeholder="date de dépôt" class="{{ inp }} mt-1"><select name="dalo_etat" class="{{ inp }} mt-1"><option value="">—</option>{% for c, l in etats %}<option value="{{ c }}" {% if b1.etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div><div class="font-semibold">Mutation</div><select name="mutation_depose" class="{{ inp }}"><option value="">—</option><option value="OUI" {% if b2.depose == "OUI" %}selected{% endif %}>Déposée</option><option value="NON" {% if b2.depose == "NON" %}selected{% endif %}>Non déposée</option></select>
+        <input name="mutation_date" value="{{ b2.date }}" placeholder="date de dépôt" class="{{ inp }} mt-1"><select name="mutation_etat" class="{{ inp }} mt-1"><option value="">—</option>{% for c, l in etats %}<option value="{{ c }}" {% if b2.etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div><div class="font-semibold">Al'In</div><select name="alin_depose" class="{{ inp }}"><option value="">—</option><option value="OUI" {% if b3.depose == "OUI" %}selected{% endif %}>Inscrit(e)</option><option value="NON" {% if b3.depose == "NON" %}selected{% endif %}>Non inscrit(e)</option></select>
+        <input name="alin_date" value="{{ b3.date }}" placeholder="date d'inscription" class="{{ inp }} mt-1"><select name="alin_etat" class="{{ inp }} mt-1"><option value="">—</option>{% for c, l in etats_alin %}<option value="{{ c }}" {% if b3.etat == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    {% endwith %}
+    {% for c in communes %}<label>Commune souhaitée {{ forloop.counter }}<input name="communes" value="{{ c }}" class="{{ inp }}"></label>{% endfor %}
+      <label>Typologie souhaitée<input name="typologie_souhaitee" value="{{ dn.typologie_souhaitee }}" class="{{ inp }}"></label>
+      <label>Étage<input name="etage" value="{{ dn.etage }}" class="{{ inp }}"></label>
+      <div>Logement PMR<div class="flex gap-3 mt-1"><label><input type="radio" name="pmr" value="OUI" {% if dn.pmr == "OUI" %}checked{% endif %}> oui</label><label><input type="radio" name="pmr" value="NON" {% if dn.pmr == "NON" %}checked{% endif %}> non</label></div></div>
+      <label class="md:col-span-3">Précisions complémentaires<textarea name="precisions" rows="2" class="{{ inp }}">{{ dn.precisions }}</textarea></label>
+      <label class="md:col-span-3">Mesure d'accompagnement actuelle, durée, échéance<input name="mesure_accompagnement" value="{{ dn.mesure_accompagnement }}" list="mesures" class="{{ inp }}"></label>
+      <datalist id="mesures">{% for m in mesures %}<option value="{{ m }}">{% endfor %}</datalist>
+    </div>
+  </section>
+  <section class="bg-white rounded-xl border p-5 text-sm" id="motifs">
+    <h2 class="font-bold text-gray-800 mb-3">Motif de la demande</h2>
+    <div class="grid md:grid-cols-2 gap-1">{% for c, l in motifs %}<label><input type="checkbox" name="motif_{{ c }}" {% if c in s.motifs %}checked{% endif %}> {{ l }}</label>{% endfor %}</div>
+    <label class="block mt-2">Autre situation : préciser<input name="motif_autre" value="{{ s.motif_autre }}" class="{{ inp }}"></label>
+    <label class="block mt-3 font-semibold">Rapport social<textarea name="rapport_social" rows="10" class="{{ inp }} font-normal" placeholder="Situation, démarches engagées, motif de la demande…">{{ s.rapport_social }}</textarea></label>
+  </section>
+  <section class="bg-white rounded-xl border p-5 text-sm" id="pieces">
+    <h2 class="font-bold text-gray-800 mb-1">Justificatifs</h2>
+    <p class="text-xs text-gray-500 mb-2">Cochez les pièces de la GED à joindre, ou ajoutez-en (mise à jour, remplacement) : elles sont déposées dans la GED de l'usager.</p>
+    {% for d in docs %}<label class="block"><input type="checkbox" name="pieces" value="{{ d.pk }}" {% if d.pk in joints %}checked{% endif %}> {{ d.titre }} <span class="text-xs text-gray-500">({{ d.type_document.nom|default:"document" }}, {{ d.date_creation|date:"d/m/Y" }})</span></label>
+    {% empty %}<p class="text-gray-400">Aucune pièce dans la GED de l'usager.</p>{% endfor %}
+    <div class="mt-3 space-y-2" id="nouvelles-pieces">{% for i in "123" %}
+      <div class="flex gap-2"><select name="type_piece" class="border rounded px-2 py-1">{% for c, l, _ in types_piece %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select><input type="file" name="nouvelles_pieces" class="text-sm"></div>{% endfor %}</div>
+  </section>
+  <div class="flex justify-end gap-3"><a href="{% url 'logement:copp_detail' s.pk %}" class="px-4 py-2 border rounded-lg text-sm">Annuler</a>
+    <button class="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-save mr-1"></i>Enregistrer</button></div>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}

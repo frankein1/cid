@@ -1,0 +1,42 @@
+<!-- /templates/logement/copp_detail.html -->
+{% extends "base.html" %}
+{% block title %}Saisine COPP — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+{% if imprimer %}<script>window.addEventListener('load', () => window.open("{% url 'logement:copp_pdf' s.pk %}", "_blank"));</script>{% endif %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="copp-detail">
+  <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-people-roof text-amber-600 mr-2"></i>Commission des publics prioritaires</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if s.statut == 'EXAMINEE' %}bg-green-100 text-green-800{% elif s.statut == 'ABANDONNEE' %}bg-gray-200 text-gray-700{% else %}bg-blue-100 text-blue-800{% endif %}">{{ s.get_statut_display }}</span>
+  </div>
+  {% if alerte %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ alerte }}</div>{% endif %}
+  <div class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-4 text-sm">
+    <div><div class="text-xs text-gray-500">Séance</div>{% if s.commission %}{{ s.commission.date|date:"d/m/Y" }}{% if s.commission.horaire %} à {{ s.commission.horaire }}{% endif %}<div class="text-xs text-gray-500">dépôt avant le {{ s.commission.date_limite_depot|date:"d/m/Y" }}{% if s.commission.lieu %} – {{ s.commission.lieu }}{% endif %}</div>{% else %}à préciser{% endif %}</div>
+    <div><div class="text-xs text-gray-500">Demande de logement</div>NUD {{ dn.nud|default:"—" }}{% if dn.anciennete %} ({{ dn.anciennete }}){% endif %}</div>
+    <div><div class="text-xs text-gray-500">Motif</div>{{ s.libelles_motifs|join:" ; "|default:"à indiquer" }}</div>
+  </div>
+  <div class="bg-white rounded-xl border p-5 text-sm"><h2 class="font-bold text-gray-800 mb-2">Rapport social</h2>{{ s.rapport_social|linebreaksbr|default:"<span class='text-gray-400'>à rédiger</span>" }}</div>
+  <div class="bg-white rounded-xl border p-5 text-sm"><h2 class="font-bold text-gray-800 mb-2">Justificatifs joints</h2>
+    <ul>{% for p in pieces %}<li><a href="{% url 'ged:download_document' p.pk %}" class="text-blue-700 hover:underline">{{ p.titre }}</a> <span class="text-xs text-gray-500">({{ p.type_document.nom|default:"document" }})</span></li>{% empty %}<li class="text-gray-400">Aucun.</li>{% endfor %}</ul></div>
+  <div class="bg-white rounded-xl border p-5 space-y-3 text-sm" id="copp-actions">
+    <div class="flex flex-wrap gap-2">
+      {% if peut_ecrire and s.statut == 'BROUILLON' %}<a href="{% url 'logement:copp_modifier' s.pk %}" class="px-3 py-2 border rounded-lg"><i class="fas fa-pen mr-1"></i>Compléter</a>{% endif %}
+      <a href="{% url 'logement:copp_pdf' s.pk %}" target="_blank" class="px-3 py-2 bg-amber-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Fiche de saisine PDF</a>
+      {% if peut_ecrire and s.statut == 'BROUILLON' %}
+      <a href="{% url 'logement:envoi_dossier' 'copp' s.pk %}" class="px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-envelope mr-1"></i>Envoi par mail</a>
+      <a href="{% url 'logement:envoi_dossier' 'copp' s.pk %}#imprimer" class="px-3 py-2 border rounded-lg"><i class="fas fa-print mr-1"></i>Imprimer pour envoi</a>{% endif %}
+    </div>
+    {% if peut_ecrire and s.statut == 'ENVOYEE' %}
+    <form method="post" action="{% url 'logement:copp_action' s.pk %}" class="space-y-2">{% csrf_token %}
+      <label class="block">Décision ou préconisation de la commission<textarea name="decision" rows="3" class="w-full border rounded p-2"></textarea></label>
+      <label>Le<input type="date" name="date_decision" class="border rounded px-2 py-1 ml-1"></label>
+      <button name="action" value="decision" class="px-3 py-2 bg-green-600 text-white rounded">Enregistrer</button></form>{% endif %}
+    {% if s.decision %}<p><b>Décision ou préconisation{% if s.date_decision %} du {{ s.date_decision|date:"d/m/Y" }}{% endif %} :</b> {{ s.decision|linebreaksbr }}</p>{% endif %}
+    {% if peut_ecrire and s.statut == 'BROUILLON' or peut_ecrire and s.statut == 'ENVOYEE' %}
+    <details><summary class="cursor-pointer text-gray-500">Abandonner la saisine</summary>
+      <form method="post" action="{% url 'logement:copp_action' s.pk %}" class="mt-2 flex gap-2">{% csrf_token %}<input name="motif" placeholder="Motif" class="border rounded px-2 py-1 flex-1"><button name="action" value="abandonner" class="px-3 py-1 border rounded">Abandonner</button></form></details>{% endif %}
+  </div>
+  <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Historique</h2>
+    <ul class="text-sm space-y-1">{% for h in s.historique reversed %}<li><span class="text-gray-500">{{ h.date }}</span> – {{ h.action }} <span class="text-gray-500">({{ h.qui }})</span>{% if h.detail %} : {{ h.detail }}{% endif %}</li>{% endfor %}</ul></div>
+</div>
+{% endblock %}

@@ -133,11 +133,11 @@ def placements(code):
         c = [{'cle': 'date_saisie', 'ancre': 'Date de Saisie', 'x_abs': XD},
              {'cle': 'ref_nom', 'ancre': 'Nom-Prenom', 'x_abs': XD},
              {'cle': 'ref_telephone', 'ancre': 'Téléphone', 'x_max': 100, 'top_max': 235, 'x_abs': XD},
-             {'cle': 'ref_courriel', 'ancre': 'Courriel', 'x_min': 200, 'top_max': 235, 'x_abs': 330, 'taille': 8},
+             {'cle': 'ref_courriel', 'ancre': 'Courriel', 'x_min': 200, 'top_max': 235, 'x_abs': 406, 'taille': 8},
              {'cle': 'ref_structure', 'ancre': 'Structure', 'x_abs': XD, 'taille': 8},
-             {'cle': 'nud', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 140, 'taille': 8},
-             {'cle': 'date_creation_nud', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 300, 'taille': 8},
-             {'cle': 'anciennete', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 440, 'taille': 8}]
+             {'cle': 'nud', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 140, 'dy': 8, 'taille': 8},
+             {'cle': 'date_creation_nud', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 322, 'dy': 8, 'taille': 8},
+             {'cle': 'anciennete', 'ancre': 'DEMANDE DE LOGEMENT', 'x_abs': 470, 'dy': 8, 'taille': 8}]
         for prefixe, filtre, x in (('dem', {'x_max': 100}, XD), ('conj', {'x_min': 200}, XC)):
             for cle, ancre in (('nom', 'Nom'), ('prenom', 'Prénom'), ('date_naissance', 'Date de'),
                                ('telephone', 'Téléphone'), ('courriel', 'Courriel'), ('nir', 'Numero S.S')):
@@ -156,9 +156,9 @@ def placements(code):
         for code, ancre in (('PARC_SOCIAL', 'Parc Social'), ('PARC_PRIVE', 'arc Privé'), ('HEBERGEMENT', 'Hébergement'),
                             ('SDF', 'Sans Domicile fixe'), ('AUTRE', 'Autre')):
             c.append({'cle': f'lg_{code}', 'ancre': ancre, 'top_min': 440, 'top_max': 460, 'mode': 'case',
-                      'dx': -1 if code != 'PARC_PRIVE' else -6})
-        c += [{'cle': 'adresse', 'ancre': 'Adresse', 'top_min': 465, 'x_max': 100, 'mode': 'dessous', 'dy': -3,
-               'taille': 5, 'largeur': 75, 'lignes': 2, 'interligne': 6},
+                      'dx': -1 if code != 'PARC_PRIVE' else 2})
+        c += [{'cle': 'adresse', 'ancre': 'Adresse', 'top_min': 465, 'x_max': 100, 'mode': 'dessous', 'dy': -9,
+               'taille': 5, 'largeur': 90, 'lignes': 2, 'interligne': 6},
               {'cle': 'typologie', 'ancre': 'Typologie :', 'top_min': 465, 'dx': 2, 'taille': 8},
               {'cle': 'loyer', 'ancre': 'Loyer :', 'dx': 2, 'taille': 8},
               {'cle': 'charges', 'ancre': 'Charges :', 'dx': 2, 'taille': 8},

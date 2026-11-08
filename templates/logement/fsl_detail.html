@@ -2,6 +2,7 @@
 {% extends "base.html" %}
 {% block title %}Demande FSL — {{ b.nom }} {{ b.prenom }}{% endblock %}
 {% block content %}
+{% if request.GET.imprimer %}<script>window.addEventListener('load', () => window.open("{% url 'logement:fsl_pdf' demande.pk %}", "_blank"));</script>{% endif %}
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="fsl-detail">
   <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
   <div class="flex flex-wrap items-center justify-between gap-3">
@@ -47,19 +48,23 @@
   <div class="bg-white rounded-xl border p-5 space-y-4" id="fsl-actions"><h2 class="font-bold text-gray-800">Suite</h2>
     {% if demande.statut == 'A_VALIDER_CADRE' %}
       {% if est_cadre %}<form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="space-y-2">{% csrf_token %}
-        <label class="text-sm block">Note explicative du cadre (jointe au dossier)<textarea name="note_cadre" rows="4" class="w-full border rounded p-2 text-sm">{{ demande.note_cadre }}</textarea></label>
-        <button name="action" value="cadre_accepte" class="px-3 py-2 bg-green-600 text-white rounded text-sm">Accepter l'envoi avec cette note</button>
+        {% if demande.pieces_manquantes %}<label class="text-sm block">Note explicative du cadre (pièces manquantes : obligatoire, jointe au dossier)<textarea name="note_cadre" rows="4" class="w-full border rounded p-2 text-sm">{{ demande.note_cadre }}</textarea></label>
+        {% else %}<p class="text-sm text-gray-600">Dossier complet. Votre visa (initiales, date{% if signature_validee %}, signature numérisée{% endif %}) sera apposé sur le dossier.</p>
+        <label class="text-sm block">Commentaire pour l'agent (facultatif)<textarea name="note_cadre" rows="2" class="w-full border rounded p-2 text-sm"></textarea></label>{% endif %}
+        <button name="action" value="cadre_accepte" class="px-3 py-2 bg-green-600 text-white rounded text-sm"><i class="fas fa-signature mr-1"></i>Viser la demande</button>
         <button name="action" value="cadre_renvoie" class="px-3 py-2 border rounded text-sm">Renvoyer à l'agent</button></form>
-      {% else %}<p class="text-sm text-gray-600">En attente de l'avis du cadre.</p>{% endif %}
+      {% else %}<p class="text-sm text-gray-600">En attente du visa du cadre.</p>{% endif %}
     {% endif %}
     {% if peut_ecrire %}
-      {% if demande.statut == 'BROUILLON' or demande.statut == 'AJOURNEE' or demande.statut == 'VALIDEE_CADRE' %}
-        {% if demande.pieces_manquantes and demande.statut != 'VALIDEE_CADRE' %}
-        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}">{% csrf_token %}<button name="action" value="demander_cadre" class="px-3 py-2 border border-amber-500 text-amber-800 rounded text-sm">Pièces manquantes : demander l'avis du cadre</button></form>
-        {% endif %}
-        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="flex flex-wrap items-end gap-2">{% csrf_token %}
-          <label class="text-sm">Envoyée le<input type="date" name="date_envoi" class="block border rounded px-2 py-1"></label>
-          <button name="action" value="envoyer" class="px-3 py-2 bg-blue-600 text-white rounded text-sm">{% if demande.statut == 'AJOURNEE' %}Renvoyer (pièces complétées){% else %}Enregistrer l'envoi{% endif %}</button></form>
+      {% if demande.statut == 'BROUILLON' or demande.statut == 'AJOURNEE' %}
+        <form method="post" action="{% url 'logement:fsl_action' demande.pk %}">{% csrf_token %}<button name="action" value="demander_cadre" class="px-3 py-2 border border-amber-500 text-amber-800 rounded text-sm"><i class="fas fa-signature mr-1"></i>Demander le visa du cadre{% if demande.pieces_manquantes %} (pièces manquantes : note explicative){% endif %}</button></form>
+      {% endif %}
+      {% if demande.statut == 'VALIDEE_CADRE' or demande.statut == 'AJOURNEE' %}
+        <div class="flex flex-wrap items-center gap-2" id="fsl-envoi">
+          <a href="{% url 'logement:envoi_dossier' 'fsl' demande.pk %}" class="px-3 py-2 bg-blue-600 text-white rounded text-sm"><i class="fas fa-envelope mr-1"></i>{% if demande.statut == 'AJOURNEE' %}Renvoyer par mail{% else %}Envoi par mail{% endif %}</a>
+          <a href="{% url 'logement:envoi_dossier' 'fsl' demande.pk %}#imprimer" class="px-3 py-2 border rounded text-sm"><i class="fas fa-print mr-1"></i>Imprimer pour envoi</a>
+          {% if demande.gestionnaire.transmission %}<span class="text-xs text-gray-500">Circuit : {{ demande.gestionnaire.transmission }}</span>{% endif %}
+        </div>
       {% endif %}
       {% if demande.statut == 'ENVOYEE' %}
         <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="grid md:grid-cols-3 gap-2 text-sm">{% csrf_token %}

@@ -15,9 +15,14 @@ Depuis la fiche usager, encart **Logement – FSL**, boutons **FSL accès**, **F
    - coordonnées du travailleur social. Le **courriel proposé est celui de la MDS** : l'adresse nominative des agents reste interne.
 2. **Saisie** du nouveau logement, de la proposition (garantie, caution, 1er loyer, compteurs, assurance, équipements), de l'avis motivé et des pièces (fournie / à fournir / sans objet).
 3. **Alertes** selon les plafonds du règlement intérieur, paramétrés sur le gestionnaire. CID prévient, il ne bloque pas.
-4. **Pièces manquantes** : l'agent demande l'avis du cadre. Le cadre rédige la note explicative jointe au dossier (« argumentaire de pièces manquantes ») et accepte l'envoi, ou renvoie la demande. Il est prévenu par un message CID.
-5. **Envoi** (date) puis **réponse du FSL** : accordée (montants, garantie), ajournée (pièces demandées, la demande redevient modifiable puis se renvoie) ou refusée. Tout est daté dans l'historique.
-6. **Dossier PDF** à imprimer et faire signer, dans l'ordre : demande, avis motivé, argumentaire du cadre, contrat de prêt, autorisation de prélèvement, contrat de garantie, convention d'accès, fiche d'identification du logement (bailleur privé), demande de versement direct de l'AL, liste des pièces. Chaque document ne figure que s'il concerne la demande.
+4. **Visa du cadre (toute demande)** : l'agent demande le visa et le cadre reçoit un message CID. En un clic, le cadre appose sur le dossier ses initiales et la date, plus sa signature numérisée si elle a été déposée et validée (*Admin → MDS → Signatures numérisées*). S'il manque des pièces, il rédige en plus la note explicative jointe au dossier (« argumentaire de pièces manquantes »). Il peut aussi renvoyer la demande.
+5. **Envoi**, une fois la demande visée :
+   - **Envoi par mail** : destinataire à saisir, objet prérempli « MDST/MDSP – ville – … – NOM Prénom », PDF et pièces de la GED joints ;
+   - **Imprimer pour envoi**, seulement si le destinataire l'exige.
+
+   Chaque envoi alimente le compteur de papier économisé (voir `docs/LOGEMENT_COPP.md`).
+6. **Réponse du FSL** : accordée (montants, garantie), ajournée (pièces demandées : la demande redevient modifiable puis se renvoie) ou refusée. Tout est daté dans l'historique.
+7. **Dossier PDF**, dans l'ordre : demande, avis motivé, argumentaire du cadre, contrat de prêt, autorisation de prélèvement, contrat de garantie, convention d'accès, fiche d'identification du logement (bailleur privé), demande de versement direct de l'AL, liste des pièces. Chaque document ne figure que s'il concerne la demande.
 
 ## Maintien et concordat
 

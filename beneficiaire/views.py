@@ -271,6 +271,7 @@ def detail_beneficiaire(request, code_interne):
             "peut_modifier": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             "budget_foyer": budget_en_cours(beneficiaire),
             "demandes_fsl": beneficiaire.demandes_fsl.all()[:5],
+            "saisines_copp": beneficiaire.saisines_copp.select_related('commission')[:3],
             "peut_creer_fsl": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             "derniers_entretiens": beneficiaire.entretiens.select_related("auteur")[:3],
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification

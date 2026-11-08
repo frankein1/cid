@@ -1,0 +1,18 @@
+<!-- /templates/logement/envoi_manuel.html -->
+{% extends "base.html" %}
+{% block title %}Envoi par mail — {{ dos.b.nom }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 space-y-4 text-sm">
+  <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-envelope text-blue-600 mr-2"></i>Envoyer depuis votre messagerie</h1>
+  <ol class="list-decimal ml-5 space-y-2">
+    <li><a href="{{ pdf_url }}" target="_blank" class="text-blue-700 underline">Téléchargez le PDF du dossier</a>{% if joints %} et les pièces : {% for d in joints %}<a href="{% url 'ged:download_document' d.pk %}" class="text-blue-700 underline">{{ d.titre }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.</li>
+    <li><a href="mailto:{{ destinataires }}?subject={{ objet|urlencode }}" class="text-blue-700 underline">Ouvrez un nouveau mail</a> (destinataire et objet préremplis : <i>{{ objet }}</i>) et joignez-les.</li>
+    <li>Une fois le mail parti, confirmez : l'envoi entre dans le papier économisé.</li>
+  </ol>
+  <form method="post" action="{% url 'logement:envoi_dossier' dos.nature dos.obj.pk %}">{% csrf_token %}
+    <input type="hidden" name="pages" value="{{ pages }}">
+    <button name="action" value="mail_confirme" class="px-4 py-2 bg-green-600 text-white rounded"><i class="fas fa-check mr-1"></i>J'ai envoyé le dossier par mail</button>
+    <a href="{{ dos.retour }}" class="ml-2 text-gray-500">Annuler</a>
+  </form>
+</div>
+{% endblock %}
