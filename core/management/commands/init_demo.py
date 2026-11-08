@@ -1188,6 +1188,31 @@ class Command(BaseCommand):
         G.objects.filter(pk=g.pk).update(date_envoi=j - timedelta(days=75))
         d.etapes.filter(type_etape="DSF", saisi_par=self.ts, date=j).update(date=j - timedelta(days=75))
         envoi.enregistrer(g, "DSF", d.mds, EnvoiDossier.MAIL, 5)
+        self.expulsions_commissions(D)
+
+    def expulsions_commissions(self, D):
+        """Une CAPEX locale tenue (avis rendus), une commission préfectorale à venir (actualisations en cours)."""
+        from logement.models import CommissionExpulsion as K
+        from logement.services import commissions as S
+        j = self.j
+        K.objects.filter(nom__endswith="(fictif)").delete()
+        capex = K.objects.create(type_commission=K.LOCALE, nom="CAPEX locale Port-de-Bouc – Martigues (fictif)",
+                                 date=j - timedelta(days=35), heure="14 h", lieu="Salle de réunion de la MDS (fictif)",
+                                 email="capex.locale@example.com", tenue=True, cree_par=self.cadre,
+                                 compte_rendu="Séance fictive de démonstration.")
+        capex.mds.add(self.mds1, self.mds2)
+        p, _ = S.inscrire(capex, D.objects.get(numero="DEMO-EXP-003"), self.ts)
+        S.viser(p, self.cadre)
+        S.marquer_transmis(p, self.ts, "MAIL")
+        S.saisir_avis(p, self.cadre, "MAINTIEN", "Plan d'apurement respecté depuis deux mois : à revoir dans six mois.")
+        pref = K.objects.create(type_commission=K.PREFECTORALE, nom="Commission préfectorale (fictif)",
+                                date=j + timedelta(days=25), heure="9 h 30", lieu="Sous-préfecture (fictif)",
+                                date_limite=j + timedelta(days=12), email="expulsions.prefecture@example.com",
+                                cree_par=self.u("agent_sl1"))
+        pref.mds.add(self.mds1, self.mds2)
+        S.inscrire(pref, D.objects.get(numero="DEMO-EXP-004"), self.u("agent_sl1"))
+        p, _ = S.inscrire(pref, D.objects.get(numero="DEMO-EXP-001"), self.ts)
+        S.demander_visa(p, self.ts)
 
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""

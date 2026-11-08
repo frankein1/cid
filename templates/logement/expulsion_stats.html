@@ -27,6 +27,11 @@
       <table class="w-full"><tbody>{% for lib, n in s.par_etape %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
     <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Par origine</h2>
       <table class="w-full"><tbody>{% for lib, n in s.par_origine %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Diagnostics transmis</h2>
+      <table class="w-full"><tbody><tr class="border-t"><td class="py-1">Diagnostics sociaux et financiers</td><td class="text-right">{{ s.diagnostics.dsf }}</td></tr>
+        <tr class="border-t"><td class="py-1">Bordereaux de carence</td><td class="text-right">{{ s.diagnostics.carences }}</td></tr></tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Avis des commissions</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_avis %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
     <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Dossiers clos par motif</h2>
       <table class="w-full"><tbody>{% for lib, n in s.par_cloture %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
   </div>

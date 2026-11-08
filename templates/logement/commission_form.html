@@ -1,0 +1,15 @@
+<!-- /templates/logement/commission_form.html -->
+{% extends "base.html" %}
+{% block title %}{% if k %}{{ k }}{% else %}Nouvelle séance{% endif %}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 space-y-5" id="commission-form">
+  <a href="{% url 'logement:commissions_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Commissions</a>
+  <h1 class="text-2xl font-bold text-gray-900">{% if k %}Modifier la séance{% else %}Nouvelle séance{% endif %}</h1>
+  <form method="post" class="bg-white rounded-xl border p-5 grid md:grid-cols-2 gap-4 text-sm">{% csrf_token %}
+    {% for f in form %}
+    <label class="block {% if f.name == 'nom' or f.name == 'lieu' or f.name == 'mds' %}md:col-span-2{% endif %}">{{ f.label }}{{ f }}{% if f.help_text %}<span class="text-xs text-gray-500">{{ f.help_text }}</span>{% endif %}{{ f.errors }}</label>
+    {% endfor %}
+    <div class="md:col-span-2 flex justify-end"><button class="px-5 py-2 bg-red-600 text-white rounded-lg">Enregistrer</button></div>
+  </form>
+</div>
+{% endblock %}

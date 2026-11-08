@@ -108,7 +108,15 @@ def convocation_pdf(conv: ConvocationExpulsion):
                     "lieu": conv.lieu or (f"la {mds.nom}, {mds.adresse}, {mds.code_postal} {mds.ville}" if mds else "la MDS"),
                     "agent": (conv.agent.get_full_name() if conv.agent else "un travailleur social de la MDS")})
     code = "EXP_CONVOCATION_DSF"
-    if conv.type_convocation == ConvocationExpulsion.DSF_2:
+    if conv.passage_id:
+        com = conv.passage.commission
+        code = "EXP_CONVOCATION_COMMISSION" if conv.type_convocation == ConvocationExpulsion.COM_1 \
+            else "EXP_RELANCE_COMMISSION"
+        valeurs.update({"commission": com.get_type_commission_display().lower(),
+                        "date_commission": _d(com.date)})
+        prec = conv.passage.convocations.exclude(pk=conv.pk).order_by('-date_rdv').first()
+        valeurs["date_precedente"] = _d(prec.date_rdv, heure=True) if prec else "précédemment"
+    elif conv.type_convocation == ConvocationExpulsion.DSF_2:
         code = "EXP_CONVOCATION_DSF_2"
         prec = dossier.convocations.filter(type_convocation=ConvocationExpulsion.DSF_1).order_by('-date_rdv').first()
         valeurs["date_precedente"] = _d(prec.date_rdv, heure=True) if prec else "précédemment"
@@ -221,7 +229,8 @@ def questionnaire_pdf(dossier, date_retour):
 def valeurs_carence(diag):
     from .fsl import coordonnees_ts
     d = diag.dossier
-    absences = [_d(c.date_rdv) for c in d.convocations.filter(statut=ConvocationExpulsion.ABSENT).order_by('date_rdv')]
+    absences = [_d(c.date_rdv) for c in d.convocations.filter(statut=ConvocationExpulsion.ABSENT,
+                                                              type_convocation__in=ConvocationExpulsion.TYPES_DSF).order_by('date_rdv')]
     ts = coordonnees_ts(diag.redacteur, d.mds)
     from .placements_fsl import visa
     texte, image = visa(diag)

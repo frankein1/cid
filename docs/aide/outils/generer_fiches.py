@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -32,7 +32,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
-             ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf']),
+             ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -98,6 +98,7 @@ TITRES = {
     'copp': ("Demande de logement et commission des publics prioritaires", "Travailleurs sociaux de la MDS"),
     'fsl-acces': ("FSL : accès, maintien, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
     'expulsions': ("Prévention des expulsions", "Service Logement, agents et cadres de MDS"),
+    'expulsions-commissions': ("Expulsions : CAPEX locale et commission préfectorale", "Service Logement, agents et cadres de MDS"),
     'expulsions-dsf': ("Expulsions : convocations, diagnostic social et financier, carence", "Travailleurs sociaux et cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
@@ -1358,7 +1359,7 @@ page('expulsions', qui="Service Logement du Département (agents administratifs,
              "Clore un dossier demande un motif (dette apurée ou plan respecté, désistement, relogement, départ, expulsion…) ; il peut être rouvert.",
              "Le <b>secteur</b> de chaque MDS (villes, arrondissements ou codes postaux) se règle sur la fiche de la MDS : c'est lui qui permet de proposer la MDS d'après l'adresse.",
              "Les coordonnées du Service Logement imprimées sur la fiche PDF se règlent en administration (paramètre SERVICE_LOGEMENT_COORDONNEES).",
-             "À venir : CAPEX locale et commission préfectorale (ordre du jour, actualisation, avis)."],
+             "Suite : CAPEX locale et commission préfectorale, voir la fiche « Expulsions : CAPEX locale et commission préfectorale »."],
      ensuite=['fsl-acces', 'copp'])
 
 page('expulsions-dsf', qui="Travailleurs sociaux de la MDS chargée du dossier ; cadre de la MDS pour le visa",
@@ -1396,11 +1397,39 @@ page('expulsions-dsf', qui="Travailleurs sociaux de la MDS chargée du dossier ;
              "Le ménage n'est pas encore connu de CID ? Le diagnostic et le bordereau se font quand même, à partir de la fiche du Service Logement."],
      ensuite=['expulsions', 'fsl-acces'])
 
+page('expulsions-commissions', qui="Service Logement et cadres de MDS (séances, avis) ; travailleurs sociaux (actualisations)",
+     ou="Prévention des expulsions → Commissions ; dossier → bloc « Commissions »", duree="15 minutes",
+     intro="Les dossiers sont réexaminés en CAPEX locale et en commission préfectorale (environ tous les six mois après le jugement, avant le concours de la force publique). CID tient les séances et l'ordre du jour ; la MDS actualise la situation (préremplie), le cadre vise, l'actualisation part par mail ; l'avis de la commission s'inscrit dans le dossier.",
+     etapes=[
+         ("Les séances", [fig('expulsions-commissions', '01', "Séances à venir et passées."),
+                          fig('expulsions-commissions', '02', "Créer une séance.")],
+          ["Prévention des expulsions → <span class=\"clic\">Commissions</span>. Le Service Logement ou le cadre d'une MDS concernée crée la séance : instance (CAPEX locale, commission préfectorale, CCAPEX), date, lieu, date limite des actualisations, mail du secrétariat, MDS concernées."], []),
+         ("L'ordre du jour", [fig('expulsions-commissions', '03', "Les dossiers inscrits et l'état des actualisations.")],
+          ["<span class=\"clic\">Inscrire</span> un dossier en cours : l'actualisation est préremplie et le référent est prévenu.",
+           "<span class=\"clic\">Ordre du jour</span> : PDF pour la séance (ménage, MDS, étape, dette, état de l'actualisation), sans données de santé ni détail de l'évaluation. Chacun ne voit que les dossiers auxquels il a accès."], []),
+         ("Inscrire depuis le dossier", [fig('expulsions-commissions', '04', "Le bloc « Commissions » du dossier.")],
+          ["Depuis le dossier, choisissez une séance à venir puis <span class=\"clic\">Inscrire à l'ordre du jour</span>."], []),
+         ("Actualiser la situation", [fig('expulsions-commissions', '05', "L'actualisation, préremplie.")],
+          ["CID reprend les rencontres, le ménage, les revenus du budget du foyer, le logement, la dette, l'historique des étapes, les FSL et le diagnostic social et financier. Complétez l'évaluation et les propositions.",
+           "Au besoin, convoquez le ménage avant la commission : courrier modifiable en administration, rendez-vous dans l'agenda."], []),
+         ("Visa et envoi", [fig('expulsions-commissions', '06', "Le visa du cadre, puis l'envoi.")],
+          ["<span class=\"clic\">Demander le visa du cadre</span> ; le cadre clique sur <span class=\"clic\">Viser</span> (initiales et date sur le PDF).",
+           "<span class=\"clic\">Envoi par mail</span> au secrétariat de la commission (adresse de la séance), ou <span class=\"clic\">Imprimer pour envoi</span>."], []),
+         ("L'avis de la commission", [fig('expulsions-commissions', '07', "Les avis rendus en séance.")],
+          ["Le Service Logement ou le cadre saisit l'avis de chaque dossier (maintien et plan à respecter, délai, orientation, avis sur le concours de la force publique, ajourné…) et les préconisations. L'étape s'ajoute au dossier, le référent est prévenu, les statistiques comptent les avis.",
+           "<span class=\"clic\">Marquer la séance comme tenue</span> avec ses observations générales."], []),
+         ("Les solutions pour le ménage", [fig('expulsions-commissions', '08', "Les passerelles du dossier.")],
+          ["Quand l'usager est rattaché, le dossier propose directement <span class=\"clic\">FSL maintien ou concordat</span>, <span class=\"clic\">Saisine COPP</span> et <span class=\"clic\">Demande de logement social</span>, préremplis depuis sa fiche."], []),
+     ],
+     savoir=["Le Service Logement voit toutes les séances ; une MDS, celles qui la concernent.",
+             "Le formulaire d'actualisation reprend les rubriques de la fiche « Actualisation pour commission expulsion » ; les convocations suivent les modèles « Convocation avant une commission » et « Relance avant une commission »."],
+     ensuite=['expulsions', 'expulsions-dsf'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
                   ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – CAPEX locale et commission préfectorale (expulsions)"])
+                   "Logement – hébergement d'urgence, orientation ASELL"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

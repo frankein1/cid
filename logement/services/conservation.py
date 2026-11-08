@@ -12,7 +12,8 @@ Sort final :
   - anonymisation : l'identité est effacée (nom, adresse, n° allocataire, EXPLOC, bailleur, fiche CAF, historique,
     commentaires, messages), les chiffres restent pour les statistiques (MDS, commune, dette, étapes, décision) ;
   - versement aux archives : CID ne détruit rien, le dossier est listé « à verser » en administration.
-Le diagnostic (DSF, carence), les convocations et le questionnaire suivent EXPULSION_DSF, sinon le dossier."""
+Le diagnostic (DSF, carence), les convocations et les actualisations pour les commissions suivent EXPULSION_DSF,
+sinon le dossier ; l'avis d'une commission reste (statistiques)."""
 import logging
 
 from dateutil.relativedelta import relativedelta
@@ -53,6 +54,10 @@ def _effacer_pieces(qs):
     n = convs.count() + DiagnosticExpulsion.objects.filter(dossier__in=qs).count()
     convs.delete()
     DiagnosticExpulsion.objects.filter(dossier__in=qs).delete()
+    from logement.models import PassageCommission
+    passages = PassageCommission.objects.filter(dossier__in=qs).exclude(actualisation={})
+    n += passages.count()
+    passages.update(actualisation={}, historique=[], avis_detail="")   # l'avis reste (statistiques)
     return n
 
 

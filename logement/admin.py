@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .models import (CommissionPublicsPrioritaires, ConvocationExpulsion, DemandeFSL, DemandeLogementSocial,
+from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, ConvocationExpulsion, PassageCommission, DemandeFSL, DemandeLogementSocial,
                      DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 
@@ -168,3 +168,18 @@ class ConvocationExpulsionAdmin(admin.ModelAdmin):
     list_display = ['dossier', 'type_convocation', 'date_rdv', 'agent', 'statut']
     list_filter = ['type_convocation', 'statut']
     raw_id_fields = ['dossier', 'agent', 'rdv', 'cree_par']
+
+
+class PassageCommissionInline(admin.TabularInline):
+    model = PassageCommission
+    extra = 0
+    fields = ['dossier', 'statut', 'avis']
+    raw_id_fields = ['dossier']
+
+
+@admin.register(CommissionExpulsion)
+class CommissionExpulsionAdmin(admin.ModelAdmin):
+    list_display = ['date', 'nom', 'type_commission', 'date_limite', 'tenue']
+    list_filter = ['type_commission', 'tenue']
+    filter_horizontal = ['mds']
+    inlines = [PassageCommissionInline]

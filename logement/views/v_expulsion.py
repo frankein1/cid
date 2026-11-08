@@ -154,12 +154,24 @@ def expulsion_detail(request, pk):
         'usagers': [{'b': b, 'possible': X.peut_rattacher(user, d, b)} for b in usagers], 'c': c,
         'message_recherche': message_recherche, 'acces_fiche': bool(d.beneficiaire and d.beneficiaire.niveau_acces(user)), 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
         'decision': d.libelles_decision(),
-        'convocations': d.convocations.select_related('agent'), 'diagnostics': d.diagnostics.all(),
+        'convocations': d.convocations.filter(type_convocation__in=('DSF_1', 'DSF_2')).select_related('agent'), 'diagnostics': d.diagnostics.all(),
         'carence_possible': carence_possible(d),
         'retour_propose': d.questionnaire_retour_avant or _retour_propose(d),
         'courrier': (request.GET.get('courrier') or '') if (request.GET.get('courrier') or '').isdigit() else '',
+        'passages': d.passages.select_related('commission'),
+        'seances': _seances_ouvertes(user, d),
+        'passerelles': bool(d.beneficiaire_id and d.statut == D.EN_COURS and user.a_la_capacite('peut_creer')
+                            and d.beneficiaire.niveau_acces(user) == 'complet'),
         'treve': treve_hivernale() and d.etapes.filter(type_etape__in=('COMMANDEMENT_QUITTER', 'DEMANDE_CFP',
                                                                        'COMMISSION_PREFECTORALE', 'CFP_ACCORDE')).exists()})
+
+
+def _seances_ouvertes(user, d):
+    from ..services.commissions import commissions_visibles
+    qs = commissions_visibles(user).filter(date__gte=timezone.localdate(), tenue=False).exclude(passages__dossier=d)
+    if d.mds_id:
+        qs = qs.filter(Q(mds=d.mds) | Q(mds__isnull=True)).distinct()
+    return qs.order_by('date')[:10]
 
 
 def _retour_propose(d):

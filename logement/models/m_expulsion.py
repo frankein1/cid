@@ -231,6 +231,7 @@ class EtapeExpulsion(models.Model):
         ('PLAN_APUREMENT', "Plan d'apurement, protocole", None),
         ('COMMANDEMENT_QUITTER', "Commandement de quitter les lieux", 60),   # 2 mois
         ('DEMANDE_CFP', "Demande de concours de la force publique", None),
+        ('CAPEX_LOCALE', "CAPEX locale", None),
         ('COMMISSION_PREFECTORALE', "Commission préfectorale", None),
         ('CFP_ACCORDE', "Concours de la force publique accordé", None),
         ('EXPULSION', "Expulsion réalisée", None),
@@ -267,8 +268,10 @@ class EtapeExpulsion(models.Model):
 # ---------------------------------------------------------------------------------------------------------- MDS
 class ConvocationExpulsion(models.Model):
     """Rendez-vous proposé au ménage pour le diagnostic social et financier (DSF). Deux sans réponse → carence."""
-    DSF_1, DSF_2 = 'DSF_1', 'DSF_2'
-    TYPES = [(DSF_1, "1re convocation (DSF)"), (DSF_2, "2e et dernière convocation (DSF)")]
+    DSF_1, DSF_2, COM_1, COM_2 = 'DSF_1', 'DSF_2', 'COM_1', 'COM_2'
+    TYPES = [(DSF_1, "1re convocation (DSF)"), (DSF_2, "2e et dernière convocation (DSF)"),
+             (COM_1, "Convocation avant commission"), (COM_2, "Relance avant commission")]
+    TYPES_DSF = (DSF_1, DSF_2)
     PREVUE, VENU, ABSENT, ANNULE = 'PREVUE', 'VENU', 'ABSENT', 'ANNULE'
     STATUTS = [(PREVUE, "Prévue"), (VENU, "Venu"), (ABSENT, "Absent"), (ANNULE, "Annulée ou reportée")]
 
@@ -280,6 +283,8 @@ class ConvocationExpulsion(models.Model):
     agent = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                               related_name='+', verbose_name="Reçu par")
     rdv = models.ForeignKey('planning.CreneauRdv', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    passage = models.ForeignKey('logement.PassageCommission', null=True, blank=True, on_delete=models.CASCADE,
+                                related_name='convocations', help_text="Convocation avant une commission")
     statut = models.CharField(max_length=7, choices=STATUTS, default=PREVUE)
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name='+')
@@ -359,3 +364,80 @@ class DestinataireExpulsion(models.Model):
     def pour(cls, mds):
         qs = cls.objects.filter(actif=True)
         return [d for d in qs.prefetch_related('mds') if not d.mds.all() or mds in d.mds.all()]
+
+
+# ---------------------------------------------------------------------------------------------------- commissions
+class CommissionExpulsion(models.Model):
+    """Séance d'une instance qui examine les dossiers : CAPEX locale (Martigues / Port-de-Bouc), commission
+    préfectorale (environ tous les 6 mois après le jugement, avant le concours de la force publique), CCAPEX."""
+    LOCALE, PREFECTORALE, CCAPEX = 'LOCALE', 'PREFECTORALE', 'CCAPEX'
+    TYPES = [(LOCALE, "CAPEX locale"), (PREFECTORALE, "Commission préfectorale"), (CCAPEX, "CCAPEX")]
+    type_commission = models.CharField("Instance", max_length=12, choices=TYPES, default=LOCALE)
+    nom = models.CharField(max_length=150, help_text="Ex. « CAPEX locale Martigues – Port-de-Bouc »")
+    date = models.DateField()
+    heure = models.CharField(max_length=10, blank=True)
+    lieu = models.CharField(max_length=255, blank=True)
+    date_limite = models.DateField("Actualisations attendues le", null=True, blank=True)
+    email = models.EmailField("Mail du secrétariat", blank=True,
+                              help_text="Proposé à l'envoi des actualisations.")
+    mds = models.ManyToManyField('mds.MDS', blank=True, related_name='commissions_expulsion',
+                                 help_text="MDS concernées ; vide : toutes.")
+    tenue = models.BooleanField("Séance tenue", default=False)
+    compte_rendu = models.TextField("Observations générales", blank=True)
+    cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name='+')
+    cree_le = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Commission (prévention des expulsions)"
+        verbose_name_plural = "Commissions (prévention des expulsions)"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.nom} – {self.date:%d/%m/%Y}"
+
+
+class PassageCommission(models.Model):
+    """Un dossier inscrit à l'ordre du jour d'une séance : actualisation de la situation par la MDS (visée par le
+    cadre), puis avis ou préconisation de la commission."""
+    A_FAIRE, A_VISER, VISEE, TRANSMISE = 'A_FAIRE', 'A_VISER', 'VISEE', 'TRANSMISE'
+    STATUTS = [(A_FAIRE, "Actualisation à faire"), (A_VISER, "Visa du cadre demandé"),
+               (VISEE, "Visée : prête à transmettre"), (TRANSMISE, "Transmise")]
+    AVIS = [('MAINTIEN', "Maintien dans les lieux, plan à respecter"), ('DELAI', "Délai supplémentaire"),
+            ('ORIENTATION', "Orientation (relogement, hébergement, accompagnement)"),
+            ('CFP_FAVORABLE', "Avis favorable au concours de la force publique"),
+            ('CFP_DEFAVORABLE', "Avis défavorable au concours de la force publique"),
+            ('AJOURNE', "Ajourné, à revoir"), ('AUTRE', "Autre")]
+
+    commission = models.ForeignKey(CommissionExpulsion, on_delete=models.CASCADE, related_name='passages')
+    dossier = models.ForeignKey(DossierExpulsion, on_delete=models.CASCADE, related_name='passages')
+    actualisation = models.JSONField(default=dict, blank=True)
+    statut = models.CharField(max_length=10, choices=STATUTS, default=A_FAIRE)
+    redacteur = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                  related_name='+')
+    cadre = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                              related_name='+', verbose_name="Visé par")
+    date_validation_cadre = models.DateTimeField("Visé le", null=True, blank=True)
+    date_envoi = models.DateField(null=True, blank=True)
+    avis = models.CharField("Avis de la commission", max_length=20, choices=AVIS, blank=True)
+    avis_detail = models.TextField("Préconisations", blank=True)
+    historique = models.JSONField(default=list, blank=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+    tracer = DossierExpulsion.tracer
+
+    class Meta:
+        verbose_name = "Dossier inscrit à une commission"
+        verbose_name_plural = "Dossiers inscrits aux commissions"
+        ordering = ['commission__date', 'dossier__nom']
+        unique_together = ('commission', 'dossier')
+
+    def __str__(self):
+        return f"{self.dossier} – {self.commission}"
+
+    @property
+    def beneficiaire(self):
+        return self.dossier.beneficiaire
+
+    @property
+    def mds(self):
+        return self.dossier.mds

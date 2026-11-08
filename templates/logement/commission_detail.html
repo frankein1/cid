@@ -1,0 +1,44 @@
+<!-- /templates/logement/commission_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ k }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="commission-detail">
+  <a href="{% url 'logement:commissions_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Commissions</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900">{{ k.nom }} <span class="text-base font-normal text-gray-500">– {{ k.date|date:"d/m/Y" }}{% if k.heure %} à {{ k.heure }}{% endif %}</span></h1>
+    <div class="flex gap-2 text-sm">
+      <a href="{% url 'logement:commission_odj' k.pk %}" target="_blank" class="px-3 py-2 bg-red-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Ordre du jour</a>
+      {% if peut_gerer %}<a href="{% url 'logement:commission_modifier' k.pk %}" class="px-3 py-2 border rounded-lg"><i class="fas fa-pen mr-1"></i>Modifier</a>{% endif %}
+    </div>
+  </div>
+  <p class="text-sm text-gray-600">{{ k.get_type_commission_display }}{% if k.lieu %} – {{ k.lieu }}{% endif %}{% if k.date_limite %} – actualisations attendues le <b>{{ k.date_limite|date:"d/m/Y" }}</b>{% endif %}{% if k.mds.all %} – {% for m in k.mds.all %}{{ m.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% if k.tenue %} – <b>séance tenue</b>{% endif %}</p>
+  <div class="bg-white rounded-xl border overflow-x-auto" id="commission-odj">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-left text-gray-600"><tr><th class="px-3 py-2">Ménage</th><th class="px-3 py-2">MDS, référent</th><th class="px-3 py-2">Étape</th><th class="px-3 py-2">Actualisation</th><th class="px-3 py-2">Avis</th></tr></thead>
+      <tbody class="divide-y">{% for p in passages %}
+        <tr>
+          <td class="px-3 py-2"><a href="{% url 'logement:passage_detail' p.pk %}" class="text-blue-700 font-semibold hover:underline">{{ p.dossier.nom_complet }}</a><div class="text-xs text-gray-500">{{ p.dossier.numero }} – {{ p.dossier.ville }}</div></td>
+          <td class="px-3 py-2">{{ p.dossier.mds.nom|default:"—" }}<div class="text-xs text-gray-500">{{ p.dossier.referent.get_full_name }}</div></td>
+          <td class="px-3 py-2">{{ p.dossier.etape_courante.get_type_etape_display|default:"—" }}</td>
+          <td class="px-3 py-2"><span class="text-xs px-2 py-0.5 rounded {% if p.statut == 'TRANSMISE' or p.statut == 'VISEE' %}bg-green-100 text-green-800{% else %}bg-amber-100 text-amber-800{% endif %}">{{ p.get_statut_display }}</span></td>
+          <td class="px-3 py-2">{% if p.avis %}<b>{{ p.get_avis_display }}</b>{% if p.avis_detail %}<div class="text-xs text-gray-600">{{ p.avis_detail|truncatechars:120 }}</div>{% endif %}
+            {% elif peut_gerer %}<form method="post" action="{% url 'logement:passage_action' p.pk %}" class="flex flex-wrap gap-1">{% csrf_token %}<input type="hidden" name="retour" value="commission">
+              <select name="avis" class="border rounded px-1 py-0.5 text-xs"><option value="">Avis…</option>{% for c, l in avis %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select>
+              <input name="avis_detail" placeholder="Préconisations" class="border rounded px-1 py-0.5 text-xs">
+              <button name="action" value="avis" class="text-xs px-2 py-0.5 bg-gray-800 text-white rounded">OK</button></form>{% else %}—{% endif %}</td>
+        </tr>{% empty %}<tr><td colspan="5" class="px-3 py-6 text-center text-gray-400">Aucun dossier inscrit.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  {% if peut_inscrire and candidats %}
+  <form method="post" action="{% url 'logement:commission_inscrire' k.pk %}" class="bg-white rounded-xl border p-4 flex flex-wrap gap-2 items-end text-sm" id="commission-inscrire">{% csrf_token %}
+    <label class="flex flex-col flex-1">Inscrire un dossier<select name="dossier" class="border rounded px-2 py-1">{% for d in candidats %}<option value="{{ d.pk }}">{{ d.nom_complet }} – {{ d.numero }} ({{ d.mds.nom|default:"à affecter" }})</option>{% endfor %}</select></label>
+    <button class="px-3 py-1.5 bg-blue-600 text-white rounded"><i class="fas fa-plus mr-1"></i>Inscrire</button>
+    <p class="w-full text-xs text-gray-500">L'actualisation est préremplie (dossier, diagnostic, budget, étapes) ; le référent est prévenu.</p>
+  </form>{% endif %}
+  {% if peut_gerer and not k.tenue %}
+  <form method="post" action="{% url 'logement:commission_tenue' k.pk %}" class="bg-white rounded-xl border p-4 space-y-2 text-sm">{% csrf_token %}
+    <label class="block">Observations générales de la séance<textarea name="compte_rendu" rows="2" class="w-full border rounded px-2 py-1">{{ k.compte_rendu }}</textarea></label>
+    <button class="px-3 py-1.5 border rounded">Marquer la séance comme tenue</button>
+  </form>{% elif k.compte_rendu %}<div class="bg-white rounded-xl border p-4 text-sm"><b>Observations :</b> {{ k.compte_rendu|linebreaksbr }}</div>{% endif %}
+</div>
+{% endblock %}

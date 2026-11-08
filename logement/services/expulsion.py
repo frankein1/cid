@@ -206,6 +206,8 @@ def statistiques(user, annee=None):
         'departemental': stats_departementales(user),
         'a_verser': _a_verser() if stats_departementales(user) else 0,
         'anonymises': qs.filter(anonymise_le__isnull=False).count(),
+        'par_avis': _par_avis(qs),
+        'diagnostics': {'dsf': _diag(qs, 'DSF'), 'carences': _diag(qs, 'CARENCE')},
     }
 
 
@@ -220,3 +222,17 @@ def _a_verser():
         return a_verser().count()
     except Exception:      # noqa: BLE001
         return 0
+
+
+def _par_avis(qs):
+    from logement.models import PassageCommission
+    choix = dict(PassageCommission.AVIS)
+    return [(choix.get(r['avis'], r['avis']), r['n']) for r in
+            PassageCommission.objects.filter(dossier__in=qs).exclude(avis='').values('avis').annotate(n=Count('pk'))
+            .order_by('-n')]
+
+
+def _diag(qs, type_document):
+    from logement.models import DiagnosticExpulsion
+    return DiagnosticExpulsion.objects.filter(dossier__in=qs, type_document=type_document,
+                                              statut=DiagnosticExpulsion.ENVOYE).count()
