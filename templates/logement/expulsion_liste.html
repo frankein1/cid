@@ -1,0 +1,46 @@
+<!-- /templates/logement/expulsion_liste.html -->
+{% extends "base.html" %}
+{% block title %}Prévention des expulsions{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="expulsion-liste">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-house-circle-exclamation text-red-600 mr-2"></i>Prévention des expulsions</h1>
+    <div class="flex flex-wrap gap-2">
+      {% if peut_stats %}<a href="{% url 'logement:expulsion_stats' %}" class="px-3 py-2 border rounded-lg text-sm"><i class="fas fa-chart-column mr-1"></i>Statistiques</a>{% endif %}
+      {% if peut_creer %}<a href="{% url 'logement:expulsion_nouveau' %}" id="expulsion-nouveau" class="px-3 py-2 bg-red-600 text-white rounded-lg text-sm"><i class="fas fa-plus mr-1"></i>Nouveau dossier</a>{% endif %}
+    </div>
+  </div>
+  {% if treve %}<div class="p-3 bg-sky-50 border border-sky-200 rounded text-sm text-sky-900"><i class="fas fa-snowflake mr-1"></i>Trêve hivernale (1<sup>er</sup> novembre – 31 mars) : pas d'expulsion, sauf exceptions prévues par la loi. La procédure, elle, continue.</div>{% endif %}
+  <form method="get" class="bg-white rounded-xl border p-4 flex flex-wrap gap-3 items-end text-sm">
+    <label class="flex flex-col">Recherche<input name="q" value="{{ q }}" placeholder="Nom, n° de dossier, n° allocataire, ville" class="border rounded px-2 py-1 w-72"></label>
+    <label class="flex flex-col">Statut<select name="statut" class="border rounded px-2 py-1">{% for c, l in statuts %}<option value="{{ c }}" {% if c == statut %}selected{% endif %}>{{ l }}</option>{% endfor %}<option value="tous" {% if statut == 'tous' %}selected{% endif %}>Tous</option></select></label>
+    {% if mds_liste|length > 1 %}<label class="flex flex-col">MDS<select name="mds" class="border rounded px-2 py-1"><option value="">Toutes</option>{% if est_sl %}<option value="aucune" {% if mds_filtre == 'aucune' %}selected{% endif %}>À affecter</option>{% endif %}{% for m in mds_liste %}<option value="{{ m.pk }}" {% if mds_filtre == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select></label>{% endif %}
+    <label class="flex flex-col">Vue<select name="vue" class="border rounded px-2 py-1"><option value="">Tous les dossiers</option><option value="mes" {% if vue == 'mes' %}selected{% endif %}>Mes dossiers (référent)</option><option value="audiences" {% if vue == 'audiences' %}selected{% endif %}>Audiences à venir</option></select></label>
+    <button class="px-3 py-1.5 bg-gray-800 text-white rounded">Filtrer</button>
+  </form>
+  <div class="bg-white rounded-xl border overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-left text-gray-600"><tr>
+        <th class="px-3 py-2">Dossier</th><th class="px-3 py-2">Ménage</th><th class="px-3 py-2">MDS / référent</th>
+        <th class="px-3 py-2">Audience</th><th class="px-3 py-2">Dette</th><th class="px-3 py-2">À faire</th></tr></thead>
+      <tbody class="divide-y">
+      {% for d in page %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-3 py-2"><a href="{% url 'logement:expulsion_detail' d.pk %}" class="text-blue-700 font-semibold hover:underline">{{ d.numero }}</a><div class="text-xs text-gray-500">reçu le {{ d.date_reception|date:"d/m/Y" }}{% if d.statut == 'CLOS' %} – clos{% endif %}</div></td>
+          <td class="px-3 py-2">{{ d.nom_complet }}<div class="text-xs text-gray-500">{{ d.ville }}</div></td>
+          <td class="px-3 py-2">{{ d.mds.nom|default:"<span class='text-red-700'>à affecter</span>" }}<div class="text-xs text-gray-500">{% if d.referent %}{{ d.referent.get_full_name }}{% elif d.mds %}référent à désigner{% endif %}</div></td>
+          <td class="px-3 py-2">{{ d.date_audience|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-3 py-2 whitespace-nowrap">{% if d.dette is not None %}{{ d.dette|floatformat:2 }} €{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-xs text-amber-800">{% for a in d.alertes %}<div><i class="fas fa-triangle-exclamation mr-1"></i>{{ a }}</div>{% endfor %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="px-3 py-6 text-center text-gray-500">Aucun dossier.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.has_other_pages %}
+  <div class="flex gap-2 text-sm">{% if page.has_previous %}<a class="px-3 py-1 border rounded" href="?{% if q %}q={{ q|urlencode }}&{% endif %}statut={{ statut }}&mds={{ mds_filtre }}&vue={{ vue }}&page={{ page.previous_page_number }}">Précédent</a>{% endif %}<span class="px-2 py-1">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="px-3 py-1 border rounded" href="?{% if q %}q={{ q|urlencode }}&{% endif %}statut={{ statut }}&mds={{ mds_filtre }}&vue={{ vue }}&page={{ page.next_page_number }}">Suivant</a>{% endif %}</div>
+  {% endif %}
+</div>
+{% endblock %}

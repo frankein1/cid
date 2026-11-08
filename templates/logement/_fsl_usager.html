@@ -1,5 +1,5 @@
 <!-- /templates/logement/_fsl_usager.html -->
-{# Encart « Logement » de la fiche usager (dossier complet) : demande de logement social, FSL, commission des publics prioritaires #}
+{# Encart « Logement » de la fiche usager (dossier complet) : demande de logement social, FSL, commission des publics prioritaires, prévention des expulsions #}
 <div id="fsl-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex justify-between items-center gap-2">
         <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Logement</h2>
@@ -24,6 +24,10 @@
         <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>
     <form method="post" action="{% url 'logement:copp_nouvelle' beneficiaire.code_interne %}" class="mt-1" id="copp-nouvelle">{% csrf_token %}
         <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>{% endif %}
+    {% if dossiers_expulsion %}<div id="expulsion-usager-encart" class="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm">
+        {% for d in dossiers_expulsion %}<div class="flex justify-between gap-2"><a href="{% url 'logement:expulsion_detail' d.pk %}" class="text-red-800 font-semibold hover:underline"><i class="fas fa-house-circle-exclamation mr-1"></i>Prévention des expulsions – {{ d.numero }}</a>
+            <span class="text-xs text-gray-600">{% if d.statut == 'CLOS' %}clos{% elif d.date_audience %}audience le {{ d.date_audience|date:"d/m/Y" }}{% else %}en cours{% endif %}</span></div>{% endfor %}
+    </div>{% endif %}
     {% if demandes_fsl or saisines_copp %}<ul class="mt-3 text-sm divide-y">
         {% for f in demandes_fsl %}<li class="py-2 flex justify-between gap-2"><a href="{% url 'logement:fsl_detail' f.pk %}" class="text-blue-700 hover:underline">FSL – {{ f.get_type_aide_display }} – {{ f.date_creation|date:"d/m/Y" }}</a>
             <span class="text-xs text-gray-600">{{ f.get_statut_display }}</span></li>{% endfor %}

@@ -1,0 +1,43 @@
+<!-- /templates/beneficiaire/annuaire.html -->
+{% extends "base.html" %}
+{% block title %}Annuaire des usagers{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="annuaire">
+  <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-address-book text-blue-600 mr-2"></i>Annuaire des usagers</h1>
+  <p class="text-sm text-gray-600">Vérifiez si un usager est déjà connu de CID et à quelle MDS il est rattaché, puis saisissez votre dossier avec son <b>code usager CID</b> ou son <b>n° CAF</b> : on évite ainsi les doubles saisies. Seule l'identité de base s'affiche ; chaque recherche est inscrite au journal d'activité.</p>
+  <form method="get" class="bg-white rounded-xl border p-4 grid md:grid-cols-6 gap-3 items-end text-sm" id="annuaire-form">
+    <label class="flex flex-col">Code usager CID<input name="code" value="{{ c.code }}" class="border rounded px-2 py-1"></label>
+    <label class="flex flex-col">N° CAF<input name="caf" value="{{ c.caf }}" class="border rounded px-2 py-1"></label>
+    <label class="flex flex-col">Téléphone<input name="telephone" value="{{ c.telephone }}" class="border rounded px-2 py-1"></label>
+    <div class="md:col-span-3 text-xs text-gray-500 self-center">Un seul de ces trois suffit. Sinon, deux éléments au choix parmi :</div>
+    <label class="flex flex-col md:col-span-2">Nom (d'usage ou de naissance)<input name="nom" value="{{ c.nom }}" class="border rounded px-2 py-1"></label>
+    <label class="flex flex-col">Prénom<input name="prenom" value="{{ c.prenom }}" class="border rounded px-2 py-1"></label>
+    <label class="flex flex-col">Date de naissance<input type="date" name="date_naissance" value="{{ date_naissance }}" class="border rounded px-2 py-1"></label>
+    <label class="flex flex-col md:col-span-2">Adresse, même incomplète<input name="adresse" value="{{ c.adresse }}" placeholder="ex. rue Montmirail" class="border rounded px-2 py-1"></label>
+    <div class="md:col-span-5 text-xs text-gray-500">Les orthographes proches (Frederik, Frédéric, Frédérique…) sont proposées à la suite : vérifiez la date de naissance.</div>
+    <button class="px-3 py-1.5 bg-blue-600 text-white rounded"><i class="fas fa-search mr-1"></i>Chercher</button>
+  </form>
+  {% if message %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">{{ message }}</div>{% endif %}
+  {% if lignes %}
+  <div class="bg-white rounded-xl border overflow-x-auto" id="annuaire-resultats">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 text-left text-gray-600"><tr>
+        <th class="px-3 py-2">Nom, prénom</th><th class="px-3 py-2">Nom de naissance</th><th class="px-3 py-2">Né(e) le, à</th>
+        <th class="px-3 py-2">Code usager CID</th><th class="px-3 py-2">MDS de rattachement</th><th></th></tr></thead>
+      <tbody class="divide-y">
+      {% for l in lignes %}{% with b=l.b %}
+        <tr>
+          <td class="px-3 py-2 font-semibold">{{ b.nom|upper }} {{ b.prenom }}{% if b.proche %} <span class="ml-1 text-xs font-normal px-2 py-0.5 rounded bg-amber-100 text-amber-800">orthographe proche</span>{% endif %}</td>
+          <td class="px-3 py-2">{{ b.nom_naissance|upper|default:"—" }}</td>
+          <td class="px-3 py-2">{{ b.date_naissance|date:"d/m/Y"|default:"—" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %}</td>
+          <td class="px-3 py-2 font-mono">{{ b.code_interne }}</td>
+          <td class="px-3 py-2">{{ b.mds.nom|default:"—" }}{% if b.statut != 'ACTIF' %} <span class="text-xs text-gray-500">({{ b.get_statut_display|lower }})</span>{% endif %}</td>
+          <td class="px-3 py-2 text-right">{% if l.acces %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline">Ouvrir la fiche</a>{% endif %}</td>
+        </tr>
+      {% endwith %}{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

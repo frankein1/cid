@@ -192,6 +192,13 @@ class Beneficiaire(models.Model):
     date_modification = models.DateTimeField(auto_now=True)
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='beneficiaires_crees')
 
+    # Clés de recherche (annuaire des usagers) : calculées à l'enregistrement, jamais saisies ni affichées
+    nom_phonetique = models.CharField(max_length=40, blank=True, editable=False, db_index=True)
+    nom_naissance_phonetique = models.CharField(max_length=40, blank=True, editable=False, db_index=True)
+    prenom_phonetique = models.CharField(max_length=40, blank=True, editable=False, db_index=True)
+    telephone_mobile_cle = models.CharField(max_length=9, blank=True, editable=False, db_index=True)
+    telephone_fixe_cle = models.CharField(max_length=9, blank=True, editable=False, db_index=True)
+
 
 
 
@@ -205,6 +212,20 @@ class Beneficiaire(models.Model):
 
     def __str__(self):
         return f"{self.nom.upper()} {self.prenom} ({self.code_interne})"
+
+    def calculer_cles_recherche(self):
+        from core.phonetique import chiffres, cle
+        self.nom_phonetique, self.prenom_phonetique = cle(self.nom), cle(self.prenom)
+        self.nom_naissance_phonetique = cle(self.nom_naissance)
+        self.telephone_mobile_cle, self.telephone_fixe_cle = chiffres(self.telephone_mobile), chiffres(self.telephone_fixe)
+
+    def save(self, *args, **kwargs):
+        self.calculer_cles_recherche()
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {
+                'nom_phonetique', 'nom_naissance_phonetique', 'prenom_phonetique', 'telephone_mobile_cle',
+                'telephone_fixe_cle'}
+        super().save(*args, **kwargs)
 
     @property
     def documents_ged(self):
