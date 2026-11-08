@@ -61,10 +61,11 @@ def lettre_mds(mds):
     return "MDSP" if mds and mds.type_mds == MDS.PROXIMITE else "MDST"
 
 
-def objet_mail(mds, intitule, beneficiaire):
-    """Ex. « MDST - Port-de-Bouc - Fiche saisine rapport social et justificatifs pour COPP - DUPONT Jeanne »."""
-    return (f"{lettre_mds(mds)} - {mds.ville if mds else ''} - {intitule} - "
-            f"{beneficiaire.nom.upper()} {beneficiaire.prenom}")
+def objet_mail(mds, intitule, personne):
+    """Ex. « MDST - Port-de-Bouc - Fiche saisine rapport social et justificatifs pour COPP - DUPONT Jeanne ».
+    `personne` : l'usager, ou directement le nom à afficher (ménage pas encore connu de CID)."""
+    nom = personne if isinstance(personne, str) else f"{personne.nom.upper()} {personne.prenom}"
+    return f"{lettre_mds(mds)} - {mds.ville if mds else ''} - {intitule} - {nom}"
 
 
 def mail_configure():

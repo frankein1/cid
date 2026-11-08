@@ -94,6 +94,32 @@ _RSA = {
     "mds": ("MDS du référent", "MDS Exemple"),
 }
 
+_EXP = {
+    "civilite_appel": ("Madame ou Monsieur, selon la civilité du locataire", "Madame"),
+    "locataire": ("Prénom et NOM du locataire", "Lucie EXEMPLE"),
+    "adresse_locataire": ("Adresse du logement", "1 rue de l'Exemple, 13000 Exemple"),
+    "date_audience": ("Date de l'audience", "28/11/2026"),
+    "tribunal": ("Tribunal (dossier d'expulsion)", "Tribunal judiciaire d'Exemple"),
+    "mds": ("MDS : nom et adresse", "MDS Exemple, 1 rue de l'Exemple, 13000 Exemple"),
+    "telephone_mds": ("Téléphone de la MDS", "04 00 00 00 00"),
+    "signataire": ("Responsable de la MDS", "Cadre Exemple"),
+    "signataire_fonction": ("Fonction du responsable (fiche de l'agent)", "Responsable de la MDS Exemple"),
+}
+_EXP_RDV = {
+    "date_rdv": ("Date et heure du rendez-vous", "12/11/2026 à 10:00"),
+    "lieu": ("Lieu du rendez-vous (la MDS par défaut)", "la MDS Exemple, 1 rue de l'Exemple, 13000 Exemple"),
+    "agent": ("Travailleur social qui reçoit", "Agent Exemple"),
+}
+_EXP_C = {"si_tribunal": "le tribunal est indiqué au dossier", "si_audience": "la date d'audience est connue"}
+_EXP_PIECES = ("Merci d'apporter les documents concernant votre situation familiale et financière, votre logement "
+               "et vos dettes : ils seront joints au diagnostic.")
+_EXP_EMPECHEMENT = ("En cas d'empêchement, contactez-nous au {telephone_mds} ou adressez-nous vos observations par "
+                    "écrit : elles seront transmises au tribunal. Sans nouvelles de votre part, nous transmettrons les "
+                    "informations les plus récentes dont nous disposons sur votre situation.")
+_EXP_AUDIENCE = ("Lors de l'audience du {date_audience}, le juge peut prononcer la résiliation de votre bail : votre "
+                 "présence est indispensable pour faire valoir vos arguments.")
+_EXP_SIGNATURE = "{signataire}\n{signataire_fonction}"
+
 COURRIERS = {
     # ------------------------------------------------------------------ AFASE
     "AFASE_ACCORD": {
@@ -259,6 +285,59 @@ COURRIERS = {
                   "{si_refusee:Votre accompagnement se poursuit avec {referent} ({mds}). Motif : {motif}}\n\n"
                   "Je vous prie d'agréer, {civilite_appel}, l'expression de mes salutations distinguées."),
         "signature": "Pour le Président du Conseil départemental\net par délégation,\n\n{signataire}\n{pole}",
+    },
+    # ------------------------------------------------------------------ Logement – prévention des expulsions
+    "EXP_CONVOCATION_DSF": {
+        "rubrique": "Logement – prévention des expulsions",
+        "libelle": "1re convocation pour le diagnostic social et financier (DSF)",
+        "variables": {**_EXP, **_EXP_RDV}, "conditions": dict(_EXP_C),
+        "objet": "diagnostic social et financier – audience du {date_audience}",
+        "corps": ("{civilite_appel},\n\n"
+                  "Vous êtes assigné(e) devant {si_tribunal:le {tribunal}|le tribunal} pour des impayés de loyer. "
+                  "Dans le cadre de la prévention des expulsions locatives, un diagnostic social et financier (DSF) "
+                  "est établi avant l'audience : il apporte au juge les éléments de votre situation pour l'aider "
+                  "dans sa décision.\n\n"
+                  "Cet entretien est aussi l'occasion de rechercher avec vous des solutions et les aides dont vous "
+                  "pourriez bénéficier pour résorber votre dette de loyer. C'est pourquoi nous vous proposons un "
+                  "rendez-vous le **{date_rdv}**, à {lieu}, avec {agent}.\n\n"
+                  + _EXP_PIECES + "\n\n" + _EXP_EMPECHEMENT + "\n\n" + _EXP_AUDIENCE + "\n\n"
+                  "Nous vous prions d'agréer, {civilite_appel}, l'expression de nos salutations distinguées."),
+        "signature": _EXP_SIGNATURE,
+    },
+    "EXP_CONVOCATION_DSF_2": {
+        "rubrique": "Logement – prévention des expulsions",
+        "libelle": "2e et dernière convocation pour le diagnostic social et financier",
+        "variables": {**_EXP, **_EXP_RDV,
+                      "date_precedente": ("Date du rendez-vous proposé la première fois", "05/11/2026 à 14:00")},
+        "conditions": dict(_EXP_C),
+        "objet": "diagnostic social et financier – audience du {date_audience}",
+        "corps": ("{civilite_appel},\n\n"
+                  "Nous vous avions proposé un rendez-vous le {date_precedente} au sujet de votre assignation "
+                  "devant le tribunal pour des impayés de loyer.\n\n"
+                  "Le diagnostic social et financier doit être transmis au juge, que vous soyez présent(e) ou non à "
+                  "l'entretien. Si vous ne vous présentez pas, nous serons tenus d'indiquer votre absence.\n\n"
+                  "Nous vous proposons un deuxième et dernier rendez-vous le **{date_rdv}**, à {lieu}, avec {agent}."
+                  "\n\n" + _EXP_PIECES + "\n\n" + _EXP_EMPECHEMENT + "\n\n" + _EXP_AUDIENCE + "\n\n"
+                  "Nous vous prions d'agréer, {civilite_appel}, l'expression de nos salutations distinguées."),
+        "signature": _EXP_SIGNATURE,
+    },
+    "EXP_QUESTIONNAIRE_BAILLEUR": {
+        "rubrique": "Logement – prévention des expulsions",
+        "libelle": "Courrier au bailleur accompagnant le questionnaire pour le DSF",
+        "variables": {**_EXP, "date_retour": ("Date de retour souhaitée du questionnaire", "20/11/2026")},
+        "conditions": dict(_EXP_C),
+        "objet": "questionnaire bailleur – diagnostic social et financier",
+        "corps": ("Madame, Monsieur,\n\n"
+                  "Vous avez assigné votre locataire, {locataire}, résidant {adresse_locataire}, pour des impayés "
+                  "de loyer{si_audience: ; l'audience est fixée au {date_audience}|}.\n\n"
+                  "Le Département intervient à plusieurs étapes de la prévention des expulsions locatives : le "
+                  "travailleur social établit un diagnostic social et financier destiné au juge, qui peut recueillir "
+                  "vos observations.\n\n"
+                  "Nous vous serions reconnaissants de bien vouloir nous retourner le questionnaire ci-joint, "
+                  "complété, ainsi que le décompte locatif à jour, **avant le {date_retour}**, à l'adresse de la "
+                  "{mds}.\n\n"
+                  "Nous vous prions de recevoir, Madame, Monsieur, nos salutations distinguées."),
+        "signature": _EXP_SIGNATURE,
     },
 }
 CHAMPS = ("objet", "corps", "signature")

@@ -67,6 +67,7 @@ class FormulaireOfficiel(models.Model):
     FORMULAIRE_MAINTIEN, ARGUMENTAIRE_MAINTIEN = 'FSL_MAINTIEN', 'FSL_ARGU_MAINTIEN'
     COPP_FICHE_1, COPP_FICHE_2 = 'COPP_FICHE_1', 'COPP_FICHE_2'
     ENGAGEMENTS, CONVENTION_CONCORDAT, LISTE_PIECES_MAINTIEN = 'FSL_ENGAGEMENTS', 'FSL_CONCORDAT', 'FSL_PIECES_MAINTIEN'
+    EXP_DSF, EXP_QUESTIONNAIRE, EXP_CARENCE = 'EXP_DSF', 'EXP_QUEST_BAILLEUR', 'EXP_CARENCE'
     CODES = [
         (FORMULAIRE_ACCES, "Demande d'aide à l'accès au logement"),
         (AVIS_MOTIVE, "Avis motivé et proposition du travailleur social"),
@@ -89,6 +90,9 @@ class FormulaireOfficiel(models.Model):
         (LISTE_PIECES_MAINTIEN, "Liste des pièces à fournir (maintien)"),
         (COPP_FICHE_1, "Commission publics prioritaires (COPP) – fiche de saisine, page 1"),
         (COPP_FICHE_2, "Commission publics prioritaires (COPP) – fiche de saisine, page 2"),
+        (EXP_DSF, "Expulsions – diagnostic social et financier (Cerfa 16227) : remplace celui livré avec CID"),
+        (EXP_QUESTIONNAIRE, "Expulsions – questionnaire bailleur pour le DSF"),
+        (EXP_CARENCE, "Expulsions – bordereau de carence"),
     ]
     gestionnaire = models.ForeignKey(GestionnaireFSL, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='formulaires',

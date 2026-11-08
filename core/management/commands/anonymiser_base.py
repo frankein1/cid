@@ -111,7 +111,11 @@ class Command(BaseCommand):
         lot, n = [], 0
         champs = ["nom", "prenom", "nom_naissance", "date_naissance", "lieu_naissance", "code_insee_naissance",
                   "nir", "numero_caf", "numero_france_travail", "numero_fiscal", "numero_genesis",
-                  "numero_dossier_pmi", "adresse", "telephone_mobile", "telephone_fixe", "email", "detail_sortie"]
+                  "numero_dossier_pmi", "adresse", "telephone_mobile", "telephone_fixe", "email", "detail_sortie",
+                  # clés de recherche de l'annuaire : recalculées sur les valeurs fictives (sinon le vrai nom
+                  # resterait lisible sous sa forme phonétique)
+                  "nom_phonetique", "nom_naissance_phonetique", "prenom_phonetique", "telephone_mobile_cle",
+                  "telephone_fixe_cle"]
         champs = [c for c in champs if any(f.name == c for f in B._meta.concrete_fields)]
         for b in B._base_manager.all().iterator():
             b.nom = _choix(NOMS, self.sel + (b.nom or "").upper())
@@ -124,6 +128,8 @@ class Command(BaseCommand):
                     continue
                 f = B._meta.get_field(c)
                 setattr(b, c, None if f.null else "")
+            if hasattr(b, "calculer_cles_recherche"):
+                b.calculer_cles_recherche()
             lot.append(b)
             n += 1
             if len(lot) >= 500:

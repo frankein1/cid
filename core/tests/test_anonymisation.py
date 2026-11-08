@@ -71,6 +71,9 @@ class AnonymisationTests(TestCase):
         self.assertEqual(m.nom, f.nom)                                   # la famille garde un même nom
         self.assertNotEqual(m.prenom, "Lucie")
         self.assertEqual((m.nir, m.email, m.telephone_mobile), ("", "", ""))
+        from core.phonetique import cle
+        self.assertNotEqual(m.nom_phonetique, cle("DURANDEAU"))        # la clé de l'annuaire suit le nom fictif
+        self.assertEqual((m.nom_phonetique, m.telephone_mobile_cle), (cle(m.nom), ""))
         self.assertNotIn("Réelle", m.adresse)
         self.assertEqual(m.ville, "Port-de-Bouc")                        # la commune reste (statistiques)
         self.assertLessEqual(abs((m.date_naissance - date(1990, 6, 15)).days), 45)

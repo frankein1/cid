@@ -1,0 +1,57 @@
+<!-- /templates/logement/diagnostic_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ g.get_type_document_display }} – {{ d.nom_complet }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="dsf-detail">
+  <a href="{% url 'logement:expulsion_detail' d.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Dossier {{ d.numero }}</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-file-signature text-red-600 mr-2"></i>{{ g.get_type_document_display }} – {{ d.nom_complet }}</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if g.statut == 'VISE' %}bg-green-100 text-green-800{% elif g.statut == 'ENVOYE' %}bg-gray-200 text-gray-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ g.get_statut_display }}</span>
+  </div>
+  <div class="grid lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 space-y-5 text-sm">
+      {% if g.type_document == 'DSF' %}
+      <div class="bg-white rounded-xl border p-5 grid md:grid-cols-2 gap-3" id="dsf-resume">
+        <div><div class="text-xs text-gray-500">Locataire</div>{{ resume.locataire }}</div>
+        <div><div class="text-xs text-gray-500">Audience</div>{{ resume.audience|default:"—" }}</div>
+        <div><div class="text-xs text-gray-500">Dette figurant sur l'assignation</div>{% if resume.dette %}{{ resume.dette }} €{% else %}—{% endif %}</div>
+        <div><div class="text-xs text-gray-500">Bilan</div>Ressources {{ bilan.TOTAL1|default:"—" }} €, charges {{ bilan.TOTAL2|default:"—" }} €, reste à vivre {{ bilan.Reste_a_vivre_mensuel_total_ressources_total_depenses|default:"—" }} €, taux d'effort {{ bilan.Taux_d_effort|default:"—" }}</div>
+        <div class="md:col-span-2"><div class="text-xs text-gray-500">Rubriques renseignées</div>{{ resume.renseignes }} sur {{ resume.total }}{% if not resume.evaluation %} – <span class="text-amber-800">évaluation sociale à rédiger</span>{% endif %}</div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-xl border p-5 space-y-2" id="carence-resume">
+        <p>Le bordereau de carence remplace le diagnostic quand toutes ces conditions sont réunies : absence du locataire à l'entretien, pas d'observations transmises ensuite, pas d'informations de la CCAPEX locale, pas d'informations du bailleur malgré une tentative de contact.</p>
+        <form method="post" action="{% url 'logement:diagnostic_action' g.pk %}" class="space-y-2">{% csrf_token %}
+          <label class="block">Dates des convocations non honorées
+            <input name="convocations" value="{{ resume.convocations }}" class="w-full border rounded px-2 py-1" {% if not peut_ecrire or g.statut == 'ENVOYE' %}disabled{% endif %}></label>
+          {% if peut_ecrire and g.statut != 'ENVOYE' %}<button name="action" value="enregistrer" class="px-3 py-1 border rounded">Enregistrer</button>{% endif %}
+        </form>
+        <p class="text-xs text-gray-500">N° EXPLOC et n° allocataire viennent du dossier ; le travailleur social, la date et le visa sont ajoutés par CID.</p>
+      </div>
+      {% endif %}
+      <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Historique</h2>
+        <ul class="space-y-1">{% for h in g.historique reversed %}<li><span class="text-gray-500">{{ h.date }}</span> – {{ h.action }} <span class="text-gray-500">({{ h.qui }})</span>{% if h.detail %} : {{ h.detail }}{% endif %}</li>{% endfor %}</ul></div>
+    </div>
+    <div class="space-y-3 text-sm" id="dsf-actions">
+      <a href="{% url 'logement:diagnostic_pdf' g.pk %}" target="_blank" class="block text-center px-3 py-2 bg-red-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>{% if g.type_document == 'DSF' %}Cerfa rempli (PDF){% else %}Bordereau (PDF){% endif %}</a>
+      {% if peut_ecrire and g.type_document == 'DSF' and g.statut != 'ENVOYE' %}<a href="{% url 'logement:diagnostic_modifier' g.pk %}" class="block text-center px-3 py-2 border rounded-lg"><i class="fas fa-pen mr-1"></i>Compléter le diagnostic</a>{% endif %}
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="dsf-visa">
+        <h2 class="font-bold text-gray-800">Visa du cadre</h2>
+        {% if g.cadre %}<p class="text-green-800"><i class="fas fa-check mr-1"></i>Visé par {{ g.cadre.get_full_name }} le {{ g.date_validation_cadre|date:"d/m/Y" }}.</p>{% endif %}
+        {% if g.statut == 'BROUILLON' and peut_ecrire %}
+        <form method="post" action="{% url 'logement:diagnostic_action' g.pk %}">{% csrf_token %}<button name="action" value="demander_visa" class="w-full px-3 py-2 bg-amber-500 text-white rounded-lg">Demander le visa du cadre</button></form>{% endif %}
+        {% if peut_viser and g.statut == 'BROUILLON' or peut_viser and g.statut == 'A_VISER' %}
+        <form method="post" action="{% url 'logement:diagnostic_action' g.pk %}">{% csrf_token %}<button name="action" value="viser" class="w-full px-3 py-2 bg-green-600 text-white rounded-lg"><i class="fas fa-signature mr-1"></i>Viser (initiales et date)</button></form>{% endif %}
+        {% if g.statut == 'A_VISER' and not peut_viser %}<p class="text-gray-600">En attente du visa du cadre.</p>{% endif %}
+      </div>
+      {% if g.statut == 'VISE' or g.statut == 'ENVOYE' %}
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="dsf-envoi">
+        <h2 class="font-bold text-gray-800">Transmettre</h2>
+        <a href="{% url 'logement:envoi_dossier' 'dsf' g.pk %}" class="block text-center px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-envelope mr-1"></i>{% if g.statut == 'ENVOYE' %}Renvoyer par mail{% else %}Envoi par mail{% endif %}</a>
+        <a href="{% url 'logement:envoi_dossier' 'dsf' g.pk %}#imprimer" class="block text-center px-3 py-2 border rounded-lg"><i class="fas fa-print mr-1"></i>Imprimer pour envoi</a>
+        <p class="text-xs text-gray-500">Greffe du tribunal et préfecture proposés d'après l'administration. Fini le circuit imprimer, signer, scanner.</p>
+      </div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

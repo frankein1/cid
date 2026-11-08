@@ -20,6 +20,7 @@ from ..forms import DossierExpulsionForm, EtapeExpulsionForm
 from ..models import DossierExpulsion as D, EtapeExpulsion
 from ..models.m_expulsion import treve_hivernale
 from ..services import expulsion as X
+from ..services.expulsion_mds import carence_possible
 
 REFUS = "Réservé au Service Logement et aux agents de la MDS chargée du dossier."
 
@@ -153,8 +154,21 @@ def expulsion_detail(request, pk):
         'usagers': [{'b': b, 'possible': X.peut_rattacher(user, d, b)} for b in usagers], 'c': c,
         'message_recherche': message_recherche, 'acces_fiche': bool(d.beneficiaire and d.beneficiaire.niveau_acces(user)), 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
         'decision': d.libelles_decision(),
+        'convocations': d.convocations.select_related('agent'), 'diagnostics': d.diagnostics.all(),
+        'carence_possible': carence_possible(d),
+        'retour_propose': d.questionnaire_retour_avant or _retour_propose(d),
+        'courrier': (request.GET.get('courrier') or '') if (request.GET.get('courrier') or '').isdigit() else '',
         'treve': treve_hivernale() and d.etapes.filter(type_etape__in=('COMMANDEMENT_QUITTER', 'DEMANDE_CFP',
                                                                        'COMMISSION_PREFECTORALE', 'CFP_ACCORDE')).exists()})
+
+
+def _retour_propose(d):
+    """Retour du questionnaire : 15 jours, et au plus tard une semaine avant l'audience."""
+    from datetime import timedelta
+    j = timezone.localdate() + timedelta(days=15)
+    if d.date_audience and d.date_audience - timedelta(days=7) < j:
+        j = max(timezone.localdate() + timedelta(days=3), d.date_audience - timedelta(days=7))
+    return j
 
 
 @login_required
