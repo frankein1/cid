@@ -98,6 +98,12 @@ class Command(BaseCommand):
              "capacites": ['rsa_pole_cadre', 'rsa_referentiel', 'peut_voir_stats']},
             {"code": "POLE_INSERTION_MEDECIN", "nom": "Pôle insertion – médecin",
              "capacites": ['rsa_pole_medecin']},
+            # ---------------- SERVICE LOGEMENT (prévention des expulsions) ----------------
+            {"code": "SL_CADRE", "nom": "Service Logement – cadres et adjoint",
+             "capacites": ['expulsion_sl_gestion', 'expulsion_sl_pilotage', 'expulsion_sl_stats']},
+            {"code": "SL_SECRETARIAT", "nom": "Service Logement – secrétariat", "capacites": ['expulsion_sl_stats']},
+            {"code": "SL_AGENT_ADMINISTRATIF", "nom": "Service Logement – agents administratifs",
+             "capacites": ['expulsion_sl_gestion']},
             {"code": "SERVICE_CONTROLE_AFASE", "nom": "UAGAF (unité administrative de gestion des aides financières)", "capacites": ['afase_controle']},
 
             {

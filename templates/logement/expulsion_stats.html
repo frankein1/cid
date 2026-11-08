@@ -1,0 +1,33 @@
+<!-- /templates/logement/expulsion_stats.html -->
+{% extends "base.html" %}
+{% block title %}Prévention des expulsions – statistiques{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="expulsion-stats">
+  {% if peut_liste %}<a href="{% url 'logement:expulsion_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Prévention des expulsions</a>{% endif %}
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-chart-column text-red-600 mr-2"></i>Prévention des expulsions – statistiques</h1>
+    <form method="get"><select name="annee" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm"><option value="">Toutes les années</option>{% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></form>
+  </div>
+  <p class="text-sm text-gray-600">{% if s.departemental %}Tous les territoires.{% else %}Dossiers de votre MDS.{% endif %} Comptages par dossier, sans aucune donnée par agent.</p>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Dossiers</div><div class="text-2xl font-bold">{{ s.total }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">En cours</div><div class="text-2xl font-bold text-red-700">{{ s.en_cours }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Clos</div><div class="text-2xl font-bold">{{ s.clos }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Audiences dans les 30 jours</div><div class="text-2xl font-bold">{{ s.audiences_30j }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">À affecter à une MDS</div><div class="text-2xl font-bold">{{ s.non_affectes }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Référent à désigner</div><div class="text-2xl font-bold">{{ s.sans_referent }}</div></div>
+    <div class="bg-white rounded-xl border p-4 col-span-2"><div class="text-xs text-gray-500">Dette moyenne réclamée</div><div class="text-2xl font-bold">{% if s.dette_moyenne is not None %}{{ s.dette_moyenne }} €{% else %}—{% endif %}</div></div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5 text-sm">
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Par MDS</h2>
+      <table class="w-full"><thead class="text-gray-500 text-left"><tr><th>MDS</th><th class="text-right">Dossiers</th><th class="text-right">En cours</th></tr></thead>
+      <tbody>{% for r in s.par_mds %}<tr class="border-t"><td class="py-1">{{ r.mds__nom|default:"À affecter" }}</td><td class="text-right">{{ r.n }}</td><td class="text-right">{{ r.en_cours }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Dossiers en cours par étape</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_etape %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Par origine</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_origine %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Dossiers clos par motif</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_cloture %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
+{% endblock %}

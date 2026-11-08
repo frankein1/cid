@@ -40,6 +40,9 @@ COMPTES = [
     ("admin_pi1", "Agent", "Pôle insertion", "POLE_INSERTION_ADMINISTRATIF", None),
     ("cadre_pi1", "Cadre", "Pôle insertion", "POLE_INSERTION_CADRE", None),
     ("medecin_pi1", "Médecin", "Pôle insertion", "POLE_INSERTION_MEDECIN", None),
+    ("cadre_sl1", "Cadre", "Service Logement", "SL_CADRE", None),
+    ("secr_sl1", "Secrétaire", "Service Logement", "SL_SECRETARIAT", None),
+    ("agent_sl1", "Agent", "Service Logement", "SL_AGENT_ADMINISTRATIF", None),
 ]
 
 # Actions d'insertion fictives : code, libellé, type, niveau, MDS locale (1 ou None), porteur, durée, comité
@@ -990,6 +993,7 @@ class Command(BaseCommand):
         d.avis_motive = "Paiement du loyer repris depuis six mois ; le bailleur accepte une remise d'un tiers (fictif)."
         d.save()
         self.logement_social_copp()
+        self.expulsions()
         self.stdout.write("✅ Demandes FSL fictives ajoutées")
 
     def logement_social_copp(self):
@@ -1037,6 +1041,90 @@ class Command(BaseCommand):
         s.save()
         envoi.enregistrer(s, "COPP", s.mds, "MAIL", 7)
         self.stdout.write("✅ Demandes de logement et commission des publics prioritaires fictives ajoutées")
+
+    def expulsions(self):
+        """Prévention des expulsions : six dossiers fictifs, de la fiche de liaison reçue à l'expulsion évitée."""
+        from django.contrib.contenttypes.models import ContentType
+        from logement.models import DossierExpulsion as D, EtapeExpulsion as E
+        from messagerie.models import Message
+        anciens = D.objects.filter(numero__startswith="DEMO-EXP-")
+        Message.objects.filter(content_type=ContentType.objects.get_for_model(D),
+                               object_id__in=list(anciens.values_list("pk", flat=True))).delete()
+        anciens.delete()
+        sl, j = self.u("agent_sl1"), self.j
+
+        def dossier(n, nom, prenom, mds, **champs):
+            d = D(numero=f"DEMO-EXP-{n:03d}", nom=nom, prenom=prenom, mds=mds, cree_par=sl,
+                  date_reception=j - timedelta(days=champs.pop("recu_il_y_a", 10)), adresse=champs.pop("adresse", ""),
+                  code_postal=champs.pop("cp", "13110"), ville=champs.pop("ville", "Port-de-Bouc"),
+                  tribunal=champs.pop("tribunal", "Tribunal judiciaire (fictif)"), **champs)
+            d.tracer(sl, "Dossier ouvert", d.get_origine_display())
+            if mds:
+                d.tracer(sl, "Affecté à la MDS", str(mds))
+            d.save()
+            return d
+
+        def etape(d, type_etape, il_y_a, commentaire="", echeance=None, faite=False, par=None):
+            jour = j - timedelta(days=il_y_a)
+            E.objects.create(dossier=d, type_etape=type_etape, date=jour, commentaire=commentaire, faite=faite,
+                             echeance=echeance or E.echeance_proposee(type_etape, jour), saisi_par=par or sl)
+
+        caf = {"date_edition": (j - timedelta(days=12)).strftime("%d/%m/%Y"), "couple_isolement": "Isolement",
+               "enfants_pf": "1", "enfants_total": "2", "regime_resp": "Salariée (fictif)", "rni": "1 120",
+               "qf": "540", "apl": "312", "mode_versement": "Bailleur (tiers payant)", "surface": "62",
+               "montant_loyer": "690", "impaye": "Oui", "saisine": "CCAPEX (fictif)", "fsl_etat": "Archive",
+               "commentaire": "Fiche CAF fictive de démonstration."}
+        # 1. Laura PEREZ : audience dans 20 jours, référent désigné, usager rattaché
+        d = dossier(1, "PEREZ", "Laura", self.mds1, beneficiaire=self.b["FAM8-LAU"], referent=self.ts,
+                    adresse="12 rue des Mouettes", proprietaire="SCI DES PINS (fictif)\n4 avenue Fictive 13500 Martigues",
+                    type_bailleur="PRIVE_MORALE", date_signature_bail=j - timedelta(days=4 * 365), loyer_total=Decimal("750"),
+                    loyer=Decimal("690"), charges=Decimal("60"), dette=Decimal("3240"), dette_au=j - timedelta(days=40),
+                    numero_allocataire="DEMO0001", observation_caf="FICHE_CAF", date_audience=j + timedelta(days=20),
+                    heure_audience="9 h 30", caf=caf, recu_il_y_a=12)
+        etape(d, "COMMANDEMENT_PAYER", 150, "Commandement délivré par huissier (fictif).", faite=True)
+        etape(d, "ASSIGNATION", 45, "Assignation aux fins de résiliation de bail.")
+        d.tracer(self.ts, "Référent social désigné", self.ts.get_full_name())
+        d.save()
+        # 2. Inès BERNARD : reçu hier, MDS 1, référent à désigner
+        dossier(2, "BERNARD", "Inès", self.mds1, adresse="3 impasse des Cigales", colocataire="Néant",
+                proprietaire="Office public de l'habitat (fictif)", type_bailleur="SOCIAL", loyer_total=Decimal("480"),
+                dette=Decimal("1870"), dette_au=j - timedelta(days=20), numero_allocataire="DEMO0002",
+                observation_caf="SERVICE_SOCIAL_CAF", date_audience=j + timedelta(days=48), recu_il_y_a=1)
+        # 3. Thomas LEGRAND : jugement rendu, délais de paiement 24 mois, plan d'apurement
+        d = dossier(3, "LEGRAND", "Thomas", self.mds1, beneficiaire=self.b["FAM11-THO"], referent=self.ts,
+                    adresse="27 avenue du Port", proprietaire="M. EXEMPLE (fictif)", type_bailleur="PRIVE",
+                    loyer_total=Decimal("620"), dette=Decimal("2150"), dette_au=j - timedelta(days=130),
+                    numero_allocataire="DEMO0003", observation_caf="FICHE_CAF", date_audience=j - timedelta(days=60),
+                    date_decision=j - timedelta(days=60), recu_il_y_a=140,
+                    decision={"present": True, "suspension_clause": True, "accord_delai": True, "duree_delai": "24",
+                              "delais_paiement": True})
+        etape(d, "ASSIGNATION", 120)
+        etape(d, "DSF", 75, "Diagnostic social et financier transmis au tribunal (fictif).", par=self.ts)
+        etape(d, "AUDIENCE", 60)
+        etape(d, "JUGEMENT", 60, "Clause résolutoire suspendue, 24 mois pour apurer la dette.")
+        etape(d, "PLAN_APUREMENT", 40, "Reprise du loyer courant + 90 € par mois (fictif).", par=self.ts)
+        # 4. MDS 2 : commandement de quitter les lieux, commission préfectorale prévue
+        d = dossier(4, "FONTAINE", "Yanis", self.mds2, referent=self.ts2, ville="Martigues", cp="13500",
+                    adresse="18 boulevard des Salins", proprietaire="Bailleur social (fictif)", type_bailleur="SOCIAL",
+                    loyer_total=Decimal("540"), dette=Decimal("5980"), dette_au=j - timedelta(days=200),
+                    date_audience=j - timedelta(days=210), date_decision=j - timedelta(days=210), recu_il_y_a=260,
+                    decision={"resiliation": True, "expulsion": True, "delais_quitter": True})
+        etape(d, "JUGEMENT", 210, "Résiliation du bail, expulsion, délai de 3 mois pour quitter les lieux.")
+        etape(d, "COMMANDEMENT_QUITTER", 50)
+        etape(d, "COMMISSION_PREFECTORALE", -25, "Commission préfectorale (fictif) : dossier inscrit.",
+              echeance=j + timedelta(days=25))
+        # 5. Reçu ce matin, pas encore affecté
+        dossier(5, "GIRAUD", "Chloé", None, adresse="9 rue des Lavandes", ville="Saint-Mitre-les-Remparts",
+                cp="13920", dette=Decimal("960"), dette_au=j - timedelta(days=5), date_audience=j + timedelta(days=62),
+                recu_il_y_a=0, observation_caf="NON_IDENTIFIE")
+        # 6. Yasmine CHERIF : dette apurée, dossier clos
+        d = dossier(6, "CHERIF", "Yasmine", self.mds1, beneficiaire=self.b["FAM10-YAS"], referent=self.ts_b,
+                    adresse="2 allée des Tamaris", dette=Decimal("1240"), recu_il_y_a=320, statut=D.CLOS,
+                    motif_cloture="APUREMENT", date_cloture=j - timedelta(days=30),
+                    date_audience=j - timedelta(days=250), date_decision=j - timedelta(days=250),
+                    decision={"present": True, "rejet": True})
+        etape(d, "JUGEMENT", 250, "Dette réglée avec l'aide du FSL maintien (fictif) : demande rejetée.")
+        self.stdout.write("✅ Prévention des expulsions : 6 dossiers fictifs (Service Logement et MDS)")
 
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""

@@ -256,6 +256,7 @@ def detail_beneficiaire(request, code_interne):
         # Dossier complet : uniquement pour la MDS de l'usager
         # Documents GED de l'usager (y compris feuilles CAP et AFASE), selon les droits de l'agent
         from ged.utils import get_documents_for_user, rubrique_document
+        from logement.services.expulsion import dossiers_visibles as dossiers_expulsion_visibles
         documents_ged = get_documents_for_user(request.user).filter(
             content_type=ContentType.objects.get_for_model(Beneficiaire),
             object_id=beneficiaire.pk,
@@ -272,6 +273,7 @@ def detail_beneficiaire(request, code_interne):
             "budget_foyer": budget_en_cours(beneficiaire),
             "demandes_fsl": beneficiaire.demandes_fsl.all()[:5],
             "saisines_copp": beneficiaire.saisines_copp.select_related('commission')[:3],
+            "dossiers_expulsion": dossiers_expulsion_visibles(request.user).filter(beneficiaire=beneficiaire),
             "peut_creer_fsl": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             "derniers_entretiens": beneficiaire.entretiens.select_related("auteur")[:3],
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification

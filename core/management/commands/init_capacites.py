@@ -67,6 +67,10 @@ CAPACITES = [
     ('rsa_pole_admin', "RSA – Administratif du pôle insertion (réception des contrats, délais)"),
     ('rsa_pole_cadre', "RSA – Cadre du pôle insertion (commissions de validation et de réorientation)"),
     ('rsa_pole_medecin', "RSA – Médecin du pôle insertion (contrats santé : certificat reçu, avis)"),
+    # --- LOGEMENT – PRÉVENTION DES EXPULSIONS (Service Logement du Département) ---
+    ('expulsion_sl_gestion', "Expulsions – Service Logement : saisie et suivi des dossiers de tous les territoires"),
+    ('expulsion_sl_pilotage', "Expulsions – Service Logement : encadrement (supervision, suppression d'un dossier saisi par erreur)"),
+    ('expulsion_sl_stats', "Expulsions – Statistiques départementales de la prévention des expulsions (lecture)"),
     ('peut_inscrire_aidfi', 'Inscription AidFi'),
     ('peut_consulter_dossiers_aidfi', 'Consulter dossiers AidFi'),
 ]

@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'fsl-acces', 'copp', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'copp', 'expulsions', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -32,7 +32,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
-             ("Logement", ['fsl-acces', 'copp']),
+             ("Logement", ['fsl-acces', 'copp', 'expulsions']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -97,6 +97,7 @@ TITRES = {
     'budget-foyer': ("Établir le budget du foyer", "Travailleurs sociaux, agents de MDS"),
     'copp': ("Demande de logement et commission des publics prioritaires", "Travailleurs sociaux de la MDS"),
     'fsl-acces': ("FSL : accès, maintien, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
+    'expulsions': ("Prévention des expulsions", "Service Logement, agents et cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
 }
@@ -1313,11 +1314,50 @@ page('copp', qui="Agents de la MDS de l'usager (saisie : agents avec le droit de
              "Le dispositif est local : un autre territoire peut le nommer autrement ou ne pas l'utiliser."],
      ensuite=['fsl-acces', 'budget-foyer'])
 
+page('expulsions', qui="Service Logement du Département (agents administratifs, cadres, secrétariat) et agents de la MDS",
+     ou="Menu « Expulsions » (Service Logement) ou Accompagnement → Prévention des expulsions (MDS)", duree="10 minutes",
+     intro="Le Service Logement saisit le dossier à partir de la fiche de liaison CD 13 – CAF 13 (assignation aux fins de résiliation de bail) et le confie à une MDS. La MDS est prévenue dans CID, désigne le référent social, rattache l'usager et suit la procédure étape par étape, jusqu'au concours de la force publique.",
+     etapes=[
+         ("La liste des dossiers", [fig('expulsions', '01', "Les dossiers en cours et ce qu'il reste à faire.")],
+          ["Le Service Logement voit les dossiers de tous les territoires ; une MDS ne voit que les siens.",
+           "La colonne <b>À faire</b> signale ce qui attend : dossier à affecter, référent à désigner, audience proche, décision à saisir, échéance d'une étape.",
+           "Filtrez par MDS, par statut, ou affichez <b>Mes dossiers</b> ou les <b>audiences à venir</b>."], []),
+         ("Saisir la fiche de liaison", [fig('expulsions', '02', "Le locataire, comme sur la fiche de liaison."),
+                                        fig('expulsions', '03', "L'audience et la décision du tribunal.")],
+          ["<span class=\"clic\">Nouveau dossier</span> : reprenez les rubriques de la fiche de liaison (locataire, colocataire, propriétaire, bail, loyer, dette réclamée, observations CAF, audience).",
+           "La fiche CAF « Prévention de l'expulsion domiciliaire » (identification, situation familiale et professionnelle, ressources, prestations, logement, FSL) se déplie en bas du formulaire.",
+           "Choisissez la MDS : à l'enregistrement, son responsable reçoit un message dans CID. Plus besoin d'envoyer le PDF par mail."],
+          [("astuce", "Seuls le nom et l'origine sont obligatoires : le dossier se complète au fil des informations reçues.")]),
+         ("Affecter ou réaffecter", [fig('expulsions', '04', "Un dossier reçu, encore à affecter.")],
+          ["Bloc <b>Suivi</b> : choisissez la MDS puis <span class=\"clic\">Affecter</span> (ou <span class=\"clic\">Réaffecter</span> si le ménage relève d'une autre MDS : le référent est alors à redésigner)."], []),
+         ("Désigner le référent, rattacher l'usager", [fig('expulsions', '05', "Le cadre de la MDS désigne le référent.")],
+          ["Le cadre de la MDS choisit le <b>référent social</b> ; un travailleur social peut aussi cliquer sur <span class=\"clic\">Je suis le référent</span>.",
+           "<b>Usager dans CID</b> : cherchez le ménage parmi les usagers de la MDS et cliquez sur <span class=\"clic\">Rattacher</span>. Le dossier apparaît alors dans l'encart « Logement » de sa fiche."],
+          [("attention", "Le Service Logement ne voit pas les dossiers des usagers : c'est la MDS qui rattache.")]),
+         ("Suivre la procédure", [fig('expulsions', '06', "Les étapes déjà saisies."), fig('expulsions', '07', "Ajouter une étape.")],
+          ["Ajoutez chaque étape avec sa date : commandement de payer, assignation, diagnostic social et financier, audience, jugement, plan d'apurement, commandement de quitter les lieux, demande de concours de la force publique, commission préfectorale…",
+           "Laissée vide, l'<b>échéance</b> est proposée (commandement de payer : 6 semaines ; commandement de quitter les lieux : 2 mois). Elle s'affiche dans « À faire » quinze jours avant ; cliquez sur <span class=\"clic\">échéance traitée</span> une fois fait.",
+           "Pendant la trêve hivernale (1<sup>er</sup> novembre – 31 mars), un bandeau le rappelle sur les dossiers concernés."], []),
+         ("Saisir la décision du tribunal", [fig('expulsions', '08', "La décision, case par case.")],
+          ["<span class=\"clic\">Compléter la fiche, saisir la décision</span> : cochez les cases de la fiche de liaison (présence, provisions, suspension de la clause résolutoire, accord de délai 12 ou 24 mois, résiliation, expulsion, délais, rejet).",
+           "Quand la MDS saisit la décision, le Service Logement est prévenu. La <span class=\"clic\">Fiche de liaison PDF</span> reprend tout, avec la fiche CAF en page 2."], []),
+         ("Sur la fiche de l'usager", [fig('expulsions', '09', "L'encart « Logement » de la fiche usager.")],
+          ["Un dossier rattaché apparaît en rouge dans l'encart <b>Logement</b>, avec la date de l'audience : FSL maintien et commission des publics prioritaires sont à portée de clic."], []),
+         ("Les statistiques", [fig('expulsions', '10', "Les comptages du Service Logement.")],
+          ["Dossiers en cours et clos, à affecter, audiences dans les 30 jours, dette moyenne, répartition par MDS, par étape, par origine, par motif de clôture.",
+           "Le secrétariat du Service Logement n'a accès qu'à cette page ; une MDS voit les chiffres de ses dossiers. Aucun chiffre n'est calculé par agent."], []),
+     ],
+     savoir=["Trois profils pour le Service Logement : <b>cadres et adjoint</b> (tout, y compris supprimer un dossier saisi par erreur), <b>agents administratifs</b> (saisie et suivi des dossiers), <b>secrétariat</b> (statistiques). Ils s'attribuent dans Comptes &amp; droits.",
+             "Clore un dossier demande un motif (dette apurée ou plan respecté, désistement, relogement, départ, expulsion…) ; il peut être rouvert.",
+             "Les coordonnées du Service Logement imprimées sur la fiche PDF se règlent en administration (paramètre SERVICE_LOGEMENT_COORDONNEES).",
+             "À venir : convocations, diagnostic social et financier prérempli, envoi au tribunal et à la préfecture, CAPEX locale."],
+     ensuite=['fsl-acces', 'copp'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
                   ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – prévention des expulsions locatives"])
+                   "Logement – convocations et diagnostic social et financier (expulsions)"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

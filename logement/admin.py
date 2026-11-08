@@ -10,8 +10,8 @@ from django.http import HttpResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from .models import (CommissionPublicsPrioritaires, DemandeFSL, DemandeLogementSocial, EnvoiDossier,
-                     FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
+from .models import (CommissionPublicsPrioritaires, DemandeFSL, DemandeLogementSocial, DossierExpulsion, EnvoiDossier,
+                     EtapeExpulsion, FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 
 
 @admin.register(GestionnaireFSL)
@@ -126,3 +126,18 @@ class EnvoiDossierAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+class EtapeExpulsionInline(admin.TabularInline):
+    model = EtapeExpulsion
+    extra = 0
+    raw_id_fields = ['saisi_par']
+
+
+@admin.register(DossierExpulsion)
+class DossierExpulsionAdmin(admin.ModelAdmin):
+    list_display = ['numero', 'nom', 'prenom', 'mds', 'date_audience', 'statut', 'date_reception']
+    list_filter = ['statut', 'origine', 'mds']
+    search_fields = ['numero', 'nom', 'prenom', 'numero_allocataire']
+    raw_id_fields = ['beneficiaire', 'referent', 'cree_par']
+    inlines = [EtapeExpulsionInline]

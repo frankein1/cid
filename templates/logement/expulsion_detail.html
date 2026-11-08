@@ -1,0 +1,123 @@
+<!-- /templates/logement/expulsion_detail.html -->
+{% extends "base.html" %}
+{% block title %}Dossier {{ d.numero }} – prévention des expulsions{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="expulsion-detail">
+  <a href="{% url 'logement:expulsion_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Prévention des expulsions</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-house-circle-exclamation text-red-600 mr-2"></i>{{ d.nom_complet }} <span class="text-base font-normal text-gray-500">– {{ d.numero }}</span></h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if d.statut == 'CLOS' %}bg-gray-200 text-gray-700{% else %}bg-red-100 text-red-800{% endif %}">{{ d.get_statut_display }}{% if d.motif_cloture %} – {{ d.get_motif_cloture_display|lower }}{% endif %}</span>
+  </div>
+  {% for a in alertes %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ a }}</div>{% endfor %}
+  {% if treve %}<div class="p-3 bg-sky-50 border border-sky-200 rounded text-sm text-sky-900"><i class="fas fa-snowflake mr-1"></i>Trêve hivernale : l'expulsion ne peut pas avoir lieu avant le 1<sup>er</sup> avril, sauf exceptions prévues par la loi.</div>{% endif %}
+
+  <div class="grid lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 space-y-5">
+      <div class="bg-white rounded-xl border p-5 grid md:grid-cols-2 gap-4 text-sm" id="expulsion-fiche">
+        <div><div class="text-xs text-gray-500">Locataire</div>{{ d.nom_complet }}{% if d.colocataire %}<div>Colocataire : {{ d.colocataire }}</div>{% endif %}<div class="text-gray-600">{{ d.adresse_complete }}</div></div>
+        <div><div class="text-xs text-gray-500">Audience</div>{% if d.date_audience %}{{ d.date_audience|date:"d/m/Y" }}{% if d.heure_audience %} à {{ d.heure_audience }}{% endif %}{% else %}—{% endif %}<div class="text-gray-600">{{ d.tribunal }}</div></div>
+        <div><div class="text-xs text-gray-500">Propriétaire</div>{{ d.proprietaire|linebreaksbr|default:"—" }}{% if d.type_bailleur %}<div class="text-xs text-gray-500">{{ d.get_type_bailleur_display }}</div>{% endif %}</div>
+        <div><div class="text-xs text-gray-500">Bail et dette</div>
+          {% if d.date_signature_bail %}Bail signé le {{ d.date_signature_bail|date:"d/m/Y" }}<br>{% endif %}
+          Loyer {% if d.loyer_total is not None %}{{ d.loyer_total|floatformat:2 }} €{% else %}—{% endif %}{% if d.loyer is not None %} ({{ d.loyer|floatformat:2 }} € + {{ d.charges|default_if_none:0|floatformat:2 }} € de charges){% endif %}<br>
+          <b>Dette : {% if d.dette is not None %}{{ d.dette|floatformat:2 }} €{% else %}—{% endif %}</b>{% if d.dette_au %} au {{ d.dette_au|date:"d/m/Y" }}{% endif %}</div>
+        <div><div class="text-xs text-gray-500">CAF</div>Allocataire {{ d.numero_allocataire|default:"—" }}{% if d.observation_caf %} – {{ d.get_observation_caf_display }}{% endif %}{% if d.retour_le %} (retour le {{ d.retour_le|date:"d/m/Y" }}){% endif %}{% if d.association %} – association{% endif %}{% if d.ccas %} – CCAS{% endif %}</div>
+        <div><div class="text-xs text-gray-500">Origine</div>{{ d.get_origine_display }}, reçu le {{ d.date_reception|date:"d/m/Y" }}</div>
+        {% if d.observations %}<div class="md:col-span-2"><div class="text-xs text-gray-500">Observations du Service Logement</div>{{ d.observations|linebreaksbr }}</div>{% endif %}
+      </div>
+
+      <div class="bg-white rounded-xl border p-5 text-sm" id="expulsion-decision">
+        <h2 class="font-bold text-gray-800 mb-2">Décision du tribunal{% if d.date_decision %} du {{ d.date_decision|date:"d/m/Y" }}{% endif %}</h2>
+        {% if decision %}<ul class="list-disc pl-5">{% for l in decision %}<li>{{ l }}</li>{% endfor %}</ul>{% else %}<p class="text-gray-400">Pas encore saisie.</p>{% endif %}
+      </div>
+
+      {% if caf %}
+      <details class="bg-white rounded-xl border p-5 text-sm"><summary class="font-bold text-gray-800 cursor-pointer">Fiche CAF</summary>
+        {% for rubrique, lignes in caf.items %}<h3 class="mt-3 text-xs font-semibold text-gray-500 uppercase">{{ rubrique }}</h3>
+        <dl class="grid md:grid-cols-2 gap-x-4">{% for lib, v in lignes %}<div><dt class="inline text-gray-500">{{ lib }} :</dt> <dd class="inline">{{ v }}</dd></div>{% endfor %}</dl>{% endfor %}
+      </details>{% endif %}
+
+      <div class="bg-white rounded-xl border p-5 text-sm" id="expulsion-etapes">
+        <h2 class="font-bold text-gray-800 mb-3">Étapes de la procédure</h2>
+        <ol class="relative border-l border-gray-200 ml-2 space-y-3">
+          {% for e in etapes %}
+          <li class="ml-4"><span class="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full {% if e.type_etape == 'EXPULSION' %}bg-red-600{% elif e.type_etape == 'JUGEMENT' %}bg-amber-500{% else %}bg-blue-500{% endif %}"></span>
+            <div class="flex flex-wrap items-center gap-2"><b>{{ e.date|date:"d/m/Y" }}</b> – {{ e.get_type_etape_display }}
+              {% if e.echeance %}<span class="text-xs px-2 py-0.5 rounded {% if e.faite %}bg-gray-100 text-gray-500{% else %}bg-amber-100 text-amber-800{% endif %}">échéance {{ e.echeance|date:"d/m/Y" }}{% if e.faite %} (traitée){% endif %}</span>{% endif %}
+              {% if peut_ecrire %}
+              <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="etape" value="{{ e.pk }}">
+                {% if e.echeance and not e.faite %}<button name="action" value="etape_faite" class="text-xs text-green-700 hover:underline">échéance traitée</button>{% endif %}
+                <button name="action" value="etape_supprimer" class="text-xs text-gray-400 hover:text-red-600" title="Supprimer l'étape"><i class="fas fa-trash"></i></button></form>{% endif %}
+            </div>
+            {% if e.commentaire %}<div class="text-gray-600">{{ e.commentaire|linebreaksbr }}</div>{% endif %}
+            <div class="text-xs text-gray-400">saisi par {{ e.saisi_par.get_full_name|default:"CID" }}</div>
+          </li>
+          {% empty %}<li class="ml-4 text-gray-400">Aucune étape saisie.</li>{% endfor %}
+        </ol>
+        {% if peut_ecrire and d.statut == 'EN_COURS' %}
+        <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="mt-4 grid md:grid-cols-4 gap-3 border-t pt-4" id="etape-ajout">{% csrf_token %}
+          <label class="block md:col-span-2">Étape{{ etape_form.type_etape }}</label>
+          <label class="block">Date{{ etape_form.date }}</label>
+          <label class="block">Échéance{{ etape_form.echeance }}</label>
+          <label class="block md:col-span-4">Commentaire{{ etape_form.commentaire }}</label>
+          <p class="md:col-span-3 text-xs text-gray-500">{{ etape_form.echeance.help_text }}</p>
+          <button name="action" value="etape" class="px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-plus mr-1"></i>Ajouter l'étape</button>
+        </form>{% endif %}
+      </div>
+
+      <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Historique</h2>
+        <ul class="text-sm space-y-1">{% for h in d.historique reversed %}<li><span class="text-gray-500">{{ h.date }}</span> – {{ h.action }} <span class="text-gray-500">({{ h.qui }})</span>{% if h.detail %} : {{ h.detail }}{% endif %}</li>{% endfor %}</ul></div>
+    </div>
+
+    <div class="space-y-5 text-sm">
+      <div class="bg-white rounded-xl border p-5 space-y-2" id="expulsion-actions">
+        {% if peut_ecrire %}<a href="{% url 'logement:expulsion_modifier' d.pk %}" class="block text-center px-3 py-2 border rounded-lg"><i class="fas fa-pen mr-1"></i>Compléter la fiche, saisir la décision</a>{% endif %}
+        <a href="{% url 'logement:expulsion_pdf' d.pk %}" target="_blank" class="block text-center px-3 py-2 bg-red-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Fiche de liaison PDF</a>
+      </div>
+
+      <div class="bg-white rounded-xl border p-5 space-y-3" id="expulsion-suivi">
+        <h2 class="font-bold text-gray-800">Suivi</h2>
+        <div><div class="text-xs text-gray-500">MDS</div>{{ d.mds.nom|default:"<span class='text-red-700'>à affecter</span>" }}</div>
+        {% if peut_affecter and d.statut == 'EN_COURS' %}
+        <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="flex gap-2">{% csrf_token %}
+          <select name="mds" class="border rounded px-2 py-1 flex-1">{% for m in mds_liste %}<option value="{{ m.pk }}" {% if m.pk == d.mds_id %}selected{% endif %}>{{ m.nom }}</option>{% endfor %}</select>
+          <button name="action" value="affecter" class="px-3 py-1 bg-gray-800 text-white rounded">{% if d.mds %}Réaffecter{% else %}Affecter{% endif %}</button></form>{% endif %}
+        <div><div class="text-xs text-gray-500">Référent social</div>{{ d.referent.get_full_name|default:"à désigner" }}</div>
+        {% if d.mds and d.statut == 'EN_COURS' %}
+          {% if peut_designer %}
+          <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="flex gap-2">{% csrf_token %}
+            <select name="referent" class="border rounded px-2 py-1 flex-1">{% for r in referents %}<option value="{{ r.pk }}" {% if r.pk == d.referent_id %}selected{% endif %}>{{ r.get_full_name|default:r.username }}</option>{% endfor %}</select>
+            <button name="action" value="referent" class="px-3 py-1 bg-gray-800 text-white rounded">Désigner</button></form>
+          {% elif peut_prendre %}
+          <form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<button name="action" value="prendre" class="px-3 py-1 border rounded">Je suis le référent</button></form>
+          {% endif %}
+        {% endif %}
+        <div id="expulsion-usager"><div class="text-xs text-gray-500">Usager dans CID</div>
+          {% if d.beneficiaire %}<a href="{% url 'beneficiaire:detail_beneficiaire' d.beneficiaire.code_interne %}" class="text-blue-700 hover:underline">{{ d.beneficiaire.nom|upper }} {{ d.beneficiaire.prenom }}</a>
+            {% if peut_rattacher %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="inline">{% csrf_token %}<button name="action" value="detacher" class="text-xs text-gray-400 hover:underline ml-1">détacher</button></form>{% endif %}
+          {% elif peut_rattacher %}
+            <form method="get" class="flex gap-2 mt-1"><input name="usager" value="{{ recherche|default:d.nom }}" class="border rounded px-2 py-1 flex-1"><button class="px-2 py-1 border rounded"><i class="fas fa-search"></i></button></form>
+            <ul class="mt-2 space-y-1">{% for u in usagers %}<li class="flex items-center justify-between gap-2"><span>{{ u.nom|upper }} {{ u.prenom }} <span class="text-xs text-gray-500">{{ u.date_naissance|date:"d/m/Y" }} – {{ u.ville }}</span></span>
+              <form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<input type="hidden" name="beneficiaire" value="{{ u.pk }}"><button name="action" value="rattacher" class="text-xs px-2 py-1 bg-blue-600 text-white rounded">Rattacher</button></form></li>
+              {% empty %}<li class="text-gray-400">Aucun usager de la MDS ne correspond.</li>{% endfor %}</ul>
+          {% else %}<span class="text-gray-400">non rattaché (la MDS le fait)</span>{% endif %}
+        </div>
+      </div>
+
+      {% if peut_ecrire %}
+      <div class="bg-white rounded-xl border p-5 space-y-2">
+        {% if d.statut == 'EN_COURS' %}
+        <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="space-y-2">{% csrf_token %}
+          <label class="block">Clore le dossier<select name="motif_cloture" class="w-full border rounded px-2 py-1"><option value="">Motif…</option>{% for c, l in motifs_cloture %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></label>
+          <button name="action" value="cloturer" class="px-3 py-1 border rounded">Clore</button></form>
+        {% else %}
+        <form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<button name="action" value="rouvrir" class="px-3 py-1 border rounded">Rouvrir le dossier</button></form>
+        {% endif %}
+        {% if peut_supprimer %}
+        <details><summary class="cursor-pointer text-gray-500">Supprimer (dossier saisi par erreur)</summary>
+          <form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="mt-2">{% csrf_token %}<button name="action" value="supprimer" class="px-3 py-1 bg-red-600 text-white rounded">Supprimer définitivement</button></form></details>{% endif %}
+      </div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,276 @@
+# =============================================================================
+# © AGPL3 - CID - Developpeur : Frederic COTTA
+# Assistance technique: l'IA
+# Interdiction de réutilisation commerciale
+# =============================================================================
+# logement/views/v_expulsion.py
+"""Prévention des expulsions : liste, saisie par le Service Logement, suivi par la MDS, journal, statistiques."""
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from mds.models import MDS
+
+from ..forms import DossierExpulsionForm, EtapeExpulsionForm
+from ..models import DossierExpulsion as D, EtapeExpulsion
+from ..models.m_expulsion import treve_hivernale
+from ..services import expulsion as X
+
+REFUS = "Réservé au Service Logement et aux agents de la MDS chargée du dossier."
+
+
+def _dossier(request, pk):
+    d = get_object_or_404(D.objects.select_related('mds', 'referent', 'beneficiaire'), pk=pk)
+    return d, X.peut_voir(request.user, d)
+
+
+def _mds_possibles(user):
+    if X.est_sl(user) or X.est_admin(user):
+        return MDS.objects.filter(active=True).order_by('nom')
+    return X.mds_de(user).order_by('nom')
+
+
+# ---------------------------------------------------------------------------------------------------------------
+@login_required
+def expulsion_liste(request):
+    user = request.user
+    if not X.peut_voir_module(user):
+        if X.peut_voir_stats(user):
+            return redirect('logement:expulsion_stats')
+        return HttpResponseForbidden(REFUS)
+    qs = X.dossiers_visibles(user)
+    g = request.GET
+    statut = g.get('statut', D.EN_COURS)
+    if statut in dict(D.STATUTS):
+        qs = qs.filter(statut=statut)
+    if g.get('mds') == 'aucune':
+        qs = qs.filter(mds__isnull=True)
+    elif (g.get('mds') or '').isdigit():
+        qs = qs.filter(mds_id=g['mds'])
+    if g.get('vue') == 'mes':
+        qs = qs.filter(referent=user)
+    elif g.get('vue') == 'audiences':
+        j = timezone.localdate()
+        qs = qs.filter(date_audience__gte=j).order_by('date_audience')
+    q = (g.get('q') or '').strip()
+    if q:
+        qs = qs.filter(Q(nom__icontains=q) | Q(prenom__icontains=q) | Q(numero__icontains=q)
+                       | Q(numero_allocataire__icontains=q) | Q(ville__icontains=q))
+    page = Paginator(qs, 25).get_page(g.get('page'))
+    return render(request, 'logement/expulsion_liste.html', {
+        'page': page, 'statut': statut, 'statuts': D.STATUTS, 'q': q, 'vue': g.get('vue', ''),
+        'mds_filtre': g.get('mds', ''), 'mds_liste': _mds_possibles(user), 'est_sl': X.est_sl(user),
+        'peut_creer': X.peut_creer(user), 'peut_stats': X.peut_voir_stats(user), 'treve': treve_hivernale()})
+
+
+@login_required
+def expulsion_nouveau(request):
+    user = request.user
+    if not X.peut_creer(user):
+        return HttpResponseForbidden(REFUS)
+    sl = X.est_sl(user) or X.est_admin(user)
+    form = DossierExpulsionForm(request.POST or None, mds_possibles=_mds_possibles(user),
+                                initial={'origine': D.SL_CAF if sl else D.MDS_ORIGINE})
+    if request.method == 'POST' and form.is_valid():
+        d = form.save(commit=False)
+        mds = d.mds
+        d.mds = None
+        d.cree_par = user
+        d.tracer(user, "Dossier ouvert", d.get_origine_display())
+        d.save()
+        if mds:
+            if sl:
+                X.affecter(d, mds, user)
+            else:
+                d.mds = mds
+                d.referent = user if user.a_la_capacite('peut_instruire') else None
+                d.tracer(user, "Ouvert par la MDS", str(mds))
+                d.save()
+        messages.success(request, f"Dossier {d.numero} enregistré."
+                         + (" La MDS est prévenue dans CID." if mds and sl else ""))
+        return redirect('logement:expulsion_detail', pk=d.pk)
+    return render(request, 'logement/expulsion_form.html', {'form': form, 'd': None})
+
+
+@login_required
+def expulsion_modifier(request, pk):
+    d, voir = _dossier(request, pk)
+    if not voir or not X.peut_ecrire(request.user, d):
+        return HttpResponseForbidden(REFUS)
+    sl = X.est_sl(request.user) or X.est_admin(request.user)
+    mds_avant = d.mds
+    decision_avant = (dict(d.decision or {}), d.date_decision)
+    form = DossierExpulsionForm(request.POST or None, instance=d,
+                                mds_possibles=_mds_possibles(request.user) if sl else MDS.objects.filter(pk=d.mds_id))
+    if request.method == 'POST' and form.is_valid():
+        d = form.save(commit=False)
+        nouvelle_mds = d.mds
+        d.mds = mds_avant
+        d.tracer(request.user, "Dossier modifié", ", ".join(str(form.fields[c].label) for c in form.changed_data
+                                                             if c in form.fields)[:300])
+        d.save()
+        if sl and nouvelle_mds and nouvelle_mds != mds_avant:
+            X.affecter(d, nouvelle_mds, request.user)
+        if (d.decision, d.date_decision) != decision_avant and d.date_decision and not sl:
+            X.prevenir_sl(d, request.user, f"Prévention des expulsions : décision saisie – {d.nom_complet}",
+                          f"La MDS a saisi la décision du tribunal du {d.date_decision:%d/%m/%Y} pour le dossier "
+                          f"{d.numero} : {', '.join(d.libelles_decision()) or 'à préciser'}.")
+        messages.success(request, "Dossier enregistré.")
+        return redirect('logement:expulsion_detail', pk=d.pk)
+    return render(request, 'logement/expulsion_form.html', {'form': form, 'd': d})
+
+
+@login_required
+def expulsion_detail(request, pk):
+    d, voir = _dossier(request, pk)
+    if not voir:
+        return HttpResponseForbidden(REFUS)
+    user = request.user
+    recherche = (request.GET.get('usager') or '').strip()
+    peut_rattacher = bool((X.peut_ecrire(user, d) and d.mds_id and user.a_la_capacite('peut_voir')) or X.est_admin(user))
+    return render(request, 'logement/expulsion_detail.html', {
+        'd': d, 'etapes': d.etapes.select_related('saisi_par'), 'alertes': d.alertes(),
+        'peut_ecrire': X.peut_ecrire(user, d), 'peut_affecter': X.peut_affecter(user),
+        'peut_designer': X.peut_designer_referent(user, d), 'peut_prendre': X.peut_prendre(user, d),
+        'peut_supprimer': X.peut_supprimer(user), 'peut_rattacher': peut_rattacher,
+        'mds_liste': _mds_possibles(user) if X.peut_affecter(user) else [],
+        'referents': X.referents_possibles(d), 'etape_form': EtapeExpulsionForm(initial={'date': timezone.localdate()}),
+        'usagers': X.usagers_proposes(d, recherche) if peut_rattacher and not d.beneficiaire_id else [],
+        'recherche': recherche, 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
+        'decision': d.libelles_decision(),
+        'treve': treve_hivernale() and d.etapes.filter(type_etape__in=('COMMANDEMENT_QUITTER', 'DEMANDE_CFP',
+                                                                       'COMMISSION_PREFECTORALE', 'CFP_ACCORDE')).exists()})
+
+
+@login_required
+@require_POST
+def expulsion_action(request, pk):
+    d, voir = _dossier(request, pk)
+    user = request.user
+    if not voir:
+        return HttpResponseForbidden(REFUS)
+    action = request.POST.get('action')
+    retour = redirect('logement:expulsion_detail', pk=d.pk)
+
+    if action == 'affecter':
+        if not X.peut_affecter(user):
+            return HttpResponseForbidden(REFUS)
+        mds = MDS.objects.filter(pk=request.POST.get('mds')).first()
+        if mds:
+            X.affecter(d, mds, user)
+            messages.success(request, f"Dossier confié à {mds} : son responsable est prévenu dans CID.")
+        return retour
+
+    if action in ('referent', 'prendre'):
+        if action == 'prendre' and X.peut_prendre(user, d):
+            X.designer_referent(d, user, user)
+        elif action == 'referent' and X.peut_designer_referent(user, d):
+            r = X.referents_possibles(d).filter(pk=request.POST.get('referent')).first()
+            if not r:
+                messages.error(request, "Choisissez un agent de la MDS.")
+                return retour
+            X.designer_referent(d, r, user)
+        else:
+            return HttpResponseForbidden(REFUS)
+        messages.success(request, "Référent social enregistré.")
+        return retour
+
+    if not X.peut_ecrire(user, d):
+        return HttpResponseForbidden(REFUS)
+
+    if action == 'rattacher':
+        from beneficiaire.models import Beneficiaire
+        b = Beneficiaire.objects.filter(pk=request.POST.get('beneficiaire'), mds=d.mds).first()
+        if b and b.niveau_acces(user) == 'complet':
+            d.beneficiaire = b
+            d.tracer(user, "Usager rattaché", f"{b.nom.upper()} {b.prenom} ({b.code_interne})")
+            d.save()
+            messages.success(request, "Usager rattaché : le dossier apparaît sur sa fiche.")
+        else:
+            messages.error(request, "Usager introuvable dans la MDS du dossier.")
+    elif action == 'detacher':
+        d.tracer(user, "Usager détaché", str(d.beneficiaire or ""))
+        d.beneficiaire = None
+        d.save()
+    elif action == 'etape':
+        form = EtapeExpulsionForm(request.POST)
+        if form.is_valid():
+            e = form.save(commit=False)
+            e.dossier, e.saisi_par = d, user
+            e.save()
+            d.tracer(user, "Étape ajoutée", str(e))
+            d.save()
+            messages.success(request, f"Étape « {e.get_type_etape_display()} » ajoutée"
+                             + (f", échéance le {e.echeance:%d/%m/%Y}." if e.echeance else "."))
+        else:
+            messages.error(request, "Étape incomplète : type et date obligatoires.")
+    elif action in ('etape_faite', 'etape_supprimer'):
+        e = get_object_or_404(EtapeExpulsion, pk=request.POST.get('etape'), dossier=d)
+        if action == 'etape_faite':
+            e.faite = True
+            e.save(update_fields=['faite'])
+        else:
+            d.tracer(user, "Étape supprimée", str(e))
+            e.delete()
+            d.save()
+    elif action == 'cloturer':
+        motif = request.POST.get('motif_cloture')
+        if motif not in dict(D.MOTIFS_CLOTURE):
+            messages.error(request, "Indiquez le motif de clôture.")
+            return retour
+        d.statut, d.motif_cloture, d.date_cloture = D.CLOS, motif, timezone.localdate()
+        d.tracer(user, "Dossier clos", d.get_motif_cloture_display())
+        d.save()
+        if not X.est_sl(user):
+            X.prevenir_sl(d, user, f"Prévention des expulsions : dossier clos – {d.nom_complet}",
+                          f"La MDS a clos le dossier {d.numero} : {d.get_motif_cloture_display().lower()}.")
+        messages.success(request, "Dossier clos.")
+    elif action == 'rouvrir':
+        d.statut, d.motif_cloture, d.date_cloture = D.EN_COURS, '', None
+        d.tracer(user, "Dossier rouvert")
+        d.save()
+    elif action == 'supprimer':
+        if not X.peut_supprimer(user):
+            return HttpResponseForbidden(REFUS)
+        numero = d.numero
+        d.delete()
+        messages.success(request, f"Dossier {numero} supprimé.")
+        return redirect('logement:expulsion_liste')
+    return retour
+
+
+@login_required
+def expulsion_pdf(request, pk):
+    d, voir = _dossier(request, pk)
+    if not voir:
+        return HttpResponseForbidden(REFUS)
+    from ..services.expulsion_pdf import fiche
+    r = HttpResponse(fiche(d), content_type='application/pdf')
+    r['Content-Disposition'] = f'inline; filename="prevention_expulsion_{d.numero}.pdf"'
+    return r
+
+
+@login_required
+def expulsion_stats(request):
+    if not X.peut_voir_stats(request.user):
+        return HttpResponseForbidden("Réservé aux personnes habilitées à consulter les statistiques.")
+    annee = request.GET.get('annee')
+    annee = int(annee) if (annee or '').isdigit() else None
+    annees = sorted({x.year for x in D.objects.dates('date_reception', 'year')}, reverse=True)
+    return render(request, 'logement/expulsion_stats.html', {
+        's': X.statistiques(request.user, annee), 'annee': annee, 'annees': annees,
+        'peut_liste': X.peut_voir_module(request.user)})
+
+
+def dossiers_usager(beneficiaire, user):
+    """Pour l'encart « Logement » de la fiche usager."""
+    return X.dossiers_visibles(user).filter(beneficiaire=beneficiaire)
+
+
+__all__ = ['expulsion_liste', 'expulsion_nouveau', 'expulsion_modifier', 'expulsion_detail', 'expulsion_action',
+           'expulsion_pdf', 'expulsion_stats']
