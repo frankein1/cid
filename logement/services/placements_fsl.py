@@ -115,14 +115,20 @@ def _formulaire_acces():
         {'cle': 'ts_portable', 'page': 1, 'ancre': 'téléphone portable', 'dx': 10},
         {'cle': 'ts_email', 'page': 1, 'ancre': 'Adresse mail TS', 'dx': 10},
         {'cle': 'ts_organisme', 'page': 1, 'ancre': "Nom et adresse de l'organisme", 'dx': 10, 'largeur': 330, 'lignes': 3},
-    ]
+    ] + _visa('Cachet de la structure')
     return c
+
+
+def _visa(ancre, page=1):
+    """Visa du cadre (initiales, date, signature numérisée validée) dans la case du cachet."""
+    return [{'cle': 'visa', 'page': page, 'ancre': ancre, 'x_min': D, 'mode': 'dessous', 'dy': 6, 'dx': -20, 'taille': 7},
+            {'cle': 'visa_image', 'page': page, 'ancre': ancre, 'x_min': D, 'mode': 'dessous', 'dy': 12, 'dx': -10}]
 
 
 def _composition_et_ressources():
     """Situation familiale, composition (page 1) et ressources (page 2) : identiques sur les formulaires FSL."""
     return [x for x in _formulaire_acces()
-            if x['cle'].startswith(('sf_', 'comp_', 'res_', 'prec_', 'total_'))
+            if x['cle'].startswith(('sf_', 'comp_', 'res_', 'prec_', 'total_', 'visa'))
             or x['cle'] in ('num_caf', 'autres_numero', 'demandeur', 'cp_commune', 'quotient_familial', 'taux_effort')]
 
 
@@ -233,6 +239,7 @@ def _formulaire_maintien():
         {'cle': 'ts_organisme', 'page': 1, 'ancre': "Nom et adresse de l'organisme", 'mode': 'dessous', 'dy': 6,
          'largeur': 520, 'lignes': 3, 'interligne': 21},
     ]
+    c = [x for x in c if not x['cle'].startswith('visa')] + _visa('Cachet du service')
     return c
 
 
@@ -293,7 +300,8 @@ def _argumentaire_maintien():
     c += [{'cle': 'note_cadre', 'ancre': 'NOTE EXPLICATIVE DU CADRE', 'mode': 'dessous', 'dx': -150, 'dy': 6,
            'largeur': 480, 'lignes': 14},
           {'cle': 'date', 'ancre': 'Fait le :', 'dx': 4},
-          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3}]
+          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3},
+          {'cle': 'visa_image', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 32}]
     return c
 
 
@@ -308,7 +316,8 @@ def _argumentaire_fluides(eau):
     c += [{'cle': 'note_cadre', 'ancre': 'NOTE EXPLICATIVE DU CADRE', 'mode': 'dessous', 'dx': -150, 'dy': 6,
            'largeur': 480, 'lignes': 14},
           {'cle': 'date', 'ancre': 'Fait le :', 'dx': 4},
-          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3}]
+          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3},
+          {'cle': 'visa_image', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 32}]
     return c
 
 
@@ -410,7 +419,8 @@ def _argumentaire():
     c += [{'cle': 'note_cadre', 'ancre': 'NOTE EXPLICATIVE DU CADRE', 'mode': 'dessous', 'dx': -150, 'dy': 6,
            'largeur': 480, 'lignes': 14},
           {'cle': 'date', 'ancre': 'Fait le :', 'dx': 4},
-          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3}]
+          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3},
+          {'cle': 'visa_image', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 32}]
     return c
 
 
@@ -443,6 +453,19 @@ def placements(code, type_aide=None):
 
 def _nom(p):
     return f"{(p.get('nom') or '').upper()} {p.get('prenom') or ''}".strip()
+
+
+def visa(demande):
+    """(texte, image) du visa du cadre : « Visa X.Y. le 08/11/2026 » et sa signature numérisée si elle est validée."""
+    cadre = getattr(demande, 'cadre', None)
+    quand = getattr(demande, 'date_validation_cadre', None)
+    if not cadre or not quand:
+        return "", None
+    from django.utils import timezone
+    from mds.models import SignatureAgent, initiales
+    texte = f"Visa {initiales(cadre)} le {timezone.localtime(quand):%d/%m/%Y}"
+    sig = SignatureAgent.objects.filter(user=cadre, validee=True).first()
+    return texte, ({'image': bytes(sig.image)} if sig and sig.image else None)
 
 
 def valeurs(demande, code, aujourdhui=None):
@@ -501,6 +524,7 @@ def valeurs(demande, code, aujourdhui=None):
             v[f'eq_{code_e}'] = code_e in (dn.get('equipements') or [])
         for cle in ('nom', 'prenom', 'qualite', 'telephone', 'portable', 'email', 'organisme'):
             v[f'ts_{cle}'] = ts.get(cle)
+        v['visa'], v['visa_image'] = visa(demande)
         return v
     if code in (F.FORMULAIRE_EAU, F.FORMULAIRE_ENERGIE):
         v = valeurs(demande, F.FORMULAIRE_ACCES, aujourdhui)
@@ -588,7 +612,9 @@ def valeurs(demande, code, aujourdhui=None):
             v['date'] = demande.date_validation_cadre.strftime('%d/%m/%Y') if demande.date_validation_cadre else ''
             if demande.cadre:
                 from mds.fonctions import nom_et_fonction
-                v['cadre'] = nom_et_fonction(demande.cadre, demande.mds, "\n")
+                texte_visa, image = visa(demande)
+                v['cadre'] = nom_et_fonction(demande.cadre, demande.mds, "\n") + (f"\n{texte_visa}" if texte_visa else "")
+                v['visa_image'] = image
         return v
     if code == F.VERSEMENT_DIRECT_AL:
         cp_ville = (dn.get('cp_commune') or '').split(' ', 1)

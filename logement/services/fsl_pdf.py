@@ -240,6 +240,7 @@ def trame_generique(demande):
         el += [Spacer(1, 6), P("Note explicative du cadre (pièces manquantes)", "SectionHeader"), P(_t(demande.note_cadre)),
                P(f"Le {demande.date_validation_cadre:%d/%m/%Y} – {_t(nom_et_fonction(demande.cadre, demande.mds))}"
                  if demande.date_validation_cadre and demande.cadre else "")]
+    el += _visa_trame(demande, P)
     el.append(P(f"<i>Édité par CID le {timezone.localdate():%d/%m/%Y}.</i>"))
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     return buf.getvalue()
@@ -285,6 +286,7 @@ def _fin_fluides(demande, dn, el, P, COCHE, doc):
         el += [Spacer(1, 6), P("Note explicative du cadre (pièces manquantes)", "SectionHeader"), P(_t(demande.note_cadre)),
                P(f"Le {demande.date_validation_cadre:%d/%m/%Y} – {_t(nom_et_fonction(demande.cadre, demande.mds))}"
                  if demande.date_validation_cadre and demande.cadre else "")]
+    el += _visa_trame(demande, P)
     el.append(P(f"<i>Édité par CID le {timezone.localdate():%d/%m/%Y}.</i>"))
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     return doc.filename.getvalue()
@@ -315,6 +317,22 @@ def _fin_maintien(demande, dn, el, P, COCHE, doc):
         el += [Spacer(1, 6), P("Note explicative du cadre (pièces manquantes)", "SectionHeader"), P(_t(demande.note_cadre)),
                P(f"Le {demande.date_validation_cadre:%d/%m/%Y} – {_t(nom_et_fonction(demande.cadre, demande.mds))}"
                  if demande.date_validation_cadre and demande.cadre else "")]
+    el += _visa_trame(demande, P)
     el.append(P(f"<i>Édité par CID le {timezone.localdate():%d/%m/%Y}.</i>"))
     doc.build(el, onFirstPage=draw_page_template, onLaterPages=draw_page_template)
     return doc.filename.getvalue()
+
+
+def _visa_trame(demande, P):
+    from reportlab.platypus import Image
+    texte, image = placements_fsl.visa(demande)
+    if not texte:
+        return []
+    from mds.fonctions import nom_et_fonction
+    out = [Spacer(1, 6), P(f"<b>{_t(texte)}</b> – {_t(nom_et_fonction(demande.cadre, demande.mds))}")]
+    if image:
+        try:
+            out.append(Image(io.BytesIO(image['image']), width=3.2 * cm, height=1.1 * cm, kind='proportional'))
+        except Exception:
+            pass
+    return out

@@ -131,6 +131,15 @@ def renommer_comptes_demo():
             u.save(update_fields=["username"])
 
 
+def _effacer_envois(qs):
+    """Supprime des dossiers de démonstration avec leurs envois (le compteur de papier ne garde pas de doublons)."""
+    from django.contrib.contenttypes.models import ContentType
+    from logement.models import EnvoiDossier
+    EnvoiDossier.objects.filter(content_type=ContentType.objects.get_for_model(qs.model),
+                                object_id__in=list(qs.values_list('pk', flat=True))).delete()
+    qs.delete()
+
+
 def organiser_mds_demo():
     """MDS TEST 01 = MDS de territoire (directeur : chef_mds1, adjoint prévention : cadre_mds1) ;
     MDS TEST 02 = MDS de proximité rattachée à MDS TEST 01 (cadre de proximité : chef_mds2).
@@ -904,7 +913,7 @@ class Command(BaseCommand):
         """FSL accès fictif : gestionnaires de démonstration (sans formulaire officiel : trame CID), une demande en
         attente de l'avis du cadre (bail manquant) et une demande accordée."""
         from logement.models import DemandeFSL, GestionnaireFSL
-        from logement.services import circuit, fsl
+        from logement.services import circuit, envoi, fsl
         metro, _ = GestionnaireFSL.objects.get_or_create(
             nom="FSL – gestionnaire métropolitain (démo)",
             defaults={"adresse": "1 place de l'Exemple, 13000 Ville-Exemple (fictif)", "codes_postaux": "13110, 13500",
@@ -913,7 +922,7 @@ class Command(BaseCommand):
                                      "plafond_equipement_famille": 700}})
         GestionnaireFSL.objects.get_or_create(
             nom="FSL – Département (démo)", defaults={"par_defaut": True, "adresse": "Adresse fictive"})
-        DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP", "FAM3-CLA"]).delete()
+        _effacer_envois(DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP", "FAM3-CLA"]))
 
         def creer(code, maj, type_aide="ACCES", auteur=None):
             b, auteur = self.b[code], auteur or self.ts
@@ -950,7 +959,10 @@ class Command(BaseCommand):
             "proposition": {"caution": "690", "premier_loyer": "780"}})
         d.avis, d.proposition_subvention, d.avis_motive = "FAVORABLE", 1470, "Relogement dans un logement adapté (fictif)."
         d.save()
-        circuit.envoyer(d, self.ts, self.j - timedelta(days=40))
+        circuit.demander_visa(d, self.ts)
+        circuit.avis_cadre(d, self.cadre, True, "")
+        circuit.envoyer(d, self.ts, self.j - timedelta(days=40), mode="MAIL")
+        envoi.enregistrer(d, "FSL accès au logement", d.mds, "MAIL", 18)
         circuit.enregistrer_reponse(d, self.ts, DemandeFSL.ACCORDEE, self.j - timedelta(days=12), subvention=1470,
                                     garantie="4 mois sur 12", commentaire="Accord (fictif).")
         # Énergie : facture de régularisation de moins de 500 €, instruite par un agent administratif, envoyée
@@ -960,7 +972,10 @@ class Command(BaseCommand):
                   "ENERGIE", admin)
         d.instruction_administrative = True
         d.save()
-        circuit.envoyer(d, admin, self.j - timedelta(days=3))
+        circuit.demander_visa(d, admin)
+        circuit.avis_cadre(d, self.cadre, True, "")
+        circuit.envoyer(d, admin, self.j - timedelta(days=3), mode="MAIL")
+        envoi.enregistrer(d, "FSL impayés d'électricité, de gaz", d.mds, "MAIL", 9)
         # Eau : en préparation par le travailleur social
         creer("FAM2-SOP", {"distributeur": "Distributeur d'eau EXEMPLE", "date_facture": (self.j - timedelta(days=20)).strftime("%d/%m/%Y"),
                            "montant_facture": "286", "surendettement": "NON"}, "EAU")
@@ -974,7 +989,54 @@ class Command(BaseCommand):
         d.avis, d.proposition_subvention, d.proposition_pret = "FAVORABLE", 850, 450
         d.avis_motive = "Paiement du loyer repris depuis six mois ; le bailleur accepte une remise d'un tiers (fictif)."
         d.save()
+        self.logement_social_copp()
         self.stdout.write("✅ Demandes FSL fictives ajoutées")
+
+    def logement_social_copp(self):
+        """Demandes de logement social, séances fictives de la commission des publics prioritaires et deux saisines."""
+        from logement.models import CommissionPublicsPrioritaires as C, DemandeLogementSocial, SaisineCOPP
+        from logement.services import copp, envoi
+        from mds.models import MDS
+        DemandeLogementSocial.objects.filter(beneficiaire__code_interne__in=["FAM2-SOP", "FAM3-CLA"]).delete()
+        DemandeLogementSocial.objects.create(
+            beneficiaire=self.b["FAM2-SOP"], nud="DEMO-NUD-0002", date_creation=self.j - timedelta(days=4 * 365 + 40),
+            date_renouvellement=self.j - timedelta(days=345), dalo_depose=True, dalo_date=self.j - timedelta(days=500),
+            dalo_etat="EN_COURS", alin_inscrit=True, alin_date=self.j - timedelta(days=200), alin_etat="EN_COURS",
+            communes_souhaitees=["Port-de-Bouc", "Martigues", "Fos-sur-Mer"], typologie_souhaitee="T4",
+            precisions="Rez-de-chaussée ou ascenseur souhaité (fictif).")
+        DemandeLogementSocial.objects.create(
+            beneficiaire=self.b["FAM3-CLA"], nud="DEMO-NUD-0003", date_creation=self.j - timedelta(days=2 * 365 + 90),
+            dalo_depose=True, dalo_date=self.j - timedelta(days=300), dalo_etat="REFUSE",
+            communes_souhaitees=["Martigues", "Port-de-Bouc"], typologie_souhaitee="T3")
+        C.objects.filter(territoire="Territoire de démonstration").delete()
+        mds = list(MDS.objects.filter(code_mds__in=["MDSTEST1", "MDSTEST2"]))
+        seances = []
+        for jours, lieu in ((-60, "Salle du conseil (fictif)"), (25, "Maison des services (fictif)"),
+                            (115, "Salle du conseil (fictif)"), (205, "Maison des services (fictif)")):
+            c = C.objects.create(territoire="Territoire de démonstration", date=self.j + timedelta(days=jours),
+                                 date_limite_depot=self.j + timedelta(days=jours - 15), lieu=lieu, horaire="14 h")
+            c.mds.set(mds)
+            seances.append(c)
+        _effacer_envois(SaisineCOPP.objects.filter(beneficiaire__code_interne__in=["FAM2-SOP", "FAM3-CLA"]))
+        s = SaisineCOPP.objects.create(beneficiaire=self.b["FAM2-SOP"], mds=self.b["FAM2-SOP"].mds,
+                                       donnees=copp.preremplir(self.b["FAM2-SOP"], self.ts), commission=seances[1],
+                                       cree_par=self.ts, motifs=["DALO_ANCIEN", "SURNOMBRE"],
+                                       rapport_social="Couple avec deux enfants dans un T2 devenu trop petit ; demande de "
+                                                      "logement social depuis plus de quatre ans, DALO sans décision (fictif).")
+        s.donnees.update({"logement_actuel": "PARC_PRIVE", "typologie": "T2", "endettement": "NON",
+                          "plafonds_ressources": "PLUS", "rfr_n1_demandeur": "18500", "rfr_n2_demandeur": "17900"})
+        s.tracer(self.ts, "Saisine créée", "préremplie")
+        s.save()
+        s = SaisineCOPP.objects.create(beneficiaire=self.b["FAM3-CLA"], mds=self.b["FAM3-CLA"].mds,
+                                       donnees=copp.preremplir(self.b["FAM3-CLA"], self.ts), commission=seances[0],
+                                       cree_par=self.ts, motifs=["DALO_REFUSE", "EXPULSION"], statut=SaisineCOPP.EXAMINEE,
+                                       rapport_social="Procédure d'expulsion en cours, concordat déposé (fictif).",
+                                       decision="Dossier retenu : proposition prioritaire auprès des bailleurs (fictif).",
+                                       date_decision=seances[0].date)
+        s.tracer(self.ts, "Envoyée à la commission par mail", str(seances[0]))
+        s.save()
+        envoi.enregistrer(s, "COPP", s.mds, "MAIL", 7)
+        self.stdout.write("✅ Demandes de logement et commission des publics prioritaires fictives ajoutées")
 
     def ateliers(self):
         """Ateliers collectifs fictifs : une séance passée (présences notées), deux à venir dont une complète."""

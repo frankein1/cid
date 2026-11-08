@@ -47,7 +47,7 @@ Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mo
 - **MDS TEST 01**, Port-de-Bouc : **MDS de territoire**, avec ses salles (init2).
 - **MDS TEST 02**, Martigues : **MDS de proximité rattachée à MDS TEST 01**. Ses agents ne voient pas les dossiers de MDS TEST 01 ; le CODIR de MDS TEST 01 (`chef_mds1`, `cadre_mds1`) voit les siens.
 
-Logement – FSL (voir `docs/LOGEMENT_FSL.md`) : deux gestionnaires fictifs, sans formulaire officiel (trame CID). FAM5-SAR : demande d'accès en attente de l'avis du cadre (pièces manquantes), demande énergie instruite par `aa1_mds1` et envoyée ; FAM2-SOP : demande d'accès accordée, demande eau en préparation ; FAM3-CLA : concordat en préparation.
+Logement – FSL (voir `docs/LOGEMENT_FSL.md`) : deux gestionnaires fictifs, sans formulaire officiel (trame CID). FAM5-SAR : demande d'accès en attente de l'avis du cadre (pièces manquantes), demande énergie instruite par `aa1_mds1` et envoyée ; FAM2-SOP : demande d'accès accordée, demande eau en préparation ; FAM3-CLA : concordat en préparation. Demande de logement et commission des publics prioritaires (voir `docs/LOGEMENT_COPP.md`) : FAM2-SOP (saisine en préparation), FAM3-CLA (saisine examinée) ; quatre séances fictives.
 
 Organisation (voir `docs/ORGANISATION_MDS.md`) : la fonction de chaque agent est choisie dans *Gestion des agents de la MDS* ; son intitulé (« Directeur de la MDS de territoire TEST 01 ») est proposé, corrigeable, et repris sous la signature des courriers et PDF. Équipe IP de MDS TEST 01 : `as2_mds1` et `pmi_mds1`.
 

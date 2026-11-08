@@ -3,7 +3,7 @@
 # Assistance technique: l'IA
 # Interdiction de réutilisation commerciale
 # =============================================================================
-# logement/views.py
+# logement/views/v_fsl.py
 """Demandes FSL (accès au logement) depuis la fiche usager."""
 from datetime import datetime
 
@@ -16,9 +16,11 @@ from django.views.decorators.http import require_POST
 from beneficiaire.models import Beneficiaire
 from beneficiaire.views import user_peut_agir_sur_beneficiaire
 
-from .models import DemandeFSL, GestionnaireFSL
-from .services import circuit, fsl
-from .services.fsl_pdf import documents_du_dossier, dossier
+from mds.models import SignatureAgent
+
+from ..models import DemandeFSL, GestionnaireFSL
+from ..services import circuit, fsl
+from ..services.fsl_pdf import documents_du_dossier, dossier
 
 MAX_COMPOSITION = 9
 
@@ -151,8 +153,8 @@ def fsl_detail(request, pk):
     demande, voir, ecrire, cadre = _demande(request, pk)
     if not voir:
         return HttpResponseForbidden("Dossier complet de la MDS de l'usager.")
-    from .models import FormulaireOfficiel
-    from .services.fsl_pdf import TRAME as trame
+    from ..models import FormulaireOfficiel
+    from ..services.fsl_pdf import TRAME as trame
     docs = [(dict(FormulaireOfficiel.CODES)[c], r,
              'officiel' if FormulaireOfficiel.pour(c, demande.gestionnaire) else ('trame' if c in trame else 'vierge'))
             for c, r in documents_du_dossier(demande)]
@@ -165,6 +167,7 @@ def fsl_detail(request, pk):
         'pieces_manquantes': [l for c, l, _ in fsl.liste_pieces(demande.type_aide) if c in demande.pieces_manquantes],
         'statuts_reponse': [(DemandeFSL.ACCORDEE, "Accordée"), (DemandeFSL.AJOURNEE, "Ajournée (pièces demandées)"),
                             (DemandeFSL.REFUSEE, "Refusée")],
+        'signature_validee': SignatureAgent.objects.filter(user=request.user, validee=True).exists(),
     })
 
 
@@ -196,10 +199,12 @@ def fsl_action(request, pk):
     try:
         if action == 'demander_cadre' and ecrire:
             circuit.demander_avis_cadre(demande, request.user)
-            messages.success(request, "Le cadre est prévenu : il rédigera la note explicative.")
+            messages.success(request, "Le cadre est prévenu : il visera la demande (et rédigera la note explicative "
+                                      "s'il manque des pièces).")
         elif action in ('cadre_accepte', 'cadre_renvoie') and cadre:
             circuit.avis_cadre(demande, request.user, action == 'cadre_accepte', p.get('note_cadre'))
-            messages.success(request, "Avis enregistré : l'agent est prévenu.")
+            messages.success(request, "Visa enregistré : l'agent est prévenu." if action == 'cadre_accepte'
+                             else "Demande renvoyée à l'agent : il est prévenu.")
         elif action == 'envoyer' and ecrire:
             circuit.envoyer(demande, request.user, _date(p.get('date_envoi')))
             messages.success(request, "Envoi enregistré.")

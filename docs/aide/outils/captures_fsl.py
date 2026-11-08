@@ -50,4 +50,11 @@ with sync_playwright() as p:
     ts.wait_for_load_state()
     ts.goto(ts.url.rstrip("/") + "/modifier/")
     shot(ts, "fsl-acces", "08", "#maintien")
+    # envoi : demande d'accès accordée de FAM2-SOP → on montre celle de FAM5 une fois visée (cadre) puis la page d'envoi
+    ca.goto(f"{B}/logement/fsl/{fsl}/")
+    ca.fill("textarea[name=note_cadre]", "Le bail est signé lundi ; il sera transmis dès réception (fictif).")
+    ca.click("button[value=cadre_accepte]")
+    ca.wait_for_load_state()
+    ts.goto(f"{B}/logement/fsl/{fsl}/")
+    shot(ts, "fsl-acces", "09", "#fsl-envoi")
     nav.close()

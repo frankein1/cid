@@ -20,6 +20,7 @@ POLICE = "Helvetica"
 
 
 def _motif(ancre):
+    """Le libellé tel qu'il est imprimé, en tolérant les coupures que Word glisse dans les mots (« soci al »)."""
     morceaux = []
     for c in ancre:
         if c in "'’":
@@ -27,7 +28,7 @@ def _motif(ancre):
         elif c == ' ':
             morceaux.append(r"\s*")
         else:
-            morceaux.append(re.escape(c))
+            morceaux.append(re.escape(c) + r" ?")
     return "".join(morceaux)
 
 
@@ -80,6 +81,15 @@ def _ecrire(c, x, y, texte, taille, largeur=None, lignes=1, interligne=None):
         c.drawString(x, y - i * pas, ligne)
 
 
+def _image(c, x, y, octets, largeur, hauteur):
+    from reportlab.lib.utils import ImageReader
+    try:
+        c.drawImage(ImageReader(io.BytesIO(bytes(octets))), x, y - hauteur, width=largeur, height=hauteur,
+                    preserveAspectRatio=True, mask='auto')
+    except Exception:
+        pass
+
+
 def remplir(contenu_pdf, champs, valeurs, reglages=None):
     """Retourne (pdf rempli en octets, rapport {cle: 'ok' | 'ancre introuvable' | 'vide'})."""
     import pdfplumber
@@ -124,6 +134,8 @@ def remplir(contenu_pdf, champs, valeurs, reglages=None):
                     x, y = col['x0'] + dx, m['bottom'] - 1 + dy
                 else:
                     x, y = m['x0'] + dx, m['bottom'] + dy
+            if 'x_abs' in champ and 'x' not in regl:   # colonne d'un tableau : x fixe, ligne donnée par le libellé
+                x = champ['x_abs'] + regl.get('dx', 0)
             ecritures.setdefault(page, []).append((x, y, valeur, champ))
             rapport[cle] = 'ok'
     lecteur = PdfReader(io.BytesIO(contenu_pdf))
@@ -135,6 +147,9 @@ def remplir(contenu_pdf, champs, valeurs, reglages=None):
             c = canvas.Canvas(tampon, pagesize=(largeur, hauteur))
             c.setFillColorRGB(0.05, 0.15, 0.55)      # bleu : on voit ce que CID a écrit
             for x, y, texte, champ in ecritures[i]:
+                if isinstance(texte, dict) and texte.get('image'):      # signature numérisée
+                    _image(c, x, hauteur - y, texte['image'], texte.get('largeur', 90), texte.get('hauteur', 30))
+                    continue
                 _ecrire(c, x, hauteur - y, texte, champ.get('taille', 9), champ.get('largeur'), champ.get('lignes', 1),
                         champ.get('interligne'))
             c.save()

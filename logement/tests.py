@@ -200,7 +200,11 @@ class FSLTests(TestCase):
         d.refresh_from_db()
         self.assertTrue(d.instruction_administrative)
         self.assertEqual([c for c, _ in documents_du_dossier(d)], [FormulaireOfficiel.FORMULAIRE_ENERGIE])
-        circuit.envoyer(d, self.ts)                       # sans avis : instruction administrative < 500 €
+        with self.assertRaises(circuit.CircuitError):
+            circuit.envoyer(d, self.ts)                   # visa du cadre d'abord
+        circuit.demander_visa(d, self.ts)                 # sans avis : instruction administrative < 500 €
+        circuit.avis_cadre(d, self.cadre, True, "")
+        circuit.envoyer(d, self.ts)
         self.assertEqual(d.statut, DemandeFSL.ENVOYEE)
         pdf, rapport = dossier(d)
         self.assertTrue(pdf.startswith(b"%PDF"))

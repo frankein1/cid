@@ -7,6 +7,7 @@
 # mds/models.py version core user compatible
 
 from django.db import models
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -596,3 +597,33 @@ def acces_codir_mds(sender, instance, **kwargs):
     for territoire in MDS.objects.filter(pk__in=[instance.pk, instance.mds_territoire_id or 0]):
         for p in UserMDSProfile.objects.filter(mds=territoire, herite_de__isnull=True, fonction__in=UserMDSProfile.CODIR):
             synchroniser_acces_codir(p)
+
+
+
+# ==========================================================================
+# 8. SIGNATURE NUMÉRISÉE D'UN CADRE (visa des dossiers)
+# ==========================================================================
+
+class SignatureAgent(models.Model):
+    """Image de la signature d'un cadre, apposée avec son visa (initiales et date) sur les dossiers qu'il vise.
+    Utilisée seulement une fois « validée » (par la direction, en administration) ; sinon, initiales et date."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='signature_numerisee')
+    image = models.BinaryField(editable=False)
+    type_image = models.CharField(max_length=20, default='image/png', editable=False)
+    validee = models.BooleanField("Usage validé", default=False,
+                                  help_text="Cochée par la direction : la signature peut être apposée sur les dossiers.")
+    date_depot = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Signature numérisée"
+        verbose_name_plural = "Signatures numérisées"
+
+    def __str__(self):
+        return f"Signature de {self.user.get_full_name() or self.user.username}"
+
+
+def initiales(user):
+    if not user:
+        return ""
+    morceaux = [m for m in [user.first_name, user.last_name] if m] or [user.username]
+    return "".join(m[0].upper() + "." for m in " ".join(morceaux).replace("-", " ").split())
