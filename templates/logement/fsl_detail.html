@@ -15,6 +15,8 @@
     <div><div class="text-xs text-gray-500">Gestionnaire</div>{{ demande.gestionnaire|default:"à préciser" }}{% if demande.gestionnaire.transmission %}<div class="text-xs text-gray-500">Envoi : {{ demande.gestionnaire.transmission }}</div>{% endif %}</div>
     {% if demande.est_fluides %}
     <div><div class="text-xs text-gray-500">{% if demande.type_aide == 'EAU' %}Distributeur{% else %}Fournisseur{% endif %}</div>{{ dn.distributeur|default:"—" }}</div>
+    {% elif demande.type_aide == 'MAINTIEN' %}
+    <div><div class="text-xs text-gray-500">{% if demande.est_concordat %}Concordat{% else %}Maintien{% endif %} – dette locative</div>{{ dn.montant_dette|default:"—" }} €{% if demande.est_concordat and dn.montant_remise %} (remise du bailleur {{ dn.montant_remise }} €){% endif %}<div class="text-xs text-gray-500">{{ dn.nom_bailleur|default:""|truncatechars:60 }}</div></div>
     {% else %}
     <div><div class="text-xs text-gray-500">Nouveau logement</div>{{ dn.adresse_objet|default:"—" }} {{ dn.cp_commune }}<div class="text-xs text-gray-500">Bailleur {% if dn.bailleur_type == 'PRIVE' %}privé{% elif dn.bailleur_type == 'SOCIAL' %}social{% else %}?{% endif %}</div></div>
     {% endif %}
@@ -63,7 +65,7 @@
         <form method="post" action="{% url 'logement:fsl_action' demande.pk %}" class="grid md:grid-cols-3 gap-2 text-sm">{% csrf_token %}
           <label>Réponse du FSL<select name="issue" class="block w-full border rounded px-2 py-1">{% for c, l in statuts_reponse %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></label>
           <label>Le<input type="date" name="date_decision" class="block w-full border rounded px-2 py-1"></label>
-          {% if not demande.est_fluides %}<label>Garantie accordée<input name="garantie" class="block w-full border rounded px-2 py-1" placeholder="4 mois sur 12"></label>{% endif %}
+          {% if demande.type_aide == 'ACCES' %}<label>Garantie accordée<input name="garantie" class="block w-full border rounded px-2 py-1" placeholder="4 mois sur 12"></label>{% endif %}
           <label>Prêt accordé (€)<input name="pret" class="block w-full border rounded px-2 py-1"></label>
           <label>Subvention accordée (€)<input name="subvention" class="block w-full border rounded px-2 py-1"></label>
           <label>Commentaire<input name="commentaire" class="block w-full border rounded px-2 py-1" placeholder="Pièces demandées, motif…"></label>

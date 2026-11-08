@@ -95,7 +95,7 @@ TITRES = {
     'mds-organisation': ("Organiser la MDS : fonctions, équipe IP, MDS de proximité", "Cadres de MDS"),
     'journal-accompagnement': ("Le journal de l'accompagnement : entretiens et suites", "Travailleurs sociaux, agents de MDS"),
     'budget-foyer': ("Établir le budget du foyer", "Travailleurs sociaux, agents de MDS"),
-    'fsl-acces': ("FSL : accès au logement, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
+    'fsl-acces': ("FSL : accès, maintien, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
 }
@@ -1246,11 +1246,11 @@ page('mds-organisation', qui="Cadres de MDS (agents de leur MDS) ; super-adminis
 
 page('fsl-acces', qui="Agents de la MDS de l'usager (saisie : agents avec le droit de création, dont les administratifs pour l'énergie et l'eau) ; cadre de la MDS (pièces manquantes)",
      ou="Fiche usager → encart « Logement – FSL »", duree="15 minutes",
-     intro="CID prépare la demande au FSL (accès au logement, impayés d'énergie ou d'eau) avec ce qu'il connaît déjà, imprime le dossier sur les formulaires du gestionnaire (ou une trame CID) et suit l'envoi et la réponse.",
+     intro="CID prépare la demande au FSL (accès, maintien ou concordat, impayés d'énergie ou d'eau) avec ce qu'il connaît déjà, imprime le dossier sur les formulaires du gestionnaire (ou une trame CID) et suit l'envoi et la réponse.",
      avant=["Mettez à jour le <b>budget du foyer</b> et le <b>réseau familial</b> : la demande en reprend les ressources et la composition."],
      etapes=[
          ("Créer la demande", [fig('fsl-acces', '01', "Les boutons de l'encart « Logement – FSL ».")],
-          ["Sur la fiche, encart <b>Logement – FSL</b>, cliquez sur <span class=\"clic\">FSL accès</span>, <span class=\"clic\">FSL énergie</span> ou <span class=\"clic\">FSL eau</span>.",
+          ["Sur la fiche, encart <b>Logement – FSL</b>, cliquez sur <span class=\"clic\">FSL accès</span>, <span class=\"clic\">FSL maintien</span>, <span class=\"clic\">FSL énergie</span> ou <span class=\"clic\">FSL eau</span>.",
            "CID ouvre la demande préremplie : n° CAF, situation familiale, personnes du foyer, ressources du budget, loyer et aide au logement actuels, vos coordonnées (courriel de la MDS)."], []),
          ("Compléter et vérifier", [fig('fsl-acces', '02', "Les ressources reprises du budget du foyer."),
                                    fig('fsl-acces', '03', "Les pièces : fournie, à fournir, sans objet.")],
@@ -1269,6 +1269,11 @@ page('fsl-acces', qui="Agents de la MDS de l'usager (saisie : agents avec le dro
          ("Envoi et réponse du FSL", [],
           ["<span class=\"clic\">Enregistrer l'envoi</span> (date). Le circuit de transmission du gestionnaire est rappelé sur la demande.",
            "À réception de la réponse : accordée (montants, garantie), ajournée (pièces demandées : complétez puis renvoyez) ou refusée."], []),
+         ("Maintien ou concordat", [fig('fsl-acces', '08', "Logement et dette locative : maintien ou concordat.")],
+          ["Choisissez <b>FSL maintien</b> (paiement du résiduel repris depuis 3 mois) ou <b>FSL concordat</b> (6 mois, remise de dette du bailleur).",
+           "La partie logement est à compléter par le bailleur : CID la préremplit (loyer, AL) ; indiquez la dette locative, le mois de reprise du paiement, la saisine de la CCAPEX ou de la commission de surendettement et, pour un concordat, la remise du bailleur.",
+           "Le dossier ajoute les engagements du locataire et du bailleur et, pour un concordat, la convention de résorption de la dette."],
+          [("attention", "Concordat : CID prévient si la remise du bailleur est absente ou inférieure au tiers de la dette.")]),
          ("Énergie et eau", [fig('fsl-acces', '07', "Une demande d'aide aux impayés d'énergie instruite par un agent administratif.")],
           ["Même démarche : CID préremplit l'adresse, le loyer, le foyer, les ressources et, pour l'énergie, la dette d'électricité non payée du budget du foyer.",
            "Indiquez le fournisseur ou le distributeur, la facture ou les dettes, la participation du ménage et le plan proposé par le fournisseur.",
@@ -1282,7 +1287,7 @@ page('fsl-acces', qui="Agents de la MDS de l'usager (saisie : agents avec le dro
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
                   ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – FSL maintien, prévention des expulsions locatives"])
+                   "Logement – prévention des expulsions locatives"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

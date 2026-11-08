@@ -215,3 +215,29 @@ class FSLTests(TestCase):
         self.assertTrue(any("500" in a for a in fsl.alertes(d)))
         with self.assertRaises(circuit.CircuitError):
             circuit.envoyer(d, self.ts)
+
+    def test_maintien_concordat(self):
+        BudgetFoyer.objects.update(charges={"v": 2, "lignes": {"loyer": {"payee": "300", "non_payee": "300"}},
+                                            "precisions": {}})
+        self.client_de(self.ts).post("/logement/fsl/nouvelle/FL-1/", {"type_aide": "MAINTIEN"})
+        d = DemandeFSL.objects.get(type_aide="MAINTIEN")
+        self.assertEqual(d.donnees["logement"]["loyer"], "600")
+        self.assertEqual(d.donnees["montant_dette"], "300")
+        self.assertIn("releve_compte", d.pieces)
+        post = {"bailleur_type": "PRIVE", "variante": "CONCORDAT", "montant_dette": "1800", "remise_dette": "OUI",
+                "montant_remise": "300", "lg_loyer": "600", "lg_al": "200", "saisine_ccapex": "OUI",
+                "comp_0_nom": "ESSAI", "comp_0_prenom": "Clara", "res_salaires_demandeur": "1200",
+                "proposition_pret": "500", "proposition_subvention": "1000", "avis": "FAVORABLE"}
+        self.client_de(self.ts).post(f"/logement/fsl/{d.pk}/modifier/", post)
+        d.refresh_from_db()
+        self.assertTrue(d.est_concordat)
+        self.assertTrue(any("tiers" in a for a in fsl.alertes(d)))          # remise < 1/3 de la dette
+        codes = [c for c, _ in documents_du_dossier(d)]
+        for c in (FormulaireOfficiel.FORMULAIRE_MAINTIEN, FormulaireOfficiel.CONTRAT_PRET, FormulaireOfficiel.ENGAGEMENTS,
+                  FormulaireOfficiel.CONVENTION_CONCORDAT, FormulaireOfficiel.IDENTIFICATION_LOGEMENT):
+            self.assertIn(c, codes)
+        attendues = {c for c, _, _ in fsl.pieces_attendues(d)}
+        self.assertTrue({"convention_concordat", "ccapex", "kbis"} <= attendues)
+        pdf, _ = dossier(d)
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        self.assertEqual(d.total_propose, 1500)

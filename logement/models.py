@@ -64,6 +64,8 @@ class FormulaireOfficiel(models.Model):
     LISTE_PIECES, VERSEMENT_DIRECT_AL = 'FSL_PIECES', 'CERFA_11362'
     FORMULAIRE_EAU, FORMULAIRE_ENERGIE = 'FSL_EAU', 'FSL_ENERGIE'
     AVIS_FLUIDES, ARGUMENTAIRE_FLUIDES = 'FSL_AVIS_FLUIDES', 'FSL_ARGU_FLUIDES'
+    FORMULAIRE_MAINTIEN, ARGUMENTAIRE_MAINTIEN = 'FSL_MAINTIEN', 'FSL_ARGU_MAINTIEN'
+    ENGAGEMENTS, CONVENTION_CONCORDAT, LISTE_PIECES_MAINTIEN = 'FSL_ENGAGEMENTS', 'FSL_CONCORDAT', 'FSL_PIECES_MAINTIEN'
     CODES = [
         (FORMULAIRE_ACCES, "Demande d'aide à l'accès au logement"),
         (AVIS_MOTIVE, "Avis motivé et proposition du travailleur social"),
@@ -79,6 +81,11 @@ class FormulaireOfficiel(models.Model):
         (FORMULAIRE_ENERGIE, "Demande d'aide aux impayés d'électricité, de gaz"),
         (AVIS_FLUIDES, "Avis motivé du travailleur social (énergie, eau)"),
         (ARGUMENTAIRE_FLUIDES, "Argumentaire de pièces manquantes, énergie et eau (note du cadre)"),
+        (FORMULAIRE_MAINTIEN, "Demande FSL maintien ou concordat"),
+        (ARGUMENTAIRE_MAINTIEN, "Argumentaire de pièces manquantes, maintien et concordat (note du cadre)"),
+        (ENGAGEMENTS, "Engagements du locataire et du bailleur"),
+        (CONVENTION_CONCORDAT, "Concordat – convention de résorption de dette locative"),
+        (LISTE_PIECES_MAINTIEN, "Liste des pièces à fournir (maintien)"),
     ]
     gestionnaire = models.ForeignKey(GestionnaireFSL, on_delete=models.CASCADE, null=True, blank=True,
                                      related_name='formulaires',
@@ -109,8 +116,9 @@ class FormulaireOfficiel(models.Model):
 
 
 class DemandeFSL(models.Model):
-    ACCES, EAU, ENERGIE = 'ACCES', 'EAU', 'ENERGIE'
-    TYPES = [(ACCES, "Accès au logement"), (EAU, "Impayés d'eau"), (ENERGIE, "Impayés d'électricité, de gaz")]
+    ACCES, EAU, ENERGIE, MAINTIEN = 'ACCES', 'EAU', 'ENERGIE', 'MAINTIEN'
+    TYPES = [(ACCES, "Accès au logement"), (MAINTIEN, "Maintien dans le logement (ou concordat)"),
+             (EAU, "Impayés d'eau"), (ENERGIE, "Impayés d'électricité, de gaz")]
     FLUIDES = {EAU, ENERGIE}
     BROUILLON, A_VALIDER, VALIDEE = 'BROUILLON', 'A_VALIDER_CADRE', 'VALIDEE_CADRE'
     ENVOYEE, AJOURNEE, ACCORDEE, REFUSEE, ABANDONNEE = 'ENVOYEE', 'AJOURNEE', 'ACCORDEE', 'REFUSEE', 'ABANDONNEE'
@@ -182,7 +190,13 @@ class DemandeFSL(models.Model):
             return d(dn.get('montant_facture'))
         if self.type_aide == self.ENERGIE:
             return d(dn.get('dette_electricite')) + d(dn.get('dette_gaz'))
+        if self.type_aide == self.MAINTIEN:
+            return d(dn.get('montant_dette'))
         return d(0)
+
+    @property
+    def est_concordat(self):
+        return self.type_aide == self.MAINTIEN and (self.donnees or {}).get('variante') == 'CONCORDAT'
 
     @property
     def modifiable(self):
@@ -194,6 +208,8 @@ class DemandeFSL(models.Model):
 
     @property
     def total_propose(self):
+        if self.type_aide != self.ACCES:
+            return (self.proposition_pret or Decimal(0)) + (self.proposition_subvention or Decimal(0))
         p = (self.donnees or {}).get('proposition', {})
         total = Decimal(0)
         for v in p.values():
