@@ -85,9 +85,13 @@ def _lire(post, demande):
     dn['equipements'] = [c for c, _ in fsl.EQUIPEMENTS if post.get(f'eq_{c}')]
     for cle in ('distributeur', 'adresse', 'situation_logement', 'montant_loyer', 'date_facture', 'montant_facture',
                 'dette_electricite', 'dette_gaz', 'participation', 'plan_fournisseur', 'charges_exceptionnelles',
-                'surendettement', 'commentaire_administratif'):
+                'surendettement', 'commentaire_administratif', 'variante', 'nom_bailleur', 'saisine_surendettement',
+                'saisine_ccapex', 'chauffage_collectif', 'montant_dette', 'reprise_paiement_depuis', 'remise_dette',
+                'montant_remise'):
         if cle in post:
             dn[cle] = (post.get(cle) or '').strip()
+    if demande.type_aide == DemandeFSL.MAINTIEN:
+        dn['logement'] = {c: (post.get(f'lg_{c}') or '').strip() for c, _ in fsl.LOGEMENT_MAINTIEN}
     if demande.est_fluides:
         demande.instruction_administrative = bool(post.get('instruction_administrative'))
     dn['ts'] = {k: (post.get(f'ts_{k}') or '').strip()
@@ -136,6 +140,7 @@ def fsl_modifier(request, pk):
         'pieces': [(c, l, (demande.pieces or {}).get(c, 'MANQUANTE' if c in attendues else 'SANS_OBJET'), c in attendues)
                    for c, l, _ in fsl.liste_pieces(demande.type_aide)],
         'situations_logement': fsl.SITUATIONS_LOGEMENT, 'seuil_administratif': fsl.SEUIL_INSTRUCTION_ADMINISTRATIVE,
+        'logement_maintien': [(c, l, (dn.get('logement') or {}).get(c, '')) for c, l in fsl.LOGEMENT_MAINTIEN],
         'etats_piece': fsl.ETATS_PIECE, 'gestionnaires': GestionnaireFSL.objects.filter(actif=True),
         'ts': dn.get('ts') or {},
     })

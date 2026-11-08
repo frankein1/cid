@@ -170,6 +170,133 @@ def _formulaire_fluides(eau):
     return c
 
 
+def _formulaire_maintien():
+    """Page 1 (droite) : partie bailleur ; page 2 : situation familiale, composition et ressources à gauche,
+    concordat / maintien et travailleur social à droite."""
+    c = []
+    for x in _composition_et_ressources():
+        cle = x['cle']
+        if cle.startswith(('sf_', 'comp_', 'res_', 'prec_', 'total_')) or cle in ('quotient_familial', 'taux_effort'):
+            x = dict(x, page=1)
+            if cle.startswith('comp_'):
+                x.pop('x_min', None)
+                x['x_max'] = 590
+            if cle.startswith('sf_'):
+                x['dx'] = -1
+            if x.get('ancre') == 'Allocations France Travail':
+                x['ancre'] = 'Alloc France Travail'
+            if x.get('ancre') == 'Pension (préciser)':
+                x['ancre'] = 'Pension'
+                if cle == 'prec_pension':
+                    x['dx'] = 36
+            c.append(x)
+    c += [
+        {'cle': 'bailleur_social', 'page': 0, 'ancre': 'BAILLEUR SOCIAL', 'mode': 'case', 'dx': -2},
+        {'cle': 'bailleur_prive', 'page': 0, 'ancre': 'BAILLEUR PRIVE', 'mode': 'case', 'dx': -2},
+        {'cle': 'num_caf', 'page': 0, 'ancre': 'Allocataire CAF 13', 'dx': 12},
+        {'cle': 'autres_numero', 'page': 0, 'ancre': 'Autres :', 'dx': 4},
+        {'cle': 'demandeur', 'page': 0, 'ancre': 'Nom(s) et Prénom du demandeur', 'mode': 'dessous', 'dy': 2},
+        {'cle': 'adresse', 'page': 0, 'ancre': 'Adresse :', 'x_min': D, 'mode': 'dessous', 'dy': 2, 'largeur': 480,
+         'lignes': 2, 'interligne': 16},
+        {'cle': 'cp_commune', 'page': 0, 'ancre': 'Code Postal et Commune', 'dx': 8},
+        {'cle': 'nom_bailleur', 'page': 0, 'ancre': 'NOM et ADRESSE du bailleur', 'mode': 'dessous', 'dy': 2,
+         'largeur': 480, 'lignes': 2, 'interligne': 16},
+        {'cle': 'contact_bailleur', 'page': 0, 'ancre': 'Coordonnées téléphoniques et/ou adresse mail du bailleur',
+         'dx': 40},
+        {'cle': 'surendettement_oui', 'page': 0, 'ancre': 'OUI', 'ligne_de': 'Saisine Commission Surendettement'},
+        {'cle': 'surendettement_non', 'page': 0, 'ancre': 'NON', 'ligne_de': 'Saisine Commission Surendettement'},
+        {'cle': 'lg_typologie', 'page': 0, 'ancre': 'Typologie :', 'dx': 4},
+        {'cle': 'lg_surface', 'page': 0, 'ancre': 'Surface :', 'dx': 4},
+        {'cle': 'lg_loyer', 'page': 0, 'ancre': 'Loyer mensuel :', 'dx': 4},
+        {'cle': 'lg_charges', 'page': 0, 'ancre': 'Charges :', 'dx': 4},
+        {'cle': 'lg_garage', 'page': 0, 'ancre': 'Garage :', 'dx': 4},
+        {'cle': 'lg_total', 'page': 0, 'ancre': 'Total :', 'dx': 4},
+        {'cle': 'chauffage_oui', 'page': 0, 'ancre': 'OUI', 'ligne_de': 'Chauffage collectif'},
+        {'cle': 'chauffage_non', 'page': 0, 'ancre': 'NON', 'ligne_de': 'Chauffage collectif'},
+        {'cle': 'lg_al', 'page': 0, 'ancre': "Montant de l'AL ou APL :", 'dx': 4},
+        {'cle': 'lg_rls', 'page': 0, 'ancre': 'Montant RLS :', 'dx': 4},
+        {'cle': 'ccapex_non', 'page': 0, 'ancre': 'NON', 'ligne_de': 'Saisine de la CCAPEX'},
+        {'cle': 'ccapex_oui', 'page': 0, 'ancre': 'OUI', 'ligne_de': 'Saisine de la CCAPEX'},
+        {'cle': 'remise_oui', 'page': 1, 'ancre': 'OUI', 'ligne_de': 'consent-il'},
+        {'cle': 'remise_non', 'page': 1, 'ancre': 'NON', 'ligne_de': 'consent-il'},
+        {'cle': 'montant_remise', 'page': 1, 'ancre': 'indiquer le montant :', 'dx': 4},
+        {'cle': 'titre_MAINTIEN', 'page': 0, 'ancre': 'MAINTIEN', 'dx': -2},
+        {'cle': 'titre_CONCORDAT', 'page': 0, 'ancre': 'CONCORDAT', 'dx': -2},
+        {'cle': 'variante_MAINTIEN', 'page': 1, 'ancre': 'FSL Maintien Reprise', 'mode': 'case', 'dx': -6},
+        {'cle': 'variante_CONCORDAT', 'page': 1, 'ancre': 'FSL Concordat Reprise', 'mode': 'case', 'dx': -6},
+        {'cle': 'ts_nom', 'page': 1, 'ancre': 'Nom du travailleur social', 'dx': 12},
+        {'cle': 'ts_prenom', 'page': 1, 'ancre': 'Prénom :', 'x_min': D, 'top_min': 400, 'dx': 4},
+        {'cle': 'ts_qualite', 'page': 1, 'ancre': 'Educateur spécialisé)', 'dx': 10},
+        {'cle': 'ts_telephone', 'page': 1, 'ancre': 'ligne directe', 'dx': 10},
+        {'cle': 'ts_portable', 'page': 1, 'ancre': 'téléphone portable', 'dx': 10},
+        {'cle': 'ts_email', 'page': 1, 'ancre': 'Adresse mail TS', 'dx': 10},
+        {'cle': 'ts_organisme', 'page': 1, 'ancre': "Nom et adresse de l'organisme", 'mode': 'dessous', 'dy': 6,
+         'largeur': 520, 'lignes': 3, 'interligne': 21},
+    ]
+    return c
+
+
+def _engagements():
+    return [{'cle': 'num_caf', 'ancre': 'N° ALLOCATAIRE :', 'dx': 4},
+            {'cle': 'reprise_depuis', 'ancre': 'paiement du loyer depuis le mois de :', 'mode': 'dessous', 'dx': 0, 'dy': 0},
+            {'cle': 'total_loyer', 'ancre': 'soit un total de', 'dx': 6},
+            {'cle': 'accompagnement', 'ancre': '(Nom, adresse, service social', 'mode': 'dessous', 'dy': 1,
+             'largeur': 440, 'lignes': 2, 'interligne': 13, 'taille': 8},
+            {'cle': 'bailleur', 'ancre': 'Le bailleur représenté par', 'dx': 6}]
+
+
+def _convention_concordat():
+    return [{'cle': 'num_caf', 'ancre': 'N° allocataire :', 'dx': 4},
+            {'cle': 'locataires', 'ancre': 'Madame, Monsieur,', 'occ': 0, 'dx': 2},
+            {'cle': 'reprise_depuis', 'ancre': 'de :', 'occ': 0, 'dx': 4},
+            {'cle': 'total_loyer', 'ancre': 'soit un total de :', 'dx': 4},
+            {'cle': 'accompagnement', 'ancre': '(Nom, adresse, service social', 'mode': 'dessous', 'dy': 0,
+             'largeur': 440, 'lignes': 1, 'taille': 8},
+            {'cle': 'bailleur', 'ancre': 'Le bailleur représenté par', 'dx': 4}]
+
+
+def _liste_pieces_maintien():
+    c = _identite_simple(caf='CAF13 :')
+    ancres = {'avis': 'Avis motivé et proposition', 'formulaire': 'Formulaire dûment rempli',
+              'identite': "Copie des justificatifs d'identité", 'etat_civil_mineurs': 'Pour les mineurs',
+              'ressources': 'Copie des justificatifs des ressources de toutes',
+              'ressources_majeurs': 'Copie des justificatifs de ressources ou non',
+              'surendettement': "Copie de l'état d'avancement", 'rib': "Copie du Relevé d'Identité Bancaire ou postal",
+              'bail': 'Copie du bail', 'assurance': "Copie de l'attestation d'assurance",
+              'releve_compte': 'Relevé de compte locataire', 'contrat_pret': 'Contrat de prêt',
+              'prelevement': 'Autorisation et demande de prélèvements', 'ident_logement': "Fiche d'identification du logement",
+              'rib_bailleur': "Copie du Relevé d'identité bancaire, postal", 'kbis': 'Extrait K-bis',
+              'engagements': 'Engagements du locataire et du bailleur', 'convention_concordat': 'Convention de résorption'}
+    for code, ancre in ancres.items():
+        c.append({'cle': f'piece_{code}', 'ancre': ancre, 'mode': 'case', 'dx': -4})
+    return c
+
+
+def _argumentaire_maintien():
+    c = _identite_simple(caf='N° CAF :')
+    ancres = {'identite': "Justificatifs d'état civil", 'ressources': 'Justificatifs des ressources de toutes',
+              'ressources_majeurs': 'Justificatifs de ressources ou non', 'surendettement': 'Plan conventionnel',
+              'rib': ("Relevé d'identité bancaire, postal ou", 0, 0, 290), 'bail': 'Photocopie du bail',
+              'contrat_pret': 'Contrat de prêt signé', 'prelevement': 'Autorisation de prélèvement',
+              'assurance': "Photocopie de l'attestation d'assurance", 'releve_compte': 'Relevé de compte locataire',
+              'ident_logement': "Fiche d'identification du logement",
+              'rib_bailleur': ("Relevé d'identité bancaire, postal ou", 0, 290, 1e6), 'kbis': 'Extrait K-bis',
+              'versement_direct': 'Imprimé de demande de versement', 'engagements': 'engagements du locataire',
+              'convention_concordat': 'Convention de résorption', 'ccapex': 'Justificatif de la saisine de la CCAPEX'}
+    for code, ancre in ancres.items():
+        if isinstance(ancre, tuple):
+            texte, occ, xmin, xmax = ancre
+            c.append({'cle': f'piece_{code}', 'ancre': texte, 'occ': occ, 'x_min': xmin, 'x_max': xmax,
+                      'mode': 'case', 'dx': -11, 'dy': -3})
+        else:
+            c.append({'cle': f'piece_{code}', 'ancre': ancre, 'mode': 'case', 'dx': -11, 'dy': -3})
+    c += [{'cle': 'note_cadre', 'ancre': 'NOTE EXPLICATIVE DU CADRE', 'mode': 'dessous', 'dx': -150, 'dy': 6,
+           'largeur': 480, 'lignes': 14},
+          {'cle': 'date', 'ancre': 'Fait le :', 'dx': 4},
+          {'cle': 'cadre', 'ancre': 'signature du cadre social', 'mode': 'dessous', 'dy': 2, 'largeur': 230, 'lignes': 3}]
+    return c
+
+
 def _argumentaire_fluides(eau):
     """Liste à deux colonnes (énergie à gauche, eau à droite) : on coche dans la colonne du type de demande."""
     c = _identite_simple(caf='N° CAF :')
@@ -305,7 +432,10 @@ def placements(code, type_aide=None):
             F.IDENTIFICATION_LOGEMENT: _ident_logement, F.LISTE_PIECES: _liste_pieces,
             F.ARGUMENTAIRE: _argumentaire, F.VERSEMENT_DIRECT_AL: _cerfa_11362,
             F.FORMULAIRE_EAU: lambda: _formulaire_fluides(True), F.FORMULAIRE_ENERGIE: lambda: _formulaire_fluides(False),
-            F.AVIS_FLUIDES: _avis, F.ARGUMENTAIRE_FLUIDES: lambda: _argumentaire_fluides(False)}[code]()
+            F.AVIS_FLUIDES: _avis, F.ARGUMENTAIRE_FLUIDES: lambda: _argumentaire_fluides(False),
+            F.FORMULAIRE_MAINTIEN: _formulaire_maintien, F.ARGUMENTAIRE_MAINTIEN: _argumentaire_maintien,
+            F.ENGAGEMENTS: _engagements, F.CONVENTION_CONCORDAT: _convention_concordat,
+            F.LISTE_PIECES_MAINTIEN: _liste_pieces_maintien}[code]()
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -385,6 +515,41 @@ def valeurs(demande, code, aujourdhui=None):
                   'participation_oui': dn.get('participation') == 'OUI', 'participation_non': dn.get('participation') == 'NON',
                   'plan_fournisseur': dn.get('plan_fournisseur')})
         return v
+    if code == F.FORMULAIRE_MAINTIEN:
+        v = valeurs(demande, F.FORMULAIRE_ACCES, aujourdhui)
+        v = {k: x for k, x in v.items() if not k.startswith(('prop_', 'case_', 'eq_', 'garantie_', 'ant_', 'nv_'))}
+        lg = dn.get('logement') or {}
+        total = d(lg.get('loyer')) + d(lg.get('charges')) + d(lg.get('garage'))
+        v.update({'adresse': dn.get('adresse'), 'nom_bailleur': dn.get('nom_bailleur'),
+                  'surendettement_oui': "X" if dn.get('saisine_surendettement') == 'OUI' else '',
+                  'surendettement_non': "X" if dn.get('saisine_surendettement') == 'NON' else '',
+                  'lg_typologie': lg.get('typologie'), 'lg_surface': lg.get('surface'),
+                  'lg_loyer': montant(lg.get('loyer')), 'lg_charges': montant(lg.get('charges')),
+                  'lg_garage': montant(lg.get('garage')), 'lg_total': montant(total),
+                  'lg_al': montant(lg.get('al')), 'lg_rls': montant(lg.get('rls')),
+                  'chauffage_oui': "X" if dn.get('chauffage_collectif') == 'OUI' else '',
+                  'chauffage_non': "X" if dn.get('chauffage_collectif') == 'NON' else '',
+                  'ccapex_oui': "X" if dn.get('saisine_ccapex') == 'OUI' else '',
+                  'ccapex_non': "X" if dn.get('saisine_ccapex') == 'NON' else '',
+                  'remise_oui': "X" if dn.get('remise_dette') == 'OUI' and demande.est_concordat else '',
+                  'remise_non': "X" if dn.get('remise_dette') == 'NON' and demande.est_concordat else '',
+                  'montant_remise': montant(dn.get('montant_remise')) if demande.est_concordat else '',
+                  f"variante_{dn.get('variante')}": bool(dn.get('variante')),
+                  f"titre_{dn.get('variante')}": "X" if dn.get('variante') else ''})
+        return v
+    if code in (F.ENGAGEMENTS, F.CONVENTION_CONCORDAT):
+        lg = dn.get('logement') or {}
+        total = d(lg.get('loyer')) + d(lg.get('charges')) + d(lg.get('garage'))
+        acc = (f"{ts.get('prenom', '')} {ts.get('nom', '')}, {ts.get('qualite', '')} – {ts.get('organisme', '')} – "
+               f"{ts.get('telephone', '')}").strip(" ,–")
+        return {'num_caf': dn.get('num_caf'), 'reprise_depuis': dn.get('reprise_paiement_depuis'),
+                'total_loyer': montant(total), 'accompagnement': acc,
+                'bailleur': (dn.get('nom_bailleur') or '').split("\n")[0],
+                'locataires': " – ".join(_nom(p) for p in [dem, conj] if p)}
+    if code == F.LISTE_PIECES_MAINTIEN:
+        code = F.LISTE_PIECES
+    if code == F.ARGUMENTAIRE_MAINTIEN:
+        code = F.ARGUMENTAIRE
     if code == F.AVIS_FLUIDES:
         code = F.AVIS_MOTIVE
     if code == F.ARGUMENTAIRE_FLUIDES:
@@ -412,7 +577,7 @@ def valeurs(demande, code, aujourdhui=None):
                                   f"{ts.get('organisme', '')} – {ts.get('telephone', '')}".strip(" ,–")}
     if code == F.IDENTIFICATION_LOGEMENT:
         cp_ville = (dn.get('cp_commune') or '').split(' ', 1)
-        return {'locataire': _nom(dem), 'adresse': dn.get('adresse_objet'), 'code_postal': cp_ville[0],
+        return {'locataire': _nom(dem), 'adresse': dn.get('adresse_objet') or dn.get('adresse'), 'code_postal': cp_ville[0],
                 'ville': cp_ville[1] if len(cp_ville) > 1 else '', 'num_caf': dn.get('num_caf')}
     if code in (F.LISTE_PIECES, F.ARGUMENTAIRE):
         v = {'nom': dem.get('nom'), 'prenom': dem.get('prenom'), 'num_caf': dn.get('num_caf')}
@@ -427,6 +592,7 @@ def valeurs(demande, code, aujourdhui=None):
         return v
     if code == F.VERSEMENT_DIRECT_AL:
         cp_ville = (dn.get('cp_commune') or '').split(' ', 1)
-        return {'nom': (dem.get('nom') or '').upper(), 'prenom': dem.get('prenom'), 'adresse': dn.get('adresse_objet'),
+        return {'nom': (dem.get('nom') or '').upper(), 'prenom': dem.get('prenom'),
+                'adresse': dn.get('adresse_objet') or dn.get('adresse'),
                 'code_postal': cp_ville[0], 'commune': cp_ville[1] if len(cp_ville) > 1 else '', 'num_caf': dn.get('num_caf')}
     return {}

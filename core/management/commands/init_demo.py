@@ -913,7 +913,7 @@ class Command(BaseCommand):
                                      "plafond_equipement_famille": 700}})
         GestionnaireFSL.objects.get_or_create(
             nom="FSL – Département (démo)", defaults={"par_defaut": True, "adresse": "Adresse fictive"})
-        DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP"]).delete()
+        DemandeFSL.objects.filter(beneficiaire__code_interne__in=["FAM5-SAR", "FAM2-SOP", "FAM3-CLA"]).delete()
 
         def creer(code, maj, type_aide="ACCES", auteur=None):
             b, auteur = self.b[code], auteur or self.ts
@@ -964,6 +964,16 @@ class Command(BaseCommand):
         # Eau : en préparation par le travailleur social
         creer("FAM2-SOP", {"distributeur": "Distributeur d'eau EXEMPLE", "date_facture": (self.j - timedelta(days=20)).strftime("%d/%m/%Y"),
                            "montant_facture": "286", "surendettement": "NON"}, "EAU")
+        # Maintien (concordat) : dette locative, remise du bailleur d'un tiers, CCAPEX saisie
+        d = creer("FAM3-CLA", {"bailleur_type": "PRIVE", "variante": "CONCORDAT",
+                               "nom_bailleur": "SCI EXEMPLE\n7 rue Fictive 13110 Port-de-Bouc", "montant_dette": "1950",
+                               "reprise_paiement_depuis": "mai 2026", "remise_dette": "OUI", "montant_remise": "650",
+                               "saisine_ccapex": "OUI", "saisine_surendettement": "NON", "chauffage_collectif": "NON",
+                               "logement": {"typologie": "T3", "surface": "64", "loyer": "640", "charges": "60",
+                                            "al": "210"}}, "MAINTIEN")
+        d.avis, d.proposition_subvention, d.proposition_pret = "FAVORABLE", 850, 450
+        d.avis_motive = "Paiement du loyer repris depuis six mois ; le bailleur accepte une remise d'un tiers (fictif)."
+        d.save()
         self.stdout.write("✅ Demandes FSL fictives ajoutées")
 
     def ateliers(self):

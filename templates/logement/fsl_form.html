@@ -15,7 +15,16 @@
       <label>Gestionnaire du FSL<select name="gestionnaire" class="{{ inp }}">{% for g in gestionnaires %}<option value="{{ g.pk }}" {% if demande.gestionnaire_id == g.pk %}selected{% endif %}>{{ g.nom }}</option>{% endfor %}</select></label>
       <label>N° allocataire CAF<input name="num_caf" value="{{ dn.num_caf }}" class="{{ inp }}"></label>
       <label>Autre n° (MSA…)<input name="autres_numero" value="{{ dn.autres_numero }}" class="{{ inp }}"></label>
-      {% if demande.est_fluides %}
+      {% if demande.type_aide == "MAINTIEN" %}
+      <div>Bailleur
+        <div class="flex gap-4 mt-1">
+          <label><input type="radio" name="bailleur_type" value="SOCIAL" {% if dn.bailleur_type == "SOCIAL" %}checked{% endif %}> social</label>
+          <label><input type="radio" name="bailleur_type" value="PRIVE" {% if dn.bailleur_type == "PRIVE" %}checked{% endif %}> privé</label></div></div>
+      <label class="md:col-span-2">Adresse<input name="adresse" value="{{ dn.adresse }}" class="{{ inp }}"></label>
+      <label>Code postal et commune<input name="cp_commune" value="{{ dn.cp_commune }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Nom et adresse du bailleur<textarea name="nom_bailleur" rows="2" class="{{ inp }}">{{ dn.nom_bailleur }}</textarea></label>
+      <label>Téléphone / courriel du bailleur privé<input name="contact_bailleur" value="{{ dn.contact_bailleur }}" class="{{ inp }}"></label>
+      {% elif demande.est_fluides %}
       <label>{% if demande.type_aide == "EAU" %}Distributeur d'eau{% else %}Fournisseur d'énergie{% endif %}<input name="distributeur" value="{{ dn.distributeur }}" class="{{ inp }}"></label>
       <label class="md:col-span-2">Adresse<input name="adresse" value="{{ dn.adresse }}" class="{{ inp }}"></label>
       <label>Code postal et commune<input name="cp_commune" value="{{ dn.cp_commune }}" class="{{ inp }}"></label>
@@ -63,7 +72,33 @@
     <span class="text-xs text-gray-500 ml-2">Total et taux d'effort : calculés par CID.</span>
   </section>
 
-  {% if demande.est_fluides %}
+  {% if demande.type_aide == "MAINTIEN" %}
+  <section class="bg-white rounded-xl border p-5" id="maintien">
+    <h2 class="font-bold text-gray-800 mb-3">Logement et dette locative</h2>
+    <div class="flex flex-wrap gap-4 text-sm mb-3">
+      <label><input type="radio" name="variante" value="MAINTIEN" {% if dn.variante == "MAINTIEN" %}checked{% endif %}> <b>FSL maintien</b> (reprise du paiement du résiduel de loyer : 3 mois consécutifs)</label>
+      <label><input type="radio" name="variante" value="CONCORDAT" {% if dn.variante == "CONCORDAT" %}checked{% endif %}> <b>FSL concordat</b> (6 mois consécutifs, remise de dette du bailleur)</label></div>
+    <div class="grid md:grid-cols-4 gap-3 text-sm">
+      {% for c, l, v in logement_maintien %}<label>{{ l }}<input name="lg_{{ c }}" value="{{ v }}" class="{{ inp }}"></label>{% endfor %}
+      <div>Chauffage collectif<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="chauffage_collectif" value="OUI" {% if dn.chauffage_collectif == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="chauffage_collectif" value="NON" {% if dn.chauffage_collectif == "NON" %}checked{% endif %}> non</label></div></div>
+      <label>Dette locative (€)<input name="montant_dette" value="{{ dn.montant_dette }}" class="{{ num }}"></label>
+      <label>Paiement repris depuis (mois)<input name="reprise_paiement_depuis" value="{{ dn.reprise_paiement_depuis }}" class="{{ inp }}" placeholder="mai 2026"></label>
+      <div>Commission de surendettement saisie pour cette dette<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="saisine_surendettement" value="OUI" {% if dn.saisine_surendettement == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="saisine_surendettement" value="NON" {% if dn.saisine_surendettement == "NON" %}checked{% endif %}> non</label></div></div>
+      <div>CCAPEX saisie<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="saisine_ccapex" value="OUI" {% if dn.saisine_ccapex == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="saisine_ccapex" value="NON" {% if dn.saisine_ccapex == "NON" %}checked{% endif %}> non</label></div></div>
+      <div>Concordat : remise de dette du bailleur<div class="flex gap-3 mt-1">
+        <label><input type="radio" name="remise_dette" value="OUI" {% if dn.remise_dette == "OUI" %}checked{% endif %}> oui</label>
+        <label><input type="radio" name="remise_dette" value="NON" {% if dn.remise_dette == "NON" %}checked{% endif %}> non</label></div></div>
+      <label>Montant de la remise (€)<input name="montant_remise" value="{{ dn.montant_remise }}" class="{{ num }}"></label>
+    </div>
+    <p class="text-xs text-gray-500 mt-2">La partie « logement » du formulaire est à compléter par le bailleur : CID la préremplit avec ce qu'il connaît (loyer et AL du budget du foyer).</p>
+  </section>
+  {% elif demande.est_fluides %}
   <section class="bg-white rounded-xl border p-5" id="dette">
     <h2 class="font-bold text-gray-800 mb-3">Dette</h2>
     <div class="grid md:grid-cols-3 gap-3 text-sm">

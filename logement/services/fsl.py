@@ -108,6 +108,33 @@ PIECES_FLUIDES = [
     ('surendettement', "Plan conventionnel de surendettement, le cas échéant", 'facultatif'),
 ]
 SEUIL_INSTRUCTION_ADMINISTRATIVE = 500
+
+# Maintien, concordat
+PIECES_MAINTIEN = [
+    ('avis', "Avis motivé et proposition du travailleur social, daté et signé", None),
+    ('formulaire', "Formulaire rempli, cachet de la structure, signé par le travailleur social et le demandeur", None),
+    ('identite', "Pièces d'identité de toutes les personnes majeures du foyer (titre de séjour en cours de validité)", None),
+    ('etat_civil_mineurs', "Mineurs : extrait d'acte de naissance ou livret de famille", None),
+    ('ressources', "Justificatifs des ressources du foyer, mois précédant la signature", None),
+    ('ressources_majeurs', "Enfants majeurs : justificatifs de ressources ou de non-ressources", None),
+    ('surendettement', "État d'avancement de la procédure de surendettement (si demande pour cette dette)", 'surendettement'),
+    ('rib', "Relevé d'identité bancaire du demandeur", None),
+    ('bail', "Bail daté et signé (IML : contrat de location et bail initial)", None),
+    ('assurance', "Attestation d'assurance du logement pour l'année en cours", None),
+    ('releve_compte', "Relevé de compte locataire depuis l'origine de la dette (appels, paiements, CAF, solde cumulé)", None),
+    ('contrat_pret', "Contrat de prêt signé", None),
+    ('prelevement', "Autorisation et demande de prélèvement", None),
+    ('ident_logement', "Fiche d'identification du logement (bailleur privé)", 'prive'),
+    ('rib_bailleur', "RIB du bailleur privé ou de la SCI", 'prive'),
+    ('kbis', "Extrait K-bis de la SCI", 'prive'),
+    ('engagements', "Engagements du locataire et du bailleur, datés et signés", None),
+    ('convention_concordat', "Convention de résorption de dette locative (concordat), datée et signée", 'concordat'),
+    ('versement_direct', "Demande de versement direct de l'AL / APL", None),
+    ('ccapex', "Justificatif de la saisine de la CCAPEX", 'ccapex'),
+]
+LOGEMENT_MAINTIEN = [('typologie', "Typologie"), ('surface', "Surface (m²)"), ('loyer', "Loyer mensuel"),
+                     ('charges', "Charges"), ('garage', "Garage"), ('al', "Montant de l'AL ou APL"),
+                     ('rls', "Montant de la RLS")]
 ETATS_PIECE = [('MANQUANTE', "À fournir"), ('FOURNIE', "Fournie"), ('SANS_OBJET', "Sans objet")]
 
 
@@ -192,11 +219,12 @@ def totaux_ressources(ressources):
 
 def taux_effort(donnees):
     """(Loyer + charges − AL prévisionnelle) / total des ressources, en %. Indicatif : le règlement intérieur fait foi."""
-    n = donnees.get('logement_nouveau', {})
+    n = donnees.get('logement_nouveau') or donnees.get('logement') or {}
     _, total = totaux_ressources(donnees.get('ressources'))
     if not total:
         return ""
-    reste = d(n.get('loyer')) + d(n.get('charges')) - d(n.get('al_previsionnel'))
+    reste = (d(n.get('loyer')) + d(n.get('charges')) + d(n.get('garage'))
+             - d(n.get('al_previsionnel') or n.get('al')) - d(n.get('rls')))
     return f"{(reste / total * 100).quantize(Decimal('0.1'))}".replace('.', ',')
 
 
@@ -243,6 +271,14 @@ def preremplir(beneficiaire, user, type_aide='ACCES'):
                            if x.get('creancier')) if budget else ''
         if dettes:
             fluides['charges_exceptionnelles'] = dettes
+    if type_aide == 'MAINTIEN':
+        impaye = d(charges.get('loyer', {}).get('non_payee'))
+        fluides = {'adresse': beneficiaire.adresse, 'cp_commune': f"{beneficiaire.code_postal} {beneficiaire.ville}",
+                   'variante': 'MAINTIEN', 'nom_bailleur': '', 'saisine_surendettement': '', 'saisine_ccapex': '',
+                   'montant_dette': str(impaye) if impaye else '', 'reprise_paiement_depuis': '',
+                   'remise_dette': '', 'montant_remise': '',
+                   'logement': {'loyer': str(loyer) if loyer else '', 'al': str(al) if al else ''},
+                   'chauffage_collectif': ''}
     base = {
         'num_caf': beneficiaire.numero_caf or '',
         'autres_numero': '',
@@ -269,6 +305,8 @@ def preremplir(beneficiaire, user, type_aide='ACCES'):
 
 def liste_pieces(type_aide):
     from logement.models import DemandeFSL
+    if type_aide == DemandeFSL.MAINTIEN:
+        return PIECES_MAINTIEN
     return PIECES_FLUIDES if type_aide in DemandeFSL.FLUIDES else PIECES
 
 
@@ -278,6 +316,11 @@ def pieces_attendues(demande):
     if demande.est_fluides:
         return [(c, l, cond == 'facultatif') for c, l, cond in PIECES_FLUIDES
                 if not (cond == 'ts' and demande.instruction_administrative)]
+    if demande.type_aide == 'MAINTIEN':
+        conditions = {'prive': donnees.get('bailleur_type') == 'PRIVE', 'concordat': demande.est_concordat,
+                      'surendettement': donnees.get('saisine_surendettement') == 'OUI',
+                      'ccapex': donnees.get('saisine_ccapex') == 'OUI'}
+        return [(c, l, False) for c, l, cond in PIECES_MAINTIEN if cond is None or conditions.get(cond)]
     prive = donnees.get('bailleur_type') == 'PRIVE'
     garantie = bool(donnees.get('garantie'))
     equipements = bool(d((donnees.get('proposition') or {}).get('equipements')))
@@ -307,6 +350,16 @@ def alertes(demande):
                        f"Un travailleur social doit donner son avis.")
         if not donnees.get('distributeur'):
             out.append("Indiquez le " + ("distributeur d'eau." if demande.type_aide == 'EAU' else "fournisseur d'énergie."))
+        return out
+    if demande.type_aide == 'MAINTIEN':
+        if not donnees.get('bailleur_type'):
+            out.append("Indiquez si le bailleur est social ou privé.")
+        dette = demande.montant_dette
+        if demande.est_concordat and dette and donnees.get('remise_dette') == 'OUI' and d(donnees.get('montant_remise')) * 3 < dette:
+            out.append(f"Concordat : la remise du bailleur ({montant(donnees.get('montant_remise'))} €) est inférieure au "
+                       f"tiers de la dette ({montant(dette)} €), alors que la convention prévoit au moins un tiers.")
+        if demande.est_concordat and donnees.get('remise_dette') != 'OUI':
+            out.append("Concordat : la convention prévoit une remise de dette du bailleur d'au moins un tiers.")
         return out
     total = sum((d(v) for v in prop.values()), Decimal(0))
     if p.get('plafond_acces') and total > d(p['plafond_acces']):

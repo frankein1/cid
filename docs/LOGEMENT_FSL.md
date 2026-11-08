@@ -1,10 +1,10 @@
-# Logement – FSL : accès au logement, énergie, eau
+# Logement – FSL : accès, maintien, énergie, eau
 
-*Novembre 2026. Premier volet du module logement (suivront : FSL maintien, prévention des expulsions locatives).*
+*Novembre 2026. Premier volet du module logement (suivra : prévention des expulsions locatives).*
 
 ## Ce que fait CID
 
-Depuis la fiche usager, encart **Logement – FSL**, boutons **FSL accès**, **FSL énergie**, **FSL eau** (agents de la MDS de l'usager).
+Depuis la fiche usager, encart **Logement – FSL**, boutons **FSL accès**, **FSL maintien**, **FSL énergie**, **FSL eau** (agents de la MDS de l'usager).
 
 1. **Préremplissage** avec ce que CID connaît déjà, à vérifier :
    - n° CAF, situation familiale ;
@@ -18,6 +18,37 @@ Depuis la fiche usager, encart **Logement – FSL**, boutons **FSL accès**, **F
 4. **Pièces manquantes** : l'agent demande l'avis du cadre. Le cadre rédige la note explicative jointe au dossier (« argumentaire de pièces manquantes ») et accepte l'envoi, ou renvoie la demande. Il est prévenu par un message CID.
 5. **Envoi** (date) puis **réponse du FSL** : accordée (montants, garantie), ajournée (pièces demandées, la demande redevient modifiable puis se renvoie) ou refusée. Tout est daté dans l'historique.
 6. **Dossier PDF** à imprimer et faire signer, dans l'ordre : demande, avis motivé, argumentaire du cadre, contrat de prêt, autorisation de prélèvement, contrat de garantie, convention d'accès, fiche d'identification du logement (bailleur privé), demande de versement direct de l'AL, liste des pièces. Chaque document ne figure que s'il concerne la demande.
+
+## Maintien et concordat
+
+- **Une seule demande**, avec le choix entre :
+  - **FSL maintien** : reprise du paiement du résiduel de loyer depuis 3 mois consécutifs ;
+  - **FSL concordat** : 6 mois consécutifs, avec une remise de dette du bailleur.
+- **La partie « logement » est à compléter par le bailleur.** CID la préremplit avec le loyer et l'AL du budget du foyer, et propose comme dette locative le loyer non payé.
+- **À saisir :**
+  - bailleur (social ou privé), typologie, surface, charges, garage, RLS ;
+  - saisine de la commission de surendettement et de la CCAPEX ;
+  - mois de reprise du paiement ;
+  - concordat : remise du bailleur (oui / non, montant).
+- **Alerte concordat :** CID prévient si la remise est absente ou inférieure au tiers de la dette, comme le prévoit la convention.
+- **Pièces propres :**
+  - relevé de compte locataire depuis l'origine de la dette ;
+  - engagements du locataire et du bailleur ;
+  - convention de résorption (concordat) ;
+  - justificatif de saisine de la CCAPEX ;
+  - état de la procédure de surendettement.
+- **Dossier**, dans cet ordre :
+  - demande maintien / concordat (la case du titre est cochée) ;
+  - avis motivé ;
+  - argumentaire maintien / concordat ;
+  - contrat de prêt et prélèvement (si prêt) ;
+  - engagements du locataire et du bailleur ;
+  - convention de concordat ;
+  - fiche d'identification du logement (bailleur privé) ;
+  - versement direct de l'AL ;
+  - liste des pièces.
+
+  Le contrat de prêt, l'autorisation de prélèvement, l'avis motivé et la fiche d'identification sont les mêmes imprimés que pour l'accès : on ne les dépose qu'une fois.
 
 ## Énergie et eau
 
@@ -44,7 +75,7 @@ CID écrit alors les données **sur le formulaire lui-même**, page par page. Ch
 
 - **Aperçu avec des données fictives**, dans la liste des formulaires : on voit où tombe chaque champ. Les champs non placés sont signalés.
 - **Réglages** : si un champ tombe mal, on le corrige dans l'administration sans toucher au code, par exemple `{"ts_email": {"dx": 5, "dy": -2}}`, ou une position absolue `{"cle": {"page": 1, "x": 120, "y": 400}}`.
-- Les placements livrés correspondent aux formulaires FSL accès, énergie et eau **version 03/2025**, aux avis motivés et argumentaires (accès ; énergie / eau) et au Cerfa 11362\*04. Si le gestionnaire change de version, on vérifie l'aperçu.
+- Les placements livrés correspondent aux formulaires FSL accès, maintien / concordat, énergie et eau **version 03/2025**, à leurs avis motivés, argumentaires, engagements, convention de concordat et listes de pièces, et au Cerfa 11362\*04. Si le gestionnaire change de version, on vérifie l'aperçu.
 - **Sans formulaire déposé**, CID produit une **trame générique** avec les mêmes rubriques (demande, avis, pièces, note du cadre). Les contrats, la convention et les fiches propres au gestionnaire sont alors signalés « à joindre vierges ».
 
 ## Gestionnaires
@@ -64,6 +95,7 @@ Le gestionnaire est choisi d'après le code postal de l'usager. Il reste modifia
 - **FAM5-SAR** : demande en attente de l'avis du cadre (bail et fiche d'identification manquants).
 - **FAM2-SOP** : demande d'accès accordée ; demande eau en préparation.
 - **FAM5-SAR** : demande énergie instruite par un agent administratif (`aa1_mds1`), envoyée.
+- **FAM3-CLA** : demande de concordat (bailleur privé, remise d'un tiers, CCAPEX saisie) en préparation.
 
 ## Fichiers
 
