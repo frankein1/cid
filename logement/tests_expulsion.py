@@ -134,18 +134,12 @@ class ExpulsionTests(_Base):
         self.client_de(self.sl_cadre).post(url, {"action": "supprimer"})
         self.assertFalse(D.objects.exists())
 
-    def test_mds_cree_un_dossier_dans_sa_mds(self):
+    def test_seul_le_service_logement_ouvre_et_affecte(self):
         r = self.client_de(self.ts).post("/logement/expulsions/nouveau/", {
-            "origine": "MDS", "date_reception": timezone.localdate().isoformat(), "nom": "ESSAI",
-            "mds": self.mds.pk})
-        self.assertEqual(r.status_code, 302)
-        d = D.objects.get()
-        self.assertEqual((d.mds, d.referent), (self.mds, self.ts))
-        # une MDS qui n'est pas la sienne est refusée par le formulaire
-        r = self.client_de(self.ts).post("/logement/expulsions/nouveau/", {
-            "origine": "MDS", "date_reception": timezone.localdate().isoformat(), "nom": "AUTRE", "mds": self.autre.pk})
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(D.objects.count(), 1)
+            "origine": "MDS", "date_reception": timezone.localdate().isoformat(), "nom": "ESSAI", "mds": self.mds.pk})
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(D.objects.exists())
+        self.assertNotContains(self.client_de(self.ts).get("/logement/expulsions/"), "expulsion-nouveau")
 
     def test_fiche_pdf_et_decision_saisie_par_la_mds(self):
         self.nouveau(mds=self.mds.pk)
@@ -225,3 +219,9 @@ class AnnuaireEtRattachementTests(_Base):
                                            {"action": "rattacher", "beneficiaire": self.b.pk})
         d.refresh_from_db()
         self.assertEqual((d.beneficiaire, d.mds), (self.b, self.mds))
+
+    def test_annuaire_deux_elements_parmi_nom_prenom_date(self):
+        c = self.client_de(self.sl_agent)
+        self.assertContains(c.get("/beneficiaire/annuaire/?prenom=clara&date_naissance=1990-01-01"), "EX-1")
+        self.assertEqual(c.get("/beneficiaire/annuaire/?prenom=clara").context["lignes"], [])
+        self.assertEqual(c.get("/beneficiaire/annuaire/?date_naissance=1990-01-01").context["lignes"], [])

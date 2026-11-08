@@ -58,7 +58,8 @@ def peut_voir(user, d):
 
 
 def peut_creer(user):
-    return est_sl(user) or est_admin(user) or user.a_la_capacite('peut_creer')
+    """Le Service Logement ouvre les dossiers et les affecte (par arrondissement à Marseille, par ville ailleurs)."""
+    return est_sl(user) or est_admin(user)
 
 
 def peut_ecrire(user, d):
@@ -97,7 +98,9 @@ def referents_possibles(d):
 
 
 def peut_rattacher(user, d, b):
-    """Le Service Logement rattache n'importe quel usager (identité de base, annuaire) ; la MDS, ceux de sa MDS."""
+    """Le Service Logement rattache n'importe quel usager (identité de base, annuaire). Usager inconnu au départ : la
+    MDS, après la mise à disposition, peut rattacher le dossier à l'usager qu'elle a créé chez elle (sans changer
+    l'affectation, qui reste au Service Logement)."""
     if not peut_ecrire(user, d) or b.statut == 'ARCHIVE':
         return False
     if est_sl(user) or est_admin(user):

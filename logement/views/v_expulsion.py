@@ -73,9 +73,7 @@ def expulsion_nouveau(request):
     user = request.user
     if not X.peut_creer(user):
         return HttpResponseForbidden(REFUS)
-    sl = X.est_sl(user) or X.est_admin(user)
-    form = DossierExpulsionForm(request.POST or None, mds_possibles=_mds_possibles(user),
-                                initial={'origine': D.SL_CAF if sl else D.MDS_ORIGINE})
+    form = DossierExpulsionForm(request.POST or None, mds_possibles=_mds_possibles(user), initial={'origine': D.SL_CAF})
     if request.method == 'POST' and form.is_valid():
         d = form.save(commit=False)
         mds = d.mds
@@ -86,15 +84,8 @@ def expulsion_nouveau(request):
             X.rattacher(d, form.usager, user, affecter_mds=False)
         d.save()
         if mds:
-            if sl:
-                X.affecter(d, mds, user)
-            else:
-                d.mds = mds
-                d.referent = user if user.a_la_capacite('peut_instruire') else None
-                d.tracer(user, "Ouvert par la MDS", str(mds))
-                d.save()
-        messages.success(request, f"Dossier {d.numero} enregistré."
-                         + (" La MDS est prévenue dans CID." if mds and sl else ""))
+            X.affecter(d, mds, user)
+        messages.success(request, f"Dossier {d.numero} enregistré." + (" La MDS est prévenue dans CID." if mds else ""))
         return redirect('logement:expulsion_detail', pk=d.pk)
     return render(request, 'logement/expulsion_form.html', {'form': form, 'd': None})
 

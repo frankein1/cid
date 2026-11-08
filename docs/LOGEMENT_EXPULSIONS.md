@@ -21,7 +21,7 @@ Trois profils pour le SL, attribués dans *Comptes & droits* :
 - **Ce qui s'affiche :** l'identité de base, c'est-à-dire nom, prénom, nom de naissance, date et lieu de naissance, code usager CID et MDS de rattachement. Rien d'autre : ni adresse, ni dossier.
 - **Comment chercher :**
   - par un identifiant exact (code usager CID ou n° CAF) ;
-  - ou par le nom (d'usage ou de naissance) avec le prénom ou la date de naissance.
+  - ou par deux éléments parmi le nom (d'usage ou de naissance), le prénom et la date de naissance (nom + prénom, prénom + date de naissance…).
 
   On ne peut pas parcourir l'annuaire, et la recherche s'arrête à 20 réponses.
 - **Journal :** chaque recherche est inscrite au journal d'activité. Le n° CAF n'y est pas recopié.
@@ -29,14 +29,15 @@ Trois profils pour le SL, attribués dans *Comptes & droits* :
 
 **Dans le dossier d'expulsion,** le SL saisit le **code usager CID**, ou CID retrouve l'usager par le **n° allocataire** s'il est unique.
 - Le dossier est alors rattaché à l'usager et part à **sa MDS** : nom et prénom se remplissent seuls.
-- Depuis le dossier, le SL peut aussi chercher l'usager (code, n° CAF, nom avec prénom ou date de naissance). CID propose d'office les correspondances sur le n° allocataire ou sur nom + prénom.
-- Une MDS ne rattache que les usagers de sa MDS. Si l'usager relève d'une autre MDS, c'est le SL qui réaffecte.
+- Depuis le dossier, le SL peut aussi chercher l'usager (code, n° CAF, ou deux éléments parmi nom, prénom, date de naissance). CID propose d'office les correspondances sur le n° allocataire ou sur nom + prénom.
+- **Le SL ouvre et affecte les dossiers** : par arrondissement à Marseille, par ville ailleurs. Une MDS n'ouvre pas de dossier et ne change pas l'affectation.
+- **Usager inconnu de CID** : la MDS reçoit les informations minimales de la fiche du SL et fait la **mise à disposition** prévue par la procédure. Si le ménage est ensuite suivi et créé dans CID, la MDS peut rattacher le dossier à cet usager de sa MDS ; l'affectation, elle, reste au SL.
 
 Côté MDS :
 - les agents qui ont `peut_voir` voient les dossiers de leur MDS ;
-- avec `peut_modifier`, ils complètent la fiche, saisissent la décision, ajoutent des étapes, rattachent l'usager et clôturent ;
+- avec `peut_modifier`, ils complètent la fiche, saisissent la décision, ajoutent des étapes, rattachent l'usager quand il a été créé dans leur MDS après la mise à disposition, et clôturent ;
 - le cadre (`peut_valider`) désigne le référent ; un travailleur social (`peut_instruire`) peut se désigner lui-même ;
-- une MDS peut aussi ouvrir un dossier qu'elle a repéré (origine « Repéré par la MDS »).
+- une MDS n'ouvre pas de dossier : si elle repère une procédure, elle prévient le SL, qui ouvre le dossier (origine « Repéré par la MDS ») et l'affecte.
 
 ## Le dossier (`logement/models/m_expulsion.py`)
 

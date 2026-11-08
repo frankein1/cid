@@ -111,7 +111,7 @@
                 <span class="block text-xs text-gray-500">{{ b.date_naissance|date:"d/m/Y" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %} – {{ b.code_interne }} – {{ b.mds.nom|default:"sans MDS" }}</span></span>
               {% if u.possible %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<input type="hidden" name="beneficiaire" value="{{ b.pk }}"><button name="action" value="rattacher" class="text-xs px-2 py-1 bg-blue-600 text-white rounded">Rattacher</button></form>
               {% else %}<span class="text-xs text-gray-500">autre MDS : le Service Logement réaffecte</span>{% endif %}</li>
-              {% endwith %}{% empty %}<li class="text-gray-400 text-xs">Aucune proposition : cherchez par code usager, n° CAF, ou nom avec prénom ou date de naissance.</li>{% endfor %}</ul>
+              {% endwith %}{% empty %}<li class="text-gray-400 text-xs">Aucune proposition : cherchez par code usager, n° CAF, ou deux éléments parmi nom, prénom, date de naissance.</li>{% endfor %}</ul>
           {% else %}<span class="text-gray-400">non rattaché</span>{% endif %}
         </div>
       </div>

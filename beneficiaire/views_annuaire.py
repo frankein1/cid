@@ -9,7 +9,7 @@ existe et à quelle MDS il est rattaché, pour saisir ses dossiers avec le code 
 doubles saisies.
 
 On ne voit que l'identité de base : nom, prénom, nom de naissance, date et lieu de naissance, code usager, MDS.
-La recherche exige un identifiant exact (code usager, n° CAF) ou un nom avec un prénom ou une date de naissance :
+La recherche exige un identifiant exact (code usager, n° CAF) ou deux éléments parmi nom, prénom et date de naissance :
 on ne peut pas parcourir l'annuaire. Chaque recherche est inscrite au journal d'activité."""
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -30,14 +30,15 @@ def rechercher(code="", caf="", nom="", prenom="", date_naissance=None):
         qs = qs.filter(code_interne__iexact=code)
     elif caf:
         qs = qs.filter(numero_caf=caf)
-    elif len(nom) >= 2 and (len(prenom) >= 2 or date_naissance):
-        qs = qs.filter(Q(nom__icontains=nom) | Q(nom_naissance__icontains=nom))
-        if prenom:
+    elif sum((len(nom) >= 2, len(prenom) >= 2, bool(date_naissance))) >= 2:
+        if len(nom) >= 2:
+            qs = qs.filter(Q(nom__icontains=nom) | Q(nom_naissance__icontains=nom))
+        if len(prenom) >= 2:
             qs = qs.filter(prenom__icontains=prenom)
         if date_naissance:
             qs = qs.filter(date_naissance=date_naissance)
     else:
-        return [], ("Indiquez le code usager CID ou le n° CAF, ou bien le nom avec le prénom ou la date de naissance.")
+        return [], ("Indiquez le code usager CID ou le n° CAF, ou deux éléments parmi : nom, prénom, date de naissance.")
     resultats = list(qs.order_by('nom', 'prenom')[:MAX_RESULTATS + 1])
     if len(resultats) > MAX_RESULTATS:
         return resultats[:MAX_RESULTATS], f"Plus de {MAX_RESULTATS} réponses : précisez la recherche."
