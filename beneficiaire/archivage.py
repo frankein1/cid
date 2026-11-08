@@ -16,7 +16,8 @@ Cycle de vie RGPD d'un dossier usager (inspiré de Mon Suivi Social, réécrit p
    dossiers archivés depuis au moins M mois (12 par défaut, réglable). Tout ce qui dépend du dossier
    est supprimé (documents de la GED compris) ; il ne reste qu'une trace anonyme (OperationRGPD).
 
-Réglages (Administration → Configuration) : RGPD_ARCHIVAGE_ANS, RGPD_EFFACEMENT_MOIS.
+Durées : Administration → Durées de conservation (USAGER_DOSSIER), sinon les anciennes clés de configuration
+RGPD_ARCHIVAGE_ANS et RGPD_EFFACEMENT_MOIS.
 """
 from datetime import date, datetime, timedelta
 
@@ -58,12 +59,20 @@ def _conf(cle, defaut):
         return defaut
 
 
+def delai_archivage_mois():
+    """Durée de conservation importée du DPO (USAGER_DOSSIER), sinon RGPD_ARCHIVAGE_ANS, sinon 36 mois."""
+    from core.conservation import mois
+    return mois('USAGER_DOSSIER', 'base', 'RGPD_ARCHIVAGE_ANS', facteur=12)
+
+
 def delai_archivage_ans():
-    return _conf('RGPD_ARCHIVAGE_ANS', 3)
+    """Conservé pour compatibilité ; préférer delai_archivage_mois()."""
+    return round(delai_archivage_mois() / 12, 1)
 
 
 def delai_effacement_mois():
-    return _conf('RGPD_EFFACEMENT_MOIS', 12)
+    from core.conservation import mois
+    return mois('USAGER_DOSSIER', 'archivage', 'RGPD_EFFACEMENT_MOIS')
 
 
 def _jour(v):
@@ -129,10 +138,8 @@ def exclus(ids=None):
 def candidats(mds_ids=None, aujourd_hui=None):
     """[(usager, date de dernière activité)] proposés à l'archivage, du plus ancien au plus récent."""
     aujourd_hui = aujourd_hui or timezone.localdate()
-    try:
-        limite = aujourd_hui.replace(year=aujourd_hui.year - delai_archivage_ans())
-    except ValueError:  # 29 février
-        limite = aujourd_hui.replace(year=aujourd_hui.year - delai_archivage_ans(), day=28)
+    from dateutil.relativedelta import relativedelta
+    limite = aujourd_hui - relativedelta(months=delai_archivage_mois())
     qs = Beneficiaire.objects.all()  # sans les archivés
     if mds_ids is not None:
         qs = qs.filter(mds_id__in=mds_ids)

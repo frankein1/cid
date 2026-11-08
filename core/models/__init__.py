@@ -17,6 +17,7 @@ from .organisation import Service
 from .configuration import Configuration
 from .audit import AuditLog
 from .modele_courrier import ModeleCourrier
+from .conservation import DureeConservation
 
 # Export explicite pour star imports
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     # Audit
     'AuditLog',
     'ModeleCourrier',
+    'DureeConservation',
     'IdentiteProConnect',
 ]
 from .proconnect import IdentiteProConnect  # noqa: E402,F401

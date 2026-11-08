@@ -8,6 +8,7 @@
     <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-house-circle-exclamation text-red-600 mr-2"></i>{{ d.nom_complet }} <span class="text-base font-normal text-gray-500">– {{ d.numero }}</span></h1>
     <span class="px-3 py-1 rounded-full text-sm font-semibold {% if d.statut == 'CLOS' %}bg-gray-200 text-gray-700{% else %}bg-red-100 text-red-800{% endif %}">{{ d.get_statut_display }}{% if d.motif_cloture %} – {{ d.get_motif_cloture_display|lower }}{% endif %}</span>
   </div>
+  {% if d.anonymise_le %}<div class="p-3 bg-gray-100 border rounded text-sm text-gray-700"><i class="fas fa-user-slash mr-1"></i>Dossier anonymisé le {{ d.anonymise_le|date:"d/m/Y" }} : durée de conservation atteinte. Seuls les chiffres restent, pour les statistiques.</div>{% endif %}
   {% for a in alertes %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ a }}</div>{% endfor %}
   {% if treve %}<div class="p-3 bg-sky-50 border border-sky-200 rounded text-sm text-sky-900"><i class="fas fa-snowflake mr-1"></i>Trêve hivernale : l'expulsion ne peut pas avoir lieu avant le 1<sup>er</sup> avril, sauf exceptions prévues par la loi.</div>{% endif %}
 

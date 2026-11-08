@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{# templates/admin/core/dureeconservation/importer.html #}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Accueil</a> ›
+  <a href="{% url 'admin:core_dureeconservation_changelist' %}">Durées de conservation</a> › Importer</div>{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p style="max-width:60em">Le fichier est le modèle téléchargé depuis la liste, rempli par le DPO : durées en
+  <b>nombre entier de mois</b>, colonne « code » inchangée. Une ligne laissée vide garde le réglage de CID.
+  À la moindre erreur, rien n'est enregistré.</p>
+{% if erreurs %}<ul class="errorlist">{% for e in erreurs %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Importer">
+</form>
+{% endblock %}

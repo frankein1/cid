@@ -122,6 +122,8 @@ class DossierExpulsion(models.Model):
     statut = models.CharField(max_length=10, choices=STATUTS, default=EN_COURS)
     motif_cloture = models.CharField(max_length=15, choices=MOTIFS_CLOTURE, blank=True)
     date_cloture = models.DateField(null=True, blank=True)
+    anonymise_le = models.DateField("Anonymisé le", null=True, blank=True, editable=False,
+                                    help_text="Durée de conservation atteinte : identité effacée, chiffres gardés.")
     observations = models.TextField("Observations du Service Logement", blank=True)
     questionnaire_bailleur_le = models.DateField("Questionnaire envoyé au bailleur le", null=True, blank=True)
     questionnaire_retour_avant = models.DateField("Retour du questionnaire souhaité avant le", null=True, blank=True)

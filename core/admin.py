@@ -112,6 +112,7 @@ class ProfilAdmin(admin.ModelAdmin):
     filter_horizontal = ("capacites",)
 
 from core import admin_courriers  # noqa: E402,F401  (modèles de courriers)
+from core import admin_conservation  # noqa: E402,F401  (durées de conservation RGPD)
 
 
 from .models import IdentiteProConnect  # noqa: E402

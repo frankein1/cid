@@ -40,7 +40,7 @@ CONFIRMATION = "TOUT EFFACER"
 # Paramétrage conservé (modèles sans lien vers les dossiers ; les liens vers un utilisateur sont vidés)
 MODELES_CONSERVES = ["AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
                      "AidFi.MotifRefusAFASE", "protection_enfance.TypeDanger", "core.Configuration",
-                     "core.ModeleCourrier", "insertion.TypeActionInsertion", "insertion.ActionInsertion",
+                     "core.ModeleCourrier", "core.DureeConservation", "insertion.TypeActionInsertion", "insertion.ActionInsertion",
                      "insertion.QuestionAction", "insertion.ParametresRSA", "insertion.OrganismeOrientation",
                      "beneficiaire.ValeurListe", "beneficiaire.TypeAccompagnement", "connecteurs.ServiceInclusion",
                      "connecteurs.MotifRDVSP"]

@@ -8,6 +8,7 @@
     <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-chart-column text-red-600 mr-2"></i>Prévention des expulsions – statistiques</h1>
     <form method="get"><select name="annee" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm"><option value="">Toutes les années</option>{% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></form>
   </div>
+  {% if s.a_verser %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-box-archive mr-1"></i>{{ s.a_verser }} dossier(s) clos ont atteint leur durée de conservation : à verser aux archives départementales (sort final choisi par le DPO).</div>{% endif %}
   <p class="text-sm text-gray-600">{% if s.departemental %}Tous les territoires.{% else %}Dossiers de votre MDS.{% endif %} Comptages par dossier, sans aucune donnée par agent.</p>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Dossiers</div><div class="text-2xl font-bold">{{ s.total }}</div></div>
