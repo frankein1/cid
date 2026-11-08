@@ -39,6 +39,11 @@
                         </a>
                         {% endif %}
                         
+                        {% if not user.is_superuser and not user|a_la_capacite:'peut_voir' %}
+                        <a href="{% url 'beneficiaire:annuaire' %}" id="menu-annuaire" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <i class="fas fa-address-book mr-2"></i>Annuaire des usagers
+                        </a>
+                        {% endif %}
                         {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                         <div class="relative">
                             <button id="ben-button" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
@@ -48,6 +53,7 @@
                             <div id="ben-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                                 <a href="{% url 'beneficiaire:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liste complète</a>
                                 <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Ajouter un usager</a>
+                                <a href="{% url 'beneficiaire:annuaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Annuaire (toutes MDS)</a>
                             </div>
                         </div>
                         {% endif %}
@@ -327,10 +333,14 @@
                 <a href="{% url 'mds:liste_mds' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-shield mr-2 w-4"></i>Comptes & droits</a>
                 {% endif %}
 
+                {% if not user.is_superuser and not user|a_la_capacite:'peut_voir' %}
+                <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-address-book mr-2 w-4"></i>Annuaire des usagers</a>
+                {% endif %}
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Bénéficiaires</p>
                 <a href="{% url 'beneficiaire:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-users mr-2 w-4"></i>Liste complète</a>
                 <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-plus mr-2 w-4"></i>Ajouter un usager</a>
+                <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-address-book mr-2 w-4"></i>Annuaire (toutes MDS)</a>
                 {% endif %}
 
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip or user|acces_insertion or user|a_la_capacite:'stats_departement' %}

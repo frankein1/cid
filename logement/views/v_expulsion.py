@@ -82,6 +82,8 @@ def expulsion_nouveau(request):
         d.mds = None
         d.cree_par = user
         d.tracer(user, "Dossier ouvert", d.get_origine_display())
+        if form.usager:
+            X.rattacher(d, form.usager, user, affecter_mds=False)
         d.save()
         if mds:
             if sl:
@@ -111,6 +113,13 @@ def expulsion_modifier(request, pk):
         d = form.save(commit=False)
         nouvelle_mds = d.mds
         d.mds = mds_avant
+        if form.usager and form.usager != d.beneficiaire:
+            if sl or form.usager.mds_id == d.mds_id:
+                X.rattacher(d, form.usager, request.user, affecter_mds=False)
+                if sl and form.usager.mds and 'mds' not in form.changed_data:
+                    nouvelle_mds = form.usager.mds      # le dossier suit la MDS de l'usager
+            else:
+                messages.warning(request, "Cet usager relève d'une autre MDS : le Service Logement doit réaffecter le dossier.")
         d.tracer(request.user, "Dossier modifié", ", ".join(str(form.fields[c].label) for c in form.changed_data
                                                              if c in form.fields)[:300])
         d.save()
@@ -131,8 +140,16 @@ def expulsion_detail(request, pk):
     if not voir:
         return HttpResponseForbidden(REFUS)
     user = request.user
-    recherche = (request.GET.get('usager') or '').strip()
-    peut_rattacher = bool((X.peut_ecrire(user, d) and d.mds_id and user.a_la_capacite('peut_voir')) or X.est_admin(user))
+    peut_rattacher = X.peut_ecrire(user, d) and d.statut == D.EN_COURS
+    from beneficiaire.views_annuaire import criteres, rechercher
+    c = criteres(request.GET)
+    usagers, message_recherche = [], ""
+    if peut_rattacher and not d.beneficiaire_id:
+        if any(c.values()):
+            usagers, message_recherche = rechercher(**c)
+        else:   # proposition automatique : n° allocataire, puis nom et prénom
+            usagers = (rechercher(caf=d.numero_allocataire)[0] if d.numero_allocataire else []) \
+                or (rechercher(nom=d.nom, prenom=d.prenom)[0] if d.prenom else [])
     return render(request, 'logement/expulsion_detail.html', {
         'd': d, 'etapes': d.etapes.select_related('saisi_par'), 'alertes': d.alertes(),
         'peut_ecrire': X.peut_ecrire(user, d), 'peut_affecter': X.peut_affecter(user),
@@ -140,8 +157,8 @@ def expulsion_detail(request, pk):
         'peut_supprimer': X.peut_supprimer(user), 'peut_rattacher': peut_rattacher,
         'mds_liste': _mds_possibles(user) if X.peut_affecter(user) else [],
         'referents': X.referents_possibles(d), 'etape_form': EtapeExpulsionForm(initial={'date': timezone.localdate()}),
-        'usagers': X.usagers_proposes(d, recherche) if peut_rattacher and not d.beneficiaire_id else [],
-        'recherche': recherche, 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
+        'usagers': [{'b': b, 'possible': X.peut_rattacher(user, d, b)} for b in usagers], 'c': c,
+        'message_recherche': message_recherche, 'acces_fiche': bool(d.beneficiaire and d.beneficiaire.niveau_acces(user)), 'motifs_cloture': D.MOTIFS_CLOTURE, 'caf': d.caf_par_rubrique(),
         'decision': d.libelles_decision(),
         'treve': treve_hivernale() and d.etapes.filter(type_etape__in=('COMMANDEMENT_QUITTER', 'DEMANDE_CFP',
                                                                        'COMMISSION_PREFECTORALE', 'CFP_ACCORDE')).exists()})
@@ -185,14 +202,15 @@ def expulsion_action(request, pk):
 
     if action == 'rattacher':
         from beneficiaire.models import Beneficiaire
-        b = Beneficiaire.objects.filter(pk=request.POST.get('beneficiaire'), mds=d.mds).first()
-        if b and b.niveau_acces(user) == 'complet':
-            d.beneficiaire = b
-            d.tracer(user, "Usager rattaché", f"{b.nom.upper()} {b.prenom} ({b.code_interne})")
+        b = Beneficiaire.objects.select_related('mds').filter(pk=request.POST.get('beneficiaire')).first()
+        if b and X.peut_rattacher(user, d, b):
+            X.rattacher(d, b, user)
             d.save()
-            messages.success(request, "Usager rattaché : le dossier apparaît sur sa fiche.")
+            messages.success(request, "Usager rattaché." + (f" Dossier confié à {d.mds} : son responsable est prévenu."
+                                                            if X.est_sl(user) and d.mds else ""))
         else:
-            messages.error(request, "Usager introuvable dans la MDS du dossier.")
+            messages.error(request, "Rattachement impossible : l'usager relève d'une autre MDS "
+                                    "(le Service Logement réaffecte le dossier).")
     elif action == 'detacher':
         d.tracer(user, "Usager détaché", str(d.beneficiaire or ""))
         d.beneficiaire = None

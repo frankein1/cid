@@ -23,7 +23,7 @@ from .models import DossierExpulsion as D, EtapeExpulsion
 from .models.m_expulsion import treve_hivernale
 
 
-class ExpulsionTests(TestCase):
+class _Base(TestCase):
     def setUp(self):
         for cmd in ("init_capacites", "init_profils"):
             call_command(cmd, stdout=StringIO())
@@ -64,6 +64,8 @@ class ExpulsionTests(TestCase):
         donnees.update(extra)
         return self.client_de(self.sl_agent).post("/logement/expulsions/nouveau/", donnees)
 
+
+class ExpulsionTests(_Base):
     def test_profils_service_logement(self):
         for code, caps in (("SL_CADRE", {"expulsion_sl_gestion", "expulsion_sl_pilotage", "expulsion_sl_stats"}),
                            ("SL_SECRETARIAT", {"expulsion_sl_stats"}),
@@ -164,3 +166,62 @@ class ExpulsionTests(TestCase):
         self.assertTrue(treve_hivernale(date(2026, 12, 15)))
         self.assertTrue(treve_hivernale(date(2027, 3, 31)))
         self.assertFalse(treve_hivernale(date(2027, 4, 1)))
+
+
+class AnnuaireEtRattachementTests(_Base):
+    """Tout agent cherche un usager (identité de base, MDS) ; le Service Logement saisit avec le code usager ou le n° CAF."""
+
+    def setUp(self):
+        super().setUp()
+        self.b.nom_naissance, self.b.lieu_naissance, self.b.numero_caf = "MARTIN", "Marseille", "1234567"
+        self.b.save()
+
+    def test_annuaire_identite_de_base_et_criteres_minimaux(self):
+        c = self.client_de(self.sl_agent)
+        r = c.get("/beneficiaire/annuaire/?nom=ESS")
+        self.assertEqual(r.context["lignes"], [])                     # un nom seul ne suffit pas
+        r = c.get("/beneficiaire/annuaire/?nom=martin&prenom=cla")      # nom de naissance + prénom
+        self.assertContains(r, "EX-1")
+        self.assertContains(r, "MDS ESSAI")
+        self.assertContains(r, "Marseille")
+        self.assertNotContains(r, "3 rue C")                            # pas d'adresse
+        self.assertNotContains(r, "Ouvrir la fiche")
+        self.assertContains(c.get("/beneficiaire/annuaire/?caf=1234567"), "EX-1")
+        from core.models import AuditLog
+        self.assertTrue(AuditLog.objects.filter(description__icontains="Annuaire", utilisateur=self.sl_agent).exists())
+        # un agent de la MDS ouvre la fiche depuis l'annuaire
+        self.assertContains(self.client_de(self.ts).get("/beneficiaire/annuaire/?code=ex-1"), "Ouvrir la fiche")
+
+    def test_saisie_avec_le_code_usager_rattache_et_affecte(self):
+        r = self.client_de(self.sl_agent).post("/logement/expulsions/nouveau/", {
+            "origine": "SL_CAF", "date_reception": timezone.localdate().isoformat(), "code_usager": "ex-1"})
+        self.assertEqual(r.status_code, 302)
+        d = D.objects.get()
+        self.assertEqual((d.beneficiaire, d.mds, d.nom), (self.b, self.mds, "ESSAI"))
+        self.assertTrue(Message.objects.filter(destinataire=self.cadre, object_id=d.pk).exists())
+
+    def test_saisie_avec_le_numero_caf(self):
+        self.nouveau(numero_allocataire="1234567", nom="", prenom="")
+        d = D.objects.get()
+        self.assertEqual((d.beneficiaire, d.mds), (self.b, self.mds))
+
+    def test_code_inconnu_refuse(self):
+        r = self.client_de(self.sl_agent).post("/logement/expulsions/nouveau/", {
+            "origine": "SL_CAF", "date_reception": timezone.localdate().isoformat(), "code_usager": "NEXISTEPAS"})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(D.objects.exists())
+
+    def test_sl_rattache_depuis_le_dossier_et_le_dossier_suit_la_mds(self):
+        self.nouveau(mds=self.autre.pk, nom="ESSAI", prenom="Clara")
+        d = D.objects.get()
+        r = self.client_de(self.sl_agent).get(f"/logement/expulsions/{d.pk}/")
+        self.assertIn(self.b, [u["b"] for u in r.context["usagers"]])   # proposé : nom + prénom
+        # un agent de l'autre MDS ne peut pas rattacher un usager de la MDS ESSAI
+        self.client_de(self.ts_autre).post(f"/logement/expulsions/{d.pk}/action/",
+                                           {"action": "rattacher", "beneficiaire": self.b.pk})
+        d.refresh_from_db()
+        self.assertIsNone(d.beneficiaire)
+        self.client_de(self.sl_agent).post(f"/logement/expulsions/{d.pk}/action/",
+                                           {"action": "rattacher", "beneficiaire": self.b.pk})
+        d.refresh_from_db()
+        self.assertEqual((d.beneficiaire, d.mds), (self.b, self.mds))

@@ -28,6 +28,11 @@ class DossierExpulsionForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, mds_possibles=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.usager = None
+        self.fields['code_usager'] = forms.CharField(
+            label="Code usager CID", required=False, initial=getattr(self.instance.beneficiaire, 'code_interne', ''),
+            help_text="Trouvé dans l'annuaire des usagers. À défaut, CID cherche le n° allocataire parmi les usagers.")
+        self.fields['nom'].required = False
         d = self.instance.decision or {}
         caf = self.instance.caf or {}
         for cle, lib in DECISION_CASES:
@@ -54,6 +59,28 @@ class DossierExpulsionForm(forms.ModelForm):
             else:
                 f.widget.attrs.setdefault('class', CHAMP)
 
+    def clean(self):
+        """Code usager CID ou n° CAF → l'usager est rattaché et sa MDS proposée : pas de double saisie."""
+        from beneficiaire.models import Beneficiaire
+        c = super().clean()
+        code = (c.get('code_usager') or '').strip().upper()
+        caf = (c.get('numero_allocataire') or '').strip()
+        if code:
+            self.usager = Beneficiaire.objects.select_related('mds').filter(code_interne__iexact=code).first()
+            if not self.usager:
+                self.add_error('code_usager', "Aucun usager avec ce code : vérifiez dans l'annuaire des usagers.")
+        elif caf and not self.instance.beneficiaire_id:
+            trouves = list(Beneficiaire.objects.select_related('mds').filter(numero_caf=caf).exclude(statut='ARCHIVE')[:2])
+            self.usager = trouves[0] if len(trouves) == 1 else None
+        if self.usager:
+            c['nom'] = c.get('nom') or self.usager.nom
+            c['prenom'] = c.get('prenom') or self.usager.prenom
+            if not c.get('mds') and self.usager.mds and self.usager.mds in self.fields['mds'].queryset:
+                c['mds'] = self.usager.mds
+        if not c.get('nom'):
+            self.add_error('nom', "Nom obligatoire (ou code usager CID).")
+        return c
+
     def groupes_caf(self):
         groupes = {}
         for cle, _, rub in CHAMPS_CAF:
@@ -66,6 +93,9 @@ class DossierExpulsionForm(forms.ModelForm):
     def save(self, commit=True):
         d = super().save(commit=False)
         c = self.cleaned_data
+        d.nom, d.prenom = c['nom'], c.get('prenom') or ''
+        if 'mds' in c:
+            d.mds = c['mds']
         decision = {cle: True for cle, _ in DECISION_CASES if c.get(f'dec_{cle}')}
         for cle in ('provisions_montant', 'duree_delai', 'duree_autre'):
             if c.get(f'dec_{cle}'):

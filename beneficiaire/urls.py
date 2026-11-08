@@ -13,7 +13,7 @@ AMELIORE : Ajout URLs sortie et décès
 from django.urls import path
 from . import views, views_rgpd
 
-from . import views_budget, views_journal, views_stats  # noqa: E402
+from . import views_annuaire, views_budget, views_journal, views_stats  # noqa: E402
 
 app_name = 'beneficiaire'
 
@@ -29,6 +29,7 @@ urlpatterns = [
     
     # CRUD Bénéficiaire
     path('ajouter/', views.ajouter_beneficiaire, name='ajouter_beneficiaire'),
+    path('annuaire/', views_annuaire.annuaire_usagers, name='annuaire'),
     path('statistiques/accompagnement/', views_stats.statistiques_accompagnement, name='statistiques_accompagnement'),
     path('journal/mes-suites/', views_journal.mes_suites, name='mes_suites'),
     path('journal/entretien/<int:pk>/suite-faite/', views_journal.suite_faite, name='entretien_suite_faite'),

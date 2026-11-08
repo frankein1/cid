@@ -1113,10 +1113,10 @@ class Command(BaseCommand):
         etape(d, "COMMANDEMENT_QUITTER", 50)
         etape(d, "COMMISSION_PREFECTORALE", -25, "Commission préfectorale (fictif) : dossier inscrit.",
               echeance=j + timedelta(days=25))
-        # 5. Reçu ce matin, pas encore affecté
-        dossier(5, "GIRAUD", "Chloé", None, adresse="9 rue des Lavandes", ville="Saint-Mitre-les-Remparts",
-                cp="13920", dette=Decimal("960"), dette_au=j - timedelta(days=5), date_audience=j + timedelta(days=62),
-                recu_il_y_a=0, observation_caf="NON_IDENTIFIE")
+        # 5. Reçu ce matin, pas encore affecté : l'agent du SL le rattache à l'usager (annuaire), le dossier suit sa MDS
+        dossier(5, "GARNIER", "Céline", None, adresse="9 rue des Lavandes", dette=Decimal("960"),
+                dette_au=j - timedelta(days=5), date_audience=j + timedelta(days=62), recu_il_y_a=0,
+                numero_allocataire="DEMO0005", observation_caf="FICHE_CAF")
         # 6. Yasmine CHERIF : dette apurée, dossier clos
         d = dossier(6, "CHERIF", "Yasmine", self.mds1, beneficiaire=self.b["FAM10-YAS"], referent=self.ts_b,
                     adresse="2 allée des Tamaris", dette=Decimal("1240"), recu_il_y_a=320, statut=D.CLOS,

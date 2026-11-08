@@ -14,7 +14,23 @@ Trois profils pour le SL, attribués dans *Comptes & droits* :
 | `SL_AGENT_ADMINISTRATIF` – agents administratifs | `expulsion_sl_gestion` | saisir et suivre les dossiers de tous les territoires, les affecter aux MDS |
 | `SL_SECRETARIAT` – secrétariat | `expulsion_sl_stats` | lire les statistiques départementales (pour l'instant) |
 
-Le SL n'a **pas** accès aux dossiers des usagers (pas de `peut_voir`) : c'est la MDS qui rattache le dossier d'expulsion à l'usager.
+## Annuaire des usagers : éviter les doubles saisies
+
+**Tout agent de CID** (Service Logement, pôles insertion, services centraux…) peut chercher un usager dans l'**annuaire** (`/beneficiaire/annuaire/`, menu « Annuaire des usagers », ou *Bénéficiaires → Annuaire (toutes MDS)* pour les MDS). Il apprend ainsi si l'usager existe déjà et à quelle MDS il est rattaché.
+
+- **Ce qui s'affiche :** l'identité de base, c'est-à-dire nom, prénom, nom de naissance, date et lieu de naissance, code usager CID et MDS de rattachement. Rien d'autre : ni adresse, ni dossier.
+- **Comment chercher :**
+  - par un identifiant exact (code usager CID ou n° CAF) ;
+  - ou par le nom (d'usage ou de naissance) avec le prénom ou la date de naissance.
+
+  On ne peut pas parcourir l'annuaire, et la recherche s'arrête à 20 réponses.
+- **Journal :** chaque recherche est inscrite au journal d'activité. Le n° CAF n'y est pas recopié.
+- **Accès à la fiche :** un agent qui a déjà accès à la fiche peut l'ouvrir depuis l'annuaire.
+
+**Dans le dossier d'expulsion,** le SL saisit le **code usager CID**, ou CID retrouve l'usager par le **n° allocataire** s'il est unique.
+- Le dossier est alors rattaché à l'usager et part à **sa MDS** : nom et prénom se remplissent seuls.
+- Depuis le dossier, le SL peut aussi chercher l'usager (code, n° CAF, nom avec prénom ou date de naissance). CID propose d'office les correspondances sur le n° allocataire ou sur nom + prénom.
+- Une MDS ne rattache que les usagers de sa MDS. Si l'usager relève d'une autre MDS, c'est le SL qui réaffecte.
 
 Côté MDS :
 - les agents qui ont `peut_voir` voient les dossiers de leur MDS ;

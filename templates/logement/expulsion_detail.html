@@ -93,14 +93,26 @@
           {% endif %}
         {% endif %}
         <div id="expulsion-usager"><div class="text-xs text-gray-500">Usager dans CID</div>
-          {% if d.beneficiaire %}<a href="{% url 'beneficiaire:detail_beneficiaire' d.beneficiaire.code_interne %}" class="text-blue-700 hover:underline">{{ d.beneficiaire.nom|upper }} {{ d.beneficiaire.prenom }}</a>
-            {% if peut_rattacher %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="inline">{% csrf_token %}<button name="action" value="detacher" class="text-xs text-gray-400 hover:underline ml-1">détacher</button></form>{% endif %}
-          {% elif peut_rattacher %}
-            <form method="get" class="flex gap-2 mt-1"><input name="usager" value="{{ recherche|default:d.nom }}" class="border rounded px-2 py-1 flex-1"><button class="px-2 py-1 border rounded"><i class="fas fa-search"></i></button></form>
-            <ul class="mt-2 space-y-1">{% for u in usagers %}<li class="flex items-center justify-between gap-2"><span>{{ u.nom|upper }} {{ u.prenom }} <span class="text-xs text-gray-500">{{ u.date_naissance|date:"d/m/Y" }} – {{ u.ville }}</span></span>
-              <form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<input type="hidden" name="beneficiaire" value="{{ u.pk }}"><button name="action" value="rattacher" class="text-xs px-2 py-1 bg-blue-600 text-white rounded">Rattacher</button></form></li>
-              {% empty %}<li class="text-gray-400">Aucun usager de la MDS ne correspond.</li>{% endfor %}</ul>
-          {% else %}<span class="text-gray-400">non rattaché (la MDS le fait)</span>{% endif %}
+          {% if d.beneficiaire %}{% with b=d.beneficiaire %}
+            {% if acces_fiche %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline">{{ b.nom|upper }} {{ b.prenom }}</a>{% else %}<b>{{ b.nom|upper }} {{ b.prenom }}</b>{% endif %}
+            <div class="text-xs text-gray-500">{{ b.code_interne }}{% if b.date_naissance %} – né(e) le {{ b.date_naissance|date:"d/m/Y" }}{% endif %} – {{ b.mds.nom|default:"sans MDS" }}</div>
+            {% if peut_rattacher %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}" class="inline">{% csrf_token %}<button name="action" value="detacher" class="text-xs text-gray-400 hover:underline">détacher</button></form>{% endif %}
+          {% endwith %}{% elif peut_rattacher %}
+            <form method="get" class="grid grid-cols-2 gap-1 mt-1" id="expulsion-recherche-usager">
+              <input name="code" value="{{ c.code }}" placeholder="Code usager CID" class="border rounded px-2 py-1">
+              <input name="caf" value="{{ c.caf }}" placeholder="N° CAF" class="border rounded px-2 py-1">
+              <input name="nom" value="{{ c.nom|default:d.nom }}" placeholder="Nom" class="border rounded px-2 py-1">
+              <input name="prenom" value="{{ c.prenom|default:d.prenom }}" placeholder="Prénom" class="border rounded px-2 py-1">
+              <input type="date" name="date_naissance" class="border rounded px-2 py-1">
+              <button class="px-2 py-1 border rounded"><i class="fas fa-search mr-1"></i>Chercher</button></form>
+            {% if message_recherche %}<p class="mt-1 text-xs text-amber-800">{{ message_recherche }}</p>{% endif %}
+            <ul class="mt-2 space-y-2">{% for u in usagers %}{% with b=u.b %}<li class="flex items-center justify-between gap-2">
+              <span><b>{{ b.nom|upper }} {{ b.prenom }}</b>{% if b.nom_naissance %} (né{% if b.civilite == 'MME' %}e{% endif %} {{ b.nom_naissance|upper }}){% endif %}
+                <span class="block text-xs text-gray-500">{{ b.date_naissance|date:"d/m/Y" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %} – {{ b.code_interne }} – {{ b.mds.nom|default:"sans MDS" }}</span></span>
+              {% if u.possible %}<form method="post" action="{% url 'logement:expulsion_action' d.pk %}">{% csrf_token %}<input type="hidden" name="beneficiaire" value="{{ b.pk }}"><button name="action" value="rattacher" class="text-xs px-2 py-1 bg-blue-600 text-white rounded">Rattacher</button></form>
+              {% else %}<span class="text-xs text-gray-500">autre MDS : le Service Logement réaffecte</span>{% endif %}</li>
+              {% endwith %}{% empty %}<li class="text-gray-400 text-xs">Aucune proposition : cherchez par code usager, n° CAF, ou nom avec prénom ou date de naissance.</li>{% endfor %}</ul>
+          {% else %}<span class="text-gray-400">non rattaché</span>{% endif %}
         </div>
       </div>
 

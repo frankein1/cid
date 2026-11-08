@@ -96,16 +96,23 @@ def referents_possibles(d):
             .distinct().order_by('last_name', 'first_name'))
 
 
-def usagers_proposes(d, recherche=""):
-    """Usagers de la MDS du dossier dont le nom correspond (rattachement par la MDS)."""
-    from beneficiaire.models import Beneficiaire
-    if not d.mds_id:
-        return Beneficiaire.objects.none()
-    q = (recherche or d.nom).strip()
-    qs = Beneficiaire.objects.filter(mds=d.mds)
-    for mot in q.split()[:3]:
-        qs = qs.filter(Q(nom__icontains=mot) | Q(prenom__icontains=mot))
-    return qs.order_by('nom', 'prenom')[:15]
+def peut_rattacher(user, d, b):
+    """Le Service Logement rattache n'importe quel usager (identité de base, annuaire) ; la MDS, ceux de sa MDS."""
+    if not peut_ecrire(user, d) or b.statut == 'ARCHIVE':
+        return False
+    if est_sl(user) or est_admin(user):
+        return True
+    return bool(d.mds_id and b.mds_id == d.mds_id)
+
+
+def rattacher(d, b, user, affecter_mds=True):
+    """Rattache l'usager. Côté Service Logement, le dossier suit la MDS de l'usager (le responsable est prévenu).
+    L'appelant enregistre le dossier."""
+    d.beneficiaire = b
+    d.tracer(user, "Usager rattaché", f"{b.nom.upper()} {b.prenom} ({b.code_interne})")
+    if affecter_mds and b.mds_id and b.mds_id != d.mds_id and (est_sl(user) or est_admin(user)):
+        d.save()
+        affecter(d, b.mds, user)
 
 
 # ------------------------------------------------------------------------------------------------- messages
