@@ -39,6 +39,8 @@ with sync_playwright() as p:
     shot(pg, "budget-foyer", "03", "#budget-historique")
     pg.goto(f"{B}/beneficiaire/FAM5-SAR/budget/nouveau/")
     shot(pg, "budget-foyer", "04", "#budgetAfase")
+    # une ligne par prestation (allocations familiales, ASF, PAJE, prime d'activité, AAH, AEEH, PCH…)
+    shot(pg, "budget-foyer", "05", "tr:has-text('Allocations familiales')")
     # --- Journal de l'accompagnement
     pg.goto(f"{B}/beneficiaire/FAM5-SAR/")
     shot(pg, "journal-accompagnement", "01", "#journal-usager")

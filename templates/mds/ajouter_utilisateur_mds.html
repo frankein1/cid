@@ -170,6 +170,12 @@
                     </label>
                 </div>
                 <div class="mt-6 flex items-center p-3 bg-white rounded border border-gray-200">
+                    {{ form.equipe_ip }}
+                    <label for="{{ form.equipe_ip.id_for_label }}" class="ml-3 block text-sm font-medium text-gray-800 cursor-pointer">
+                        Équipe IP <span class="text-gray-500 font-normal">(proposé(e) en premier pour les binômes d'évaluation des IP)</span>
+                    </label>
+                </div>
+                <div class="mt-6 flex items-center p-3 bg-white rounded border border-gray-200">
     {{ form.actif }}
     <label for="{{ form.actif.id_for_label }}" class="ml-3 block text-sm font-medium text-gray-800 cursor-pointer">
         Agent actif dans cette MDS

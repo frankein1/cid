@@ -22,8 +22,9 @@ class MDSForm(forms.ModelForm):
         model = MDS
         fields = ['code_mds', 'nom', 'adresse', 'code_postal', 'ville', 
                  'telephone', 'email', 'responsable', 'active', 'type_mds', 'mds_territoire',
-                 'nb_agents_max', 'services_proposes', 'communes',
-                 'latitude', 'longitude', 'configuration']
+                 'nb_agents_max']
+        # services proposés, communes, coordonnées et configuration : non affichés sur la page, donc hors du
+        # formulaire (ils étaient vidés à chaque modification) ; ils se règlent dans l'administration.
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,7 +73,7 @@ class UserMDSProfileForm(forms.ModelForm):
     class Meta:
         model = UserMDSProfile
         fields = ['date_debut', 'date_fin', 'principale', 'actif', 'fonction', 'role_specifique',
-                 'bureau', 'telephone_interne', 'peut_gerer_utilisateurs']
+                 'bureau', 'telephone_interne', 'peut_gerer_utilisateurs', 'equipe_ip']
         widgets = {
             'date_debut': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'date_fin': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
@@ -125,7 +126,7 @@ class UserMDSProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = UserMDSProfile
         fields = ['date_debut', 'date_fin', 'principale', 'actif', 'fonction', 'role_specifique',
-                 'bureau', 'telephone_interne', 'peut_gerer_utilisateurs']
+                 'bureau', 'telephone_interne', 'peut_gerer_utilisateurs', 'equipe_ip']
         widgets = {
             'date_debut': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'date_fin': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),

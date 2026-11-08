@@ -23,6 +23,12 @@ Le type et le rattachement se règlent sur la fiche de la MDS. Le responsable de
 - Un agent qui a aussi un rattachement propre à la MDSp le garde : il prime sur l'accès hérité.
 - Pas de bouton d'escalade vers le territoire : cela se règle par téléphone ; au besoin, le cadre de territoire rédige une note, annexée au dossier comme un document.
 
+## Équipe IP
+
+Le cadre coche **Équipe IP** sur le rattachement des professionnels qui évaluent les informations préoccupantes (*Gestion des agents* → modifier l'agent). Ils sont proposés **en premier** pour le binôme (mention « équipe IP »), puis les autres du moins chargé au plus chargé. Le cadre reste libre de son choix ; un membre de l'équipe qui suit la famille n'est pas proposé pour elle. Pour le médecin PMI de la MDS de territoire, la case se coche sur son rattachement à la MDS de territoire et vaut aussi dans les MDS de proximité.
+
+Une note du cadre de territoire se dépose dans la GED en **Divers** : l'objet et la date suffisent à la retrouver.
+
 ## Fonction et intitulé sur les courriers
 
 Sur le rattachement de l'agent à sa MDS (*Gestion des agents de la MDS* → ajouter ou modifier) :

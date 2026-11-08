@@ -10,24 +10,25 @@ from .models import MDS, MDSReception, DemiJourneeReception, UserMDSProfile
 
 @admin.register(UserMDSProfile)
 class UserMDSProfileAdmin(admin.ModelAdmin):
-    list_display = ["user", "mds", "principale", "actif", "date_debut"]
-    list_filter = ["mds", "principale", "actif"]
+    list_display = ["user", "mds", "fonction", "principale", "actif", "equipe_ip", "herite_de", "date_debut"]
+    list_filter = ["mds", "fonction", "principale", "actif", "equipe_ip"]
+    readonly_fields = ["herite_de"]
     search_fields = ["user__last_name", "user__first_name", "user__username", "mds__nom"]
     autocomplete_fields = ["user", "mds"]
     list_editable = ["actif", "principale"]
 
 @admin.register(MDS)
 class MDSAdmin(admin.ModelAdmin):
-    list_display = ["code_mds", "nom", "ville", "active", "get_utilisateurs_count"]
-    list_filter = ["active", "ville"]
+    list_display = ["code_mds", "nom", "type_mds", "mds_territoire", "ville", "active", "get_utilisateurs_count"]
+    list_filter = ["active", "type_mds", "ville"]
     search_fields = ["code_mds", "nom", "ville", "communes", "adresse"]
 
     fieldsets = (
         ("Identification", {
-            "fields": ("code_mds", "nom", "active"),
+            "fields": ("code_mds", "nom", "active", "type_mds", "mds_territoire"),
         }),
         ("Localisation", {
-            "fields": ("adresse", "code_postal", "ville", "departement", "communes"),
+            "fields": ("adresse", "code_postal", "ville", "departement", "communes", "latitude", "longitude"),
         }),
         ("Contact", {
             "fields": ("telephone", "email", "site_web"),

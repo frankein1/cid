@@ -148,3 +148,18 @@ class DemoOrganisationTests(TestCase):
         self.assertTrue(comptes["cadre_mds1"].a_acces_mds(m2))
         self.assertEqual(cadre_ip(m2), comptes["chef_mds2"])
         self.assertFalse(comptes["as1_mds2"].a_acces_mds(m1))
+
+
+class FormulaireMDSTests(TestCase):
+    def test_modifier_la_mds_garde_configuration_et_communes(self):
+        from mds.forms import MDSForm
+        m = MDS.objects.create(code_mds="TC1", nom="MDS CONF", adresse="a", code_postal="13110", ville="v",
+                               configuration={"cle": 1}, communes=["13077"], latitude=43.4, longitude=4.98)
+        data = {k: getattr(m, k) for k in ("code_mds", "nom", "adresse", "code_postal", "ville", "telephone", "email",
+                                           "nb_agents_max", "type_mds")}
+        data["active"] = True
+        f = MDSForm(data, instance=m)
+        self.assertTrue(f.is_valid(), f.errors)
+        f.save()
+        m.refresh_from_db()
+        self.assertEqual((m.configuration, m.communes, float(m.latitude)), ({"cle": 1}, ["13077"], 43.4))

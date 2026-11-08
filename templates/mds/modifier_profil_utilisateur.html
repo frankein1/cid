@@ -110,13 +110,14 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white border border-gray-100 p-4 rounded-xl">
                             {% for field in form %}
-                                {% if "peut_" in field.name or "gerer" in field.name %}
+                                {% if "peut_" in field.name or "gerer" in field.name or field.name == "equipe_ip" %}
                                 <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100">
                                     <div class="flex items-center h-5">
                                         {{ field }}
                                     </div>
                                     <div class="ml-3 text-sm">
                                         <label for="{{ field.id_for_label }}" class="font-semibold text-gray-800 cursor-pointer">{{ field.label }}</label>
+                                        {% if field.name == "equipe_ip" %}<p class="text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
                                     </div>
                                 </div>
                                 {% endif %}

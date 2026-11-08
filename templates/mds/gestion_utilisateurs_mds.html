@@ -127,6 +127,9 @@
                             <span class="text-xs font-medium text-gray-600">
                                 {{ profile.intitule|default:"—" }}
                             </span>
+                            {% if profile.equipe_ip or profile.herite_de.equipe_ip %}
+                            <div class="mt-1 text-[10px] font-bold uppercase text-pink-700"><i class="fas fa-child mr-1"></i>Équipe IP</div>
+                            {% endif %}
                             {% if profile.herite_de_id %}
                             <div class="mt-1 text-[10px] font-bold uppercase text-indigo-600" title="Accès donné automatiquement : membre du CODIR de la MDS de territoire">
                                 <i class="fas fa-sitemap mr-1"></i>CODIR {{ profile.herite_de.mds.code_mds }}

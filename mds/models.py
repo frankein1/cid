@@ -293,6 +293,10 @@ class UserMDSProfile(AuditedMixin):
         "Intitulé de la fonction (sur les courriers)", max_length=150, blank=True,
         help_text="Proposé d'après la fonction (ex. « Directrice de la MDS de territoire de Martigues ») : "
                   "à corriger (féminin, précision) si besoin.")
+    equipe_ip = models.BooleanField(
+        "Équipe IP", default=False,
+        help_text="Désigné(e) par le cadre pour évaluer les informations préoccupantes : proposé(e) en premier "
+                  "pour les binômes. Le cadre peut toujours choisir quelqu'un d'autre.")
     herite_de = models.ForeignKey(
         'self', on_delete=models.CASCADE, null=True, blank=True, related_name='acces_herites',
         help_text="Accès donné automatiquement à un membre du CODIR de la MDS de territoire sur ses MDS de proximité.")
