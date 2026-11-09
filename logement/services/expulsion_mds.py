@@ -60,10 +60,26 @@ def noter(conv, statut, user):
     conv.dossier.save()
 
 
-def carence_possible(dossier):
-    """Deux convocations sans réponse : le bordereau de carence remplace le DSF."""
+def criteres_carence(dossier):
+    """Ce qui manque au bordereau de carence (note MDS du 27/03/2023) : liste vide = carence possible. Trois critères,
+    cumulatifs : absence du locataire aux entretiens (1re convocation et relance), aucune observation du locataire,
+    aucune information du bailleur. La CCAPEX n'est pas un critère : une absence de réponse du service public ne doit
+    pas bloquer la carence."""
+    manque = []
     dsf = dossier.convocations.filter(type_convocation__in=C.TYPES_DSF)
-    return dsf.filter(statut=C.ABSENT).count() >= 2 and not dsf.filter(statut=C.VENU).exists()
+    if dsf.filter(statut=C.VENU).exists() or dsf.filter(statut=C.ABSENT).count() < 2:
+        manque.append("deux convocations DSF sans présence du locataire")
+    if dossier.observations_locataire:
+        manque.append("le locataire a transmis des observations")
+    if not dossier.questionnaire_bailleur_le:
+        manque.append("le bailleur n'a pas été sollicité (questionnaire non envoyé)")
+    elif dossier.questionnaire_bailleur_retour:
+        manque.append("le bailleur a transmis des informations")
+    return manque
+
+
+def carence_possible(dossier):
+    return not criteres_carence(dossier)
 
 
 def questionnaire_envoye(dossier, user, date_retour):

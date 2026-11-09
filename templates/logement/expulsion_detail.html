@@ -102,7 +102,7 @@
             <button name="type_document" value="DSF" class="px-3 py-1.5 bg-red-600 text-white rounded"><i class="fas fa-file-signature mr-1"></i>Diagnostic social et financier</button>
             <button name="type_document" value="CARENCE" class="px-3 py-1.5 {% if carence_possible %}bg-amber-500 text-white{% else %}border{% endif %} rounded" title="Le ménage ne s'est présenté à aucune des deux convocations">Bordereau de carence</button>
           </form>
-          {% if carence_possible %}<p class="text-xs text-amber-800 mt-1">Deux convocations sans réponse : le bordereau de carence remplace le diagnostic.</p>{% endif %}{% endif %}
+          {% if carence_possible %}<p class="text-xs text-amber-800 mt-1">Critères réunis (deux convocations sans présence, aucune observation du locataire, bailleur sollicité sans information) : le bordereau de carence remplace le diagnostic</p>{% endif %}{% endif %}
         </div>
       </div>
       {% endif %}
