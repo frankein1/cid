@@ -140,11 +140,26 @@ Bloc **Diagnostic social et financier** du dossier (`logement/views/v_expulsion_
 - Le Service Logement est prévenu ; l'étape « DSF transmis » ou « Bordereau de carence transmis » s'ajoute au journal.
 - Chaque envoi par mail compte dans le papier économisé.
 
-## Suite
+## Commissions : CAPEX locale, commission préfectorale, CCAPEX (3e PR)
 
-- **PR C** :
-  - CAPEX locale (Martigues / Port-de-Bouc) et commission préfectorale : séances, ordre du jour, convocations, actualisation, avis ;
-  - statistiques complétées ;
-  - passerelles vers FSL maintien, COPP et logement social.
+- **Séances** (`CommissionExpulsion`) :
+  - champs : instance, nom, date, heure, lieu, date limite des actualisations, mail du secrétariat, MDS concernées ;
+  - créées par le Service Logement ou par le cadre (`peut_valider`) d'une MDS concernée ;
+  - le SL voit toutes les séances, une MDS celles qui la concernent ou celles qui n'ont pas de MDS précisée.
+- **Ordre du jour** (`PassageCommission`) :
+  - on inscrit un dossier en cours depuis la séance ou depuis le dossier ; le référent est prévenu ;
+  - PDF en paysage : n° de dossier, ménage, commune, MDS, référent, étape, dette, état de l'actualisation, avis ;
+  - jamais de données de santé ni de détail de l'évaluation ; chacun ne voit que les dossiers auxquels il a accès.
+- **Actualisation** (rubriques de la fiche locale « Actualisation pour commission expulsion », trame CID) :
+  - préremplie avec les rencontres (convocations honorées), l'accompagnant, le ménage et le bailleur, la composition familiale, les revenus du budget du foyer, le logement, la dette, l'historique des étapes, les FSL et plans d'apurement, et l'évaluation du dernier DSF à actualiser ;
+  - visa du cadre en un clic, puis envoi par mail au secrétariat de la séance (ou impression) ;
+  - une modification après le visa annule le visa.
+- **Convocations avant commission** : modèles `EXP_CONVOCATION_COMMISSION` et `EXP_RELANCE_COMMISSION`, avec rendez-vous dans l'agenda. Elles ne comptent pas pour le bordereau de carence, qui ne regarde que les convocations au DSF.
+- **Avis** : le Service Logement ou le cadre saisit l'avis et les préconisations.
+  - Choix possibles : maintien et plan à respecter, délai, orientation, avis favorable ou défavorable au concours de la force publique, ajourné, autre.
+  - L'étape « CAPEX locale » ou « Commission préfectorale » s'ajoute au dossier, et le référent (puis le SL) est prévenu.
+  - La séance se marque « tenue » avec ses observations.
+- **Passerelles** : quand l'usager est rattaché et que l'agent a accès à sa fiche, le dossier propose FSL maintien ou concordat, saisine COPP et demande de logement social, préremplis.
+- **Statistiques** : diagnostics et bordereaux de carence transmis, avis des commissions.
 
 Import de la liste des assignations : CID ne reçoit pas le fichier aujourd'hui (le SL l'importe dans le logiciel actuel). Un import pourra être ajouté quand le format sera connu (en-têtes seulement, jamais de données réelles).

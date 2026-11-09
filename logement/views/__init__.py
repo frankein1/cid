@@ -9,3 +9,4 @@ from .v_envoi import envoi_dossier, papier_economise  # noqa: F401
 from .v_fsl import *  # noqa: F401,F403
 from .v_expulsion import *  # noqa: F401,F403
 from .v_expulsion_mds import *  # noqa: F401,F403
+from .v_expulsion_commissions import *  # noqa: F401,F403

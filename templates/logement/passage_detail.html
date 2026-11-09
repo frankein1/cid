@@ -1,0 +1,63 @@
+<!-- /templates/logement/passage_detail.html -->
+{% extends "base.html" %}
+{% block title %}Actualisation – {{ d.nom_complet }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="passage-detail">
+  <div class="flex flex-wrap gap-3 text-sm"><a href="{% url 'logement:expulsion_detail' d.pk %}" class="text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Dossier {{ d.numero }}</a>
+    <a href="{% url 'logement:commission_detail' k.pk %}" class="text-gray-500 hover:underline">{{ k }}</a></div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-users-between-lines text-red-600 mr-2"></i>{{ d.nom_complet }} – {{ k.get_type_commission_display }} du {{ k.date|date:"d/m/Y" }}</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if p.statut == 'VISEE' or p.statut == 'TRANSMISE' %}bg-green-100 text-green-800{% else %}bg-amber-100 text-amber-800{% endif %}">{{ p.get_statut_display }}</span>
+  </div>
+  {% if k.date_limite and p.statut == 'A_FAIRE' %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">Actualisation attendue le {{ k.date_limite|date:"d/m/Y" }}.</div>{% endif %}
+  <div class="grid lg:grid-cols-3 gap-5">
+    <form method="post" class="lg:col-span-2 space-y-4 text-sm" id="actualisation-form">{% csrf_token %}
+      {% for titre, champs in sections %}
+      <section class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-3">{{ titre }}</h2>
+        <div class="grid md:grid-cols-3 gap-3">{% for c in champs %}
+          {% if c.type == 'choix' %}<label class="block">{{ c.label }}<select name="{{ c.cle }}" class="w-full border rounded px-2 py-1" {% if not peut_ecrire or p.statut == 'TRANSMISE' %}disabled{% endif %}><option value="">—</option>{% for o in c.options %}<option value="{{ o }}" {% if o == c.valeur %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+          {% elif c.type == 'long' %}<label class="block md:col-span-3">{{ c.label }}<textarea name="{{ c.cle }}" rows="{% if c.cle == 'evaluation' %}8{% else %}3{% endif %}" class="w-full border rounded px-2 py-1" {% if not peut_ecrire or p.statut == 'TRANSMISE' %}disabled{% endif %}>{{ c.valeur }}</textarea></label>
+          {% else %}<label class="block {% if c.largeur == 2 %}md:col-span-2{% endif %}">{{ c.label }}<input name="{{ c.cle }}" value="{{ c.valeur }}" class="w-full border rounded px-2 py-1" {% if not peut_ecrire or p.statut == 'TRANSMISE' %}disabled{% endif %}></label>{% endif %}
+        {% endfor %}</div></section>
+      {% endfor %}
+      {% if peut_ecrire and p.statut != 'TRANSMISE' %}<div class="flex justify-end"><button class="px-4 py-2 bg-red-600 text-white rounded-lg"><i class="fas fa-save mr-1"></i>Enregistrer l'actualisation</button></div>{% endif %}
+    </form>
+    <div class="space-y-3 text-sm">
+      <a href="{% url 'logement:passage_pdf' p.pk %}" target="_blank" class="block text-center px-3 py-2 bg-red-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Actualisation (PDF)</a>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="passage-convocations">
+        <h2 class="font-bold text-gray-800">Rendez-vous avant la commission</h2>
+        <ul class="space-y-1">{% for c in convocations %}<li>{{ c.date_rdv|date:"d/m/Y H:i" }} – {{ c.get_type_convocation_display }} <span class="text-xs text-gray-500">({{ c.get_statut_display|lower }})</span> <a href="{% url 'logement:convocation_pdf' c.pk %}" target="_blank" class="text-xs text-blue-700">courrier</a>
+          {% if peut_ecrire and c.statut == 'PREVUE' %}<form method="post" action="{% url 'logement:convocation_noter' c.pk %}" class="inline">{% csrf_token %}<button name="statut" value="VENU" class="text-xs px-1 border rounded">Venu</button><button name="statut" value="ABSENT" class="text-xs px-1 border rounded">Absent</button></form>{% endif %}</li>
+          {% empty %}<li class="text-gray-400">Aucun.</li>{% endfor %}</ul>
+        {% if peut_ecrire and convocations|length < 2 and p.statut != 'TRANSMISE' %}
+        <form method="post" action="{% url 'logement:passage_action' p.pk %}" class="grid grid-cols-2 gap-2">{% csrf_token %}
+          <input type="date" name="date" class="border rounded px-2 py-1"><input type="time" name="heure" class="border rounded px-2 py-1">
+          <select name="agent" class="border rounded px-2 py-1 col-span-2">{% for r in referents %}<option value="{{ r.pk }}" {% if r.pk == d.referent_id %}selected{% endif %}>{{ r.get_full_name|default:r.username }}</option>{% endfor %}</select>
+          <button name="action" value="convoquer" class="col-span-2 px-3 py-1.5 border rounded">{% if convocations %}Relance{% else %}Convoquer{% endif %}</button></form>{% endif %}
+      </div>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="passage-visa">
+        <h2 class="font-bold text-gray-800">Visa du cadre</h2>
+        {% if p.cadre %}<p class="text-green-800"><i class="fas fa-check mr-1"></i>Visée par {{ p.cadre.get_full_name }} le {{ p.date_validation_cadre|date:"d/m/Y" }}.</p>{% endif %}
+        {% if peut_ecrire and p.statut == 'A_FAIRE' %}<form method="post" action="{% url 'logement:passage_action' p.pk %}">{% csrf_token %}<button name="action" value="demander_visa" class="w-full px-3 py-2 bg-amber-500 text-white rounded-lg">Demander le visa du cadre</button></form>{% endif %}
+        {% if peut_viser and p.statut == 'A_FAIRE' or peut_viser and p.statut == 'A_VISER' %}<form method="post" action="{% url 'logement:passage_action' p.pk %}">{% csrf_token %}<button name="action" value="viser" class="w-full px-3 py-2 bg-green-600 text-white rounded-lg"><i class="fas fa-signature mr-1"></i>Viser (initiales et date)</button></form>{% endif %}
+        {% if p.statut == 'VISEE' or p.statut == 'TRANSMISE' %}
+        <a href="{% url 'logement:envoi_dossier' 'actualisation' p.pk %}" class="block text-center px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-envelope mr-1"></i>{% if p.statut == 'TRANSMISE' %}Renvoyer par mail{% else %}Envoi par mail{% endif %}</a>
+        <a href="{% url 'logement:envoi_dossier' 'actualisation' p.pk %}#imprimer" class="block text-center px-3 py-2 border rounded-lg"><i class="fas fa-print mr-1"></i>Imprimer pour envoi</a>{% endif %}
+      </div>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="passage-avis">
+        <h2 class="font-bold text-gray-800">Avis de la commission</h2>
+        {% if p.avis %}<p><b>{{ p.get_avis_display }}</b></p>{% if p.avis_detail %}<p class="text-gray-600">{{ p.avis_detail|linebreaksbr }}</p>{% endif %}{% endif %}
+        {% if peut_avis %}<form method="post" action="{% url 'logement:passage_action' p.pk %}" class="space-y-2">{% csrf_token %}
+          <select name="avis" class="w-full border rounded px-2 py-1"><option value="">Avis…</option>{% for c, l in avis %}<option value="{{ c }}" {% if c == p.avis %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+          <textarea name="avis_detail" rows="3" placeholder="Préconisations" class="w-full border rounded px-2 py-1">{{ p.avis_detail }}</textarea>
+          <button name="action" value="avis" class="px-3 py-1.5 bg-gray-800 text-white rounded">Enregistrer l'avis</button></form>{% elif not p.avis %}<p class="text-gray-400">Pas encore rendu.</p>{% endif %}
+        {% if not p.avis %}<form method="post" action="{% url 'logement:passage_action' p.pk %}" onsubmit="return true">{% csrf_token %}<button name="action" value="retirer" class="text-xs text-gray-500 hover:underline">Retirer de l'ordre du jour</button></form>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if request.GET.courrier %}<script>window.addEventListener('load', function () { window.open("{% url 'logement:convocation_pdf' 0 %}".replace('/0/', '/{{ request.GET.courrier|add:0 }}/'), "_blank"); });</script>{% endif %}
+{% endblock %}

@@ -32,6 +32,31 @@
         {% if decision %}<ul class="list-disc pl-5">{% for l in decision %}<li>{{ l }}</li>{% endfor %}</ul>{% else %}<p class="text-gray-400">Pas encore saisie.</p>{% endif %}
       </div>
 
+      <div class="bg-white rounded-xl border p-5 text-sm space-y-2" id="expulsion-commissions">
+        <h2 class="font-bold text-gray-800">Commissions</h2>
+        <ul class="space-y-1">{% for p in passages %}
+          <li><a href="{% url 'logement:passage_detail' p.pk %}" class="text-blue-700 hover:underline">{{ p.commission.get_type_commission_display }} du {{ p.commission.date|date:"d/m/Y" }}</a>
+            – <span class="text-gray-600">{{ p.get_statut_display }}</span>{% if p.avis %} – <b>{{ p.get_avis_display }}</b>{% endif %}</li>
+          {% empty %}<li class="text-gray-400">Pas encore présenté.</li>{% endfor %}</ul>
+        {% if peut_ecrire and d.statut == 'EN_COURS' and seances %}
+        <form method="post" action="{% url 'logement:commission_inscrire' 0 %}" class="flex flex-wrap gap-2 items-end" id="inscrire-commission" onsubmit="this.action=this.action.replace('/0/','/'+this.seance.value+'/')">{% csrf_token %}
+          <input type="hidden" name="dossier" value="{{ d.pk }}"><input type="hidden" name="retour" value="dossier">
+          <select name="seance" class="border rounded px-2 py-1 flex-1">{% for k in seances %}<option value="{{ k.pk }}">{{ k.date|date:"d/m/Y" }} – {{ k.nom }}</option>{% endfor %}</select>
+          <button class="px-3 py-1.5 border rounded">Inscrire à l'ordre du jour</button></form>{% endif %}
+        <a href="{% url 'logement:commissions_liste' %}" class="text-xs text-gray-500 hover:underline">Toutes les séances</a>
+      </div>
+
+      {% if passerelles %}
+      <div class="bg-white rounded-xl border p-5 text-sm" id="expulsion-passerelles">
+        <h2 class="font-bold text-gray-800 mb-2">Solutions pour le ménage</h2>
+        <div class="flex flex-wrap gap-2">
+          <form method="post" action="{% url 'logement:fsl_nouvelle' d.beneficiaire.code_interne %}">{% csrf_token %}<button name="type_aide" value="MAINTIEN" class="px-3 py-1.5 border rounded"><i class="fas fa-hand-holding-dollar mr-1"></i>FSL maintien ou concordat</button></form>
+          <form method="post" action="{% url 'logement:copp_nouvelle' d.beneficiaire.code_interne %}">{% csrf_token %}<button class="px-3 py-1.5 border rounded"><i class="fas fa-people-roof mr-1"></i>Saisine COPP</button></form>
+          <a href="{% url 'logement:logement_social' d.beneficiaire.code_interne %}" class="px-3 py-1.5 border rounded"><i class="fas fa-key mr-1"></i>Demande de logement social</a>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Préremplis depuis la fiche de l'usager ; ils restent visibles dans son encart « Logement ».</p>
+      </div>{% endif %}
+
       {% if d.mds %}
       <div class="bg-white rounded-xl border p-5 text-sm space-y-4" id="expulsion-dsf">
         <h2 class="font-bold text-gray-800">Diagnostic social et financier</h2>

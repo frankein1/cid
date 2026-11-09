@@ -21,11 +21,14 @@ def _etape(dossier, type_etape, user, commentaire=""):
 
 
 # ------------------------------------------------------------------------------------------------- convocations
-def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=45):
+def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=45, passage=None):
     """1re convocation, ou 2e et dernière si une première est restée sans réponse. Le rendez-vous est posé dans
-    l'agenda de l'agent qui reçoit (planning de CID)."""
+    l'agenda de l'agent qui reçoit (planning de CID). Avec `passage` : convocation avant une commission."""
     from planning.models import CreneauRdv
-    rang = C.DSF_2 if dossier.convocations.filter(type_convocation=C.DSF_1).exists() else C.DSF_1
+    if passage is not None:
+        rang = C.COM_2 if passage.convocations.exists() else C.COM_1
+    else:
+        rang = C.DSF_2 if dossier.convocations.filter(type_convocation=C.DSF_1).exists() else C.DSF_1
     agent = agent or dossier.referent or user
     local = timezone.localtime(date_rdv)
     rdv = CreneauRdv.objects.create(
@@ -33,10 +36,11 @@ def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=45):
         duree_minutes=duree, mds=dossier.mds, agent=agent, beneficiaire=dossier.beneficiaire,
         nature='HORS_PERMANENCE', domaine='SOCIAL', type_rdv='HORS_PERMANENCE', statut='RESERVE',
         modalite='MDS' if not lieu else 'AUTRE', lieu_precis=lieu[:200],
-        description=f"Prévention des expulsions – diagnostic social et financier ({dossier.numero}, "
-                    f"{dossier.nom_complet})", cree_par=user, reserve_par=user, date_reservation=timezone.now())
+        description=f"Prévention des expulsions – {'commission' if passage else 'diagnostic social et financier'} "
+                    f"({dossier.numero}, {dossier.nom_complet})", cree_par=user, reserve_par=user,
+        date_reservation=timezone.now())
     conv = C.objects.create(dossier=dossier, type_convocation=rang, date_rdv=date_rdv, lieu=lieu, agent=agent,
-                            rdv=rdv, cree_par=user)
+                            rdv=rdv, cree_par=user, passage=passage)
     dossier.tracer(user, "Convocation", f"{conv.get_type_convocation_display()} : {local:%d/%m/%Y à %H:%M}")
     dossier.save()
     return conv
@@ -58,8 +62,8 @@ def noter(conv, statut, user):
 
 def carence_possible(dossier):
     """Deux convocations sans réponse : le bordereau de carence remplace le DSF."""
-    return dossier.convocations.filter(statut=C.ABSENT).count() >= 2 and not dossier.convocations.filter(
-        statut=C.VENU).exists()
+    dsf = dossier.convocations.filter(type_convocation__in=C.TYPES_DSF)
+    return dsf.filter(statut=C.ABSENT).count() >= 2 and not dsf.filter(statut=C.VENU).exists()
 
 
 def questionnaire_envoye(dossier, user, date_retour):

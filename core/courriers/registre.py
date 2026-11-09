@@ -110,6 +110,10 @@ _EXP_RDV = {
     "lieu": ("Lieu du rendez-vous (la MDS par défaut)", "la MDS Exemple, 1 rue de l'Exemple, 13000 Exemple"),
     "agent": ("Travailleur social qui reçoit", "Agent Exemple"),
 }
+_EXP_COM = {
+    "commission": ("Instance (« CAPEX locale », « commission préfectorale »…)", "commission préfectorale"),
+    "date_commission": ("Date de la séance", "16/03/2027"),
+}
 _EXP_C = {"si_tribunal": "le tribunal est indiqué au dossier", "si_audience": "la date d'audience est connue"}
 _EXP_PIECES = ("Merci d'apporter les documents concernant votre situation familiale et financière, votre logement "
                "et vos dettes : ils seront joints au diagnostic.")
@@ -318,6 +322,40 @@ COURRIERS = {
                   "l'entretien. Si vous ne vous présentez pas, nous serons tenus d'indiquer votre absence.\n\n"
                   "Nous vous proposons un deuxième et dernier rendez-vous le **{date_rdv}**, à {lieu}, avec {agent}."
                   "\n\n" + _EXP_PIECES + "\n\n" + _EXP_EMPECHEMENT + "\n\n" + _EXP_AUDIENCE + "\n\n"
+                  "Nous vous prions d'agréer, {civilite_appel}, l'expression de nos salutations distinguées."),
+        "signature": _EXP_SIGNATURE,
+    },
+    "EXP_CONVOCATION_COMMISSION": {
+        "rubrique": "Logement – prévention des expulsions",
+        "libelle": "Convocation avant une commission (CAPEX locale, commission préfectorale)",
+        "variables": {**_EXP, **_EXP_RDV, **_EXP_COM}, "conditions": dict(_EXP_C),
+        "objet": "procédure d'expulsion locative – {commission} du {date_commission}",
+        "corps": ("{civilite_appel},\n\n"
+                  "Dans le cadre de votre procédure d'expulsion locative, votre dossier sera présenté à la "
+                  "{commission} du **{date_commission}**.\n\n"
+                  "Afin de faire le point sur votre situation, nous vous proposons un rendez-vous le **{date_rdv}**, "
+                  "à {lieu}, avec {agent}.\n\n"
+                  "Merci d'apporter les documents concernant votre situation familiale et financière, votre "
+                  "logement, votre dette de loyer et vos autres dettes éventuelles.\n\n"
+                  "En cas d'empêchement, contactez-nous au {telephone_mds} pour convenir d'une autre date.\n\n"
+                  "Nous vous prions d'agréer, {civilite_appel}, l'expression de nos salutations distinguées."),
+        "signature": _EXP_SIGNATURE,
+    },
+    "EXP_RELANCE_COMMISSION": {
+        "rubrique": "Logement – prévention des expulsions",
+        "libelle": "Relance avant une commission (rendez-vous non honoré)",
+        "variables": {**_EXP, **_EXP_RDV, **_EXP_COM,
+                      "date_precedente": ("Date du rendez-vous non honoré", "05/11/2026 à 14:00")},
+        "conditions": dict(_EXP_C),
+        "objet": "procédure d'expulsion locative – {commission} du {date_commission}",
+        "corps": ("{civilite_appel},\n\n"
+                  "Votre dossier sera présenté à la {commission} du **{date_commission}**. Nous vous avions proposé "
+                  "un rendez-vous le {date_precedente}, auquel vous ne vous êtes pas présenté(e).\n\n"
+                  "Pour que votre situation puisse être étudiée avec les éléments les plus récents, nous vous "
+                  "proposons un nouveau rendez-vous le **{date_rdv}**, à {lieu}, avec {agent}.\n\n"
+                  "Merci d'apporter les documents concernant votre situation familiale et financière, votre "
+                  "logement et vos dettes.\n\n"
+                  "En cas d'empêchement, contactez-nous au {telephone_mds} pour convenir d'une autre date.\n\n"
                   "Nous vous prions d'agréer, {civilite_appel}, l'expression de nos salutations distinguées."),
         "signature": _EXP_SIGNATURE,
     },
