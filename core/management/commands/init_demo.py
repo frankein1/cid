@@ -1088,6 +1088,39 @@ class Command(BaseCommand):
         H.cloturer(d, ts, "LOGEMENT", j - timedelta(days=125))
         D.objects.filter(pk=d.pk).update(date_cloture=j - timedelta(days=125))
         self.stdout.write("✅ Hébergement d'urgence : 4 dossiers fictifs")
+        self.orientations_asell()
+
+    def orientations_asell(self):
+        """Orientation ASELL : deux opérateurs fictifs ; une fiche renforcée en préparation (liée au dossier
+        d'expulsion de PEREZ Laura), une fiche généraliste envoyée et acceptée (AMRANI Sarah)."""
+        from logement.models import DossierExpulsion, EnvoiDossier, OperateurASELL, OrientationASELL as A
+        from logement.services import asell as S, envoi
+        j, ts = self.j, self.ts
+        _effacer_envois(A.objects.filter(beneficiaire__code_interne__in=CODES_DEMO))
+        OperateurASELL.objects.filter(nom__endswith="(fictif)").delete()
+        op = OperateurASELL.objects.create(nom="Association Habitat Solidaire (fictif)", email="asell@habitat-solidaire.example.com",
+                                           territoire="Ouest de l'étang de Berre")
+        OperateurASELL.objects.create(nom="Association Toit et Liens (fictif)", email="contact@toit-et-liens.example.com",
+                                      territoire="Pays de Martigues", generaliste=False)
+        # PEREZ Laura : ASELL renforcé (maintien), prérempli depuis son dossier de prévention des expulsions
+        d = DossierExpulsion.objects.filter(numero="DEMO-EXP-001").first()
+        a = S.creer(self.b["FAM8-LAU"], ts, A.RENFORCE, A.MAINTIEN, d)
+        a.donnees["typologie"] = "T3"
+        a.save()
+        # AMRANI Sarah : ASELL généraliste (accès), envoyé il y a un mois, mesure engagée
+        a = S.creer(self.b["FAM5-SAR"], ts, A.GENERALISTE, A.ACCES)
+        a.operateur = op
+        a.donnees.update({"statut_logement": "Hébergement", "motifs": ["Absence de logement"],
+                          "evaluation": ("Situation fictive de démonstration. Mme AMRANI est hébergée en structure d'urgence. "
+                                         "Ses droits sont ouverts et ses ressources stables. Elle a besoin d'un appui pour "
+                                         "chercher un logement, constituer ses dossiers et s'installer.")})
+        a.save()
+        S.marquer_envoyee(a, ts, "MAIL")
+        A.objects.filter(pk=a.pk).update(date_envoi=j - timedelta(days=30), cree_le=timezone.now() - timedelta(days=31))
+        envoi.enregistrer(a, "ASELL", a.mds, EnvoiDossier.MAIL, 2)
+        a.refresh_from_db()
+        S.enregistrer_reponse(a, ts, A.ACCORD, j - timedelta(days=18), "Premier rendez-vous fixé avec l'intervenante")
+        self.stdout.write("✅ Orientation ASELL : 2 fiches fictives, 2 opérateurs fictifs")
 
     def logement_social_copp(self):
         """Demandes de logement social, séances fictives de la commission des publics prioritaires et deux saisines."""

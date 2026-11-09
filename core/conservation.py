@@ -40,6 +40,7 @@ TRAITEMENTS = [
     ("FSL", "Fonds de solidarité logement", "Demande, avis, visa du cadre, décision", 36, 12, SUIT, True),
     ("LOGEMENT_DEMANDE", "Demande de logement social", "NUD, DALO, mutation, Al'In, souhaits", 36, 12, SUIT, True),
     ("COPP", "Commission des publics prioritaires", "Saisine, motifs, rapport social, décision", 36, 12, SUIT, True),
+    ("ASELL", "Orientation ASELL", "Fiche d'orientation, budget, logement, évaluation, réponse de l'opérateur", 36, 12, SUIT, True),
     ("EXPULSION_DOSSIER", "Prévention des expulsions : dossier",
      "Fiche de liaison, fiche CAF, bailleur, dette, audience, décision, étapes", None, None,
      "clôture du dossier", True),

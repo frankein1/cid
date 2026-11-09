@@ -60,4 +60,8 @@ urlpatterns = [
     path('hebergement/fiche/<int:pk>/', views.fiche_hebergement, name='fiche_hebergement'),
     path('hebergement/fiche/<int:pk>/fiche.pdf', views.fiche_hebergement_pdf, name='fiche_hebergement_pdf'),
     path('hebergement/fiche/<int:pk>/action/', views.fiche_hebergement_action, name='fiche_hebergement_action'),
+    path('asell/nouvelle/<str:code_interne>/', views.asell_nouvelle, name='asell_nouvelle'),
+    path('asell/<int:pk>/', views.asell_detail, name='asell_detail'),
+    path('asell/<int:pk>/fiche.pdf', views.asell_pdf, name='asell_pdf'),
+    path('asell/<int:pk>/action/', views.asell_action, name='asell_action'),
 ]

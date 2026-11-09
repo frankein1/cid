@@ -13,6 +13,7 @@ from django.utils.html import format_html
 from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, ConvocationExpulsion, PassageCommission, DemandeFSL, DemandeLogementSocial,
                      DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
+from .models import OperateurASELL, OrientationASELL
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
                      StructureHebergement)
 
@@ -219,3 +220,16 @@ class FicheHebergementAdmin(admin.ModelAdmin):
     list_display = ['dossier', 'type_fiche', 'statut', 'redacteur', 'cadre', 'date_envoi', 'reponse']
     list_filter = ['type_fiche', 'statut', 'reponse']
     raw_id_fields = ['dossier', 'redacteur', 'cadre']
+
+
+@admin.register(OperateurASELL)
+class OperateurASELLAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'territoire', 'email', 'generaliste', 'renforce', 'actif']
+    list_filter = ['actif', 'generaliste', 'renforce']
+
+
+@admin.register(OrientationASELL)
+class OrientationASELLAdmin(admin.ModelAdmin):
+    list_display = ['beneficiaire', 'type_mesure', 'volet', 'operateur', 'statut', 'date_envoi', 'reponse']
+    list_filter = ['type_mesure', 'volet', 'statut', 'reponse']
+    raw_id_fields = ['beneficiaire', 'dossier_expulsion', 'cree_par']

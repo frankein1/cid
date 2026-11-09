@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions', 'hebergement-urgence', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions', 'hebergement-urgence', 'asell', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -33,7 +33,7 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
              ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions',
-                           'hebergement-urgence']),
+                           'hebergement-urgence', 'asell']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -101,6 +101,7 @@ TITRES = {
     'expulsions': ("Prévention des expulsions", "Service Logement, agents et cadres de MDS"),
     'expulsions-commissions': ("Expulsions : CAPEX locale et commission préfectorale", "Service Logement, agents et cadres de MDS"),
     'hebergement-urgence': ("Hébergement d'urgence : démarches, fiches, prise en charge", "Travailleurs sociaux et cadres de MDS"),
+    'asell': ("Orienter vers une mesure ASELL", "Travailleurs sociaux de la MDS"),
     'expulsions-dsf': ("Expulsions : convocations, diagnostic social et financier, carence", "Travailleurs sociaux et cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
@@ -1462,11 +1463,31 @@ page('hebergement-urgence', qui="Travailleurs sociaux de la MDS ; cadres (visa)"
              "La durée de conservation de ces dossiers est fixée par le délégué à la protection des données (code HEBERGEMENT_URGENCE)."],
      ensuite=['copp', 'fsl-acces', 'expulsions'])
 
+page('asell', qui="Travailleurs sociaux de la MDS", ou="Fiche de l'usager → encart « Logement » ; dossier d'expulsion → Solutions pour le ménage",
+     duree="10 minutes",
+     intro="La fiche d'orientation ASELL (accompagnement socio-éducatif lié au logement), généraliste ou renforcée, accès ou maintien, est préremplie par CID : il reste à choisir l'opérateur et à rédiger l'évaluation. Elle part par mail, et la réponse de l'opérateur se note sur la fiche.",
+     etapes=[
+         ("Créer la fiche", [fig('asell', '01', "Dans l'encart « Logement » : le volet, puis le type de mesure.")],
+          ["Sur la fiche de l'usager, encart « Logement », ligne ASELL : choisissez le volet (maintien ou accès), puis <span class=\"clic\">généraliste</span> ou <span class=\"clic\">renforcé</span>.",
+           "Depuis un dossier de prévention des expulsions : « Solutions pour le ménage » → <span class=\"clic\">Orientation ASELL renforcé</span>."], []),
+         ("Vérifier ce qui est prérempli", [fig('asell', '02', "L'opérateur, le bénéficiaire, le budget.")],
+          ["CID reprend l'identité, le numéro CAF, l'adresse, le téléphone, la composition familiale, les ressources hors aide au logement, l'AL ou l'APL, le loyer et les dettes du budget du foyer, et sait si un FSL est en cours ou si une mesure ASELL a déjà été demandée.",
+           "Choisissez l'<b>opérateur sollicité</b> dans la liste (ou saisissez-en un autre)."], []),
+         ("ASELL renforcé : la procédure d'expulsion", [fig('asell', '03', "Les dates et le motif viennent du dossier d'expulsion.")],
+          ["Quand l'usager a un dossier de prévention des expulsions, le bailleur, la dette et les dates (assignation, commandement de quitter les lieux, concours de la force publique) sont repris des étapes du dossier."], []),
+         ("Évaluer, envoyer, noter la réponse", [fig('asell', '04', "Le PDF, l'envoi, la réponse de l'opérateur.")],
+          ["Rédigez l'<b>évaluation du travailleur social</b>, enregistrez, contrôlez le PDF.",
+           "<span class=\"clic\">Envoi par mail</span> : l'adresse de l'opérateur est proposée, les pièces se cochent parmi les documents de l'usager. L'envoi est tracé (et inscrit dans le dossier d'expulsion s'il y en a un).",
+           "À la réponse de l'opérateur : mesure engagée, liste d'attente ou orientation non retenue."], []),
+     ],
+     savoir=["Les opérateurs et leurs adresses se règlent en administration : Logement → Opérateurs ASELL.",
+             "Une fiche envoyée ne se modifie plus ; un brouillon peut être supprimé."],
+     ensuite=['fsl-acces', 'expulsions', 'hebergement-urgence'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
-                  ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – orientation ASELL"])
+                  ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

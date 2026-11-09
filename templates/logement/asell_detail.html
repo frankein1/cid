@@ -1,0 +1,62 @@
+<!-- /templates/logement/asell_detail.html -->
+{% extends "base.html" %}
+{% block title %}{{ a.get_type_mesure_display }} – {{ b.nom|upper }} {{ b.prenom }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="asell-detail">
+  <div class="flex flex-wrap gap-3 text-sm"><a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de l'usager</a>
+    {% if a.dossier_expulsion %}<a href="{% url 'logement:expulsion_detail' a.dossier_expulsion.pk %}" class="text-gray-500 hover:underline">Dossier {{ a.dossier_expulsion.numero }}</a>{% endif %}</div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-hands-holding-circle text-teal-600 mr-2"></i>Orientation {{ a.get_type_mesure_display }} – {{ b.nom|upper }} {{ b.prenom }}</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if a.statut == 'ENVOYEE' %}bg-green-100 text-green-800{% elif a.statut == 'ABANDONNEE' %}bg-gray-200 text-gray-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ a.get_statut_display }}{% if a.date_envoi %} le {{ a.date_envoi|date:"d/m/Y" }}{% endif %}</span>
+  </div>
+  <div class="grid lg:grid-cols-3 gap-5">
+    <form method="post" class="lg:col-span-2 space-y-4 text-sm" id="asell-form">{% csrf_token %}
+      <fieldset {% if not peut_ecrire %}disabled{% endif %} class="space-y-4">
+      <section class="bg-white rounded-xl border p-5" id="asell-operateur"><h2 class="font-bold text-gray-800 mb-3">Mesure et opérateur</h2>
+        <div class="grid md:grid-cols-3 gap-3">
+          <label class="block">Volet<select name="volet" class="w-full border rounded px-2 py-1">{% for c, l in volets %}<option value="{{ c }}" {% if c == a.volet %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+          <label class="block">Opérateur sollicité<select name="operateur" class="w-full border rounded px-2 py-1"><option value="">Autre…</option>{% for o in operateurs %}<option value="{{ o.pk }}" {% if o.pk == a.operateur_id %}selected{% endif %}>{{ o.nom }}{% if o.territoire %} ({{ o.territoire }}){% endif %}</option>{% endfor %}</select></label>
+          <label class="block">Autre opérateur<input name="operateur_libre" value="{{ a.operateur_libre }}" class="w-full border rounded px-2 py-1"></label>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Prescripteur : {{ a.mds.nom }}, {{ a.cree_par.get_full_name }} (coordonnées de la MDS portées sur le PDF).</p></section>
+      {% for titre, champs in sections %}
+      <section class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-3">{{ titre }}</h2>
+        <div class="grid md:grid-cols-3 gap-3 items-end">{% for c in champs %}
+          {% if c.type == 'choix' %}<label class="block">{{ c.label }}<select name="{{ c.cle }}" class="w-full border rounded px-2 py-1"><option value="">—</option>{% for o in c.options %}<option value="{{ o }}" {% if o == c.valeur %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+          {% elif c.type == 'multi' %}<div class="md:col-span-3"><div class="mb-1">{{ c.label }}</div><div class="flex flex-wrap gap-x-5 gap-y-1">{% for o in c.options %}<label class="inline-flex items-center gap-1"><input type="checkbox" name="{{ c.cle }}" value="{{ o }}" {% if o in c.valeur %}checked{% endif %}>{{ o }}</label>{% endfor %}</div></div>
+          {% elif c.type == 'long' %}<label class="block md:col-span-3">{{ c.label }}<textarea name="{{ c.cle }}" rows="{% if c.cle == 'evaluation' %}9{% else %}4{% endif %}" class="w-full border rounded px-2 py-1">{{ c.valeur }}</textarea></label>
+          {% else %}<label class="block {% if c.largeur == 2 %}md:col-span-2{% elif c.largeur == 3 %}md:col-span-3{% endif %}">{{ c.label }}<input name="{{ c.cle }}" value="{{ c.valeur }}" class="w-full border rounded px-2 py-1"></label>{% endif %}
+        {% endfor %}</div></section>
+      {% endfor %}
+      </fieldset>
+      {% if peut_ecrire %}<div class="flex justify-end"><button class="px-4 py-2 bg-teal-600 text-white rounded-lg"><i class="fas fa-save mr-1"></i>Enregistrer la fiche</button></div>{% endif %}
+    </form>
+    <div class="space-y-3 text-sm">
+      <a href="{% url 'logement:asell_pdf' a.pk %}" target="_blank" class="block text-center px-3 py-2 bg-teal-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Fiche d'orientation (PDF)</a>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="asell-envoi">
+        <h2 class="font-bold text-gray-800">Envoi à l'opérateur</h2>
+        {% for m in manques %}<p class="text-amber-800"><i class="fas fa-triangle-exclamation mr-1"></i>{{ m }}</p>{% endfor %}
+        {% if a.statut != 'ABANDONNEE' and not manques %}
+        <a href="{% url 'logement:envoi_dossier' 'asell' a.pk %}" class="block text-center px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-envelope mr-1"></i>{% if a.statut == 'ENVOYEE' %}Renvoyer par mail{% else %}Envoi par mail{% endif %}</a>
+        <p class="text-xs text-gray-500">L'adresse de l'opérateur est proposée ; les pièces se cochent parmi les documents de l'usager. « Imprimer pour envoi » reste possible sur la même page.</p>{% endif %}
+      </div>
+      {% if a.statut == 'ENVOYEE' %}<div class="bg-white rounded-xl border p-4 space-y-2" id="asell-reponse">
+        <h2 class="font-bold text-gray-800">Réponse de l'opérateur</h2>
+        {% if a.reponse %}<p><b>{{ a.get_reponse_display }}</b>{% if a.date_reponse %} le {{ a.date_reponse|date:"d/m/Y" }}{% endif %}</p>{% if a.reponse_detail %}<p class="text-gray-600">{{ a.reponse_detail }}</p>{% endif %}{% endif %}
+        {% if peut_repondre %}<form method="post" action="{% url 'logement:asell_action' a.pk %}" class="space-y-2">{% csrf_token %}
+          <select name="reponse" class="w-full border rounded px-2 py-1"><option value="">Réponse…</option>{% for c, l in reponses %}<option value="{{ c }}" {% if c == a.reponse %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+          <label class="block">Reçue le<input type="date" name="date_reponse" value="{{ a.date_reponse|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>
+          <input name="detail" value="{{ a.reponse_detail }}" placeholder="Précision (intervenant, début de la mesure…)" class="w-full border rounded px-2 py-1">
+          <button name="action" value="reponse" class="px-3 py-1.5 bg-gray-800 text-white rounded">Enregistrer la réponse</button>
+          {% if not a.reponse %}<button name="action" value="abandonner" class="text-xs text-gray-500 hover:underline ml-2">Abandonner l'orientation</button>{% endif %}</form>{% endif %}
+      </div>{% endif %}
+      {% if peut_ecrire and a.statut == 'BROUILLON' %}<form method="post" action="{% url 'logement:asell_action' a.pk %}">{% csrf_token %}<button name="action" value="supprimer" class="text-xs text-gray-500 hover:underline">Supprimer ce brouillon</button></form>{% endif %}
+      <div class="bg-white rounded-xl border p-4"><h2 class="font-bold text-gray-800 mb-1">Historique</h2>
+        <ul class="space-y-1 text-xs text-gray-600">{% for h in a.historique reversed %}<li>{{ h.date }} – {{ h.qui }} : {{ h.action }}{% if h.detail %} ({{ h.detail }}){% endif %}</li>{% endfor %}</ul></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if request.GET.imprimer %}<script>window.addEventListener('load', function () { window.open("{% url 'logement:asell_pdf' a.pk %}", "_blank"); });</script>{% endif %}
+{% endblock %}

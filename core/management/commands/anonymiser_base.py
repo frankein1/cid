@@ -49,7 +49,8 @@ EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.DureeConservation",
           "connecteurs.LieuExterneRDVSP", "connecteurs.ServiceInclusion",
           "connecteurs.ImportInclusion", "core.User",
           "logement.GestionnaireFSL", "logement.FormulaireOfficiel", "logement.CommissionPublicsPrioritaires",
-          "logement.DestinataireExpulsion", "logement.StructureHebergement", "logement.DestinataireHebergement"}
+          "logement.DestinataireExpulsion", "logement.StructureHebergement", "logement.DestinataireHebergement",
+          "logement.OperateurASELL"}
 # Champs courts qui portent une donnée personnelle, où qu'ils soient
 CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "numero_caf", "numero_france_travail",
                   "numero_fiscal", "numero_genesis", "numero_dossier_pmi", "code_insee_naissance",
@@ -59,7 +60,7 @@ CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "num
                   "dernier_emploi", "logement_precision", "precision", "situation_particuliere",
                   "reorientation_precision", "precision_notification", "famille_libelle",
                   "colocataire", "numero_allocataire", "numero_exploc", "nud", "reponse", "reponse_detail",
-                  "structure_libre", "motif_autre", "tribunal", "heure_audience"}
+                  "structure_libre", "operateur_libre", "motif_autre", "tribunal", "heure_audience"}
 CHAMPS_NOM = {"nom", "nom_usage", "nom_famille"}
 CHAMPS_PRENOM = {"prenom"}
 CHAMPS_TEXTE_COURT = {"objet", "commentaire", "objet_libelle", "utilisateur_nom", "titre", "adresse", "resume",
