@@ -1098,10 +1098,12 @@ class Command(BaseCommand):
         j, ts = self.j, self.ts
         _effacer_envois(A.objects.filter(beneficiaire__code_interne__in=CODES_DEMO))
         OperateurASELL.objects.filter(nom__endswith="(fictif)").delete()
-        op = OperateurASELL.objects.create(nom="Association Habitat Solidaire (fictif)", email="asell@habitat-solidaire.example.com",
-                                           territoire="Ouest de l'étang de Berre")
-        OperateurASELL.objects.create(nom="Association Toit et Liens (fictif)", email="contact@toit-et-liens.example.com",
-                                      territoire="Pays de Martigues", generaliste=False)
+        op = OperateurASELL.objects.create(sigle="AHS (fictif)", nom="Association Habitat Solidaire (fictif)",
+                                           emails="asell@habitat-solidaire.example.com", cp_ville="13000 MARSEILLE",
+                                           thematique=OperateurASELL.GENERALISTE, territoire="Département")
+        OperateurASELL.objects.create(sigle="TEL (fictif)", nom="Toit et Liens (fictif)",
+                                      emails="contact@toit-et-liens.example.com", cp_ville="13500 MARTIGUES",
+                                      thematique=OperateurASELL.RENFORCE, territoire="Martigues, Port de Bouc")
         # PEREZ Laura : ASELL renforcé (maintien), prérempli depuis son dossier de prévention des expulsions
         d = DossierExpulsion.objects.filter(numero="DEMO-EXP-001").first()
         a = S.creer(self.b["FAM8-LAU"], ts, A.RENFORCE, A.MAINTIEN, d)

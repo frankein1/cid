@@ -15,7 +15,10 @@
       <section class="bg-white rounded-xl border p-5" id="asell-operateur"><h2 class="font-bold text-gray-800 mb-3">Mesure et opérateur</h2>
         <div class="grid md:grid-cols-3 gap-3">
           <label class="block">Volet<select name="volet" class="w-full border rounded px-2 py-1">{% for c, l in volets %}<option value="{{ c }}" {% if c == a.volet %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
-          <label class="block">Opérateur sollicité<select name="operateur" class="w-full border rounded px-2 py-1"><option value="">Autre…</option>{% for o in operateurs %}<option value="{{ o.pk }}" {% if o.pk == a.operateur_id %}selected{% endif %}>{{ o.nom }}{% if o.territoire %} ({{ o.territoire }}){% endif %}</option>{% endfor %}</select></label>
+          <label class="block">Opérateur sollicité<select name="operateur" class="w-full border rounded px-2 py-1"><option value="">Autre…</option>
+            {% if operateurs_secteur %}<optgroup label="Secteur de l'usager ({{ b.ville }})">{% for o in operateurs_secteur %}<option value="{{ o.pk }}" {% if o.pk == a.operateur_id %}selected{% endif %}>{{ o }}{% if o.ville %} – {{ o.ville }}{% endif %}{% if o.public_specifique %} ({{ o.public_specifique }}){% endif %}</option>{% endfor %}</optgroup>{% endif %}
+            {% if operateurs_autres %}<optgroup label="Autres opérateurs du département">{% for o in operateurs_autres %}<option value="{{ o.pk }}" {% if o.pk == a.operateur_id %}selected{% endif %}>{{ o }}{% if o.ville %} – {{ o.ville }}{% endif %}{% if o.public_specifique %} ({{ o.public_specifique }}){% endif %}</option>{% endfor %}</optgroup>{% endif %}
+          </select></label>
           <label class="block">Autre opérateur<input name="operateur_libre" value="{{ a.operateur_libre }}" class="w-full border rounded px-2 py-1"></label>
         </div>
         <p class="text-xs text-gray-500 mt-2">Prescripteur : {{ a.mds.nom }}, {{ a.cree_par.get_full_name }} (coordonnées de la MDS portées sur le PDF).</p></section>

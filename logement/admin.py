@@ -222,10 +222,53 @@ class FicheHebergementAdmin(admin.ModelAdmin):
     raw_id_fields = ['dossier', 'redacteur', 'cadre']
 
 
+class FichierOperateursForm(forms.Form):
+    fichier = forms.FileField(label="Tableau des opérateurs (CSV ou Excel)")
+
+
 @admin.register(OperateurASELL)
 class OperateurASELLAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'territoire', 'email', 'generaliste', 'renforce', 'actif']
-    list_filter = ['actif', 'generaliste', 'renforce']
+    """Liste annuelle des opérateurs conventionnés : importée d'un fichier (tout ou rien), ligne à ligne ensuite."""
+    list_display = ['sigle', 'nom', 'ville', 'thematique', 'nature', 'territoire_court', 'emails', 'annee', 'actif']
+    list_filter = ['actif', 'annee', 'nature', 'thematique']
+    search_fields = ['sigle', 'nom', 'territoire', 'cp_ville']
+    fields = ['sigle', 'nom', 'adresse', 'cp_ville', 'telephone', 'emails', 'nature', 'thematique', 'territoire',
+              'public_specifique', 'annee', 'actif']
+    change_list_template = "admin/logement/operateurasell/change_list.html"
+
+    @admin.display(description="Territoire")
+    def territoire_court(self, obj):
+        return (obj.territoire[:80] + "…") if len(obj.territoire or "") > 80 else obj.territoire
+
+    def get_urls(self):
+        return [path("modele.csv", self.admin_site.admin_view(self.vue_modele),
+                     name="logement_operateurasell_modele"),
+                path("importer/", self.admin_site.admin_view(self.vue_importer),
+                     name="logement_operateurasell_importer")] + super().get_urls()
+
+    def vue_modele(self, request):
+        from .services import asell_operateurs as AO
+        r = HttpResponse(AO.modele_csv(), content_type="text/csv; charset=utf-8")
+        r["Content-Disposition"] = 'attachment; filename="CID_operateurs_ASELL_modele.csv"'
+        return r
+
+    def vue_importer(self, request):
+        from django.shortcuts import redirect, render
+        from .services import asell_operateurs as AO
+        form = FichierOperateursForm(request.POST or None, request.FILES or None)
+        erreurs, avertissements = [], []
+        if request.method == "POST" and form.is_valid():
+            f = form.cleaned_data["fichier"]
+            n, anciens, erreurs, avertissements = AO.importer(f.read(), f.name)
+            if not erreurs:
+                messages.success(request, f"{n} ligne(s) importée(s). {anciens} ligne(s) de l'ancienne liste désactivée(s) "
+                                          "(elles restent consultables, les fiches déjà envoyées gardent leur opérateur).")
+                for a in avertissements:
+                    messages.warning(request, a)
+                return redirect("admin:logement_operateurasell_changelist")
+        return render(request, "admin/logement/operateurasell/importer.html", {
+            "form": form, "erreurs": erreurs, "title": "Importer la liste des opérateurs conventionnés",
+            **self.admin_site.each_context(request)})
 
 
 @admin.register(OrientationASELL)

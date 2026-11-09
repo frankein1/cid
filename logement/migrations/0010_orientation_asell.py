@@ -32,23 +32,82 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
+                ("sigle", models.CharField(max_length=60)),
                 ("nom", models.CharField(max_length=150)),
-                ("email", models.EmailField(blank=True, max_length=254)),
-                ("territoire", models.CharField(blank=True, max_length=150)),
+                ("adresse", models.CharField(blank=True, max_length=255)),
                 (
-                    "generaliste",
-                    models.BooleanField(default=True, verbose_name="ASELL généraliste"),
+                    "cp_ville",
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Code postal et ville"
+                    ),
                 ),
                 (
-                    "renforce",
-                    models.BooleanField(default=True, verbose_name="ASELL renforcé"),
+                    "telephone",
+                    models.CharField(
+                        blank=True, max_length=30, verbose_name="Téléphone"
+                    ),
+                ),
+                (
+                    "emails",
+                    models.CharField(
+                        blank=True,
+                        help_text="Une ou plusieurs, séparées par des virgules : toutes sont proposées à l'envoi.",
+                        max_length=255,
+                        verbose_name="Adresses mail",
+                    ),
+                ),
+                (
+                    "nature",
+                    models.CharField(
+                        choices=[
+                            ("ASELL", "ASELL (accompagnement individuel)"),
+                            ("ASC", "ASC (action collective)"),
+                            ("ALL", "ALL (auto-réhabilitation)"),
+                        ],
+                        default="ASELL",
+                        max_length=5,
+                    ),
+                ),
+                (
+                    "thematique",
+                    models.CharField(
+                        choices=[
+                            ("GENERALISTE", "Généraliste"),
+                            ("RENFORCE", "Renforcé"),
+                            ("COURTE_DUREE", "Diagnostic courte durée"),
+                            ("ATELIERS", "Ateliers recherche logement"),
+                            ("AUTO_REHAB", "Auto-réhabilitation accompagnée"),
+                        ],
+                        default="GENERALISTE",
+                        max_length=12,
+                        verbose_name="Thématique",
+                    ),
+                ),
+                (
+                    "territoire",
+                    models.TextField(
+                        blank=True,
+                        help_text="Tel qu'écrit dans la liste : communes, « 13e et 14e arrondissements de Marseille », « Département »…",
+                    ),
+                ),
+                (
+                    "public_specifique",
+                    models.CharField(
+                        blank=True, max_length=255, verbose_name="Public spécifique"
+                    ),
+                ),
+                (
+                    "annee",
+                    models.PositiveSmallIntegerField(
+                        blank=True, null=True, verbose_name="Année de la convention"
+                    ),
                 ),
                 ("actif", models.BooleanField(default=True)),
             ],
             options={
-                "verbose_name": "Opérateur ASELL (destinataire des fiches)",
-                "verbose_name_plural": "Opérateurs ASELL (destinataires des fiches)",
-                "ordering": ["nom"],
+                "verbose_name": "Opérateur conventionné (ASELL)",
+                "verbose_name_plural": "Opérateurs conventionnés (ASELL)",
+                "ordering": ["sigle", "thematique", "pk"],
             },
         ),
         migrations.CreateModel(

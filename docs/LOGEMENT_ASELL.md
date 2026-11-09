@@ -21,7 +21,11 @@ ou **maintien**. Code : `logement/models/m_asell.py`, `services/asell.py`, `view
 
 - **Pas de visa du cadre** : le modèle de fiche ne porte que la signature du travailleur social. S'il faut un visa,
   il se branche comme pour l'hébergement d'urgence.
-- **Destinataire** : la liste « Opérateurs ASELL » (administration) sert aussi bien pour les opérateurs que pour un
-  service qui centraliserait les fiches ; l'adresse est proposée à l'envoi.
+- **Opérateurs** : la liste annuelle du Département s'importe en administration (Logement → Opérateurs ASELL, CSV ou
+  Excel, tout ou rien). Une ligne = un opérateur et une thématique (généraliste, renforcé…). Le sélecteur de la fiche
+  propose d'abord les opérateurs du secteur de l'usager (commune, ou arrondissement de Marseille), puis les autres. Les
+  lignes sans sigle (cellules fusionnées) reprennent l'opérateur du dessus : l'import le signale, à vérifier.
+- **Destinataires** : toutes les adresses mail de la ligne opérateur sont proposées à l'envoi (une ou plusieurs).
+  Les fichiers réels ne sont jamais versés au dépôt : seul le modèle CSV et les données fictives le sont.
 - Les cases à cocher du PDF sont écrites `[X]` : même rendu sur tous les serveurs.
 - Durée de conservation : code `ASELL`, suit le dossier de l'usager.

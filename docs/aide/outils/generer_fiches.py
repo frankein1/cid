@@ -1480,7 +1480,8 @@ page('asell', qui="Travailleurs sociaux de la MDS", ou="Fiche de l'usager → en
            "<span class=\"clic\">Envoi par mail</span> : l'adresse de l'opérateur est proposée, les pièces se cochent parmi les documents de l'usager. L'envoi est tracé (et inscrit dans le dossier d'expulsion s'il y en a un).",
            "À la réponse de l'opérateur : mesure engagée, liste d'attente ou orientation non retenue."], []),
      ],
-     savoir=["Les opérateurs et leurs adresses se règlent en administration : Logement → Opérateurs ASELL.",
+     savoir=["La liste des opérateurs conventionnés se charge en administration (Logement → Opérateurs ASELL) à partir du "
+             "tableau annuel du Département. Les opérateurs du secteur de l'usager (selon sa commune) sont proposés en premier.",
              "Une fiche envoyée ne se modifie plus ; un brouillon peut être supprimé."],
      ensuite=['fsl-acces', 'expulsions', 'hebergement-urgence'])
 

@@ -63,11 +63,14 @@ def asell_detail(request, pk):
         a.save()
         messages.success(request, "Fiche enregistrée.")
         return redirect('logement:asell_detail', pk=a.pk)
-    filtre = {'generaliste': True} if a.type_mesure == A.GENERALISTE else {'renforce': True}
+    from ..services import asell_operateurs as AO
+    secteur, autres = AO.pour_usager(a.type_mesure, a.beneficiaire)
+    if a.operateur and a.operateur not in secteur + autres:       # opérateur retiré depuis : on le garde visible
+        autres = [a.operateur] + autres
     return render(request, 'logement/asell_detail.html', {
         'a': a, 'b': a.beneficiaire, 'sections': S.pour_gabarit(a), 'peut_ecrire': ecrire and a.modifiable,
         'peut_repondre': ecrire, 'manques': S.manques(a) if a.modifiable else [], 'volets': A.VOLETS,
-        'operateurs': OperateurASELL.objects.filter(actif=True, **filtre), 'reponses': A.REPONSES})
+        'operateurs_secteur': secteur, 'operateurs_autres': autres, 'reponses': A.REPONSES})
 
 
 @login_required

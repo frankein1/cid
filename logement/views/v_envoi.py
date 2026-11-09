@@ -77,8 +77,8 @@ class _Dossier:
             self.envoyable = obj.statut in (OrientationASELL.BROUILLON, OrientationASELL.ENVOYEE) and not manques(obj)
             self.pourquoi = "Choisissez l'opérateur et rédigez l'évaluation avant l'envoi."
             self.pieces_proposees = []
-            self.destinataires_proposes = [SimpleNamespace(nom=obj.operateur.nom, email=obj.operateur.email)] \
-                if obj.operateur and obj.operateur.email else []
+            self.destinataires_proposes = [SimpleNamespace(nom=obj.operateur.nom, email=e)
+                                           for e in obj.operateur.liste_emails] if obj.operateur else []
         elif nature == 'hebergement':
             self.libelle = "Hébergement d'urgence"
             self.intitule = obj.get_type_fiche_display()

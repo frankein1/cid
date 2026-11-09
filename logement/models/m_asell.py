@@ -5,7 +5,8 @@
 # =============================================================================
 # logement/models/m_asell.py
 """Orientation ASELL (accompagnement socio-éducatif lié au logement) : fiche d'orientation généraliste ou renforcée,
-volet accès ou maintien, adressée à un opérateur. Les opérateurs et leurs adresses sont réglés en administration."""
+volet accès ou maintien, adressée à un opérateur conventionné. La liste des opérateurs (territoires, actions) est
+importée en administration."""
 from django.conf import settings
 from django.db import models
 
@@ -13,21 +14,51 @@ from .m_expulsion import DossierExpulsion
 
 
 class OperateurASELL(models.Model):
-    """Destinataire des fiches : opérateur de la mesure, ou service qui les centralise (réglé en administration)."""
+    """Une ligne de la liste annuelle des opérateurs conventionnés (accompagnement social lié au FSL) : un opérateur,
+    une antenne, une action (ASELL généraliste, renforcé, diagnostic courte durée, ateliers, auto-réhabilitation), un
+    territoire. La liste se charge en administration (import du tableau du Département) : rien de local dans le code.
+    Un nouvel import désactive l'ancienne liste sans l'effacer (les fiches déjà envoyées gardent leur opérateur)."""
+    ASELL, ASC, ALL = 'ASELL', 'ASC', 'ALL'
+    NATURES = [(ASELL, "ASELL (accompagnement individuel)"), (ASC, "ASC (action collective)"),
+               (ALL, "ALL (auto-réhabilitation)")]
+    GENERALISTE, RENFORCE, COURTE_DUREE = 'GENERALISTE', 'RENFORCE', 'COURTE_DUREE'
+    ATELIERS, AUTO_REHABILITATION = 'ATELIERS', 'AUTO_REHAB'
+    THEMATIQUES = [(GENERALISTE, "Généraliste"), (RENFORCE, "Renforcé"), (COURTE_DUREE, "Diagnostic courte durée"),
+                   (ATELIERS, "Ateliers recherche logement"), (AUTO_REHABILITATION, "Auto-réhabilitation accompagnée")]
+
+    sigle = models.CharField(max_length=60)
     nom = models.CharField(max_length=150)
-    email = models.EmailField(blank=True)
-    territoire = models.CharField(max_length=150, blank=True)
-    generaliste = models.BooleanField("ASELL généraliste", default=True)
-    renforce = models.BooleanField("ASELL renforcé", default=True)
+    adresse = models.CharField(max_length=255, blank=True)
+    cp_ville = models.CharField("Code postal et ville", max_length=100, blank=True)
+    telephone = models.CharField("Téléphone", max_length=30, blank=True)
+    emails = models.CharField("Adresses mail", max_length=255, blank=True,
+                              help_text="Une ou plusieurs, séparées par des virgules : toutes sont proposées à l'envoi.")
+    nature = models.CharField(max_length=5, choices=NATURES, default=ASELL)
+    thematique = models.CharField("Thématique", max_length=12, choices=THEMATIQUES, default=GENERALISTE)
+    territoire = models.TextField(blank=True, help_text="Tel qu'écrit dans la liste : communes, « 13e et 14e "
+                                                        "arrondissements de Marseille », « Département »…")
+    public_specifique = models.CharField("Public spécifique", max_length=255, blank=True)
+    annee = models.PositiveSmallIntegerField("Année de la convention", null=True, blank=True)
     actif = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Opérateur ASELL (destinataire des fiches)"
-        verbose_name_plural = "Opérateurs ASELL (destinataires des fiches)"
-        ordering = ['nom']
+        verbose_name = "Opérateur conventionné (ASELL)"
+        verbose_name_plural = "Opérateurs conventionnés (ASELL)"
+        ordering = ['sigle', 'thematique', 'pk']
 
     def __str__(self):
-        return self.nom
+        return f"{self.sigle} – {self.nom}" if self.nom and self.nom.upper() != self.sigle.upper() else self.sigle
+
+    @property
+    def ville(self):
+        import re
+        v = re.sub(r"^\s*\d{5}\s*", "", self.cp_ville or "")
+        return re.sub(r"\s*CEDEX.*$", "", v, flags=re.I).strip().title()
+
+    @property
+    def liste_emails(self):
+        import re
+        return re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", self.emails or "")
 
 
 class OrientationASELL(models.Model):
