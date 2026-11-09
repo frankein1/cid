@@ -38,7 +38,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import models, transaction
 
 APPS = ["core", "beneficiaire", "ged", "messagerie", "planning", "AidFi", "connecteurs", "protection_enfance",
-        "insertion"]
+        "insertion", "logement"]
 # Paramétrage et référentiels (pas de données personnelles) : jamais modifiés
 EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.DureeConservation", "core.Profil", "core.Capacite", "ged.DocumentType",
           "AidFi.ParametresAides", "AidFi.ReferentielMotifAFASE", "AidFi.MontantIndicatifAFASE",
@@ -47,7 +47,9 @@ EXCLUS = {"core.Configuration", "core.ModeleCourrier", "core.DureeConservation",
           "insertion.OrganismeOrientation", "insertion.PoleInsertion", "beneficiaire.ValeurListe", "beneficiaire.TypeAccompagnement",
           "connecteurs.MotifRDVSP", "connecteurs.ParametresRDVSP", "connecteurs.MdsRDVSP",
           "connecteurs.LieuExterneRDVSP", "connecteurs.ServiceInclusion",
-          "connecteurs.ImportInclusion", "core.User"}
+          "connecteurs.ImportInclusion", "core.User",
+          "logement.GestionnaireFSL", "logement.FormulaireOfficiel", "logement.CommissionPublicsPrioritaires",
+          "logement.DestinataireExpulsion", "logement.StructureHebergement", "logement.DestinataireHebergement"}
 # Champs courts qui portent une donnée personnelle, où qu'ils soient
 CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "numero_caf", "numero_france_travail",
                   "numero_fiscal", "numero_genesis", "numero_dossier_pmi", "code_insee_naissance",
@@ -55,7 +57,9 @@ CHAMPS_EFFACES = {"telephone", "telephone_mobile", "telephone_fixe", "nir", "num
                   "contact_telephone", "telephone_professionnel", "signalant_nom", "tiers_nom", "conjoint_referent",
                   "lieu_precis", "numero_lrar", "reference_parquet", "signature_manuscrite", "ldap_dn",
                   "dernier_emploi", "logement_precision", "precision", "situation_particuliere",
-                  "reorientation_precision", "precision_notification", "famille_libelle"}
+                  "reorientation_precision", "precision_notification", "famille_libelle",
+                  "colocataire", "numero_allocataire", "numero_exploc", "nud", "reponse", "reponse_detail",
+                  "structure_libre", "motif_autre", "tribunal", "heure_audience"}
 CHAMPS_NOM = {"nom", "nom_usage", "nom_famille"}
 CHAMPS_PRENOM = {"prenom"}
 CHAMPS_TEXTE_COURT = {"objet", "commentaire", "objet_libelle", "utilisateur_nom", "titre", "adresse", "resume",

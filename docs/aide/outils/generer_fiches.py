@@ -17,7 +17,7 @@ ORDRE = ['connexion', 'beneficiaire-chercher', 'beneficiaire-creer', 'beneficiai
          'ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine',
          'messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue',
          'journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement',
-         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
+         'fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions', 'hebergement-urgence', 'insertion-actions', 'insertion-action-locale', 'insertion-import',
          'contrat-rediger', 'contrat-pole', 'contrat-sante', 'contrat-renouveler',
          'prescription-rediger', 'prescription-pole', 'prescription-suivi', 'action-questions',
          'reorientation-demander', 'commission-reorientation', 'organismes-reorientation',
@@ -32,7 +32,8 @@ RUBRIQUES = [("Premiers pas", ['connexion']),
              ("Informations préoccupantes", ['ip-saisir', 'ip-binome', 'ip-evaluer', 'ip-synthese', 'ip-inspecteur', 'ip-saisine']),
              ("Au quotidien", ['messagerie', 'ged-deposer', 'rdv-prendre', 'rdv-issue']),
              ("Accompagnement", ['journal-accompagnement', 'budget-foyer', 'ateliers-collectifs', 'statistiques-accompagnement']),
-             ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions']),
+             ("Logement", ['fsl-acces', 'copp', 'expulsions', 'expulsions-dsf', 'expulsions-commissions',
+                           'hebergement-urgence']),
              ("Protection des données", ['journal-activite', 'archivage-rgpd']),
              ("Encadrement de la MDS", ['mds-organisation']),
              ("RSA – Insertion", ['insertion-actions', 'insertion-action-locale', 'insertion-import',
@@ -99,6 +100,7 @@ TITRES = {
     'fsl-acces': ("FSL : accès, maintien, énergie, eau", "Travailleurs sociaux, agents administratifs, cadres de MDS"),
     'expulsions': ("Prévention des expulsions", "Service Logement, agents et cadres de MDS"),
     'expulsions-commissions': ("Expulsions : CAPEX locale et commission préfectorale", "Service Logement, agents et cadres de MDS"),
+    'hebergement-urgence': ("Hébergement d'urgence : démarches, fiches, prise en charge", "Travailleurs sociaux et cadres de MDS"),
     'expulsions-dsf': ("Expulsions : convocations, diagnostic social et financier, carence", "Travailleurs sociaux et cadres de MDS"),
     'ateliers-collectifs': ("Organiser un atelier collectif", "Agents de MDS, animateurs"),
     'statistiques-accompagnement': ("Les statistiques de l'accompagnement", "Cadres de MDS, direction"),
@@ -1425,11 +1427,46 @@ page('expulsions-commissions', qui="Service Logement et cadres de MDS (séances,
              "Le formulaire d'actualisation reprend les rubriques de la fiche « Actualisation pour commission expulsion » ; les convocations suivent les modèles « Convocation avant une commission » et « Relance avant une commission »."],
      ensuite=['expulsions', 'expulsions-dsf'])
 
+page('hebergement-urgence', qui="Travailleurs sociaux de la MDS ; cadres (visa)",
+     ou="Fiche de l'usager → encart « Logement » ; Accompagnement → Hébergement d'urgence", duree="15 minutes",
+     intro="Pour un ménage en rupture d'hébergement, CID garde la trace des démarches (115, SIAO, centres maternels, DAHO), prépare les fiches à transmettre (demande d'hébergement d'urgence, orientation vers les services de l'État, renouvellement, rapport final), les fait viser par le cadre et suit la prise en charge jusqu'à son échéance. Rien n'est ressaisi : tout vient de la fiche de l'usager, de son budget et de la fiche précédente.",
+     etapes=[
+         ("Ouvrir le dossier", [fig('hebergement-urgence', '01', "Le bouton dans l'encart « Logement » de l'usager."),
+                                fig('hebergement-urgence', '02', "Les dossiers de la MDS et leurs échéances.")],
+          ["Sur la fiche de l'usager, encart « Logement » : <span class=\"clic\">Hébergement d'urgence</span>. Un seul dossier ouvert par ménage : s'il existe, CID le rouvre.",
+           "La liste (Accompagnement → Hébergement d'urgence) montre les dossiers de votre MDS, l'échéance de chaque prise en charge et ce qui attend : visa demandé, réponse attendue."], []),
+         ("Tracer les démarches", [fig('hebergement-urgence', '03', "Les démarches et leurs réponses.")],
+          ["Notez chaque démarche avec sa date et sa réponse : appel au 115, fiche SIAO instruite ou mise à jour, centres maternels (enfant de moins de 3 ans), accueil mère-enfants, recours DAHO ou DALO, solution personnelle.",
+           "CID signale ce qui manque : sans le 115 et la fiche SIAO, la demande risque l'ajournement. Ces traces servent aussi en cas de recours de la famille."], []),
+         ("Choisir la fiche", [fig('hebergement-urgence', '04', "La fiche conseillée d'après la composition du foyer.")],
+          ["CID propose la fiche d'après le foyer : <b>demande d'hébergement d'urgence</b> pour une mère isolée avec un enfant de moins de 3 ans (ou une femme enceinte de plus de trois mois : à vous de le savoir, CID ne l'enregistre pas) ; <b>orientation vers les services de l'État</b> pour un couple, une personne isolée ou un parent dont les enfants ont plus de 3 ans.",
+           "Le choix reste le vôtre : les deux boutons sont toujours proposés."], []),
+         ("Compléter la fiche", [fig('hebergement-urgence', '05', "La fiche préremplie : personnes, revenus, rubriques.")],
+          ["Les personnes du foyer, le téléphone, le dernier domicile, les revenus du budget et la demande de logement social sont repris. Vérifiez, puis rédigez le parcours logement (il doit apparaître clairement), l'histoire et le projet de la famille, votre analyse.",
+           "L'information préoccupante et la mesure éducative ne sont jamais préremplies : vous cochez vous-même.",
+           "Pour l'orientation vers l'État, le numéro de la carte d'identité ou le numéro AGDREF du titre de séjour est demandé : CID l'efface à la clôture du dossier."], []),
+         ("Visa du cadre et envoi", [fig('hebergement-urgence', '06', "Le cadre vise en un clic.")],
+          ["<span class=\"clic\">Demander le visa du cadre</span> : il est prévenu dans sa messagerie. Il clique sur <span class=\"clic\">Viser</span> (ses initiales et la date sont portées sur le PDF) ou renvoie la fiche avec ce qu'il faut compléter.",
+           "<span class=\"clic\">Envoi par mail</span> : l'adresse du service est proposée, cochez les justificatifs d'identité parmi les documents de l'usager (pièce d'identité ou titre de séjour, livret de famille). Une fiche modifiée après le visa doit être visée de nouveau."], []),
+         ("La réponse et la prise en charge", [fig('hebergement-urgence', '08', "La structure, l'entrée, la fin prévue.")],
+          ["Quelle que soit la façon dont la réponse arrive (mail, téléphone), saisissez-la sur la fiche : accord, ajournement, refus. Pour un accord, indiquez la structure et la date d'entrée : CID calcule la fin de la prise en charge (durée de la structure si elle est réglée, sinon 3 mois).",
+           "Une entrée obtenue autrement (115, centre maternel) se saisit directement dans le bloc « Prise en charge »."], []),
+         ("Renouveler à temps", [fig('hebergement-urgence', '07', "L'alerte avant l'échéance.")],
+          ["Le référent est prévenu trois semaines avant la fin. <span class=\"clic\">Renouvellement</span> : la fiche reprend la précédente, il reste à écrire ce qui a changé (démarches, éléments socio-éducatifs, projets, évaluation). Durée proposée : 3 mois pour le premier renouvellement, puis 2 mois.",
+           "À la sortie : <span class=\"clic\">Rapport final</span>, puis clôture du dossier avec son motif (logement, hébergement durable, solution personnelle…)."], []),
+         ("Statistiques", [fig('hebergement-urgence', '09', "Les comptages, sans donnée par agent.")],
+          ["Pour les cadres : dossiers, démarches tracées, fiches et réponses, entrées par structure, durée moyenne d'hébergement, motifs de clôture."], []),
+     ],
+     savoir=["Les structures d'hébergement (avec leurs durées d'accueil) et l'adresse de transmission se règlent en administration : Logement → Structures d'hébergement d'urgence, Destinataires des fiches.",
+             "Instruire une fiche engage le référent à suivre la famille, avec la structure, jusqu'à une solution durable.",
+             "La durée de conservation de ces dossiers est fixée par le délégué à la protection des données (code HEBERGEMENT_URGENCE)."],
+     ensuite=['copp', 'fsl-acces', 'expulsions'])
+
 # =============================================================================
 # Sommaire
 a_venir = ''.join(f'<a class="avenir"><b>{t}</b><span>Fiche à venir</span></a>' for t in
                   ["RSA – comités de suivi technique, suivi des heures d'activité", "Enfance",
-                   "Logement – hébergement d'urgence, orientation ASELL"])
+                   "Logement – orientation ASELL"])
 open(f'{OUT}/index.html', 'w').write(f'''<!DOCTYPE html>
 <!-- docs/aide/index.html -->
 <html lang="fr">

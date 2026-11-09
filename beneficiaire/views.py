@@ -274,6 +274,7 @@ def detail_beneficiaire(request, code_interne):
             "demandes_fsl": beneficiaire.demandes_fsl.all()[:5],
             "saisines_copp": beneficiaire.saisines_copp.select_related('commission')[:3],
             "dossiers_expulsion": dossiers_expulsion_visibles(request.user).filter(beneficiaire=beneficiaire),
+            "dossiers_hebergement": beneficiaire.dossiers_hebergement.select_related('structure')[:3],
             "peut_creer_fsl": user_peut_agir_sur_beneficiaire(request.user, beneficiaire),
             "derniers_entretiens": beneficiaire.entretiens.select_related("auteur")[:3],
             # Ne pas nommer cette clé « messages » : c'est le nom des bandeaux de notification

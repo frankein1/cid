@@ -31,6 +31,7 @@ Priorité d'une durée : la valeur importée, sinon l'ancienne clé de configura
 | `ANNUAIRE_RECHERCHES` | Les recherches dans l'annuaire des usagers peuvent être purgées plus tôt que le reste du journal, jamais plus tard. |
 | `EXPULSION_DOSSIER` | Point de départ : la clôture du dossier. Selon le sort final : **suppression** ; **anonymisation** (identité, adresse, numéros, bailleur, fiche CAF, historique, commentaires et messages effacés ; MDS, commune, dette, étapes et décision gardées pour les statistiques) ; **versement aux archives** (rien n'est détruit, les dossiers sont signalés dans les statistiques du Service Logement). Rien ne se passe tant que la durée n'est pas fixée. |
 | `EXPULSION_DSF` | Le diagnostic, le bordereau de carence et les convocations sont supprimés, s'ils doivent partir avant le dossier. |
+| `HEBERGEMENT_URGENCE` | Point de départ : la clôture du dossier. **Suppression** : le dossier disparaît ; **anonymisation** : fiches, démarches, historique et messages effacés, il reste la MDS, les dates, la structure et le motif de clôture (statistiques) ; **versement aux archives** : CID ne détruit rien. Le numéro du titre d'identité ou de séjour est effacé dès la clôture, sans attendre. |
 
 Les purges tournent une fois par jour, à la première connexion, comme celle du journal : le plan gratuit de Render n'a pas de tâche planifiée.
 

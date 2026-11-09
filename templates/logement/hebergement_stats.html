@@ -1,0 +1,35 @@
+<!-- /templates/logement/hebergement_stats.html -->
+{% extends "base.html" %}
+{% block title %}Hébergement d'urgence – statistiques{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="hebergement-stats">
+  <a href="{% url 'logement:hebergement_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Hébergement d'urgence</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-chart-column text-indigo-600 mr-2"></i>Hébergement d'urgence – statistiques</h1>
+    <form method="get"><select name="annee" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm"><option value="">Toutes les années</option>{% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}</select></form>
+  </div>
+  <p class="text-sm text-gray-600">{% if s.departemental %}Tous les territoires.{% else %}Dossiers de votre MDS.{% endif %} Comptages par dossier, sans aucune donnée par agent.</p>
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Dossiers</div><div class="text-2xl font-bold">{{ s.total }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Recherche d'une solution</div><div class="text-2xl font-bold text-amber-700">{{ s.recherche }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Hébergés</div><div class="text-2xl font-bold text-green-700">{{ s.heberges }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Clos</div><div class="text-2xl font-bold">{{ s.clos }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Échéances proches</div><div class="text-2xl font-bold">{{ s.echeances }}</div></div>
+    <div class="bg-white rounded-xl border p-4"><div class="text-xs text-gray-500">Durée moyenne d'hébergement</div><div class="text-2xl font-bold">{% if s.duree_moyenne is not None %}{{ s.duree_moyenne }} j{% else %}—{% endif %}</div></div>
+  </div>
+  <div class="grid md:grid-cols-2 gap-5 text-sm">
+    {% if s.departemental %}<div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Par MDS</h2>
+      <table class="w-full"><tbody>{% for r in s.par_mds %}<tr class="border-t"><td class="py-1">{{ r.mds__nom }}</td><td class="text-right">{{ r.n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Démarches tracées</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_demarche %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Fiches visées ou transmises</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_fiche %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Réponses aux fiches transmises</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_reponse %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Entrées par structure</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_structure %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+    <div class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Dossiers clos par motif</h2>
+      <table class="w-full"><tbody>{% for lib, n in s.par_cloture %}<tr class="border-t"><td class="py-1">{{ lib }}</td><td class="text-right">{{ n }}</td></tr>{% empty %}<tr><td class="text-gray-400">—</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
+{% endblock %}

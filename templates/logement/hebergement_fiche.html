@@ -1,0 +1,85 @@
+<!-- /templates/logement/hebergement_fiche.html -->
+{% extends "base.html" %}
+{% block title %}{{ f.get_type_fiche_display }} – {{ d.nom_complet }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="hebergement-fiche">
+  <a href="{% url 'logement:hebergement_detail' d.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Dossier {{ d.numero }}</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-bed text-indigo-600 mr-2"></i>{{ f.get_type_fiche_display }} – {{ d.nom_complet }}</h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if f.statut == 'VISEE' %}bg-green-100 text-green-800{% elif f.statut == 'ENVOYEE' %}bg-gray-200 text-gray-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ f.get_statut_display }}</span>
+  </div>
+  {% if f.statut != 'ENVOYEE' %}{% for c in controles %}<div class="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ c }} La demande risque l'ajournement : tracez la démarche dans le dossier.</div>{% endfor %}{% endif %}
+  <div class="grid lg:grid-cols-3 gap-5">
+    <form method="post" class="lg:col-span-2 space-y-4 text-sm" id="fiche-form">{% csrf_token %}
+      <fieldset {% if not peut_ecrire %}disabled{% endif %} class="space-y-4">
+      <section class="bg-white rounded-xl border p-5" id="fiche-personnes"><h2 class="font-bold text-gray-800 mb-3">Personnes concernées par l'hébergement</h2>
+        <div class="overflow-x-auto"><table class="w-full"><thead class="text-left text-gray-500 text-xs"><tr><th>Qualité</th><th>Autorité parentale</th><th>Nom</th><th>Prénom</th><th>Né(e) le</th><th>Lieu de naissance</th></tr></thead>
+          <tbody>{% for p in personnes %}<tr>
+            <td class="pr-1 py-0.5"><select name="p{{ p.i }}_qualite" class="border rounded px-1 py-1"><option value=""></option>{% for q in qualites %}<option {% if q == p.qualite %}selected{% endif %}>{{ q }}</option>{% endfor %}</select></td>
+            <td class="pr-1"><select name="p{{ p.i }}_autorite" class="border rounded px-1 py-1"><option value=""></option><option {% if p.autorite == 'oui' %}selected{% endif %}>oui</option><option {% if p.autorite == 'non' %}selected{% endif %}>non</option></select></td>
+            <td class="pr-1"><input name="p{{ p.i }}_nom" value="{{ p.nom }}" class="w-full border rounded px-2 py-1"></td>
+            <td class="pr-1"><input name="p{{ p.i }}_prenom" value="{{ p.prenom }}" class="w-full border rounded px-2 py-1"></td>
+            <td class="pr-1"><input name="p{{ p.i }}_naissance" value="{{ p.naissance }}" placeholder="jj/mm/aaaa" class="w-28 border rounded px-2 py-1"></td>
+            <td><input name="p{{ p.i }}_lieu" value="{{ p.lieu }}" class="w-full border rounded px-2 py-1"></td></tr>{% endfor %}</tbody></table></div>
+      </section>
+      <section class="bg-white rounded-xl border p-5" id="fiche-revenus"><h2 class="font-bold text-gray-800 mb-1">Revenus mensuels</h2>
+        <p class="text-xs text-gray-500 mb-3">Repris du budget du foyer s'il est tenu dans CID.</p>
+        <div class="grid md:grid-cols-2 gap-x-6 gap-y-2">{% for r in revenus %}<div class="flex items-center gap-2 {% if r.avec_detail %}md:col-span-2{% endif %}"><span class="w-40 shrink-0">{{ r.label }}</span>
+          <input name="rev_{{ r.code }}" value="{{ r.montant }}" class="w-24 border rounded px-2 py-1 text-right"><span>€</span>
+          {% if r.avec_detail %}<input name="rev_{{ r.code }}_detail" value="{{ r.detail }}" placeholder="lesquelles ?" class="flex-1 min-w-0 border rounded px-2 py-1">{% endif %}</div>{% endfor %}</div>
+      </section>
+      {% for titre, champs in sections %}
+      <section class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-3">{{ titre }}</h2>
+        <div class="grid md:grid-cols-3 gap-3">{% for c in champs %}
+          {% if c.type == 'choix' %}<label class="block">{{ c.label }}<select name="{{ c.cle }}" class="w-full border rounded px-2 py-1"><option value="">—</option>{% for o in c.options %}<option value="{{ o }}" {% if o == c.valeur %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+          {% elif c.type == 'long' %}<label class="block md:col-span-3">{{ c.label }}{% if c.aide %}<span class="block text-xs text-gray-500">{{ c.aide }}</span>{% endif %}<textarea name="{{ c.cle }}" rows="5" class="w-full border rounded px-2 py-1">{{ c.valeur }}</textarea></label>
+          {% else %}<label class="block {% if c.largeur == 2 %}md:col-span-2{% elif c.largeur == 3 %}md:col-span-3{% endif %}">{{ c.label }}<input name="{{ c.cle }}" value="{{ c.valeur }}" class="w-full border rounded px-2 py-1">{% if c.aide %}<span class="block text-xs text-gray-500">{{ c.aide }}</span>{% endif %}</label>{% endif %}
+        {% endfor %}</div></section>
+      {% endfor %}
+      </fieldset>
+      {% if f.type_fiche == 'SAS' or f.type_fiche == 'ETAT' %}<section class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Démarches d'hébergement <span class="text-xs font-normal text-gray-500">(reprises du dossier)</span></h2>
+        <ul class="space-y-1">{% for m in demarches %}<li>{{ m.date|date:"d/m/Y" }} – {{ m.get_type_demarche_display }}{% if m.precision %} – {{ m.precision }}{% endif %} : {{ m.reponse|default:"en attente" }}</li>{% empty %}<li class="text-gray-400">Aucune démarche tracée dans le dossier.</li>{% endfor %}</ul></section>{% endif %}
+      {% if peut_ecrire %}<div class="flex justify-end"><button class="px-4 py-2 bg-indigo-600 text-white rounded-lg"><i class="fas fa-save mr-1"></i>Enregistrer la fiche</button></div>{% endif %}
+    </form>
+    <div class="space-y-3 text-sm">
+      <a href="{% url 'logement:fiche_hebergement_pdf' f.pk %}" target="_blank" class="block text-center px-3 py-2 bg-indigo-600 text-white rounded-lg"><i class="fas fa-file-pdf mr-1"></i>Fiche (PDF)</a>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="fiche-visa">
+        <h2 class="font-bold text-gray-800">Visa du cadre</h2>
+        {% if f.cadre %}<p class="text-green-800"><i class="fas fa-check mr-1"></i>Visée par {{ f.cadre.get_full_name }} le {{ f.date_validation_cadre|date:"d/m/Y" }}.</p>{% else %}<p class="text-xs text-gray-500">La fiche part toujours avec l'aval du cadre : ses initiales et la date sont portées sur le PDF.</p>{% endif %}
+        {% if peut_ecrire and f.statut == 'BROUILLON' %}<form method="post" action="{% url 'logement:fiche_hebergement_action' f.pk %}">{% csrf_token %}<button name="action" value="demander_visa" class="w-full px-3 py-2 bg-amber-500 text-white rounded-lg">Demander le visa du cadre</button></form>{% endif %}
+        {% if peut_viser %}{% if f.statut == 'BROUILLON' or f.statut == 'A_VISER' %}<form method="post" action="{% url 'logement:fiche_hebergement_action' f.pk %}" class="space-y-2">{% csrf_token %}<button name="action" value="viser" class="w-full px-3 py-2 bg-green-600 text-white rounded-lg"><i class="fas fa-signature mr-1"></i>Viser (initiales et date)</button>
+          {% if f.statut == 'A_VISER' %}<input name="motif" placeholder="Ce qu'il faut compléter" class="w-full border rounded px-2 py-1"><button name="action" value="renvoyer" class="w-full px-3 py-1.5 border rounded-lg">Renvoyer à l'agent</button>{% endif %}</form>{% endif %}{% endif %}
+        {% if f.statut == 'VISEE' or f.statut == 'ENVOYEE' %}
+        <a href="{% url 'logement:envoi_dossier' 'hebergement' f.pk %}" class="block text-center px-3 py-2 bg-blue-600 text-white rounded-lg"><i class="fas fa-envelope mr-1"></i>{% if f.statut == 'ENVOYEE' %}Renvoyer par mail{% else %}Envoi par mail{% endif %}</a>
+        <p class="text-xs text-gray-500">Joignez les justificatifs d'identité (pièce d'identité ou titre de séjour, livret de famille) : ils se cochent à l'envoi, depuis les documents de l'usager.</p>{% endif %}
+      </div>
+      {% if f.statut == 'ENVOYEE' %}<div class="bg-white rounded-xl border p-4 space-y-2" id="fiche-reponse">
+        <h2 class="font-bold text-gray-800">Réponse reçue</h2>
+        {% if f.reponse %}<p><b>{{ f.get_reponse_display }}</b>{% if f.date_reponse %} le {{ f.date_reponse|date:"d/m/Y" }}{% endif %}</p>{% if f.reponse_detail %}<p class="text-gray-600">{{ f.reponse_detail }}</p>{% endif %}
+        {% elif peut_repondre %}<form method="post" action="{% url 'logement:fiche_hebergement_action' f.pk %}" class="space-y-2">{% csrf_token %}
+          <select name="reponse" id="reponse-issue" class="w-full border rounded px-2 py-1"><option value="">Réponse…</option>{% for c, l in reponses %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select>
+          <label class="block">Reçue le<input type="date" name="date_reponse" class="w-full border rounded px-2 py-1"></label>
+          <input name="detail" placeholder="Précision (motif, pièce à compléter…)" class="w-full border rounded px-2 py-1">
+          <div id="reponse-accord" class="space-y-2 hidden">
+          {% if f.type_fiche == 'SAS' or f.type_fiche == 'ETAT' %}
+          <select name="structure" class="w-full border rounded px-2 py-1"><option value="">Structure : autre…</option>{% for s in structures %}<option value="{{ s.pk }}">{{ s }}</option>{% endfor %}</select>
+          <input name="structure_libre" placeholder="Autre structure (nom)" class="w-full border rounded px-2 py-1">
+          <label class="block">Entrée le<input type="date" name="date_entree" class="w-full border rounded px-2 py-1"></label>
+          <label class="block">Fin prévue le <span class="text-xs text-gray-500">(vide : calculée d'après la structure, sinon 3 mois)</span><input type="date" name="date_fin" class="w-full border rounded px-2 py-1"></label>
+          {% elif f.type_fiche == 'RENOUV' %}<label class="block">Nouvelle fin de prise en charge<input type="date" name="date_fin" value="{{ fin_proposee|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>{% endif %}
+          </div>
+          <button name="action" value="reponse" class="px-3 py-1.5 bg-gray-800 text-white rounded">Enregistrer la réponse</button></form>
+        {% else %}<p class="text-gray-400">En attente.</p>{% endif %}
+      </div>{% endif %}
+      {% if peut_ecrire and f.statut == 'BROUILLON' %}<form method="post" action="{% url 'logement:fiche_hebergement_action' f.pk %}">{% csrf_token %}<button name="action" value="supprimer" class="text-xs text-gray-500 hover:underline">Supprimer ce brouillon</button></form>{% endif %}
+      <div class="bg-white rounded-xl border p-4"><h2 class="font-bold text-gray-800 mb-1">Historique</h2>
+        <ul class="space-y-1 text-xs text-gray-600">{% for h in f.historique reversed %}<li>{{ h.date }} – {{ h.qui }} : {{ h.action }}{% if h.detail %} ({{ h.detail }}){% endif %}</li>{% endfor %}</ul></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>(function () { var s = document.getElementById('reponse-issue'), a = document.getElementById('reponse-accord');
+  if (s && a) { s.addEventListener('change', function () { a.classList.toggle('hidden', s.value !== 'ACCORD'); }); }
+  if (location.search.indexOf('imprimer=1') > -1) { window.open("{% url 'logement:fiche_hebergement_pdf' f.pk %}", "_blank"); } })();</script>
+{% endblock %}

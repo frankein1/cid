@@ -101,3 +101,32 @@ def a_verser(aujourd_hui=None):
     if duree is None or sort_final('EXPULSION_DOSSIER') != 'ARCHIVES':
         return D.objects.none()
     return _clos_depuis(duree, aujourd_hui or timezone.localdate()).filter(anonymise_le__isnull=True)
+
+
+# ------------------------------------------------------------------------------------------------- hébergement d'urgence
+def purger_hebergement(aujourd_hui=None):
+    """HEBERGEMENT_URGENCE, à partir de la clôture. Suppression : le dossier disparaît ; anonymisation : fiches,
+    démarches, historique et messages effacés, il reste la MDS, les dates, la structure et le motif de clôture ;
+    versement aux archives : rien n'est détruit. Renvoie le nombre de dossiers traités."""
+    from logement.models import DemarcheHebergement, DossierHebergement as H, FicheHebergement
+    from messagerie.models import Message
+    aujourd_hui = aujourd_hui or timezone.localdate()
+    duree, sort = _duree('HEBERGEMENT_URGENCE'), sort_final('HEBERGEMENT_URGENCE')
+    if duree is None or sort not in ('SUPPRESSION', 'ANONYMISATION'):
+        return 0
+    qs = H.objects.filter(statut=H.CLOS, date_cloture__isnull=False, anonymise_le__isnull=True,
+                          date_cloture__lt=aujourd_hui - relativedelta(months=duree))
+    ids = list(qs.values_list('pk', flat=True))
+    if not ids:
+        return 0
+    Message.objects.filter(content_type=ContentType.objects.get_for_model(H), object_id__in=ids).delete()
+    if sort == 'SUPPRESSION':
+        H.objects.filter(pk__in=ids).delete()
+    else:
+        FicheHebergement.objects.filter(dossier__in=ids).update(donnees={}, historique=[], reponse_detail="",
+                                                                redacteur=None, cadre=None)
+        DemarcheHebergement.objects.filter(dossier__in=ids).update(precision="", reponse="", saisi_par=None)
+        H.objects.filter(pk__in=ids).update(beneficiaire=None, referent=None, historique=[], structure_libre="",
+                                            cree_par=None, anonymise_le=aujourd_hui)
+    logger.info("Hébergement d'urgence, durées de conservation : %s dossier(s)", len(ids))
+    return len(ids)

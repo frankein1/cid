@@ -13,6 +13,8 @@ from django.utils.html import format_html
 from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, ConvocationExpulsion, PassageCommission, DemandeFSL, DemandeLogementSocial,
                      DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
+from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
+                     StructureHebergement)
 
 
 @admin.register(GestionnaireFSL)
@@ -183,3 +185,37 @@ class CommissionExpulsionAdmin(admin.ModelAdmin):
     list_filter = ['type_commission', 'tenue']
     filter_horizontal = ['mds']
     inlines = [PassageCommissionInline]
+
+
+class DemarcheHebergementInline(admin.TabularInline):
+    model = DemarcheHebergement
+    extra = 0
+    raw_id_fields = ['saisi_par']
+
+
+@admin.register(StructureHebergement)
+class StructureHebergementAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'ville', 'public', 'duree_initiale_jours', 'duree_renouvellement_jours', 'actif']
+    list_filter = ['actif']
+    search_fields = ['nom', 'ville']
+
+
+@admin.register(DestinataireHebergement)
+class DestinataireHebergementAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'email', 'actif']
+
+
+@admin.register(DossierHebergement)
+class DossierHebergementAdmin(admin.ModelAdmin):
+    list_display = ['numero', 'beneficiaire', 'mds', 'statut', 'structure', 'date_entree', 'date_fin_prevue']
+    list_filter = ['statut', 'mds']
+    search_fields = ['numero', 'beneficiaire__nom', 'beneficiaire__prenom']
+    raw_id_fields = ['beneficiaire', 'referent', 'cree_par']
+    inlines = [DemarcheHebergementInline]
+
+
+@admin.register(FicheHebergement)
+class FicheHebergementAdmin(admin.ModelAdmin):
+    list_display = ['dossier', 'type_fiche', 'statut', 'redacteur', 'cadre', 'date_envoi', 'reponse']
+    list_filter = ['type_fiche', 'statut', 'reponse']
+    raw_id_fields = ['dossier', 'redacteur', 'cadre']

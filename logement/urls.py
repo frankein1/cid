@@ -52,4 +52,12 @@ urlpatterns = [
     path('expulsions/passage/<int:pk>/', views.passage_detail, name='passage_detail'),
     path('expulsions/passage/<int:pk>/actualisation.pdf', views.passage_pdf, name='passage_pdf'),
     path('expulsions/passage/<int:pk>/action/', views.passage_action, name='passage_action'),
+    path('hebergement/', views.hebergement_liste, name='hebergement_liste'),
+    path('hebergement/statistiques/', views.hebergement_stats, name='hebergement_stats'),
+    path('hebergement/nouveau/<str:code_interne>/', views.hebergement_nouveau, name='hebergement_nouveau'),
+    path('hebergement/<int:pk>/', views.hebergement_detail, name='hebergement_detail'),
+    path('hebergement/<int:pk>/action/', views.hebergement_action, name='hebergement_action'),
+    path('hebergement/fiche/<int:pk>/', views.fiche_hebergement, name='fiche_hebergement'),
+    path('hebergement/fiche/<int:pk>/fiche.pdf', views.fiche_hebergement_pdf, name='fiche_hebergement_pdf'),
+    path('hebergement/fiche/<int:pk>/action/', views.fiche_hebergement_action, name='fiche_hebergement_action'),
 ]

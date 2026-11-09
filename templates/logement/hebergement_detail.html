@@ -1,0 +1,82 @@
+<!-- /templates/logement/hebergement_detail.html -->
+{% extends "base.html" %}
+{% block title %}Hébergement d'urgence – {{ d.nom_complet }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-5" id="hebergement-detail">
+  <div class="flex flex-wrap gap-3 text-sm"><a href="{% url 'logement:hebergement_liste' %}" class="text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Hébergement d'urgence</a>
+    {% if b %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-gray-500 hover:underline">Fiche de l'usager</a>{% endif %}</div>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-bed text-indigo-600 mr-2"></i>{{ d.nom_complet }} <span class="text-base font-normal text-gray-500">{{ d.numero }}</span></h1>
+    <span class="px-3 py-1 rounded-full text-sm font-semibold {% if d.statut == 'HEBERGE' %}bg-green-100 text-green-800{% elif d.statut == 'CLOS' %}bg-gray-200 text-gray-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ d.get_statut_display }}</span>
+  </div>
+  {% if d.jours_restants is not None and d.jours_restants <= alerte %}<div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-900" id="hebergement-echeance"><i class="fas fa-hourglass-half mr-1"></i>La prise en charge se termine le {{ d.date_fin_prevue|date:"d/m/Y" }}{% if d.jours_restants < 0 %} (dépassée){% else %} (dans {{ d.jours_restants }} jours){% endif %} : le renouvellement, ou le rapport final, part avant cette date.</div>{% endif %}
+  <div class="grid lg:grid-cols-3 gap-5 text-sm">
+    <div class="lg:col-span-2 space-y-5">
+      <section class="bg-white rounded-xl border p-5" id="hebergement-demarches">
+        <h2 class="font-bold text-gray-800 mb-1">Démarches tracées</h2>
+        <p class="text-xs text-gray-500 mb-3">Le 115 et la fiche SIAO d'abord, puis les centres maternels s'il y a un enfant de moins de 3 ans, le DAHO en l'absence de réponse. Sans ces démarches, la demande risque l'ajournement ; elles servent aussi en cas de recours.</p>
+        {% for c in controles %}<div class="mb-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ c }}</div>{% endfor %}
+        <table class="w-full"><thead class="text-left text-gray-500"><tr><th class="py-1">Date</th><th>Démarche</th><th>Réponse, proposition</th><th></th></tr></thead>
+          <tbody class="divide-y">{% for m in demarches %}<tr><td class="py-1.5 whitespace-nowrap">{{ m.date|date:"d/m/Y" }}</td><td>{{ m.get_type_demarche_display }}{% if m.precision %} – {{ m.precision }}{% endif %}</td>
+            <td>{% if peut_ecrire %}<form method="post" action="{% url 'logement:hebergement_action' d.pk %}" class="flex gap-1">{% csrf_token %}<input type="hidden" name="demarche" value="{{ m.pk }}"><input name="reponse" value="{{ m.reponse }}" placeholder="en attente" class="border rounded px-2 py-0.5 w-full"><button name="action" value="demarche_reponse" class="px-2 border rounded text-xs" title="Enregistrer la réponse"><i class="fas fa-check"></i></button></form>{% else %}{{ m.reponse|default:"en attente" }}{% endif %}</td>
+            <td class="text-right">{% if peut_ecrire %}<form method="post" action="{% url 'logement:hebergement_action' d.pk %}">{% csrf_token %}<input type="hidden" name="demarche" value="{{ m.pk }}"><button name="action" value="demarche_supprimer" class="text-gray-400 hover:text-red-600" title="Retirer"><i class="fas fa-xmark"></i></button></form>{% endif %}</td></tr>
+          {% empty %}<tr><td colspan="4" class="py-2 text-gray-400">Aucune démarche tracée.</td></tr>{% endfor %}</tbody></table>
+        {% if peut_ecrire %}<form method="post" action="{% url 'logement:hebergement_action' d.pk %}" class="mt-3 grid md:grid-cols-5 gap-2 items-end" id="demarche-form">{% csrf_token %}
+          <label class="block">Date<input type="date" name="date" value="{{ aujourd_hui|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>
+          <label class="block">Démarche<select name="type_demarche" class="w-full border rounded px-2 py-1">{% for c, l in types_demarche %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select></label>
+          <label class="block">Précision<input name="precision" placeholder="lequel ?" class="w-full border rounded px-2 py-1"></label>
+          <label class="block">Réponse<input name="reponse" placeholder="si elle est connue" class="w-full border rounded px-2 py-1"></label>
+          <button name="action" value="demarche" class="px-3 py-1.5 bg-gray-800 text-white rounded"><i class="fas fa-plus mr-1"></i>Tracer</button></form>{% endif %}
+      </section>
+      <section class="bg-white rounded-xl border p-5" id="hebergement-fiches">
+        <h2 class="font-bold text-gray-800 mb-1">Fiches</h2>
+        <p class="text-xs text-gray-500 mb-3">Préremplies depuis la fiche de l'usager, son budget et la fiche précédente. Elles partent toutes avec le visa du cadre.</p>
+        <ul class="divide-y">{% for f in fiches %}<li class="py-2 flex flex-wrap justify-between gap-2"><a href="{% url 'logement:fiche_hebergement' f.pk %}" class="text-blue-700 hover:underline">{{ f.get_type_fiche_display }} – {{ f.cree_le|date:"d/m/Y" }}</a>
+          <span class="text-xs text-gray-600">{% if f.reponse %}<b>{{ f.get_reponse_display }}</b>{% if f.date_reponse %} le {{ f.date_reponse|date:"d/m/Y" }}{% endif %}{% elif f.statut == 'ENVOYEE' %}transmise le {{ f.date_envoi|date:"d/m/Y" }}, réponse attendue{% else %}{{ f.get_statut_display }}{% endif %}</span></li>
+          {% empty %}<li class="py-2 text-gray-400">Aucune fiche.</li>{% endfor %}</ul>
+        {% if peut_ecrire %}
+        {% if d.statut == 'RECHERCHE' and conseil %}<p class="mt-3 text-xs text-gray-600" id="hebergement-conseil"><i class="fas fa-lightbulb text-amber-500 mr-1"></i>D'après la composition du foyer ({{ conseil_raison }}) : {% if conseil == 'SAS' %}demande d'hébergement d'urgence{% else %}orientation vers les services de l'État{% endif %}.</p>{% endif %}
+        <form method="post" action="{% url 'logement:hebergement_action' d.pk %}" class="mt-2 flex flex-wrap gap-2">{% csrf_token %}<input type="hidden" name="action" value="fiche">
+          {% if d.statut == 'RECHERCHE' %}
+          <button name="type_fiche" value="SAS" class="px-3 py-1.5 rounded border {% if conseil == 'SAS' %}bg-indigo-600 text-white border-indigo-600{% endif %}"><i class="fas fa-plus mr-1"></i>Demande d'hébergement d'urgence</button>
+          <button name="type_fiche" value="ETAT" class="px-3 py-1.5 rounded border {% if conseil == 'ETAT' %}bg-indigo-600 text-white border-indigo-600{% endif %}"><i class="fas fa-plus mr-1"></i>Orientation vers l'État (DDETS)</button>
+          {% else %}
+          <button name="type_fiche" value="RENOUV" class="px-3 py-1.5 rounded border bg-indigo-600 text-white border-indigo-600"><i class="fas fa-rotate mr-1"></i>Renouvellement</button>
+          <button name="type_fiche" value="FINAL" class="px-3 py-1.5 rounded border"><i class="fas fa-flag-checkered mr-1"></i>Rapport final</button>{% endif %}
+        </form>{% endif %}
+      </section>
+      <section class="bg-white rounded-xl border p-5"><h2 class="font-bold text-gray-800 mb-2">Historique</h2>
+        <ul class="space-y-1 text-xs text-gray-600">{% for h in d.historique reversed %}<li>{{ h.date }} – {{ h.qui }} : <b>{{ h.action }}</b>{% if h.detail %} ({{ h.detail }}){% endif %}</li>{% endfor %}</ul></section>
+    </div>
+    <div class="space-y-3">
+      <div class="bg-white rounded-xl border p-4 space-y-1">
+        <h2 class="font-bold text-gray-800">Suivi</h2>
+        <p>{{ d.mds.nom }}</p><p>Référent social : <b>{{ d.referent.get_full_name|default:"à désigner" }}</b></p>
+        <p class="text-xs text-gray-500">Instruire une fiche engage le référent à suivre la famille, en lien avec la structure, jusqu'à une solution durable.</p>
+      </div>
+      <div class="bg-white rounded-xl border p-4 space-y-2" id="hebergement-prise-en-charge">
+        <h2 class="font-bold text-gray-800">Prise en charge</h2>
+        {% if d.date_entree %}<p><b>{{ d.nom_structure|default:"Structure à préciser" }}</b></p>
+          <p>Entrée le {{ d.date_entree|date:"d/m/Y" }}{% if d.date_sortie %}, sortie le {{ d.date_sortie|date:"d/m/Y" }}{% elif d.date_fin_prevue %}, jusqu'au <b>{{ d.date_fin_prevue|date:"d/m/Y" }}</b>{% endif %}</p>
+        {% else %}<p class="text-gray-400">Pas encore d'hébergement.</p>{% endif %}
+        {% if peut_ecrire %}<details><summary class="cursor-pointer text-blue-700 text-xs">{% if d.date_entree %}Corriger{% else %}Saisir une entrée en structure{% endif %}</summary>
+        <form method="post" action="{% url 'logement:hebergement_action' d.pk %}" class="space-y-2 mt-2">{% csrf_token %}
+          <select name="structure" class="w-full border rounded px-2 py-1"><option value="">Autre structure…</option>{% for s in structures %}<option value="{{ s.pk }}" {% if s.pk == d.structure_id %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+          <input name="structure_libre" value="{{ d.structure_libre }}" placeholder="Autre structure (nom)" class="w-full border rounded px-2 py-1">
+          <label class="block">Entrée le<input type="date" name="date_entree" value="{{ d.date_entree|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>
+          <label class="block">Fin prévue le <span class="text-xs text-gray-500">(vide : calculée)</span><input type="date" name="date_fin_prevue" value="{{ d.date_fin_prevue|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>
+          <button name="action" value="prise_en_charge" class="px-3 py-1.5 border rounded">Enregistrer</button></form></details>{% endif %}
+      </div>
+      {% if peut_ecrire %}<div class="bg-white rounded-xl border p-4 space-y-2" id="hebergement-cloture">
+        <h2 class="font-bold text-gray-800">Clore le dossier</h2>
+        <form method="post" action="{% url 'logement:hebergement_action' d.pk %}" class="space-y-2">{% csrf_token %}
+          <select name="motif" class="w-full border rounded px-2 py-1"><option value="">Motif…</option>{% for c, l in motifs %}<option value="{{ c }}">{{ l }}</option>{% endfor %}</select>
+          {% if d.date_entree and not d.date_sortie %}<label class="block">Sortie de la structure le<input type="date" name="date_sortie" value="{{ aujourd_hui|date:'Y-m-d' }}" class="w-full border rounded px-2 py-1"></label>{% endif %}
+          <button name="action" value="cloturer" class="px-3 py-1.5 border rounded">Clore</button></form>
+      </div>{% elif d.statut == 'CLOS' %}<div class="bg-white rounded-xl border p-4 space-y-2">
+        <p>Clos le {{ d.date_cloture|date:"d/m/Y" }} : <b>{{ d.get_motif_cloture_display }}</b></p>
+        {% if peut_rouvrir %}<form method="post" action="{% url 'logement:hebergement_action' d.pk %}">{% csrf_token %}<button name="action" value="rouvrir" class="px-3 py-1.5 border rounded">Rouvrir</button></form>{% endif %}</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
