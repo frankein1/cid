@@ -15,6 +15,7 @@ from django.urls import reverse
 
 from beneficiaire.views import user_peut_agir_sur_beneficiaire
 
+from ..models import OrientationASELL
 from ..models import (DemandeFSL, DestinataireExpulsion, DestinataireHebergement, FicheHebergement, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier,
                       PassageCommission, SaisineCOPP)
 from ..services import circuit, copp, envoi
@@ -67,6 +68,17 @@ class _Dossier:
             self.destinataires_proposes = [SimpleNamespace(nom=f"secrétariat – {com.nom}", email=com.email)] \
                 if com.email else []
             self.nom_personne = obj.dossier.nom_complet
+        elif nature == 'asell':
+            from types import SimpleNamespace
+            from ..services.asell import manques
+            self.libelle = "ASELL"
+            self.intitule = f"Fiche d'orientation {obj.get_type_mesure_display()} ({obj.get_volet_display().lower()})"
+            self.retour = reverse('logement:asell_detail', args=[obj.pk])
+            self.envoyable = obj.statut in (OrientationASELL.BROUILLON, OrientationASELL.ENVOYEE) and not manques(obj)
+            self.pourquoi = "Choisissez l'opérateur et rédigez l'évaluation avant l'envoi."
+            self.pieces_proposees = []
+            self.destinataires_proposes = [SimpleNamespace(nom=obj.operateur.nom, email=e)
+                                           for e in obj.operateur.liste_emails] if obj.operateur else []
         elif nature == 'hebergement':
             self.libelle = "Hébergement d'urgence"
             self.intitule = obj.get_type_fiche_display()
@@ -109,6 +121,9 @@ class _Dossier:
         if self.nature == 'hebergement':
             from ..services.hebergement_pdf import fiche_pdf
             return fiche_pdf(self.obj)
+        if self.nature == 'asell':
+            from ..services.asell import fiche_pdf as asell_pdf
+            return asell_pdf(self.obj)
         from ..services import expulsion_documents as E
         if self.nature == 'actualisation':
             from ..services.commissions import actualisation_pdf
@@ -137,6 +152,9 @@ class _Dossier:
         elif self.nature == 'hebergement':
             from ..services.hebergement import marquer_transmis
             marquer_transmis(self.obj, user, mode)
+        elif self.nature == 'asell':
+            from ..services.asell import marquer_envoyee
+            marquer_envoyee(self.obj, user, mode)
         else:
             from ..services.expulsion_mds import questionnaire_envoye
             questionnaire_envoye(self.obj, user, self.obj.questionnaire_retour_avant)
@@ -161,7 +179,7 @@ def _charger(request, nature, pk):
     if nature == 'actualisation':
         return _Dossier(nature, get_object_or_404(PassageCommission.objects.select_related('dossier__mds', 'commission'),
                                                   pk=pk))
-    modele = {'fsl': DemandeFSL, 'copp': SaisineCOPP}.get(nature)
+    modele = {'fsl': DemandeFSL, 'copp': SaisineCOPP, 'asell': OrientationASELL}.get(nature)
     if not modele:
         return None
     obj = get_object_or_404(modele.objects.select_related('beneficiaire', 'mds'), pk=pk)
@@ -246,7 +264,7 @@ def envoi_dossier(request, nature, pk):
 def _url_pdf(dos):
     nom = {'fsl': 'logement:fsl_pdf', 'copp': 'logement:copp_pdf', 'dsf': 'logement:diagnostic_pdf',
            'bailleur': 'logement:questionnaire_pdf', 'actualisation': 'logement:passage_pdf',
-           'hebergement': 'logement:fiche_hebergement_pdf'}[dos.nature]
+           'hebergement': 'logement:fiche_hebergement_pdf', 'asell': 'logement:asell_pdf'}[dos.nature]
     return reverse(nom, args=[dos.obj.pk])
 
 

@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+{# templates/admin/logement/operateurasell/change_list.html #}
+{% block object-tools-items %}
+  <li><a href="{% url 'admin:logement_operateurasell_modele' %}">Télécharger le modèle (CSV)</a></li>
+  <li><a href="{% url 'admin:logement_operateurasell_importer' %}">Importer la liste annuelle</a></li>
+  {{ block.super }}
+{% endblock %}
+{% block content %}
+  <p style="max-width:62em">Liste annuelle des opérateurs conventionnés (accompagnement social lié au FSL), une ligne par
+    opérateur et par thématique. Elle vient du tableau du Département : l'importer remplace la liste active (l'ancienne
+    reste consultable). Les usagers ne voient que les lignes actives, selon la commune de leur logement.</p>
+  {{ block.super }}
+{% endblock %}

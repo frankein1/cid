@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{# templates/admin/logement/operateurasell/importer.html #}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Accueil</a> ›
+  <a href="{% url 'admin:logement_operateurasell_changelist' %}">Opérateurs ASELL</a> › Importer</div>{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p style="max-width:60em">Fichier du Département (CSV ou Excel), avec les colonnes : sigle, nom, adresse, code postal et
+  ville, téléphone, adresses mail, territoires, nature, thématique, complément thématique. Les cellules fusionnées
+  peuvent rester vides : la ligne reprend l'opérateur du dessus. À la moindre erreur, rien n'est enregistré.</p>
+{% if erreurs %}<ul class="errorlist">{% for e in erreurs %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Importer">
+</form>
+{% endblock %}

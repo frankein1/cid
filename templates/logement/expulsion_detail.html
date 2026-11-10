@@ -53,6 +53,7 @@
           <form method="post" action="{% url 'logement:fsl_nouvelle' d.beneficiaire.code_interne %}">{% csrf_token %}<button name="type_aide" value="MAINTIEN" class="px-3 py-1.5 border rounded"><i class="fas fa-hand-holding-dollar mr-1"></i>FSL maintien ou concordat</button></form>
           <form method="post" action="{% url 'logement:copp_nouvelle' d.beneficiaire.code_interne %}">{% csrf_token %}<button class="px-3 py-1.5 border rounded"><i class="fas fa-people-roof mr-1"></i>Saisine COPP</button></form>
           <a href="{% url 'logement:logement_social' d.beneficiaire.code_interne %}" class="px-3 py-1.5 border rounded"><i class="fas fa-key mr-1"></i>Demande de logement social</a>
+          <form method="post" action="{% url 'logement:asell_nouvelle' d.beneficiaire.code_interne %}">{% csrf_token %}<input type="hidden" name="dossier_expulsion" value="{{ d.pk }}"><input type="hidden" name="volet" value="MAINTIEN"><button name="type_mesure" value="RENFORCE" class="px-3 py-1.5 border rounded"><i class="fas fa-hands-holding-circle mr-1"></i>Orientation ASELL renforcé</button></form>
         </div>
         <p class="text-xs text-gray-500 mt-2">Préremplis depuis la fiche de l'usager ; ils restent visibles dans son encart « Logement ».</p>
       </div>{% endif %}
