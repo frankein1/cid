@@ -289,6 +289,15 @@ def pieces_proposees(f):
     return list(_documents_identite(b).values()) if b else []
 
 
+def pieces_non_jointes(f, cochees):
+    """Ce qui empêche l'envoi : pièces de la GED non jointes au formulaire, et pièces absentes de la GED."""
+    out = []
+    if {d.pk for d in pieces_proposees(f)} - set(cochees):
+        out.append("pièce(s) de la GED non jointes au formulaire")
+    out += [f"absente de la GED : {m}" for m in pieces_manquantes(f)]
+    return out
+
+
 def _rappel(code, complement=""):
     """None si le rappel est décoché dans l'administration. Le texte et la référence viennent de l'administration,
     à défaut du texte de la note."""

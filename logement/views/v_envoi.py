@@ -182,6 +182,20 @@ def envoi_dossier(request, nature, pk):
         action = request.POST.get('action')
         ids = {int(x) for x in request.POST.getlist('pieces') if x.isdigit()}
         joints = [d for d in docs_usager if d.pk in ids]
+        if dos.nature == 'hebergement' and action in ('mail', 'imprimer'):
+            from ..services import hebergement as H
+            manque = H.pieces_non_jointes(dos.obj, ids)
+            justif = (request.POST.get('justification_pieces') or '').strip()
+            if len(justif) > 200:
+                messages.error(request, "La justification ne dépasse pas 200 caractères.")
+                return redirect(request.path)
+            if manque and not justif:
+                messages.error(request, "Pièces non jointes : " + " ; ".join(manque) + ". Joignez-les, ou justifiez "
+                                                                             "leur absence (200 caractères).")
+                return redirect(request.path)
+            if manque:
+                dos.obj.tracer(request.user, "Envoi sans pièce(s)", f"{' ; '.join(manque)} — {justif}")
+                dos.obj.save()
         pdf = dos.pdf()
         pages = envoi.pages_a4(pdf) + sum(envoi.pages_document(d) for d in joints)
         if action == 'imprimer':

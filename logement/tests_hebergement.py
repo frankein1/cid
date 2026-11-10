@@ -105,7 +105,8 @@ class HebergementTests(_Base):
         self.assertContains(self.ts_c.get(f"/logement/envoi/hebergement/{f.pk}/"), "appui@example.com")
         with override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
             self.ts_c.post(f"/logement/envoi/hebergement/{f.pk}/", {"action": "mail", "destinataire": "appui@example.com",
-                                                                     "objet": "Demande", "message": "Bonjour"})
+                                                                     "objet": "Demande", "message": "Bonjour",
+                                                                     "justification_pieces": "Pièces en cours (fictif)."})
         f.refresh_from_db()
         self.assertEqual((f.statut, len(mail.outbox)), (F.ENVOYEE, 1))
         self.assertTrue(EnvoiDossier.objects.filter(mode="MAIL").exists())

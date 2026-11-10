@@ -102,3 +102,21 @@ class RappelsHebergementTests(_Base):
         RH.objects.filter(code='OQTF').update(actif=False)
         self.assertNotIn('OQTF', self.codes(g))
 
+    def test_envoi_bloque_sans_piece_puis_accepte_la_justification(self):
+        f = self.fiche(F.SAS)
+        F.objects.filter(pk=f.pk).update(statut=F.VISEE)
+        url = f"/logement/envoi/hebergement/{f.pk}/"
+        r = self.ts_c.post(url, {"action": "mail", "destinataire": "appui@example.com"})
+        self.assertRedirects(r, url, fetch_redirect_response=False)                  # pièces absentes : refusé
+        f.refresh_from_db()
+        self.assertFalse(any(h['action'] == 'Envoi sans pièce(s)' for h in f.historique))
+        trop_long = "x" * 201
+        r = self.ts_c.post(url, {"action": "mail", "destinataire": "appui@example.com",
+                                 "justification_pieces": trop_long})
+        self.assertRedirects(r, url, fetch_redirect_response=False)                  # justification au-delà de 200
+        r = self.ts_c.post(url, {"action": "mail", "destinataire": "appui@example.com",
+                                 "justification_pieces": "Ménage arrivé d'Italie, pièces en cours de demande."})
+        self.assertNotEqual(r['Location'], url)                                      # justification acceptée : l'envoi part
+        f.refresh_from_db()
+        self.assertTrue(any(h['action'] == 'Envoi sans pièce(s)' for h in f.historique))
+
