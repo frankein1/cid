@@ -21,7 +21,8 @@ class DossierExpulsionForm(forms.ModelForm):
         fields = ['origine', 'date_reception', 'mds', 'nom', 'prenom', 'colocataire', 'adresse', 'code_postal', 'ville',
                   'proprietaire', 'proprietaire_email', 'type_bailleur', 'date_signature_bail', 'loyer_total', 'loyer', 'charges', 'dette',
                   'dette_au', 'numero_allocataire', 'numero_exploc', 'observation_caf', 'retour_le', 'association', 'ccas',
-                  'tribunal', 'date_audience', 'heure_audience', 'date_decision', 'observations']
+                  'tribunal', 'date_audience', 'heure_audience', 'date_decision', 'observations',
+                  'observations_locataire']
         widgets = {'date_reception': DATE, 'date_signature_bail': DATE, 'dette_au': DATE, 'retour_le': DATE,
                    'date_audience': DATE, 'date_decision': DATE,
                    'proprietaire': forms.Textarea(attrs={'rows': 3}), 'observations': forms.Textarea(attrs={'rows': 3})}

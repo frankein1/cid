@@ -52,6 +52,10 @@ class ExpulsionMDSTests(_Base):
         self.assertEqual(deuxieme.type_convocation, C.DSF_2)
         self.c.post(f"/logement/expulsions/convocation/{deuxieme.pk}/noter/", {"statut": "ABSENT"})
         r = self.c.get(f"/logement/expulsions/{self.d.pk}/")
+        self.assertFalse(r.context["carence_possible"])              # le bailleur n'a pas encore été sollicité
+        self.d.questionnaire_bailleur_le = timezone.localdate()
+        self.d.save()
+        r = self.c.get(f"/logement/expulsions/{self.d.pk}/")
         self.assertTrue(r.context["carence_possible"])
         # un agent d'une autre MDS ne convoque pas
         self.assertEqual(self.client_de(self.ts_autre).post(f"/logement/expulsions/{self.d.pk}/convoquer/",
