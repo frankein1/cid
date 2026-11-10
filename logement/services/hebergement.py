@@ -228,6 +228,51 @@ def controles(d, type_fiche):
     return out
 
 
+NOTE_SOURCE = "fiche méthodologique hébergement d'urgence du 27/05/2024 (DGAS – DITAS)"
+ADRESSE_SAS = "sas@departement13.fr"
+
+
+def rappels(f):
+    """Écarts entre la note et la fiche, affichés à l'ouverture : l'agent les lit (OK) avant de travailler la fiche.
+    Un rappel n'est jamais un champ de saisie : il vient confirmer que l'information a été lue."""
+    if f.type_fiche not in (F.SAS, F.ETAT, F.RENOUVELLEMENT):
+        return []
+    d = f.dossier
+    out = [{'code': 'OQTF', 'texte': "Vérifiez si la personne n'est pas sous OQTF (obligation de quitter le "
+                                     "territoire français) : les publics ayant une OQTF ne sont pas pris en charge par "
+                                     "la DDETS, leur seule possibilité reste un appel direct au 115."},
+           {'code': 'PIECES', 'texte': "La fiche est adressée avec les justificatifs d'identité : carte de séjour, "
+                                       "carte d'identité, passeport et livret de famille."}]
+    if f.type_fiche == F.ETAT:
+        if not (f.donnees or {}).get('identite_numero'):
+            out.append({'code': 'AGDREF', 'texte': "Si la personne est de nationalité étrangère, le numéro AGDREF "
+                                                   "(10 chiffres du titre de séjour) doit être inscrit."})
+        out.append({'code': 'SAS_SEUL', 'texte': f"La fiche DDETS ne se transmet que par le SAS ({ADRESSE_SAS}), "
+                                                 "jamais directement à la DDETS."})
+    if f.type_fiche == F.SAS:
+        out.append({'code': 'DROITS', 'texte': "Le SAS retient les familles ayant des droits ouverts ou en cours "
+                                               "d'ouverture, ou des ressources : mentionnez-le dans la fiche."})
+    if not d.demarches.filter(type_demarche='MECS').exists():
+        out.append({'code': 'MECS', 'texte': "Contactez la MECS la Draille dès l'entrée de la famille, ou tracez "
+                                             "la démarche dans le dossier."})
+    return out
+
+
+def rappels_non_lus(f):
+    lus = {h.get('detail') for h in (f.historique or []) if h.get('action') == 'Rappel lu'}
+    return [r for r in rappels(f) if r['code'] not in lus]
+
+
+def accuser(f, user, codes):
+    """Enregistre la lecture des rappels présentés (seuls ceux qui s'appliquent à la fiche sont retenus)."""
+    valides = {r['code'] for r in rappels(f)}
+    lus = [c for c in codes if c in valides]
+    for c in lus:
+        f.tracer(user, 'Rappel lu', c)
+    if lus:
+        f.save()
+    return lus
+
 # ------------------------------------------------------------------------------------------------- préremplissage
 def _montant(v):
     v = Decimal(v).quantize(Decimal('0.01'))

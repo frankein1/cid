@@ -201,6 +201,7 @@ def fiche_hebergement(request, pk):
         'f': f, 'd': d, 'b': d.beneficiaire, 'sections': sections, 'personnes': personnes, 'revenus': revenus,
         'qualites': H.QUALITES, 'peut_ecrire': ecrire, 'peut_viser': H.peut_viser(request.user, d),
         'peut_repondre': H.peut_ecrire(request.user, d), 'controles': H.controles(d, f.type_fiche),
+        'rappels': H.rappels_non_lus(f) if ecrire else [], 'note_source': H.NOTE_SOURCE,
         'demarches': d.demarches.all(), 'reponses': F.REPONSES,
         'structures': StructureHebergement.objects.filter(actif=True),
         'fin_proposee': H.fin_apres(debut, H.duree_renouvellement(d)) if debut else None})
@@ -245,6 +246,9 @@ def fiche_hebergement_action(request, pk):
                 date_entree=parse_date(p.get('date_entree') or ''), date_fin=parse_date(p.get('date_fin') or ''))
             messages.success(request, "Réponse enregistrée.")
             return redirect('logement:hebergement_detail', pk=d.pk)
+    elif action == 'rappels_lus' and ecrire:
+        H.accuser(f, user, p.getlist('codes'))
+        return redirect('logement:fiche_hebergement', pk=f.pk)
     elif action == 'supprimer' and ecrire and f.statut == F.BROUILLON:
         d.tracer(user, "Fiche supprimée (brouillon)", f.get_type_fiche_display())
         d.save()

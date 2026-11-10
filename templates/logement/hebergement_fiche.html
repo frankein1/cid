@@ -8,6 +8,19 @@
     <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-bed text-indigo-600 mr-2"></i>{{ f.get_type_fiche_display }} – {{ d.nom_complet }}</h1>
     <span class="px-3 py-1 rounded-full text-sm font-semibold {% if f.statut == 'VISEE' %}bg-green-100 text-green-800{% elif f.statut == 'ENVOYEE' %}bg-gray-200 text-gray-700{% else %}bg-amber-100 text-amber-800{% endif %}">{{ f.get_statut_display }}</span>
   </div>
+  {% if rappels %}
+  <div id="rappels" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="rappels-titre">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 space-y-3 text-sm text-gray-900">
+      <h2 id="rappels-titre" class="text-lg font-bold text-indigo-900"><i class="fas fa-book mr-1"></i>Conformément à la {{ note_source }}</h2>
+      <ul class="list-disc pl-5 space-y-2">{% for r in rappels %}<li>{{ r.texte }}</li>{% endfor %}</ul>
+      <form method="post" action="{% url 'logement:fiche_hebergement_action' f.pk %}" class="text-right">{% csrf_token %}
+        <input type="hidden" name="action" value="rappels_lus">
+        {% for r in rappels %}<input type="hidden" name="codes" value="{{ r.code }}">{% endfor %}
+        <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold">OK</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
   {% if f.statut != 'ENVOYEE' %}{% for c in controles %}<div class="p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900"><i class="fas fa-triangle-exclamation mr-1"></i>{{ c }} La demande risque l'ajournement : tracez la démarche dans le dossier.</div>{% endfor %}{% endif %}
   <div class="grid lg:grid-cols-3 gap-5">
     <form method="post" class="lg:col-span-2 space-y-4 text-sm" id="fiche-form">{% csrf_token %}
