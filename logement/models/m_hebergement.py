@@ -42,6 +42,8 @@ class DestinataireHebergement(models.Model):
     """Adresse à laquelle les fiches sont transmises (boîte générique du service départemental), en administration."""
     nom = models.CharField(max_length=150, help_text="Ex. « Service d'appui à l'hébergement »")
     email = models.EmailField()
+    est_sas = models.BooleanField("Adresse du SAS (fiches DDETS)", default=False,
+                                  help_text="La fiche DDETS ne se transmet que par le SAS.")
     actif = models.BooleanField(default=True)
 
     class Meta:
@@ -194,3 +196,24 @@ class FicheHebergement(models.Model):
     @property
     def modifiable(self):
         return self.statut != self.ENVOYEE
+
+
+class RappelHebergement(models.Model):
+    """Texte d'un rappel de la note affiché en popup à l'ouverture de la fiche. Vide ou absent : texte par défaut.
+    Décoché : le rappel n'est plus affiché."""
+    CODES = [('OQTF', "OQTF"), ('PIECES', "Pièces d'identité (GED)"), ('AGDREF', "Numéro AGDREF"),
+             ('SAS_SEUL', "DDETS uniquement par le SAS"), ('DROITS', "Droits ouverts (SAS)"),
+             ('MECS', "MECS la Draille")]
+    code = models.CharField(max_length=10, choices=CODES, unique=True)
+    texte = models.TextField(blank=True, help_text="Texte affiché dans le popup. {sas} = adresse du SAS.")
+    reference = models.CharField("Référence de la note", max_length=200, blank=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Rappel de la note (popup)"
+        verbose_name_plural = "Rappels de la note (popup)"
+        ordering = ['code']
+
+    def __str__(self):
+        return self.get_code_display()
+

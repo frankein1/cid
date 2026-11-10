@@ -73,8 +73,12 @@ class _Dossier:
             self.retour = reverse('logement:fiche_hebergement', args=[obj.pk])
             self.envoyable = obj.statut in (FicheHebergement.VISEE, FicheHebergement.ENVOYEE)
             self.pourquoi = "La fiche part avec le visa du cadre : demandez-le d'abord."
-            self.pieces_proposees = []
-            self.destinataires_proposes = list(DestinataireHebergement.objects.filter(actif=True))
+            from ..services.hebergement import pieces_proposees as pieces_hu
+            self.pieces_proposees = pieces_hu(obj)
+            destinataires = DestinataireHebergement.objects.filter(actif=True)
+            if obj.type_fiche == FicheHebergement.ETAT and destinataires.filter(est_sas=True).exists():
+                destinataires = destinataires.filter(est_sas=True)
+            self.destinataires_proposes = list(destinataires)
             self.nom_personne = obj.dossier.nom_complet
         else:                                                  # 'bailleur'
             self.libelle = "Questionnaire bailleur"

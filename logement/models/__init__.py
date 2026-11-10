@@ -10,5 +10,5 @@ from .m_copp import CommissionPublicsPrioritaires, SaisineCOPP  # noqa: F401
 from .m_envoi import EnvoiDossier  # noqa: F401
 from .m_expulsion import (CommissionExpulsion, ConvocationExpulsion, DestinataireExpulsion,  # noqa: F401
                           DiagnosticExpulsion, DossierExpulsion, EtapeExpulsion, PassageCommission)
-from .m_hebergement import (DemarcheHebergement, DestinataireHebergement, DossierHebergement,  # noqa: F401
+from .m_hebergement import (RappelHebergement, DemarcheHebergement, DestinataireHebergement, DossierHebergement,  # noqa: F401
                             FicheHebergement, StructureHebergement)

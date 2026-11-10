@@ -25,7 +25,8 @@ from dateutil.relativedelta import relativedelta
 from django.db.models import Count
 from django.utils import timezone
 
-from logement.models import (DemarcheHebergement as M, DossierHebergement as D, FicheHebergement as F)
+from logement.models import (DemarcheHebergement as M, DestinataireHebergement, DossierHebergement as D,
+                             FicheHebergement as F)
 
 from .expulsion import est_admin, mds_de
 
@@ -54,6 +55,10 @@ SECTIONS = {
             _c('identite_type', "Document d'identité (carte d'identité, passeport, livret de famille…)", largeur=2),
             _c('identite_validite', "Valable jusqu'au"),
             _c('sejour_validite', "Titre de séjour valable jusqu'au"), _c('sejour_mention', "Mention du titre de séjour", largeur=2),
+            _c('oqtf', "Situation OQTF", R, ["non", "oui", "ne sait pas"]),
+            _c('droits', "Droits ouverts ou en cours d'ouverture", R,
+               ["droits ouverts", "droits en cours d'ouverture", "ressources, sans droits", "aucun droit ni ressource"]),
+            _c('mecs', "MECS la Draille sollicitée", R, ["oui", "non", "ne sait pas"]),
             _c('ip', "Information préoccupante en cours", R, ["oui", "non"]),
             _c('mesure_educative', "Mesure éducative en cours", R, ["oui", "non"])] + _COORD),
         ("Parcours et projet", [
@@ -70,7 +75,10 @@ SECTIONS = {
             _c('identite_type', "Document d'identité ou de séjour (préciser)", largeur=2),
             _c('identite_validite', "Valable jusqu'au"),
             _c('identite_numero', "Numéro (carte d'identité, ou AGDREF à 10 chiffres du titre de séjour)", largeur=2,
-               aide="Demandé par les services de l'État. Effacé de CID à la clôture du dossier.")] + _COORD),
+               aide="Demandé par les services de l'État. Effacé de CID à la clôture du dossier."),
+            _c('oqtf', "Situation OQTF", R, ["non", "oui", "ne sait pas"]),
+            _c('mecs', "MECS la Draille sollicitée", R, ["oui", "non", "ne sait pas"]),
+            _c('via_sas', "Fiche transmise par le SAS", R, ["oui"])] + _COORD),
         ("Situation familiale", [
             _c('situation_familiale', "Parcours familial, situation des enfants (scolarité, santé), projet de la "
                                       "famille", L,
@@ -81,7 +89,9 @@ SECTIONS = {
         ("Prise en charge", [
             _c('structure', "Structure d'hébergement", largeur=2), _c('date_entree', "Entrée dans la structure le"),
             _c('renouvellement_du', "Renouvellement à compter du"), _c('duree', "Durée demandée", R, ["1 mois", "2 mois", "3 mois"]),
-            _c('fin_prevue', "Fin de prise en charge prévue le")] + _COORD[1:]),
+            _c('fin_prevue', "Fin de prise en charge prévue le"),
+            _c('oqtf', "Situation OQTF", R, ["non", "oui", "ne sait pas"]),
+            _c('mecs', "MECS la Draille sollicitée", R, ["oui", "non", "ne sait pas"])] + _COORD[1:]),
         ("Accompagnement depuis l'entrée", [
             _c('demarches_administratives', "Démarches administratives (droits, titre de séjour, ressources)", L),
             _c('parcours_demarches', "Parcours logement : démarches depuis le début de la prise en charge (SIAO, CHRS, "
@@ -229,33 +239,91 @@ def controles(d, type_fiche):
 
 
 NOTE_SOURCE = "fiche méthodologique hébergement d'urgence du 27/05/2024 (DGAS – DITAS)"
-ADRESSE_SAS = "sas@departement13.fr"
+RAPPELS_DEFAUT = {
+    'OQTF': "Vérifiez si la personne n'est pas sous OQTF (obligation de quitter le territoire français) : les publics "
+            "ayant une OQTF ne sont pas pris en charge par la DDETS, leur seule possibilité reste un appel direct au 115.",
+    'PIECES': "La fiche est adressée avec les justificatifs d'identité : carte de séjour, carte d'identité, passeport "
+              "et livret de famille.",
+    'AGDREF': "Si la personne est de nationalité étrangère, le numéro AGDREF (10 chiffres du titre de séjour) doit "
+              "être inscrit.",
+    'SAS_SEUL': "La fiche DDETS ne se transmet que par le SAS ({sas}), jamais directement à la DDETS.",
+    'DROITS': "Le SAS retient les familles ayant des droits ouverts ou en cours d'ouverture, ou des ressources : "
+              "mentionnez-le dans la fiche.",
+    'MECS': "Contactez la MECS la Draille dès l'entrée de la famille, ou tracez la démarche dans le dossier.",
+}
+IDENTITE_CODES = ('CI', 'PASSEPORT', 'TITRE_SEJOUR', 'LIVRET_FAMILLE')
+
+
+def sas_email():
+    sas = DestinataireHebergement.objects.filter(actif=True, est_sas=True).first()
+    return sas.email if sas else "l'adresse du SAS (à paramétrer dans l'administration)"
+
+
+def _documents_identite(b):
+    """Documents GED du demandeur (et du foyer) : {code de type: DocumentGED}."""
+    from django.contrib.contenttypes.models import ContentType
+    from beneficiaire.models import Beneficiaire
+    from ged.models import DocumentGED
+    qs = DocumentGED.objects.filter(content_type=ContentType.objects.get_for_model(Beneficiaire), object_id=b.pk,
+                                    type_document__code__in=IDENTITE_CODES).select_related('type_document')
+    return {doc.type_document.code: doc for doc in qs.order_by('-pk')}
+
+
+def pieces_manquantes(f):
+    """Pièces de la note absentes de la GED : CID le dit au TS, qui complète le dossier avant l'envoi."""
+    b = f.dossier.beneficiaire
+    if not b:
+        return []
+    docs = _documents_identite(b)
+    manque = []
+    if not {'CI', 'PASSEPORT', 'TITRE_SEJOUR'} & set(docs):
+        manque.append("pièce d'identité ou titre de séjour")
+    if any(x['role'] == 'ENFANT' for x in menage(b)) and 'LIVRET_FAMILLE' not in docs:
+        manque.append("livret de famille")
+    return manque
+
+
+def pieces_proposees(f):
+    """Documents GED joints par défaut à la fiche envoyée (carte, passeport, titre de séjour, livret)."""
+    b = f.dossier.beneficiaire
+    return list(_documents_identite(b).values()) if b else []
+
+
+def _rappel(code, complement=""):
+    """None si le rappel est décoché dans l'administration. Le texte et la référence viennent de l'administration,
+    à défaut du texte de la note."""
+    from logement.models import RappelHebergement as RH
+    r = RH.objects.filter(code=code).first()
+    if r and not r.actif:
+        return None
+    texte = (r.texte.strip() if r and r.texte.strip() else RAPPELS_DEFAUT[code]).replace('{sas}', sas_email())
+    return {'code': code, 'texte': (texte + complement).strip(),
+            'reference': (r.reference.strip() if r and r.reference.strip() else NOTE_SOURCE)}
 
 
 def rappels(f):
-    """Écarts entre la note et la fiche, affichés à l'ouverture : l'agent les lit (OK) avant de travailler la fiche.
-    Un rappel n'est jamais un champ de saisie : il vient confirmer que l'information a été lue."""
+    """Écarts entre la note et la fiche, affichés en popup à l'ouverture : l'agent les lit (OK) avant de travailler la
+    fiche. Un champ dédié renseigné fait disparaître le rappel. Un rappel n'est jamais un champ de saisie."""
     if f.type_fiche not in (F.SAS, F.ETAT, F.RENOUVELLEMENT):
         return []
-    d = f.dossier
-    out = [{'code': 'OQTF', 'texte': "Vérifiez si la personne n'est pas sous OQTF (obligation de quitter le "
-                                     "territoire français) : les publics ayant une OQTF ne sont pas pris en charge par "
-                                     "la DDETS, leur seule possibilité reste un appel direct au 115."},
-           {'code': 'PIECES', 'texte': "La fiche est adressée avec les justificatifs d'identité : carte de séjour, "
-                                       "carte d'identité, passeport et livret de famille."}]
+    d, donnees = f.dossier, f.donnees or {}
+    candidats = []
+    if not donnees.get('oqtf'):
+        candidats.append(_rappel('OQTF'))
+    manque = pieces_manquantes(f)
+    if manque:
+        candidats.append(_rappel('PIECES', " Absents du dossier de la personne : " + ", ".join(manque)
+                                 + ". Complétez-le avant l'envoi."))
     if f.type_fiche == F.ETAT:
-        if not (f.donnees or {}).get('identite_numero'):
-            out.append({'code': 'AGDREF', 'texte': "Si la personne est de nationalité étrangère, le numéro AGDREF "
-                                                   "(10 chiffres du titre de séjour) doit être inscrit."})
-        out.append({'code': 'SAS_SEUL', 'texte': f"La fiche DDETS ne se transmet que par le SAS ({ADRESSE_SAS}), "
-                                                 "jamais directement à la DDETS."})
-    if f.type_fiche == F.SAS:
-        out.append({'code': 'DROITS', 'texte': "Le SAS retient les familles ayant des droits ouverts ou en cours "
-                                               "d'ouverture, ou des ressources : mentionnez-le dans la fiche."})
-    if not d.demarches.filter(type_demarche='MECS').exists():
-        out.append({'code': 'MECS', 'texte': "Contactez la MECS la Draille dès l'entrée de la famille, ou tracez "
-                                             "la démarche dans le dossier."})
-    return out
+        if not donnees.get('identite_numero'):
+            candidats.append(_rappel('AGDREF'))
+        if not donnees.get('via_sas'):
+            candidats.append(_rappel('SAS_SEUL'))
+    if f.type_fiche == F.SAS and not donnees.get('droits'):
+        candidats.append(_rappel('DROITS'))
+    if not donnees.get('mecs') and not d.demarches.filter(type_demarche='MECS').exists():
+        candidats.append(_rappel('MECS'))
+    return [r for r in candidats if r]
 
 
 def rappels_non_lus(f):

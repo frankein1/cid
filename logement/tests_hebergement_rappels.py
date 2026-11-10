@@ -66,3 +66,39 @@ class RappelsHebergementTests(_Base):
         f = self.fiche(F.SAS)
         F.objects.filter(pk=f.pk).update(statut=F.ENVOYEE)
         self.assertNotContains(self.ts_c.get(f"/logement/hebergement/fiche/{f.pk}/"), 'id="rappels"')
+
+    def test_champs_dedies_font_disparaitre_le_rappel(self):
+        f = self.fiche(F.SAS)
+        f.donnees = {'oqtf': 'non', 'droits': 'droits ouverts', 'mecs': 'oui'}
+        f.save()
+        self.assertEqual(self.codes(f), ['PIECES'])
+        g = self.fiche(F.ETAT)
+        g.donnees = {'oqtf': 'non', 'identite_numero': '1234567890', 'via_sas': 'oui', 'mecs': 'non'}
+        g.save()
+        self.assertEqual(self.codes(g), ['PIECES'])
+
+    def test_piece_identite_dans_la_ged_retire_le_rappel_pieces(self):
+        from django.contrib.contenttypes.models import ContentType
+        from ged.models import DocumentGED, DocumentType
+        from beneficiaire.models import Beneficiaire
+        f = self.fiche(F.SAS)
+        self.assertIn('PIECES', self.codes(f))
+        self.assertIn("pièce d'identité ou titre de séjour", H.pieces_manquantes(f))
+        t = DocumentType.objects.get_or_create(code='CI', defaults={'nom': "Carte d'identité", 'categorie': 'IDENTITE'})[0]
+        DocumentGED.objects.create(content_type=ContentType.objects.get_for_model(Beneficiaire), object_id=self.b.pk,
+                                   type_document=t, titre="CI (fictive).pdf", seaweedfs_id="fictif", extension="pdf")
+        self.assertNotIn('PIECES', self.codes(f))
+
+    def test_adresse_sas_et_texte_personnalisable_depuis_l_administration(self):
+        from .models import RappelHebergement as RH
+        self.assertEqual(H.sas_email(), "l'adresse du SAS (à paramétrer dans l'administration)")
+        DestinataireHebergement.objects.create(nom="SAS (fictif)", email="sas@example.org", est_sas=True)
+        g = self.fiche(F.ETAT)
+        self.assertIn("sas@example.org", [r['texte'] for r in H.rappels(g) if r['code'] == 'SAS_SEUL'][0])
+        RH.objects.create(code='OQTF', texte="Texte local : vérifiez l'OQTF.", reference="Note locale 2026")
+        textes = {r['code']: r for r in H.rappels(g)}
+        self.assertEqual(textes['OQTF']['texte'], "Texte local : vérifiez l'OQTF.")
+        self.assertEqual(textes['OQTF']['reference'], "Note locale 2026")
+        RH.objects.filter(code='OQTF').update(actif=False)
+        self.assertNotIn('OQTF', self.codes(g))
+

@@ -14,7 +14,7 @@ from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, Convoca
                      DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
-                     StructureHebergement)
+                     RappelHebergement, StructureHebergement)
 
 
 @admin.register(GestionnaireFSL)
@@ -202,7 +202,15 @@ class StructureHebergementAdmin(admin.ModelAdmin):
 
 @admin.register(DestinataireHebergement)
 class DestinataireHebergementAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'email', 'actif']
+    list_display = ['nom', 'email', 'est_sas', 'actif']
+    list_editable = ['est_sas']
+
+
+@admin.register(RappelHebergement)
+class RappelHebergementAdmin(admin.ModelAdmin):
+    list_display = ['code', 'actif']
+    list_editable = ['actif']
+    fields = ['code', 'texte', 'reference', 'actif']
 
 
 @admin.register(DossierHebergement)
