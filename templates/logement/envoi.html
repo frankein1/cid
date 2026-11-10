@@ -18,6 +18,7 @@
       {% if dos.b %}<div><div class="font-semibold mb-1">Pièces de la GED à joindre</div>
         {% for d in docs_usager %}<label class="block"><input type="checkbox" name="pieces" value="{{ d.pk }}" {% if d.pk in proposes %}checked{% endif %}> {{ d.titre }} <span class="text-xs text-gray-500">({{ d.type_document.nom|default:"document" }}, {{ d.date_creation|date:"d/m/Y" }})</span></label>
         {% empty %}<p class="text-gray-400">Aucune pièce dans la GED de l'usager.</p>{% endfor %}</div>{% endif %}
+      {% if dos.nature == 'hebergement' %}<label class="block">Pièces absentes : justifiez-le si une pièce n'est pas jointe (200 caractères)<input name="justification_pieces" maxlength="200" class="w-full border rounded px-2 py-1"></label>{% endif %}
       <button name="action" value="mail" class="px-4 py-2 bg-blue-600 text-white rounded"><i class="fas fa-envelope mr-1"></i>Envoi par mail</button>
     </section>
     <section class="bg-white rounded-xl border p-5 text-sm" id="imprimer">

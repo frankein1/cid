@@ -997,7 +997,97 @@ class Command(BaseCommand):
         d.save()
         self.logement_social_copp()
         self.expulsions()
+        self.hebergement_urgence()
         self.stdout.write("✅ Demandes FSL fictives ajoutées")
+
+    def hebergement_urgence(self):
+        """Hébergement d'urgence : quatre dossiers fictifs (recherche, fiche à viser, hébergée avec échéance proche,
+        clos), trois structures et une adresse de transmission fictives."""
+        from django.contrib.contenttypes.models import ContentType
+        from logement.models import (DemarcheHebergement as M, DestinataireHebergement, DossierHebergement as D,
+                                     EnvoiDossier, FicheHebergement as F, StructureHebergement)
+        from logement.services import envoi, hebergement as H
+        from messagerie.models import Message
+        j, ts, cadre = self.j, self.ts, self.cadre
+        anciens = D.objects.filter(beneficiaire__code_interne__in=CODES_DEMO)
+        Message.objects.filter(content_type=ContentType.objects.get_for_model(D),
+                               object_id__in=list(anciens.values_list("pk", flat=True))).delete()
+        _effacer_envois(F.objects.filter(dossier__in=anciens))
+        anciens.delete()
+        StructureHebergement.objects.filter(nom__endswith="(fictif)").delete()
+        DestinataireHebergement.objects.filter(nom__endswith="(fictif)").delete()
+        DestinataireHebergement.objects.create(nom="Service d'appui à l'hébergement (fictif)", email="appui.hebergement@example.com")
+        hotel = StructureHebergement.objects.create(nom="Résidence Les Tamaris (fictif)", ville="Martigues",
+                                                    public="Femmes enceintes ou mères isolées avec un enfant de moins de 3 ans")
+        StructureHebergement.objects.create(nom="Accueil La Passerelle (fictif)", ville="Istres", duree_initiale_jours=15,
+                                            duree_renouvellement_jours=15, public="Femmes avec enfants, accueil court")
+        StructureHebergement.objects.create(nom="Foyer Les Calanques (fictif)", ville="Marseille", duree_initiale_jours=60,
+                                            duree_renouvellement_jours=30, public="Femmes isolées avec enfants")
+
+        def dossier(code, il_y_a, demarches):
+            d = D(beneficiaire=self.b[code], mds=self.b[code].mds, referent=ts, cree_par=ts, date_ouverture=j - timedelta(days=il_y_a))
+            d.tracer(ts, "Dossier ouvert")
+            d.save()
+            for type_, jours, precision, reponse in demarches:
+                M.objects.create(dossier=d, type_demarche=type_, date=j - timedelta(days=jours), precision=precision,
+                                 reponse=reponse, saisi_par=ts)
+            return d
+
+        def transmettre(f, il_y_a):
+            H.viser(f, cadre)
+            H.marquer_transmis(f, ts, "MAIL")
+            quand = timezone.now() - timedelta(days=il_y_a)
+            F.objects.filter(pk=f.pk).update(date_envoi=j - timedelta(days=il_y_a), cree_le=quand - timedelta(days=1),
+                                             date_validation_cadre=quand)
+            envoi.enregistrer(f, "Hébergement d'urgence", f.dossier.mds, EnvoiDossier.MAIL, 3)
+            f.refresh_from_db()
+
+        # VIDAL Nolan : en rupture familiale, démarches engagées, pas encore de fiche (orientation vers l'État conseillée)
+        dossier("FAM4-NOL", 3, [("115", 3, "", "Pas de place ce soir, rappeler chaque jour"),
+                                ("SIAO", 2, "", "Fiche instruite, en attente")])
+        # CHERIF Yasmine, un enfant de 3 ans : orientation vers l'État rédigée, visa demandé à chef_mds1
+        d = dossier("FAM10-YAS", 8, [("115", 8, "", "Deux nuits d'hôtel, puis plus de place"),
+                                     ("SIAO", 7, "", "Fiche mise à jour, en attente"),
+                                     ("CENTRE_MATERNEL", 6, "Centre maternel (fictif)", "Enfant de plus de 3 ans : refus"),
+                                     ("DAHO", 4, "", "Recours déposé")])
+        f = H.creer_fiche(d, F.ETAT, ts)
+        f.donnees.update({
+            "identite_type": "Carte nationale d'identité", "identite_validite": "03/2031",
+            "situation_familiale": ("Situation fictive de démonstration. Mme CHERIF élève seule son fils de 3 ans, scolarisé "
+                                    "en petite section. Elle a quitté le logement d'une amie qui ne peut plus l'accueillir. "
+                                    "L'enfant est suivi par la PMI ; la famille souhaite rester près de l'école."),
+            "parcours_logement": ("Locataire jusqu'en 2025, puis hébergée chez une amie pendant huit mois. Sans solution "
+                                  "depuis une semaine : deux nuits d'hôtel par le 115, fiche SIAO à jour, recours DAHO "
+                                  "déposé.")})
+        f.save()
+        H.demander_visa(f, ts)
+        # AMRANI Sarah : demande accordée, hébergée depuis près de 3 mois, échéance dans 12 jours (renouvellement à préparer)
+        d = dossier("FAM5-SAR", 95, [("115", 95, "", "Pas de place"), ("SIAO", 94, "", "Fiche instruite"),
+                                     ("CENTRE_MATERNEL", 92, "Centre maternel (fictif)", "Liste d'attente")])
+        f = H.creer_fiche(d, F.SAS, ts)
+        f.donnees.update({
+            "identite_type": "Carte nationale d'identité", "identite_validite": "11/2029", "ip": "non", "mesure_educative": "non",
+            "parcours_logement": "Situation fictive : hébergée par sa famille jusqu'à une rupture, puis sans solution.",
+            "historique_projet": "Mme AMRANI attend un enfant. Elle souhaite un logement autonome près de sa formation.",
+            "demarches_logement": "Demande de logement social déposée, dossier ASELL accès à préparer.",
+            "analyse": "Droits ouverts, ressources stables : une sortie vers le logement est possible avec un accompagnement.",
+            "rdv_famille": "Reçue à trois reprises avant la demande (dates fictives)."})
+        f.save()
+        transmettre(f, 92)
+        entree = j - relativedelta(months=3) + timedelta(days=12)
+        H.enregistrer_reponse(f, ts, F.ACCORD, entree - timedelta(days=1), "Place disponible", structure=hotel, date_entree=entree)
+        # GARNIER Céline : hébergée deux mois, relogée, dossier clos
+        d = dossier("FAM9-CEL", 200, [("115", 200, "", "Mise à l'abri trois nuits"), ("SIAO", 199, "", "Fiche instruite"),
+                                      ("DALO", 150, "", "Reconnu prioritaire")])
+        f = H.creer_fiche(d, F.ETAT, ts)
+        f.donnees["situation_familiale"] = "Situation fictive de démonstration."
+        f.save()
+        transmettre(f, 195)
+        H.enregistrer_reponse(f, ts, F.ACCORD, j - timedelta(days=190), structure_libre="Hôtel conventionné (fictif)",
+                              date_entree=j - timedelta(days=190), date_fin=j - timedelta(days=100))
+        H.cloturer(d, ts, "LOGEMENT", j - timedelta(days=125))
+        D.objects.filter(pk=d.pk).update(date_cloture=j - timedelta(days=125))
+        self.stdout.write("✅ Hébergement d'urgence : 4 dossiers fictifs")
 
     def logement_social_copp(self):
         """Demandes de logement social, séances fictives de la commission des publics prioritaires et deux saisines."""

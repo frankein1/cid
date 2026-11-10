@@ -1,5 +1,5 @@
 <!-- /templates/logement/_fsl_usager.html -->
-{# Encart « Logement » de la fiche usager (dossier complet) : demande de logement social, FSL, commission des publics prioritaires, prévention des expulsions #}
+{# Encart « Logement » de la fiche usager (dossier complet) : demande de logement social, FSL, commission des publics prioritaires, hébergement d'urgence, prévention des expulsions #}
 <div id="fsl-usager" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex justify-between items-center gap-2">
         <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Logement</h2>
@@ -23,7 +23,13 @@
         <button name="type_aide" value="ENERGIE" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL énergie</button>
         <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>
     <form method="post" action="{% url 'logement:copp_nouvelle' beneficiaire.code_interne %}" class="mt-1" id="copp-nouvelle">{% csrf_token %}
-        <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>{% endif %}
+        <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>
+    <form method="post" action="{% url 'logement:hebergement_nouveau' beneficiaire.code_interne %}" class="mt-1" id="hebergement-nouveau">{% csrf_token %}
+        <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-bed mr-1"></i>Hébergement d'urgence</button></form>{% endif %}
+    {% if dossiers_hebergement %}<div id="hebergement-usager-encart" class="mt-3 p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-sm">
+        {% for h in dossiers_hebergement %}<div class="flex justify-between gap-2"><a href="{% url 'logement:hebergement_detail' h.pk %}" class="text-indigo-800 font-semibold hover:underline"><i class="fas fa-bed mr-1"></i>Hébergement d'urgence – {{ h.numero }}</a>
+            <span class="text-xs text-gray-600">{{ h.get_statut_display|lower }}{% if h.statut == 'HEBERGE' and h.date_fin_prevue %} jusqu'au {{ h.date_fin_prevue|date:"d/m/Y" }}{% endif %}</span></div>{% endfor %}
+    </div>{% endif %}
     {% if dossiers_expulsion %}<div id="expulsion-usager-encart" class="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-sm">
         {% for d in dossiers_expulsion %}<div class="flex justify-between gap-2"><a href="{% url 'logement:expulsion_detail' d.pk %}" class="text-red-800 font-semibold hover:underline"><i class="fas fa-house-circle-exclamation mr-1"></i>Prévention des expulsions – {{ d.numero }}</a>
             <span class="text-xs text-gray-600">{% if d.statut == 'CLOS' %}clos{% elif d.date_audience %}audience le {{ d.date_audience|date:"d/m/Y" }}{% else %}en cours{% endif %}</span></div>{% endfor %}

@@ -17,6 +17,7 @@ LOGEMENT_DEMANDE;Demande de logement social;NUD, DALO, mutation, Al'In, souhaits
 COPP;Commission des publics prioritaires;Saisine, motifs, rapport social, décision;36;12;dernière activité du dossier usager (archivage, puis effacement);;;;;;
 EXPULSION_DOSSIER;Prévention des expulsions : dossier;Fiche de liaison, fiche CAF, bailleur, dette, audience, décision, étapes;;;clôture du dossier;;;;;;
 EXPULSION_DSF;Prévention des expulsions : diagnostic;DSF (Cerfa 16227), bordereau de carence, convocations, questionnaire bailleur;;;clôture du dossier;;;;;;
+HEBERGEMENT_URGENCE;Hébergement d'urgence;Démarches (115, SIAO…), fiches de demande, de renouvellement et d'orientation, prise en charge;;;clôture du dossier;;;;;;
 ANNUAIRE_RECHERCHES;Annuaire des usagers : recherches;Qui a cherché quoi (critères, codes trouvés);12;;date de la recherche;;;;;;
 JOURNAL_ACTIVITE;Journal d'activité (traçabilité);Consultations, modifications, connexions des agents;12;;date de l'action;;;;;;
 CONNECTEURS_API;Appels aux services de l'État (CAF, impôts, France Travail);Journal des appels et réponses;;;pas de durée propre;;;;;;

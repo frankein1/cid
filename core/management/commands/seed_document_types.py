@@ -23,6 +23,14 @@ class Command(BaseCommand):
                 'sensible': True
             },
             {
+                'code': 'LIVRET_FAMILLE',
+                'nom': "Livret de famille",
+                'categorie': DocumentCategorie.IDENTITE,
+                'extensions': ['jpg', 'jpeg', 'png', 'pdf'],
+                'taille_max': 5,
+                'sensible': True
+            },
+            {
                 'code': 'PASSEPORT',
                 'nom': "Passeport",
                 'categorie': DocumentCategorie.IDENTITE,

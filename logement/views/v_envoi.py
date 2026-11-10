@@ -15,7 +15,7 @@ from django.urls import reverse
 
 from beneficiaire.views import user_peut_agir_sur_beneficiaire
 
-from ..models import (DemandeFSL, DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier,
+from ..models import (DemandeFSL, DestinataireExpulsion, DestinataireHebergement, FicheHebergement, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier,
                       PassageCommission, SaisineCOPP)
 from ..services import circuit, copp, envoi
 from ..services.fsl_pdf import dossier as dossier_fsl
@@ -23,7 +23,8 @@ from ..services.fsl_pdf import dossier as dossier_fsl
 
 class _Dossier:
     """Ce qu'il faut savoir d'un dossier pour l'envoyer, quelle que soit sa nature : FSL, COPP, et pour la
-    prévention des expulsions le DSF (ou bordereau de carence) et le questionnaire au bailleur."""
+    prévention des expulsions le DSF (ou bordereau de carence) et le questionnaire au bailleur, fiches d'hébergement
+    d'urgence."""
     def __init__(self, nature, obj):
         self.nature, self.obj = nature, obj
         self.b, self.mds = obj.beneficiaire, obj.mds
@@ -66,6 +67,19 @@ class _Dossier:
             self.destinataires_proposes = [SimpleNamespace(nom=f"secrétariat – {com.nom}", email=com.email)] \
                 if com.email else []
             self.nom_personne = obj.dossier.nom_complet
+        elif nature == 'hebergement':
+            self.libelle = "Hébergement d'urgence"
+            self.intitule = obj.get_type_fiche_display()
+            self.retour = reverse('logement:fiche_hebergement', args=[obj.pk])
+            self.envoyable = obj.statut in (FicheHebergement.VISEE, FicheHebergement.ENVOYEE)
+            self.pourquoi = "La fiche part avec le visa du cadre : demandez-le d'abord."
+            from ..services.hebergement import pieces_proposees as pieces_hu
+            self.pieces_proposees = pieces_hu(obj)
+            destinataires = DestinataireHebergement.objects.filter(actif=True)
+            if obj.type_fiche == FicheHebergement.ETAT and destinataires.filter(est_sas=True).exists():
+                destinataires = destinataires.filter(est_sas=True)
+            self.destinataires_proposes = list(destinataires)
+            self.nom_personne = obj.dossier.nom_complet
         else:                                                  # 'bailleur'
             self.libelle = "Questionnaire bailleur"
             self.intitule = "Questionnaire bailleur pour le diagnostic social et financier"
@@ -78,6 +92,9 @@ class _Dossier:
             self.nom_personne = f"{self.b.nom.upper()} {self.b.prenom}"
 
     def peut_envoyer(self, user):
+        if self.nature == 'hebergement':
+            from ..services.hebergement import peut_ecrire as peut_ecrire_hu
+            return peut_ecrire_hu(user, self.obj.dossier)
         if self.nature in ('dsf', 'bailleur', 'actualisation'):
             from ..services.expulsion import peut_ecrire
             dossier = self.obj if self.nature == 'bailleur' else self.obj.dossier
@@ -89,6 +106,9 @@ class _Dossier:
             return dossier_fsl(self.obj)[0]
         if self.nature == 'copp':
             return copp.dossier(self.obj)[0]
+        if self.nature == 'hebergement':
+            from ..services.hebergement_pdf import fiche_pdf
+            return fiche_pdf(self.obj)
         from ..services import expulsion_documents as E
         if self.nature == 'actualisation':
             from ..services.commissions import actualisation_pdf
@@ -114,6 +134,9 @@ class _Dossier:
         elif self.nature == 'actualisation':
             from ..services.commissions import marquer_transmis
             marquer_transmis(self.obj, user, mode)
+        elif self.nature == 'hebergement':
+            from ..services.hebergement import marquer_transmis
+            marquer_transmis(self.obj, user, mode)
         else:
             from ..services.expulsion_mds import questionnaire_envoye
             questionnaire_envoye(self.obj, user, self.obj.questionnaire_retour_avant)
@@ -130,6 +153,9 @@ def _documents_usager(b, user):
 def _charger(request, nature, pk):
     if nature == 'dsf':
         return _Dossier(nature, get_object_or_404(DiagnosticExpulsion.objects.select_related('dossier__mds'), pk=pk))
+    if nature == 'hebergement':
+        return _Dossier(nature, get_object_or_404(FicheHebergement.objects.select_related(
+            'dossier__mds', 'dossier__beneficiaire', 'dossier__referent', 'cadre', 'redacteur'), pk=pk))
     if nature == 'bailleur':
         return _Dossier(nature, get_object_or_404(DossierExpulsion.objects.select_related('mds', 'beneficiaire'), pk=pk))
     if nature == 'actualisation':
@@ -156,6 +182,20 @@ def envoi_dossier(request, nature, pk):
         action = request.POST.get('action')
         ids = {int(x) for x in request.POST.getlist('pieces') if x.isdigit()}
         joints = [d for d in docs_usager if d.pk in ids]
+        if dos.nature == 'hebergement' and action in ('mail', 'imprimer'):
+            from ..services import hebergement as H
+            manque = H.pieces_non_jointes(dos.obj, ids)
+            justif = (request.POST.get('justification_pieces') or '').strip()
+            if len(justif) > 200:
+                messages.error(request, "La justification ne dépasse pas 200 caractères.")
+                return redirect(request.path)
+            if manque and not justif:
+                messages.error(request, "Pièces non jointes : " + " ; ".join(manque) + ". Joignez-les, ou justifiez "
+                                                                             "leur absence (200 caractères).")
+                return redirect(request.path)
+            if manque:
+                dos.obj.tracer(request.user, "Envoi sans pièce(s)", f"{' ; '.join(manque)} — {justif}")
+                dos.obj.save()
         pdf = dos.pdf()
         pages = envoi.pages_a4(pdf) + sum(envoi.pages_document(d) for d in joints)
         if action == 'imprimer':
@@ -205,7 +245,8 @@ def envoi_dossier(request, nature, pk):
 
 def _url_pdf(dos):
     nom = {'fsl': 'logement:fsl_pdf', 'copp': 'logement:copp_pdf', 'dsf': 'logement:diagnostic_pdf',
-           'bailleur': 'logement:questionnaire_pdf', 'actualisation': 'logement:passage_pdf'}[dos.nature]
+           'bailleur': 'logement:questionnaire_pdf', 'actualisation': 'logement:passage_pdf',
+           'hebergement': 'logement:fiche_hebergement_pdf'}[dos.nature]
     return reverse(nom, args=[dos.obj.pk])
 
 

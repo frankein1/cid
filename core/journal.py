@@ -306,6 +306,13 @@ def purger_si_besoin():
                 purger_expulsions()
             except Exception as e:   # noqa: BLE001 – la purge du journal ne dépend pas du reste
                 logger.error("Durées de conservation (expulsions) : %s", e)
+            try:
+                from logement.services.conservation import purger_hebergement
+                from logement.services.hebergement import alerter
+                purger_hebergement()
+                alerter()
+            except Exception as e:   # noqa: BLE001
+                logger.error("Hébergement d'urgence (échéances, durées de conservation) : %s", e)
             Configuration.objects.filter(pk=c.pk).update(valeur=aujourd_hui)
             if n:
                 logger.info("Journal d'activité : %s ligne(s) purgée(s)", n)
