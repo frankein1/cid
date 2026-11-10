@@ -224,6 +224,7 @@ def preremplir(dossier, user):
                                  else "une famille monoparentale" if enfants else "une personne seule")
         _budget(b, v)
         _fsl_et_logement(b, v)
+        _mesures_asell(b, v)
     ts = coordonnees_ts(user, mds)
     v.update({'Nom': (ts['nom'] or '').upper(), 'Prénom': ts['prenom'], 'Organisme de rattachement': ts['organisme'],
               'Adresse mail_2': ts['email'], 'Numéro de téléphone fixe ou mobile': ts['telephone']})
@@ -266,6 +267,29 @@ def _fsl_et_logement(b, v):
         v['Date 8'] = _date(dl.date_creation)
         if dl.date_renouvellement:
             v['Date 9'] = _date(dl.date_renouvellement)
+
+
+def _mesures_asell(b, v):
+    """ASELL : le CERFA n'a pas de case ASELL. Une mesure engagée (ou une demande en attente) est écrite dans
+    « Autres mesures d'apurement et d'ouverture de droits », à relire dans l'aperçu avant impression."""
+    from logement.models import OrientationASELL as A
+    orientations = A.objects.filter(beneficiaire=b).exclude(statut=A.ABANDONNEE)
+    engagee = orientations.filter(reponse=A.ACCORD).order_by('-date_reponse', '-pk').first()
+    if engagee:
+        genre = "renforcée" if engagee.type_mesure == A.RENFORCE else "généraliste"
+        txt = f"ASELL {genre} engagée"
+        if engagee.date_reponse:
+            txt += f" depuis le {_date(engagee.date_reponse)}"
+        if engagee.nom_operateur:
+            txt += f" (opérateur : {engagee.nom_operateur})"
+        v["Autres mesures d'apurement"] = txt + "."
+        return
+    attente = orientations.filter(statut=A.ENVOYEE, reponse__in=['', A.ATTENTE]).order_by('-date_envoi', '-pk').first()
+    if attente:
+        txt = "ASELL demandée"
+        if attente.date_envoi:
+            txt += f" le {_date(attente.date_envoi)}"
+        v["Autres mesures d'apurement"] = txt + ", en attente de réponse."
 
 
 def calculs(v):
