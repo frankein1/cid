@@ -101,6 +101,14 @@ Le SL et son secrétariat voient tout le Département ; une MDS voit ses dossier
 
 ## Travail de la MDS : convocations, questionnaire bailleur, DSF, carence (2e PR)
 
+**Délais du DSF (jours ouvrés, hors week-end et fériés)** — `services/jours_ouvres.py`, `DossierExpulsion.echeances_dsf()` :
+- entretien proposé au locataire : 15 jours ouvrés après le signalement ;
+- nouvel entretien si pas de réponse : 15 jours ouvrés avant l'audience ;
+- CCAPEX locale, si elle suit le ménage : 10 jours ouvrés avant l'audience ;
+- transmission du DSF ou du bordereau au juge et à la CCAPEX : 5 jours ouvrés avant l'audience.
+Ces échéances apparaissent dans les alertes du dossier, tant que l'audience est à venir et que l'action n'est pas faite.
+Points à trancher : la note locale de Marseille (dsf.marseille) parle de 15 jours avant l'audience pour la transmission.
+
 Bloc **Diagnostic social et financier** du dossier (`logement/views/v_expulsion_mds.py`, `services/expulsion_mds.py`).
 
 **Convocations** (`ConvocationExpulsion`)
@@ -129,7 +137,10 @@ Bloc **Diagnostic social et financier** du dossier (`logement/views/v_expulsion_
   - le rédacteur (mail de la MDS).
 
 **Bordereau de carence** (`DiagnosticExpulsion`, type CARENCE)
-- Il est proposé quand deux convocations sont restées sans réponse.
+- Il est proposé quand trois critères sont réunis (note MDS du 27/03/2023) : deux convocations DSF sans présence du
+  locataire ; aucune observation du locataire (case « observations du locataire » de la fiche du dossier) ; bailleur
+  sollicité (questionnaire envoyé) et sans information (pas de questionnaire retour). La CCAPEX n'est pas un critère :
+  une absence de réponse du service public ne bloque pas la carence (`services/expulsion_mds.criteres_carence`).
 - CID reprend les dates non honorées, le **n° EXPLOC** (nouveau champ du dossier) et le n° allocataire.
 - Formulaire local en administration (code `EXP_CARENCE`), sinon trame CID.
 

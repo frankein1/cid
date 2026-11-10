@@ -128,6 +128,8 @@ class DossierExpulsion(models.Model):
     questionnaire_bailleur_le = models.DateField("Questionnaire envoyé au bailleur le", null=True, blank=True)
     questionnaire_retour_avant = models.DateField("Retour du questionnaire souhaité avant le", null=True, blank=True)
     questionnaire_bailleur_retour = models.DateField("Questionnaire du bailleur reçu le", null=True, blank=True)
+    observations_locataire = models.BooleanField("Le locataire a transmis des observations", default=False,
+                                                 help_text="Pour le DSF : sans observation, le bordereau de carence peut suivre.")
     historique = models.JSONField(default=list, blank=True)
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name='+')
@@ -207,7 +209,32 @@ class DossierExpulsion(models.Model):
                 a.append("Audience passée : saisir la décision du tribunal.")
         for e in self.etapes.filter(echeance__isnull=False, echeance__lte=j + timedelta(days=15), faite=False):
             a.append(f"{e.get_type_etape_display()} : échéance le {e.echeance:%d/%m/%Y}.")
+        audience_a_venir = bool(self.date_audience and self.date_audience >= j)
+        for libelle, echeance, fait in self.echeances_dsf():
+            if fait or echeance > j + timedelta(days=15) or (echeance < j and not audience_a_venir):
+                continue
+            a.append(f"{libelle} : " + (f"échéance dépassée ({echeance:%d/%m/%Y})." if echeance < j
+                                        else f"avant le {echeance:%d/%m/%Y}."))
         return a
+
+    def echeances_dsf(self):
+        """Délais du DSF, en jours ouvrés (note MDS du 27/03/2023, notice CERFA 16227*01) : (libellé, date, fait)."""
+        from ..services.jours_ouvres import ajouter, retrancher
+        out = []
+        signalement = self.etapes.filter(type_etape='SIGNALEMENT').order_by('-date').values_list('date', flat=True).first()
+        dsf = self.convocations.filter(type_convocation__in=ConvocationExpulsion.TYPES_DSF)
+        if signalement:
+            out.append(("Proposer l'entretien DSF au locataire (15 jours ouvrés après le signalement)",
+                        ajouter(signalement, 15), dsf.exists()))
+        if self.date_audience:
+            a = self.date_audience
+            out.append(("Nouvel entretien DSF si le locataire ne répond pas (15 jours ouvrés avant l'audience)",
+                        retrancher(a, 15), dsf.filter(statut=ConvocationExpulsion.VENU).exists()))
+            out.append(("Contacter la CCAPEX locale si elle suit le ménage (10 jours ouvrés avant l'audience)",
+                        retrancher(a, 10), False))
+            out.append(("Transmettre le DSF ou le bordereau au juge et à la CCAPEX (5 jours ouvrés avant l'audience)",
+                        retrancher(a, 5), self.diagnostics.filter(statut=DiagnosticExpulsion.ENVOYE).exists()))
+        return out
 
 
 def treve_hivernale(jour=None):
