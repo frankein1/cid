@@ -188,9 +188,11 @@ def copp_detail(request, pk):
             alerte = "La date limite de dépôt de cette séance est passée : choisissez la séance suivante."
         elif restant <= 7:
             alerte = f"Date limite de dépôt dans {restant} jour{'s' if restant > 1 else ''} ({s.commission.date_limite_depot:%d/%m/%Y})."
+    avertissement = ecrire and s.statut == s.BROUILLON and not any(
+        h.get('action') == 'Avertissement lu' and h.get('detail') == 'PIECES' for h in (s.historique or []))
     return render(request, 'logement/copp_detail.html', {
         's': s, 'b': s.beneficiaire, 'dn': s.donnees or {}, 'peut_ecrire': ecrire, 'alerte': alerte,
-        'pieces': s.pieces.all(), 'imprimer': request.GET.get('imprimer'),
+        'pieces': s.pieces.all(), 'imprimer': request.GET.get('imprimer'), 'avertissement': avertissement,
     })
 
 
@@ -212,6 +214,10 @@ def copp_action(request, pk):
     if not ecrire:
         return HttpResponseForbidden("Réservé aux agents de la MDS de l'usager.")
     action = request.POST.get('action')
+    if action == 'pieces_lu':
+        s.tracer(request.user, "Avertissement lu", "PIECES")
+        s.save()
+        return redirect('logement:copp_detail', pk=pk)
     if action == 'decision' and s.statut == s.ENVOYEE:
         s.decision = (request.POST.get('decision') or '').strip()
         s.date_decision = _date(request.POST.get('date_decision')) or (s.commission.date if s.commission else j())
