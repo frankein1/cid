@@ -14,6 +14,7 @@ from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, Convoca
                      DestinataireExpulsion, DiagnosticExpulsion, DossierExpulsion, EnvoiDossier, EtapeExpulsion,
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 from .models import OperateurASELL, OrientationASELL
+from .models import RecoursDALO
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
                      RappelHebergement, SignalementHabitatIndigne, StructureHebergement)
 
@@ -292,3 +293,10 @@ class SignalementHabitatIndigneAdmin(admin.ModelAdmin):
     list_filter = ('statut', 'origine', 'mds')
     search_fields = ('beneficiaire__nom', 'beneficiaire__prenom')
     readonly_fields = ('historique', 'date_creation', 'date_modification')
+
+
+@admin.register(RecoursDALO)
+class RecoursDALOAdmin(admin.ModelAdmin):
+    list_display = ('id', 'beneficiaire', 'nationalite', 'date_modification', 'modifie_par')
+    search_fields = ('beneficiaire__nom', 'beneficiaire__prenom', 'nud')
+    readonly_fields = ('date_modification',)

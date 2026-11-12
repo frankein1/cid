@@ -18,6 +18,7 @@ urlpatterns = [
     path('demande/<str:code_interne>/', views.logement_social, name='logement_social'),
     path('indigne/', views.indigne_liste, name='indigne_liste'),
     path('indigne/nouveau/', views.indigne_nouveau, name='indigne_nouveau'),
+    path('indigne/statistiques/', views.indigne_stats_vue, name='indigne_stats'),
     path('indigne/<int:pk>/', views.indigne_detail, name='indigne_detail'),
     path('indigne/<int:pk>/modifier/', views.indigne_modifier, name='indigne_modifier'),
     path('indigne/<int:pk>/action/', views.indigne_action, name='indigne_action'),

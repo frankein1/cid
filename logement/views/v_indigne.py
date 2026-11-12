@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 from mds.models import UserMDSProfile
 
 from ..models import SignalementHabitatIndigne
-from ..services import indigne, indigne_rapport
+from ..services import indigne, indigne_rapport, indigne_stats
 from .v_copp import _date, _usager
 
 
@@ -292,3 +292,17 @@ def indigne_note_pdf(request, pk):
     rep['Content-Disposition'] = f'inline; filename="VAD_{s.pk}.pdf"'
     return rep
 
+
+@login_required
+def indigne_stats_vue(request):
+    if not indigne_stats.peut_voir_stats(request.user):
+        return HttpResponseForbidden("Réservé aux personnes habilitées à consulter les statistiques.")
+    annee = request.GET.get('annee')
+    annee = int(annee) if (annee or '').isdigit() else None
+    s = indigne_stats.statistiques(request.user, annee)
+    if request.GET.get('format') == 'csv':
+        rep = HttpResponse(indigne_stats.export_csv(s, annee), content_type='text/csv; charset=utf-8')
+        rep['Content-Disposition'] = f'attachment; filename="habitat_indigne_{annee or "toutes_annees"}.csv"'
+        return rep
+    return render(request, 'logement/indigne_stats.html', {
+        's': s, 'annee': annee, 'annees': indigne_stats.annees(request.user)})

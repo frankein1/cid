@@ -16,6 +16,7 @@ from core.models import Profil, User
 from mds.models import MDS, UserMDSProfile
 
 from .models import SignalementHabitatIndigne
+from .services import indigne_stats
 from .services.indigne import champs_valides, valeur_propre
 
 
@@ -303,3 +304,74 @@ class LogementIndigneTests(TestCase):
         self.assertIsNone(s3.creneau)
         self.assertEqual(CreneauRdv.objects.filter(beneficiaire=autre_usager).count(), 0)
 
+
+
+class LogementIndigneStatsTests(TestCase):
+    """Statistiques de l'habitat indigne : comptage, « je ne sais pas » à part, périmètre par MDS, export CSV agrégé."""
+
+    def setUp(self):
+        for cmd in ("init_capacites", "init_profils"):
+            call_command(cmd, stdout=StringIO())
+        self.mds = MDS.objects.create(code_mds="ST1", nom="MDS STATS", adresse="1 rue A", code_postal="13110",
+                                      ville="Port-de-Bouc", email="mds@exemple.fr")
+        self.autre = MDS.objects.create(code_mds="ST2", nom="MDS AUTRE", adresse="2 rue B", code_postal="13500",
+                                        ville="Martigues", email="autre@exemple.fr")
+        self.ts = self.agent("sophie", self.mds)
+        self.hors = self.agent("bruno", self.autre)
+        self.admin = User.objects.create_superuser("admin_stats", password="x", matricule="ADMSTATS",
+                                                   first_name="Admin", last_name="ESSAI")
+        self.b = Beneficiaire.objects.create(code_interne="ST-1", civilite="MME", nom="ESSAI", prenom="Clara",
+                                             date_naissance="1990-01-01", adresse="3 rue C", code_postal="13110",
+                                             ville="Port-de-Bouc", mds=self.mds)
+        SignalementHabitatIndigne.objects.create(
+            beneficiaire=self.b, mds=self.mds, origine='VAD', statut='ENVOYE', date_envoi="2026-10-01",
+            enquete_salubrite=True, bascule_dalo=True, permis_ville=True,
+            donnees={'statut_occupant': 'locataire', 'eclairage_communs': 'nsp', 'humidite': 'oui', 'chauffage': 'non'})
+        SignalementHabitatIndigne.objects.create(
+            mds=self.mds, origine='COMMUNE', statut='ENVOYE', donnees={'statut_occupant': 'sans_titre'})
+        SignalementHabitatIndigne.objects.create(
+            mds=self.autre, origine='LOCATAIRE', statut='BROUILLON', donnees={'humidite': 'oui'})
+
+    def agent(self, login, mds):
+        u = User.objects.create_user(login, password="x", matricule=login.upper(), first_name=login.title(),
+                                     last_name="ESSAI")
+        u.profils.add(Profil.objects.get(code="MDS_AGENTS_SOCIAUX"))
+        UserMDSProfile.objects.create(user=u, mds=mds, actif=True, principale=True)
+        return u
+
+    def client_de(self, u):
+        c = Client(HTTP_HOST="localhost")
+        c.force_login(u)
+        return c
+
+    def test_comptage_et_je_ne_sais_pas_a_part(self):
+        s = indigne_stats.statistiques(self.admin)
+        synthese = dict(s['synthese'])
+        self.assertEqual(synthese['Signalements'], 3)
+        self.assertEqual(synthese['Envoyés au PDLHI'], 1)
+        self.assertEqual(synthese['Enquête de salubrité'], 1)
+        self.assertEqual(synthese['Hors suivi MDS (renvoyés au CIAS ou CCAS)'], 2)
+        ligne = next(l for bloc in s['reponses'] for l in bloc['lignes'] if l['label'].startswith("Éclairage"))
+        self.assertEqual(dict(ligne['choix']), {'Oui': 0, 'Non': 0, 'Je ne sais pas': 1})
+        self.assertEqual(ligne['sans'], 2)
+
+    def test_perimetre_par_mds(self):
+        s = indigne_stats.statistiques(self.ts)
+        self.assertEqual(dict(s['synthese'])['Signalements'], 2)
+        self.assertEqual(s['par_mds'], [])  # pas de vue départementale
+        self.assertEqual(dict(indigne_stats.statistiques(self.hors)['synthese'])['Signalements'], 1)
+
+    def test_acces_refuse_sans_habilitation(self):
+        self.assertEqual(self.client_de(self.ts).get("/logement/indigne/statistiques/").status_code, 403)
+
+    def test_export_csv_agrege_sans_identite(self):
+        rep = self.client_de(self.admin).get("/logement/indigne/statistiques/?format=csv")
+        self.assertEqual(rep.status_code, 200)
+        self.assertTrue(rep['Content-Type'].startswith('text/csv'))
+        contenu = rep.content.decode('utf-8-sig')
+        self.assertIn('Signalements;3', contenu)
+        self.assertNotIn('ESSAI', contenu)
+        self.assertNotIn('Clara', contenu)
+
+    def test_page_statistiques_accessible_au_departement(self):
+        self.assertEqual(self.client_de(self.admin).get("/logement/indigne/statistiques/").status_code, 200)
