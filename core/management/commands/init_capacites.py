@@ -30,6 +30,7 @@ CAPACITES = [
     ('peut_decider', 'Décider'),
     ('peut_gerer_finance', 'Gérer finance'),
     ('peut_verser', 'Verser des aides'),
+    ('ru_gerer_sas', 'Relation Usager – gérer les saisines et finalisations SAS'),
 
     # --- Administration ---
     ('peut_administrer', 'Administrer'),

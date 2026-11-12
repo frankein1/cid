@@ -124,6 +124,7 @@ INSTALLED_APPS = [
     'protection_enfance',
     'insertion',
     'logement',
+    'ru',
 ]
 
 # ============================================================

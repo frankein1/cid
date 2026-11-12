@@ -207,6 +207,7 @@ class Command(BaseCommand):
             self.budgets()
             self.logement()
             self.indigne_dalo()
+            self.ru_demo()
             self.journal()
             from core.demo_presentation import creer as presentation
             presentation(self)
@@ -240,6 +241,8 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------ remise à zéro
     @transaction.atomic
     def supprimer(self):
+        from ru.models import DemandeRelationUsager as DRU
+        DRU.objects.filter(objet__startswith="[démo]").delete()
         from AidFi.models.m_generique import DemandeAide
         from AidFi.models.m_recours import RecoursAFASE
         from beneficiaire.models import Beneficiaire
@@ -1127,6 +1130,71 @@ class Command(BaseCommand):
         a.refresh_from_db()
         S.enregistrer_reponse(a, ts, A.ACCORD, j - timedelta(days=18), "Premier rendez-vous fixé avec l'intervenante")
         self.stdout.write("✅ Orientation ASELL : 2 fiches fictives, 2 opérateurs fictifs")
+
+    def ru_demo(self):
+        """Relation usager : une demande à chaque étape du circuit, un compte SAS, une relance (fictifs)."""
+        from datetime import timedelta
+        from core.models import Profil
+        from ru.models import DemandeRelationUsager as D, FicheRetourSAS, HistoriqueRU, RelanceRU
+        from core.models import User
+
+        sas, cree = User.objects.get_or_create(username="ru_sas", defaults={
+            "first_name": "Sylvie", "last_name": "Sas", "email": "ru_sas@exemple.fr",
+            "is_active": True, "matricule": "RU_SAS"})
+        if cree:
+            sas.set_password(mot_de_passe())
+            sas.save()
+        sas.profils.add(Profil.objects.get(code="RU_SAS"))
+        mds1, ts, cadre = self.mds1, self.ts, self.cadre
+        j = self.j
+        texte = dict(
+            elements_declaratifs="Déclaration fictive de l'usager.",
+            evaluation_sociale="Évaluation fictive : situation d'isolement, besoin d'un accompagnement administratif.",
+            modalites_contact="Appel téléphonique et courrier de convocation (fictifs).",
+            situation_actualisee="Situation actualisée fictive, ressources stables.",
+            problematique_plan="Accompagnement administratif et orientation vers le CCAS (fictif).",
+        )
+
+        def creer(nom, prenom, objet, statut, circuit, recu, notif=None, canal="COURRIEL", agent=None, **champs):
+            demande = D.objects.create(
+                canal=canal, priorite=D.Priorite.ORDINAIRE, circuit=circuit, statut=statut,
+                date_reception=recu, date_notification_mds=notif,
+                mds=mds1 if circuit == D.Circuit.MDS else None, agent_assigne=agent,
+                nom_usager=nom, prenom_usager=prenom, objet=f"[démo] {objet}",
+                resume_demande="Demande fictive de démonstration.", reference_sap="SAP-DEMO",
+                emetteur="Service fictif", cree_par=sas, **champs)
+            HistoriqueRU.objects.create(demande=demande, action="CREATION", acteur=sas, detail="Demande fictive")
+            return demande
+
+        # 1. Saisine reçue par le SAS, pas encore transmise
+        creer("BOYER", "Théo", "Demande d'aide au logement", D.Statut.A_TRAITER_SAS, D.Circuit.MDS, j - timedelta(days=2))
+        # 2. Évaluation en cours, en retard, avec une relance
+        retard = creer("DURAND", "Lina", "Demande d'accompagnement budgétaire", D.Statut.EN_EVALUATION, D.Circuit.MDS,
+                       j - timedelta(days=40), notif=j - timedelta(days=40), agent=ts,
+                       date_premier_rendez_vous=j + timedelta(days=5), heure_premier_rendez_vous="09:30",
+                       elements_declaratifs=texte["elements_declaratifs"], evaluation_sociale=texte["evaluation_sociale"])
+        RelanceRU.objects.create(demande=retard, date_relance=j - timedelta(days=3), commentaire="Relance par téléphone (fictive)", effectuee_par=sas)
+        # 3. Évaluation soumise, en attente du visa du cadre
+        creer("ROUX", "Amina", "Demande de secours exceptionnel", D.Statut.A_VALIDER_CADRE, D.Circuit.MDS,
+              j - timedelta(days=8), notif=j - timedelta(days=8), agent=ts, date_premier_rendez_vous=j + timedelta(days=10),
+              heure_premier_rendez_vous="14:00", date_soumission_mds=timezone.now(), **texte)
+        # 4. Évaluation visée, à finaliser par le SAS
+        valide = creer("LEFEBVRE", "Marc", "Demande d'information sur les droits", D.Statut.A_VALIDER_SAS, D.Circuit.MDS,
+              j - timedelta(days=9), notif=j - timedelta(days=9), agent=ts, date_premier_rendez_vous=j + timedelta(days=3),
+              heure_premier_rendez_vous="10:00", date_soumission_mds=timezone.now(), validee_par=cadre,
+              initiales_signature_cadre="CM", date_validation_mds=timezone.now(), **texte)
+        HistoriqueRU.objects.create(demande=valide, action="TRANSMISSION_SAS_MDS", acteur=sas, detail="Envoyée à Agent Social 1 – MDS TEST 01")
+        HistoriqueRU.objects.create(demande=valide, action="VALIDATION_CADRE_MDS", acteur=cadre, detail="Signature CM")
+        # 5. Réponse directe du SAS, clôturée
+        clos = creer("GIRAUD", "Paule", "Question sur une aide ponctuelle", D.Statut.CLOTUREE, D.Circuit.SAS,
+                     j - timedelta(days=20), canal="PLATEFORME_13", date_reponse_transmise=timezone.now(),
+                     reponse_transmise_par=sas, usager_informe_transmission=True)
+        FicheRetourSAS.objects.create(demande=clos, type_reponse=FicheRetourSAS.REPONSE_DIRECTE,
+                                      synthese_reponse="Réponse fictive transmise à l'usager.",
+                                      date_transmission=timezone.now(), transmis_par=sas)
+        # 6. Réorientation par le SAS, en attente de la fiche retour
+        creer("MOREAU", "Karim", "Demande d'aide alimentaire", D.Statut.A_TRAITER_SAS, D.Circuit.SAS,
+              j - timedelta(days=1), canal="CONTACT")
 
     def indigne_dalo(self):
         """Habitat indigne (VAD, locataire, bailleur, commune) et recours DALO fictifs sur les familles de démonstration."""

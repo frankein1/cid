@@ -30,6 +30,11 @@ class Command(BaseCommand):
 
         PROFILS = [
             {
+                "code": "RU_SAS",
+                "nom": "Relation Usager – gestion SAS",
+                "capacites": ['ru_gerer_sas']
+            },
+            {
                 "code": "MDS_ADMINISTRATIFS",
                 "nom": "MDS Administratifs",
                 "capacites": [
