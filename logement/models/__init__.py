@@ -13,3 +13,4 @@ from .m_expulsion import (CommissionExpulsion, ConvocationExpulsion, Destinatair
 from .m_hebergement import (RappelHebergement, DemarcheHebergement, DestinataireHebergement, DossierHebergement,  # noqa: F401
                             FicheHebergement, StructureHebergement)
 from .m_asell import OperateurASELL, OrientationASELL  # noqa: F401
+from .m_indigne import SignalementHabitatIndigne  # noqa: F401

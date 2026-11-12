@@ -1,0 +1,61 @@
+<!-- /templates/logement/indigne_form.html -->
+{% extends "base.html" %}
+{% block title %}Signalement d'habitat indigne{% endblock %}
+{% block content %}
+{% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <a href="{% url 'logement:indigne_detail' s.pk %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Retour au signalement</a>
+  <h1 class="text-2xl font-bold text-gray-900 mt-2">Fiche de signalement au PDLHI</h1>
+  <p class="text-sm text-gray-600">Saisie par un agent MDS, jamais par le locataire ou le bailleur. La parole du TS prime sur les déclarations.</p>
+
+  <form method="post" class="space-y-6 mt-6">{% csrf_token %}
+    <section class="bg-white border rounded-lg p-4 space-y-3">
+      <h2 class="font-semibold">Origine du signalement</h2>
+      <select name="origine" class="{{ inp }}">
+        {% for val, lab in origines %}<option value="{{ val }}" {% if s.origine == val %}selected{% endif %}>{{ lab }}</option>{% endfor %}
+      </select>
+      <div class="flex flex-wrap gap-6 text-sm">
+        <label><input type="checkbox" name="permis_ville" {% if s.permis_ville %}checked{% endif %}> Ville soumise au permis de louer</label>
+        <label><input type="checkbox" name="permis_logement" {% if s.permis_logement %}checked{% endif %}> Logement soumis au permis de louer</label>
+      </div>
+      <p class="text-xs text-gray-500">Le permis de louer est un indicateur, pas un processus : même non soumis, le TS peut signaler le cas à la ville.</p>
+    </section>
+
+    {% for sec in sections %}
+    <section class="bg-white border rounded-lg p-4 space-y-3">
+      <h2 class="font-semibold">{{ sec.titre }}</h2>
+      {% for f in sec.champs %}
+        <div class="text-sm">
+          <div class="mb-1">{{ f.label }}</div>
+          {% if f.kind == 'texte' %}
+            <input name="{{ f.key }}" value="{{ f.valeur }}" maxlength="300" class="{{ inp }}">
+          {% elif f.kind == 'choix' %}
+            <select name="{{ f.key }}" class="{{ inp }}">
+              <option value="">—</option>
+              {% for val, lab in f.choix %}<option value="{{ val }}" {% if f.valeur == val %}selected{% endif %}>{{ lab }}</option>{% endfor %}
+            </select>
+          {% else %}
+            <div class="flex flex-wrap gap-4">
+              {% for val, lab in f.choix %}
+                <label><input type="radio" name="{{ f.key }}" value="{{ val }}" {% if f.valeur == val %}checked{% endif %}> {{ lab }}</label>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+
+    <section class="bg-white border rounded-lg p-4 space-y-3">
+      <h2 class="font-semibold">Rapport de visite à domicile</h2>
+      <p class="text-xs text-gray-500">Signé par le TS. Modifier le rapport retire la signature.</p>
+      <textarea name="rapport_vad" rows="6" class="{{ inp }}">{{ s.rapport_vad }}</textarea>
+    </section>
+
+    <div class="text-right">
+      <button class="px-5 py-2 bg-red-600 text-white rounded-lg font-semibold">Enregistrer</button>
+    </div>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}

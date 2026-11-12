@@ -1,0 +1,41 @@
+<!-- /templates/logement/indigne_liste.html -->
+{% extends "base.html" %}
+{% block title %}Logement indigne{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-house-circle-exclamation text-red-600 mr-2"></i>Lutte contre le logement indigne</h1>
+  <p class="text-sm text-gray-600 mt-1">Signalements au Pôle départemental de lutte contre l'habitat indigne (PDLHI).</p>
+
+  <form method="post" action="{% url 'logement:indigne_nouveau' %}" class="mt-6 p-4 bg-white border rounded-lg flex flex-wrap gap-3 items-end">{% csrf_token %}
+    <label class="text-sm">Origine
+      <select name="origine" class="block mt-1 px-2 py-1 border rounded">
+        {% for val, lab in origines %}<option value="{{ val }}">{{ lab }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="text-sm">Code usager (facultatif)
+      <input name="code_interne" class="block mt-1 px-2 py-1 border rounded" placeholder="ex. CO-1">
+    </label>
+    <button class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold"><i class="fas fa-plus mr-1"></i>Nouveau signalement</button>
+    <p class="w-full text-xs text-gray-500">Hors suivi MDS, le courrier est renvoyé au CIAS ou CCAS : le lien à l'usager est facultatif, mais recommandé quand il existe.</p>
+  </form>
+
+  <div class="mt-6 flex gap-2 text-sm">
+    <a href="{% url 'logement:indigne_liste' %}" class="px-3 py-1 rounded border {% if not statut %}bg-gray-900 text-white{% endif %}">Tous</a>
+    {% for val, lab in statuts %}
+      <a href="?statut={{ val }}" class="px-3 py-1 rounded border {% if statut == val %}bg-gray-900 text-white{% endif %}">{{ lab }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="mt-4 bg-white border rounded-lg divide-y">
+    {% for s in signalements %}
+      <a href="{% url 'logement:indigne_detail' s.pk %}" class="block px-4 py-3 hover:bg-gray-50">
+        <span class="font-semibold">{% if s.beneficiaire %}{{ s.beneficiaire.nom }} {{ s.beneficiaire.prenom }}{% else %}Hors suivi MDS{% endif %}</span>
+        <span class="text-sm text-gray-500 ml-2">{{ s.get_origine_display }} · {{ s.mds.nom }} · {{ s.date_creation|date:"d/m/Y" }}</span>
+        <span class="float-right text-sm">{{ s.get_statut_display }}</span>
+      </a>
+    {% empty %}
+      <p class="px-4 py-6 text-sm text-gray-500">Aucun signalement.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
