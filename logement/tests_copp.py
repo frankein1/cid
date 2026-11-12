@@ -168,7 +168,8 @@ class LogementCOPPTests(TestCase):
         self.assertIsNone(visa(d)[1])                                  # pas de signature validée
         SignatureAgent.objects.create(user=self.cadre, image=png(), validee=True)
         self.assertEqual(valeurs(d, "FSL_ACCES")["visa_image"]["image"][:4], b"\x89PNG")
-        r = self.client_de(self.ts).post(f"/logement/envoi/fsl/{d.pk}/", {"action": "imprimer"})
+        r = self.client_de(self.ts).post(f"/logement/envoi/fsl/{d.pk}/", {"action": "imprimer",
+                                                                          "justification_pieces": "Pièces en cours (fictif)."})
         self.assertTrue(r["Location"].endswith("?imprimer=1"))
         d.refresh_from_db()
         self.assertEqual(d.statut, DemandeFSL.ENVOYEE)

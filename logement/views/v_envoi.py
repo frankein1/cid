@@ -6,6 +6,7 @@
 # logement/views/v_envoi.py
 """« Envoi par mail » ou « Imprimer pour envoi » d'un dossier (FSL, COPP) : un PDF d'abord, le papier seulement
 si le destinataire l'exige ; chaque envoi alimente le compteur de papier évité (collectif, jamais par agent)."""
+from ..services import pieces as pieces_fsl
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
@@ -30,7 +31,9 @@ class _Dossier:
         self.nature, self.obj = nature, obj
         self.b, self.mds = obj.beneficiaire, obj.mds
         self.destinataires_proposes = []
+        self.checklist = []
         if nature == 'fsl':
+            self.checklist = pieces_fsl.liste_fsl(obj.type_aide)
             self.libelle = f"FSL {obj.get_type_aide_display().lower()}"
             self.intitule = f"Demande FSL {obj.get_type_aide_display().lower()} et justificatifs"
             self.retour = reverse('logement:fsl_detail', args=[obj.pk])
@@ -200,9 +203,12 @@ def envoi_dossier(request, nature, pk):
         action = request.POST.get('action')
         ids = {int(x) for x in request.POST.getlist('pieces') if x.isdigit()}
         joints = [d for d in docs_usager if d.pk in ids]
-        if dos.nature == 'hebergement' and action in ('mail', 'imprimer'):
-            from ..services import hebergement as H
-            manque = H.pieces_non_jointes(dos.obj, ids)
+        if (dos.nature == 'hebergement' or dos.checklist) and action in ('mail', 'imprimer'):
+            if dos.checklist:
+                manque = pieces_fsl.manquantes(dos.obj.type_aide, request.POST.getlist('cochees'))
+            else:
+                from ..services import hebergement as H
+                manque = H.pieces_non_jointes(dos.obj, ids)
             justif = (request.POST.get('justification_pieces') or '').strip()
             if len(justif) > 200:
                 messages.error(request, "La justification ne dépasse pas 200 caractères.")
