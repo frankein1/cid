@@ -21,6 +21,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import cm
 
 from AidFi.models.m_afase import DemandeAFASE
+from core.signature import libelle_signature
 
 LOGO_PATH = os.path.join(settings.BASE_DIR, "static/img/logoCD13.png")
 
@@ -292,8 +293,7 @@ def generer_pdf_afase_v1(demande: DemandeAFASE):
 
         decideur = decision.decide_par
         if decideur:
-            prenom_initial = decideur.first_name[0].upper() + "." if decideur.first_name else ""
-            nom_complet = f"{prenom_initial} {decideur.last_name}".strip() if decideur.last_name else decideur.username
+            nom_complet = libelle_signature(decideur)
             date_decision = decision.date_decision.strftime("%d/%m/%Y à %H:%M") if decision.date_decision else "Date inconnue"
         else:
             nom_complet = "Non renseigné"

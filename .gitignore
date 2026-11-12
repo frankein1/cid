@@ -10,6 +10,7 @@ media/
 commandes
 sync_render.sh
 venv/
+.venv/
 commandes
 *.token
 *.secret

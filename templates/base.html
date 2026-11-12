@@ -92,6 +92,12 @@
                         </div>
                         {% endif %}
 
+                        {% if user.is_superuser or user|a_la_capacite:'ru_gerer_sas' or user|a_la_capacite:'peut_voir' %}
+                        <a href="{% url 'ru:liste' %}" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <i class="fas fa-comments mr-2"></i>Relation Usager
+                        </a>
+                        {% endif %}
+
                         <div class="relative">
                             <button id="planning-button" class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center">
                                 <i class="fas fa-calendar-alt mr-2"></i>Planning
@@ -343,6 +349,10 @@
                 <a href="{% url 'beneficiaire:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-users mr-2 w-4"></i>Liste complète</a>
                 <a href="{% url 'beneficiaire:ajouter_beneficiaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-plus mr-2 w-4"></i>Ajouter un usager</a>
                 <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-address-book mr-2 w-4"></i>Annuaire (toutes MDS)</a>
+                {% endif %}
+
+                {% if user.is_superuser or user|a_la_capacite:'ru_gerer_sas' or user|a_la_capacite:'peut_voir' %}
+                <a href="{% url 'ru:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-comments mr-2 w-4"></i>Relation Usager</a>
                 {% endif %}
 
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip or user|acces_insertion or user|a_la_capacite:'stats_departement' %}

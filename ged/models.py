@@ -249,6 +249,11 @@ class DocumentGED(models.Model):
             return any(user.pk in (m.expediteur_id, m.destinataire_id, m.copie_id)
                        for m in [objet, *self.messages_lies.all()])
 
+        # Relation Usager : la pièce suit exactement les habilitations du dossier,
+        # y compris la barrière avant notification explicite du SAS à la MDS.
+        if getattr(getattr(objet, "_meta", None), "app_label", None) == "ru":
+            return bool(hasattr(objet, "peut_etre_vu_par") and objet.peut_etre_vu_par(user))
+
         # IP : les pièces suivent les droits de l'IP (CRIP, inspecteurs, cadres de la MDS, binôme)
         from protection_enfance.models import InformationPreoccupante
         if isinstance(objet, InformationPreoccupante):

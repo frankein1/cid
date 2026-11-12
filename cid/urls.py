@@ -52,6 +52,7 @@ urlpatterns = [
     path('planning/', include('planning.urls')),
     path('AidFi/', include('AidFi.urls')),
     path('messagerie/', include('messagerie.urls')),
+    path('ru/', include('ru.urls')),
     path('connecteurs/', include('connecteurs.urls')),
     path('partenaires/', include('partenaires.urls')),
     path('protection-enfance/', include('protection_enfance.urls')),
