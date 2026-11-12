@@ -10,6 +10,7 @@
     {% if dl and dl.nud %}
         <p>NUD <b>{{ dl.nud }}</b>{% if dl.date_creation %} du {{ dl.date_creation|date:"d/m/Y" }} ({{ dl.anciennete }}){% endif %}
         {% if dl.alerte_renouvellement %}<span class="ml-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">à renouveler avant le {{ dl.prochain_renouvellement|date:"d/m/Y" }}</span>{% endif %}</p>
+        {% if dl.alerte_dalo %}<p class="mt-1 px-3 py-2 rounded bg-red-50 text-red-800 text-xs"><i class="fas fa-triangle-exclamation mr-1"></i>DALO déposé le {{ dl.dalo_date|date:"d/m/Y" }} ; hors délais depuis {{ dl.dalo_hors_delais|date:"m/Y" }}. Proposer un rendez-vous DALO à l'usager.</p>{% endif %}
         <p class="text-xs text-gray-600">{% if dl.dalo_depose %}DALO déposé{% if dl.dalo_date %} le {{ dl.dalo_date|date:"d/m/Y" }}{% endif %}{% if dl.dalo_etat %} ({{ dl.get_dalo_etat_display|lower }}){% endif %}{% else %}Pas de DALO{% endif %}
             {% if dl.mutation_deposee %} · mutation {{ dl.get_mutation_etat_display|lower|default:"déposée" }}{% endif %}{% if dl.alin_inscrit %} · Al'In {{ dl.get_alin_etat_display|lower|default:"inscrit(e)" }}{% endif %}
             {% if dl.communes_souhaitees %} · souhaits : {{ dl.communes_souhaitees|join:", " }}{% endif %}</p>
