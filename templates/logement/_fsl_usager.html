@@ -25,6 +25,7 @@
         <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>
     <form method="post" action="{% url 'logement:copp_nouvelle' beneficiaire.code_interne %}" class="mt-1" id="copp-nouvelle">{% csrf_token %}
         <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>
+    <p class="mt-1"><a href="{% url 'logement:dalo_formulaire' beneficiaire.code_interne %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50 inline-block"><i class="fas fa-scale-balanced mr-1"></i>Recours DALO (Cerfa 15036)</a></p>
     <form method="post" action="{% url 'logement:indigne_nouveau' %}" class="mt-1" id="indigne-nouveau">{% csrf_token %}
         <input type="hidden" name="code_interne" value="{{ beneficiaire.code_interne }}">
         <input type="hidden" name="origine" value="VAD">
