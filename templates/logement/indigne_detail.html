@@ -1,0 +1,91 @@
+<!-- /templates/logement/indigne_detail.html -->
+{% extends "base.html" %}
+{% block title %}Signalement d'habitat indigne{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+  <a href="{% url 'logement:indigne_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Signalements</a>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900">
+      {% if s.beneficiaire %}{{ s.beneficiaire.nom }} {{ s.beneficiaire.prenom }}{% else %}Hors suivi MDS{% endif %}
+      <span class="text-base font-normal text-gray-500">· {{ s.get_origine_display }}</span>
+    </h1>
+    <span class="px-3 py-1 rounded bg-gray-100 text-sm">{{ s.get_statut_display }}</span>
+  </div>
+
+  {% if messages %}{% for m in messages %}<div class="p-3 rounded bg-blue-50 text-sm">{{ m }}</div>{% endfor %}{% endif %}
+
+  <section class="bg-white border rounded-lg p-4 space-y-2 text-sm">
+    <h2 class="font-semibold">Signatures</h2>
+    <p>Rapport de VAD : {% if s.vad_signee %}signé par {{ s.vad_signee_par.get_full_name|default:s.vad_signee_par.username }} le {{ s.vad_date_signature|date:"d/m/Y" }}{% else %}non signé{% endif %}</p>
+    <p>Fiche PDLHI (cadre) : {% if s.fiche_signee %}signée par {{ s.fiche_signee_par.get_full_name|default:s.fiche_signee_par.username }} le {{ s.fiche_date_signature|date:"d/m/Y" }}{% else %}non signée{% endif %}</p>
+    <p>Permis de louer : ville {% if s.permis_ville %}soumise{% else %}non soumise{% endif %} · logement {% if s.permis_logement %}soumis{% else %}non soumis{% endif %}</p>
+    {% if s.date_envoi %}<p>Envoyée au PDLHI le {{ s.date_envoi|date:"d/m/Y" }}</p>{% endif %}
+  </section>
+
+  {% if ecrire and s.modifiable %}
+  <div class="flex flex-wrap gap-3">
+    <a href="{% url 'logement:indigne_modifier' s.pk %}" class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold">Modifier la fiche et le rapport</a>
+    {% if ecrire and s.rapport_vad and not s.vad_signee %}
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="signer_vad">
+      <button class="px-4 py-2 border rounded-lg text-sm font-semibold">Signer le rapport de VAD (TS)</button>
+    </form>
+    {% endif %}
+    {% if peut_signer_fiche and not s.fiche_signee %}
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="signer_fiche">
+      <button class="px-4 py-2 border rounded-lg text-sm font-semibold">Signer la fiche PDLHI (cadre)</button>
+    </form>
+    {% endif %}
+    {% if s.fiche_signee and s.vad_signee %}
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}" class="flex items-center gap-2">{% csrf_token %}
+      <input type="hidden" name="action" value="envoyer">
+      <input type="date" name="date_envoi" class="px-2 py-1 border rounded text-sm">
+      <button class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold">Marquer comme envoyé au PDLHI</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if peut_suivre %}
+  <section class="bg-white border rounded-lg p-4 space-y-3 text-sm">
+    <h2 class="font-semibold">Suivi</h2>
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}" class="space-y-3">{% csrf_token %}
+      <input type="hidden" name="action" value="suivi">
+      <label class="block">Réponse du PDLHI<textarea name="reponse_pdlhi" rows="3" class="w-full px-2 py-1 border rounded">{{ s.reponse_pdlhi }}</textarea></label>
+      <label class="block"><input type="checkbox" name="enquete_salubrite" {% if s.enquete_salubrite %}checked{% endif %}> Enquête de salubrité</label>
+      <label class="block">Suite donnée<textarea name="suite" rows="3" class="w-full px-2 py-1 border rounded">{{ s.suite }}</textarea></label>
+      <label class="block"><input type="checkbox" name="bascule_dalo" {% if s.bascule_dalo %}checked{% endif %}> Bascule sur dispositif DALO</label>
+      <button class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold">Enregistrer le suivi</button>
+    </form>
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}">{% csrf_token %}
+      <input type="hidden" name="action" value="clore">
+      <button class="text-sm text-gray-600 underline">Clore le signalement</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% for sec in sections %}
+  <section class="bg-white border rounded-lg p-4 text-sm">
+    <h2 class="font-semibold mb-2">{{ sec.titre }}</h2>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+      {% for f in sec.champs %}
+        <div class="flex justify-between gap-3 border-b py-1"><dt class="text-gray-600">{{ f.label }}</dt><dd>{{ f.affiche|default:"—" }}</dd></div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endfor %}
+
+  <section class="bg-white border rounded-lg p-4 text-sm">
+    <h2 class="font-semibold mb-2">Rapport de visite à domicile</h2>
+    <p class="whitespace-pre-line">{{ s.rapport_vad|default:"—" }}</p>
+  </section>
+
+  <section class="bg-white border rounded-lg p-4 text-sm">
+    <h2 class="font-semibold mb-2">Historique</h2>
+    <ul class="space-y-1">
+      {% for h in s.historique %}<li>{{ h.date }} · {{ h.qui }} · {{ h.action }}{% if h.detail %} ({{ h.detail }}){% endif %}</li>{% empty %}<li>—</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}
