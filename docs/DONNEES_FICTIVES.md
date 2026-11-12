@@ -221,3 +221,15 @@ Chaque famille de démonstration a une AS référente (référent MDS), réparti
 - **Hors suivi MDS** : signalement de la commune sans usager, renvoyé au CIAS ou CCAS.
 
 Les statistiques de l'habitat indigne (« Logement indigne » › « Statistiques ») et leur export CSV s'appuient sur ces données.
+
+## Relation usager (RU)
+
+- Compte **ru_sas** (Sylvie Sas, profil RU_SAS) : enregistre et finalise les demandes du SAS. Mot de passe de démonstration.
+- **BOYER Théo** : saisine reçue par le SAS, pas encore transmise à une MDS.
+- **DURAND Lina** : évaluation en cours par le travailleur social de MDS TEST 01, en retard, avec une relance.
+- **ROUX Amina** : évaluation complète, en attente du visa du cadre.
+- **LEFEBVRE Marc** : évaluation visée par le cadre, à finaliser par le SAS (historique de transmission et de validation).
+- **GIRAUD Paule** : réponse directe du SAS (plateforme 13), clôturée avec sa fiche retour.
+- **MOREAU Karim** : réorientation en attente de la fiche retour du SAS.
+
+Les demandes de démonstration portent le préfixe « [démo] » dans leur objet ; la remise à zéro les supprime.
