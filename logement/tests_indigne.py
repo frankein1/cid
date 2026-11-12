@@ -141,15 +141,6 @@ class LogementIndigneTests(TestCase):
         self.assertNotContains(self.client_de(self.hors).get("/logement/indigne/"), f"/logement/indigne/{s.pk}/")
         self.assertContains(self.client_de(self.ts).get("/logement/indigne/"), f"/logement/indigne/{s.pk}/")
 
-    def test_pdf_fiche_acces_et_contenu(self):
-        s = self.nouveau(code="IN-1")
-        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rongeurs": "oui"})
-        r = self.client_de(self.ts).get(f"/logement/indigne/{s.pk}/fiche.pdf")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r['Content-Type'], 'application/pdf')
-        self.assertTrue(r.content.startswith(b'%PDF'))
-        self.assertEqual(self.client_de(self.hors).get(f"/logement/indigne/{s.pk}/fiche.pdf").status_code, 403)
-
     def test_entree_dans_le_menu(self):
         self.assertContains(self.client_de(self.ts).get("/logement/indigne/"), "Logement indigne")
 

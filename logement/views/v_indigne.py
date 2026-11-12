@@ -7,7 +7,7 @@
 """Lutte contre le logement indigne : signalement, rapport de VAD (signé TS), fiche PDLHI (signée cadre), suivi."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -16,7 +16,6 @@ from mds.models import UserMDSProfile
 
 from ..models import SignalementHabitatIndigne
 from ..services import indigne
-from ..services.indigne_pdf import fiche as indigne_pdf_fiche
 from .v_copp import _date, _usager
 
 
@@ -225,12 +224,3 @@ def indigne_action(request, pk):
     s.save()
     return redirect('logement:indigne_detail', pk=s.pk)
 
-
-@login_required
-def indigne_pdf(request, pk):
-    s, voir, _ = _acces(request, pk)
-    if not voir:
-        return HttpResponseForbidden("Réservé aux agents de la MDS du signalement.")
-    rep = HttpResponse(indigne_pdf_fiche(s), content_type='application/pdf')
-    rep['Content-Disposition'] = f'inline; filename="PDLHI_{s.pk}.pdf"'
-    return rep
