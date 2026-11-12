@@ -181,3 +181,13 @@ class LogementCOPPTests(TestCase):
         dehors = self.agent("ines", autre_mds, "MDS_AGENTS_SOCIAUX")
         self.assertEqual(self.client_de(dehors).post("/logement/copp/nouvelle/CO-1/").status_code, 403)
         self.assertEqual(self.client_de(dehors).get("/logement/demande/CO-1/").status_code, 403)
+
+    def test_popup_pieces_affiche_puis_accuse_lecture(self):
+        self.client_de(self.ts).post("/logement/copp/nouvelle/CO-1/")
+        s = SaisineCOPP.objects.get()
+        self.assertContains(self.client_de(self.ts).get(f"/logement/copp/{s.pk}/"), "Avez-vous pensé aux pièces")
+        self.client_de(self.ts).post(f"/logement/copp/{s.pk}/action/", {"action": "pieces_lu"})
+        s.refresh_from_db()
+        self.assertTrue(any(h.get('action') == 'Avertissement lu' for h in s.historique))
+        self.assertNotContains(self.client_de(self.ts).get(f"/logement/copp/{s.pk}/"), "Avez-vous pensé aux pièces")
+

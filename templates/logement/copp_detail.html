@@ -2,6 +2,18 @@
 {% extends "base.html" %}
 {% block title %}Saisine COPP — {{ b.nom }} {{ b.prenom }}{% endblock %}
 {% block content %}
+{% if avertissement %}
+<div class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+  <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-3 text-sm text-gray-900">
+    <h2 class="text-lg font-bold text-amber-800">Avez-vous pensé aux pièces ?</h2>
+    <p>Vérifiez les justificatifs à joindre à la saisine avant de la déposer. Une pièce absente se justifie à l'envoi.</p>
+    <form method="post" action="{% url 'logement:copp_action' s.pk %}" class="text-right">{% csrf_token %}
+      <input type="hidden" name="action" value="pieces_lu">
+      <button class="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold">OK</button>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% if imprimer %}<script>window.addEventListener('load', () => window.open("{% url 'logement:copp_pdf' s.pk %}", "_blank"));</script>{% endif %}
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="copp-detail">
   <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
