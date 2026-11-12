@@ -9,7 +9,10 @@
       {% if s.beneficiaire %}{{ s.beneficiaire.nom }} {{ s.beneficiaire.prenom }}{% else %}Hors suivi MDS{% endif %}
       <span class="text-base font-normal text-gray-500">· {{ s.get_origine_display }}</span>
     </h1>
-    <span class="px-3 py-1 rounded bg-gray-100 text-sm">{{ s.get_statut_display }}</span>
+    <div class="flex items-center gap-3">
+      <span class="px-3 py-1 rounded bg-gray-100 text-sm">{{ s.get_statut_display }}</span>
+      <a href="{% url 'logement:indigne_pdf' s.pk %}" target="_blank" class="px-3 py-1 border rounded text-sm"><i class="fas fa-file-pdf mr-1"></i>Fiche PDF</a>
+    </div>
   </div>
 
   {% if messages %}{% for m in messages %}<div class="p-3 rounded bg-blue-50 text-sm">{{ m }}</div>{% endfor %}{% endif %}
@@ -20,6 +23,8 @@
     <p>Fiche PDLHI (cadre) : {% if s.fiche_signee %}signée par {{ s.fiche_signee_par.get_full_name|default:s.fiche_signee_par.username }} le {{ s.fiche_date_signature|date:"d/m/Y" }}{% else %}non signée{% endif %}</p>
     <p>Permis de louer : ville {% if s.permis_ville %}soumise{% else %}non soumise{% endif %} · logement {% if s.permis_logement %}soumis{% else %}non soumis{% endif %}</p>
     {% if s.date_envoi %}<p>Envoyée au PDLHI le {{ s.date_envoi|date:"d/m/Y" }}</p>{% endif %}
+    {% if s.creneau %}<p>Visite liée au planning : {{ s.creneau.date|date:"d/m/Y" }} {{ s.creneau.heure_debut|time:"H:i" }}</p>{% endif %}
+    {% if s.entretien %}<p>Rapport de VAD versé au journal de l'usager (entretien du {{ s.entretien.date|date:"d/m/Y" }}).</p>{% endif %}
   </section>
 
   {% if ecrire and s.modifiable %}

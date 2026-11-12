@@ -14,6 +14,14 @@
       <select name="origine" class="{{ inp }}">
         {% for val, lab in origines %}<option value="{{ val }}" {% if s.origine == val %}selected{% endif %}>{{ lab }}</option>{% endfor %}
       </select>
+      {% if rdvs %}
+      <label class="block text-sm">Visite à domicile (rendez-vous du planning)
+        <select name="creneau" class="{{ inp }}">
+          <option value="">— aucun rendez-vous —</option>
+          {% for r in rdvs %}<option value="{{ r.pk }}" {% if s.creneau_id == r.pk %}selected{% endif %}>{{ r.date|date:"d/m/Y" }} {{ r.heure_debut|time:"H:i" }} · {{ r.get_modalite_display|default:r.modalite }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
       <div class="flex flex-wrap gap-6 text-sm">
         <label><input type="checkbox" name="permis_ville" {% if s.permis_ville %}checked{% endif %}> Ville soumise au permis de louer</label>
         <label><input type="checkbox" name="permis_logement" {% if s.permis_logement %}checked{% endif %}> Logement soumis au permis de louer</label>

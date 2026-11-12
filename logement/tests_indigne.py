@@ -140,3 +140,57 @@ class LogementIndigneTests(TestCase):
         self.assertEqual(self.client_de(self.hors).get(f"/logement/indigne/{s.pk}/").status_code, 403)
         self.assertNotContains(self.client_de(self.hors).get("/logement/indigne/"), f"/logement/indigne/{s.pk}/")
         self.assertContains(self.client_de(self.ts).get("/logement/indigne/"), f"/logement/indigne/{s.pk}/")
+
+    def test_pdf_fiche_acces_et_contenu(self):
+        s = self.nouveau(code="IN-1")
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rongeurs": "oui"})
+        r = self.client_de(self.ts).get(f"/logement/indigne/{s.pk}/fiche.pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'application/pdf')
+        self.assertTrue(r.content.startswith(b'%PDF'))
+        self.assertEqual(self.client_de(self.hors).get(f"/logement/indigne/{s.pk}/fiche.pdf").status_code, 403)
+
+    def test_entree_dans_le_menu(self):
+        self.assertContains(self.client_de(self.ts).get("/logement/indigne/"), "Logement indigne")
+
+    def test_vad_signee_va_au_journal_et_au_planning(self):
+        from datetime import date, time
+        from beneficiaire.models_journal import EntretienSocial
+        from planning.models import CreneauRdv
+        rdv = CreneauRdv.objects.create(date=date(2026, 11, 5), heure_debut=time(9), heure_fin=time(9, 30),
+                                        beneficiaire=self.b, mds=self.mds, agent=self.ts, modalite='VAD',
+                                        statut='VENU_RECU')
+        s = self.nouveau(code="IN-1")
+        c = self.client_de(self.ts)
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "creneau": rdv.pk,
+                                                        "rapport_vad": "Humidité dans la chambre."})
+        c.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
+        s.refresh_from_db()
+        e = s.entretien
+        self.assertIsNotNone(e)
+        self.assertEqual((e.mode, e.creneau, e.synthese, e.date), (EntretienSocial.VAD, rdv, "Humidité dans la chambre.", rdv.date))
+        self.assertEqual(self.b.entretiens.count(), 1)
+        self.assertIn(s, rdv.signalements_indigne.all())
+        # rapport modifié : signature retirée et entrée du journal retirée
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "creneau": rdv.pk, "rapport_vad": "Autre texte."})
+        s.refresh_from_db()
+        self.assertFalse(s.vad_signee)
+        self.assertEqual(self.b.entretiens.count(), 0)
+
+    def test_rdv_d_un_autre_usager_refuse(self):
+        from datetime import date, time
+        from planning.models import CreneauRdv
+        autre = Beneficiaire.objects.create(code_interne="IN-2", civilite="M.", nom="AUTRE", prenom="Paul",
+                                            date_naissance="1980-01-01", adresse="4 rue D", code_postal="13110",
+                                            ville="Port-de-Bouc", mds=self.mds)
+        rdv = CreneauRdv.objects.create(date=date(2026, 11, 5), heure_debut=time(9), heure_fin=time(9, 30),
+                                        beneficiaire=autre, mds=self.mds, agent=self.ts, modalite='VAD')
+        s = self.nouveau(code="IN-1")
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "creneau": rdv.pk})
+        s.refresh_from_db()
+        self.assertIsNone(s.creneau)
+
+    def test_bouton_sur_fiche_usager(self):
+        self.assertContains(self.client_de(self.ts).get(f"/beneficiaire/{self.b.code_interne}/"),
+                            'id="indigne-nouveau"')
+

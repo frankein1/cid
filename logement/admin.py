@@ -15,7 +15,7 @@ from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, Convoca
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 from .models import OperateurASELL, OrientationASELL
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
-                     RappelHebergement, StructureHebergement)
+                     RappelHebergement, SignalementHabitatIndigne, StructureHebergement)
 
 
 @admin.register(GestionnaireFSL)
@@ -284,3 +284,11 @@ class OrientationASELLAdmin(admin.ModelAdmin):
     list_display = ['beneficiaire', 'type_mesure', 'volet', 'operateur', 'statut', 'date_envoi', 'reponse']
     list_filter = ['type_mesure', 'volet', 'statut', 'reponse']
     raw_id_fields = ['beneficiaire', 'dossier_expulsion', 'cree_par']
+
+
+@admin.register(SignalementHabitatIndigne)
+class SignalementHabitatIndigneAdmin(admin.ModelAdmin):
+    list_display = ('id', 'beneficiaire', 'mds', 'origine', 'statut', 'date_creation')
+    list_filter = ('statut', 'origine', 'mds')
+    search_fields = ('beneficiaire__nom', 'beneficiaire__prenom')
+    readonly_fields = ('historique', 'date_creation', 'date_modification')

@@ -72,6 +72,7 @@
                                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                                 <a href="{% url 'logement:expulsion_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
                                 <a href="{% url 'logement:hebergement_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>
+                                <a href="{% url 'logement:indigne_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Logement indigne</a>
                                 {% endif %}
                                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                                 <a href="{% url 'connecteurs:inclusion_recherche' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-map-location-dot mr-2 w-4"></i>Trouver un service d'insertion</a>
@@ -349,6 +350,7 @@
                 {% if user.is_superuser or user|a_la_capacite:'peut_valider' or user|a_la_capacite:'stats_departement' or user|a_la_capacite:'peut_administrer' %}<a href="{% url 'beneficiaire:statistiques_accompagnement' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-chart-column mr-2 w-4"></i>Statistiques de l'accompagnement</a>{% endif %}
                 <a href="{% url 'logement:papier_economise' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-leaf mr-2 w-4"></i>Papier économisé</a>
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}<a href="{% url 'logement:expulsion_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
+                <a href="{% url 'logement:indigne_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Logement indigne</a>
                 <a href="{% url 'logement:hebergement_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>{% endif %}
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}<a href="{% url 'connecteurs:inclusion_recherche' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-map-location-dot mr-2 w-4"></i>Trouver un service d'insertion</a>{% endif %}
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}

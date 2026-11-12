@@ -7,7 +7,7 @@
 """Lutte contre le logement indigne : signalement, rapport de VAD (signé TS), fiche PDLHI (signée cadre), suivi."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -16,6 +16,7 @@ from mds.models import UserMDSProfile
 
 from ..models import SignalementHabitatIndigne
 from ..services import indigne
+from ..services.indigne_pdf import fiche as indigne_pdf_fiche
 from .v_copp import _date, _usager
 
 
@@ -39,6 +40,37 @@ def _champ(s, key, label, kind, choix):
     valeur = s.donnees.get(key, '')
     return {'key': key, 'label': label, 'kind': kind, 'choix': choix or [], 'valeur': valeur,
             'affiche': dict(choix or []).get(valeur, valeur) if choix else valeur}
+
+
+def _rdvs_usager(s):
+    """Rendez-vous du planning de l'usager, parmi lesquels rattacher la visite."""
+    if not s.beneficiaire_id:
+        return []
+    from planning.models import CreneauRdv
+    return CreneauRdv.objects.filter(beneficiaire=s.beneficiaire).order_by('-date', '-heure_debut')
+
+
+def _journaliser_vad(s, user):
+    """Le rapport de VAD signé entre dans le journal du dossier usager, relié au rendez-vous du planning."""
+    if not s.beneficiaire_id:
+        return
+    from beneficiaire.models_journal import EntretienSocial
+    date_vad = s.creneau.date if s.creneau_id else timezone.localdate()
+    if s.entretien_id is None:
+        s.entretien = EntretienSocial.objects.create(
+            beneficiaire=s.beneficiaire, date=date_vad, mode=EntretienSocial.VAD, auteur=user,
+            objet="Visite à domicile – logement indigne", synthese=s.rapport_vad, creneau=s.creneau,
+            cree_par=user, modifie_par=user)
+    else:
+        e = s.entretien
+        e.date, e.synthese, e.creneau, e.modifie_par = date_vad, s.rapport_vad, s.creneau, user
+        e.save()
+
+
+def _retirer_journal(s):
+    if s.entretien_id:
+        s.entretien.delete()
+        s.entretien = None
 
 
 def _champs_formulaire(s):
@@ -122,18 +154,27 @@ def indigne_modifier(request, pk):
         rapport = (p.get('rapport_vad') or '').strip()
         modifie_vad = rapport != s.rapport_vad
         s.rapport_vad = rapport
+        creneau_id = p.get('creneau') or None
+        if creneau_id and (not s.beneficiaire_id or not _rdvs_usager(s).filter(pk=creneau_id).exists()):
+            creneau_id = None
+        s.creneau_id = creneau_id
         if modifie_vad and s.vad_signee:
             s.vad_signee_par, s.vad_date_signature = None, None
+            _retirer_journal(s)
             s.tracer(request.user, "Signature du rapport de VAD retirée", "rapport modifié")
         if modifie_fiche and s.fiche_signee:
             s.fiche_signee_par, s.fiche_date_signature = None, None
             s.tracer(request.user, "Signature de la fiche retirée", "fiche modifiée")
         s.tracer(request.user, "Signalement modifié")
         s.save()
+        if s.vad_signee and s.entretien_id:
+            _journaliser_vad(s, request.user)   # rendez-vous modifié après signature : journal à jour
+            s.save()
         messages.success(request, "Signalement enregistré.")
         return redirect('logement:indigne_detail', pk=s.pk)
     return render(request, 'logement/indigne_form.html', {
-        's': s, 'sections': _champs_formulaire(s), 'origines': SignalementHabitatIndigne.ORIGINES})
+        's': s, 'sections': _champs_formulaire(s), 'origines': SignalementHabitatIndigne.ORIGINES,
+        'rdvs': _rdvs_usager(s)[:40]})
 
 
 @login_required
@@ -151,7 +192,9 @@ def indigne_action(request, pk):
             messages.error(request, "Rédigez le rapport de VAD avant de le signer.")
         else:
             s.vad_signee_par, s.vad_date_signature = request.user, maintenant
-            s.tracer(request.user, "Rapport de VAD signé")
+            _journaliser_vad(s, request.user)
+            s.tracer(request.user, "Rapport de VAD signé",
+                     "versé au journal de l'usager" if s.beneficiaire_id else "")
             messages.success(request, "Rapport de VAD signé.")
     elif action == 'signer_fiche' and s.modifiable and _cadre(request.user, s):
         s.fiche_signee_par, s.fiche_date_signature = request.user, maintenant
@@ -181,3 +224,13 @@ def indigne_action(request, pk):
         return redirect('logement:indigne_detail', pk=s.pk)
     s.save()
     return redirect('logement:indigne_detail', pk=s.pk)
+
+
+@login_required
+def indigne_pdf(request, pk):
+    s, voir, _ = _acces(request, pk)
+    if not voir:
+        return HttpResponseForbidden("Réservé aux agents de la MDS du signalement.")
+    rep = HttpResponse(indigne_pdf_fiche(s), content_type='application/pdf')
+    rep['Content-Disposition'] = f'inline; filename="PDLHI_{s.pk}.pdf"'
+    return rep

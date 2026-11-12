@@ -40,6 +40,12 @@ class SignalementHabitatIndigne(models.Model):
                                        related_name='vad_signees_indigne')
     vad_date_signature = models.DateTimeField(null=True, blank=True)
 
+    # Rapport de VAD relié au rendez-vous du planning et à l'entretien du journal de l'usager (dossier usager)
+    creneau = models.ForeignKey('planning.CreneauRdv', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='signalements_indigne', verbose_name="Visite (rendez-vous du planning)")
+    entretien = models.ForeignKey('beneficiaire.EntretienSocial', on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='signalements_indigne', verbose_name="Entrée du journal")
+
     # Fiche PDLHI : signée par le cadre (responsable de la MDS)
     fiche_signee_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                          related_name='fiches_signees_indigne')
