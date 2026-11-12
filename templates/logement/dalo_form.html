@@ -1,0 +1,136 @@
+<!-- /templates/logement/dalo_form.html -->
+{% extends "base.html" %}
+{% block title %}Recours DALO — {{ b.nom }} {{ b.prenom }}{% endblock %}
+{% block content %}
+{% with inp="w-full px-2 py-1 border border-gray-300 rounded text-sm" %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Fiche de {{ b.prenom }} {{ b.nom }}</a>
+  <div class="flex flex-wrap items-start justify-between gap-3 mt-2 mb-1">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-scale-balanced text-amber-600 mr-2"></i>Recours amiable DALO (Cerfa 15036*02)</h1>
+    <a href="{% url 'logement:dalo_pdf' b.code_interne %}" target="_blank" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-file-pdf mr-1"></i>Générer le Cerfa rempli</a>
+  </div>
+  <p class="text-sm text-gray-600 mb-5">Les rubriques sont préremplies depuis la fiche usager et la demande de logement. Vérifiez-les avant de générer le formulaire. Le PDF reste modifiable pour les rubriques restantes.</p>
+  <p class="text-xs text-gray-500 mb-5">Reste à faire à la main par le requérant : la déclaration sur l'honneur (rubrique 11), à signer.</p>
+
+  <form method="post" class="space-y-5">{% csrf_token %}
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
+      <div class="md:col-span-3 font-semibold">1. Requérant</div>
+      <label>Civilité<select name="civilite" class="{{ inp }}"><option value="">—</option>{% for c, l in civilites %}<option value="{{ c }}" {% if r.civilite == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label>Nom de naissance<input name="nom_naissance" value="{{ r.nom_naissance }}" class="{{ inp }}"></label>
+      <label>Nom d'usage<input name="nom_usage" value="{{ r.nom_usage }}" class="{{ inp }}"></label>
+      <label>Prénom(s)<input name="prenoms" value="{{ r.prenoms }}" class="{{ inp }}"></label>
+      <label>Date de naissance (JJ/MM/AAAA)<input name="date_naissance" value="{{ r.date_naissance }}" class="{{ inp }}"></label>
+      <label>Nationalité<select name="nationalite" class="{{ inp }}"><option value="">—</option>{% for c, l in nationalites %}<option value="{{ c }}" {% if r.nationalite == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label>Téléphone domicile<input name="telephone" value="{{ r.telephone }}" class="{{ inp }}"></label>
+      <label>Téléphone portable<input name="telephone_portable" value="{{ r.telephone_portable }}" class="{{ inp }}"></label>
+      <label>Courriel<input name="email" value="{{ r.email }}" class="{{ inp }}"></label>
+      <label>Numéro unique (NUD)<input name="nud" value="{{ r.nud }}" class="{{ inp }}"></label>
+      <label>N° allocataire CAF<input name="numero_allocataire" value="{{ r.numero_allocataire }}" class="{{ inp }}"></label>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-4 gap-3 text-sm">
+      <div class="md:col-span-4 font-semibold">3. Adresse et logement</div>
+      <label>Numéro<input name="adresse_numero" value="{{ r.adresse_numero }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Voie<input name="adresse_voie" value="{{ r.adresse_voie }}" class="{{ inp }}"></label>
+      <label>Complément<input name="adresse_complement" value="{{ r.adresse_complement }}" class="{{ inp }}"></label>
+      <label>Code postal<input name="code_postal" value="{{ r.code_postal }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Commune<input name="commune" value="{{ r.commune }}" class="{{ inp }}"></label>
+      <label>Type de logement<select name="logement" class="{{ inp }}"><option value="">—</option>{% for c, l in logements %}<option value="{{ c }}" {% if r.logement == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label class="md:col-span-2">Précisez (si autre)<input name="logement_autre" value="{{ r.logement_autre }}" class="{{ inp }}"></label>
+      <label class="md:col-span-4">Nom du bailleur figurant sur la quittance<input name="bailleur" value="{{ r.bailleur }}" class="{{ inp }}"></label>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-2">
+      <div class="font-semibold">5. Personnes à loger en plus de vous-même</div>
+      <p class="text-xs text-gray-500">Une par ligne : Nom;Prénom;JJ/MM/AAAA;Lien de parenté. Huit lignes maximum sur le formulaire.</p>
+      <textarea name="personnes" rows="4" class="{{ inp }} font-mono">{{ r.personnes }}</textarea>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
+      <div class="font-semibold">6. Vos ressources</div>
+      <p class="text-xs text-gray-500">Montants mensuels actuels, pour vous et les personnes à loger. Joignez les justificatifs des trois derniers mois.</p>
+      <label class="block md:w-1/2">Ressources mensuelles du mois de<input name="ressources_mois" value="{{ r.ressources_mois }}" class="{{ inp }}" placeholder="ex. octobre 2026"></label>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-xs">
+          <thead><tr class="text-left text-gray-600"><th class="py-1 pr-2">Nature des ressources</th>{% for col, lc in colonnes_ressources %}<th class="py-1 pr-2">{{ lc }}</th>{% endfor %}</tr></thead>
+          <tbody>
+          {% for code, libelle, cellules in ressources_lignes %}
+            <tr class="border-t"><td class="py-1 pr-2">{{ libelle }}</td>
+              {% for col, lc, valeur in cellules %}<td class="py-1 pr-2"><input name="res_{{ code }}_{{ col }}" value="{{ valeur }}" class="{{ inp }}" inputmode="decimal" placeholder="€"></td>{% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="grid md:grid-cols-4 gap-3">
+        <label>Année du dernier avis d'impôt<input name="ressources_annee_avis" value="{{ r.ressources_annee_avis }}" class="{{ inp }}" maxlength="4"></label>
+        <label>Aidé par un point conseil budget<select name="pcb" class="{{ inp }}"><option value="">—</option>{% for c, l in oui_non %}<option value="{{ c }}" {% if r.pcb == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+        <label>Dossier de surendettement déposé<select name="surendettement" class="{{ inp }}"><option value="">—</option>{% for c, l in oui_non %}<option value="{{ c }}" {% if r.surendettement == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
+      <div class="font-semibold">7. Lieux de travail ou d'activité</div>
+      <p class="text-xs text-gray-500">Ligne 1 : vous-même ; lignes suivantes : les personnes de la rubrique 5. Le type de contrat des lignes 6 et 7 du formulaire PDF n'est pas repris : à compléter à la main (champs dupliqués dans le formulaire officiel).</p>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-xs">
+          <thead><tr class="text-left text-gray-600"><th class="py-1 pr-2">Personne</th><th class="py-1 pr-2">Activité</th><th class="py-1 pr-2">Contrat</th><th class="py-1 pr-2">Employeur / lieu</th><th class="py-1 pr-2">Commune</th><th class="py-1 pr-2">Transport</th><th class="py-1 pr-2">Temps</th></tr></thead>
+          <tbody>
+          {% for i, l in lieux %}
+            <tr class="border-t align-top">
+              <td class="py-1 pr-2">{% if i == 0 %}<span class="font-medium">Vous-même</span>{% else %}<input name="lieu{{ i }}_nom" value="{{ l.nom }}" class="{{ inp }}" placeholder="Nom Prénom">{% endif %}</td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_activite" value="{{ l.activite }}" class="{{ inp }}" placeholder="salarié, chômage…"></td>
+              <td class="py-1 pr-2"><select name="lieu{{ i }}_contrat" class="{{ inp }}"><option value="">—</option>{% for c, lc in contrats %}<option value="{{ c }}" {% if l.contrat == c %}selected{% endif %}>{{ lc }}</option>{% endfor %}</select></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_entreprise" value="{{ l.entreprise }}" class="{{ inp }}"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_commune" value="{{ l.commune }}" class="{{ inp }}"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_transport" value="{{ l.transport }}" class="{{ inp }}" placeholder="bus, voiture…"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_temps" value="{{ l.temps }}" class="{{ inp }}" placeholder="min"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
+      <div class="font-semibold">8. Motifs du recours</div>
+      <div class="grid md:grid-cols-2 gap-2">
+        {% for code, libelle in situations %}
+        <label class="flex items-start gap-2"><input type="checkbox" name="situations" value="{{ code }}" class="mt-1" {% if code in r.situations %}checked{% endif %}> <span>{{ libelle }}</span></label>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">Le motif 8.7 (logement non décent) n'est ouvert qu'aux personnes ayant un enfant mineur ou une personne handicapée à charge. Vérifiez cette condition avant de cocher.</p>
+      <div class="grid md:grid-cols-3 gap-3">
+        <label class="md:col-span-3">8.1 Nature du local<input name="nature_local" value="{{ r.nature_local }}" class="{{ inp }}"></label>
+        <label class="md:col-span-3">8.2 Personnes qui vous hébergent (nom, adresse, depuis quand)<textarea name="hebergeurs" rows="2" class="{{ inp }}">{{ r.hebergeurs }}</textarea></label>
+        <label>8.2 Nombre de personnes dans le logement<input name="hebergement_nb_personnes" value="{{ r.hebergement_nb_personnes }}" class="{{ inp }}"></label>
+        <label>8.2 Surface (m²)<input name="hebergement_surface" value="{{ r.hebergement_surface }}" class="{{ inp }}"></label>
+        <label>8.2 Nombre de pièces<input name="hebergement_pieces" value="{{ r.hebergement_pieces }}" class="{{ inp }}"></label>
+        <label class="md:col-span-2">8.4 Nom de la structure<input name="structure_nom" value="{{ r.structure_nom }}" class="{{ inp }}"></label>
+        <label>8.4 Date d'entrée (JJ/MM/AAAA)<input name="structure_date" value="{{ r.structure_date }}" class="{{ inp }}"></label>
+        <label>8.8 Surface totale (m²)<input name="surface_totale" value="{{ r.surface_totale }}" class="{{ inp }}"></label>
+        <label>8.8 Nombre de pièces<input name="nombre_pieces" value="{{ r.nombre_pieces }}" class="{{ inp }}"></label>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
+      <div class="md:col-span-3 font-semibold">9. Personne ou structure qui vous aide</div>
+      <label>Nom<input name="assistant_nom" value="{{ r.assistant_nom }}" class="{{ inp }}"></label>
+      <label>Organisme<input name="assistant_organisme" value="{{ r.assistant_organisme }}" class="{{ inp }}"></label>
+      <label>Téléphone<input name="assistant_telephone" value="{{ r.assistant_telephone }}" class="{{ inp }}"></label>
+      <label>Numéro<input name="assistant_adresse_numero" value="{{ r.assistant_adresse_numero }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Voie<input name="assistant_adresse_voie" value="{{ r.assistant_adresse_voie }}" class="{{ inp }}"></label>
+      <label>Code postal<input name="assistant_code_postal" value="{{ r.assistant_code_postal }}" class="{{ inp }}"></label>
+      <label class="md:col-span-2">Commune<input name="assistant_commune" value="{{ r.assistant_commune }}" class="{{ inp }}"></label>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-2">
+      <div class="font-semibold">10. Argumentaire libre</div>
+      <textarea name="argumentaire" rows="8" class="{{ inp }}">{{ r.argumentaire }}</textarea>
+    </section>
+
+    <div class="flex justify-end"><button class="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-save mr-1"></i>Enregistrer</button></div>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}

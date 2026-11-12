@@ -13,3 +13,4 @@ from .v_expulsion_commissions import *  # noqa: F401,F403
 from .v_hebergement import *  # noqa: F401,F403
 from .v_asell import *  # noqa: F401,F403
 from .v_indigne import *  # noqa: F401,F403
+from .v_dalo import *  # noqa: F401,F403

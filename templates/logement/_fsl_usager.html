@@ -10,6 +10,7 @@
     {% if dl and dl.nud %}
         <p>NUD <b>{{ dl.nud }}</b>{% if dl.date_creation %} du {{ dl.date_creation|date:"d/m/Y" }} ({{ dl.anciennete }}){% endif %}
         {% if dl.alerte_renouvellement %}<span class="ml-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">à renouveler avant le {{ dl.prochain_renouvellement|date:"d/m/Y" }}</span>{% endif %}</p>
+        {% if dl.alerte_dalo %}<p class="mt-1 px-3 py-2 rounded bg-red-50 text-red-800 text-xs"><i class="fas fa-triangle-exclamation mr-1"></i>DALO déposé le {{ dl.dalo_date|date:"d/m/Y" }} ; hors délais depuis {{ dl.dalo_hors_delais|date:"m/Y" }}. Proposer un rendez-vous DALO à l'usager.</p>{% endif %}
         <p class="text-xs text-gray-600">{% if dl.dalo_depose %}DALO déposé{% if dl.dalo_date %} le {{ dl.dalo_date|date:"d/m/Y" }}{% endif %}{% if dl.dalo_etat %} ({{ dl.get_dalo_etat_display|lower }}){% endif %}{% else %}Pas de DALO{% endif %}
             {% if dl.mutation_deposee %} · mutation {{ dl.get_mutation_etat_display|lower|default:"déposée" }}{% endif %}{% if dl.alin_inscrit %} · Al'In {{ dl.get_alin_etat_display|lower|default:"inscrit(e)" }}{% endif %}
             {% if dl.communes_souhaitees %} · souhaits : {{ dl.communes_souhaitees|join:", " }}{% endif %}</p>
@@ -24,6 +25,7 @@
         <button name="type_aide" value="EAU" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>FSL eau</button></form>
     <form method="post" action="{% url 'logement:copp_nouvelle' beneficiaire.code_interne %}" class="mt-1" id="copp-nouvelle">{% csrf_token %}
         <button class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50"><i class="fas fa-plus mr-1"></i>Saisine commission des publics prioritaires (COPP)</button></form>
+    <p class="mt-1"><a href="{% url 'logement:dalo_formulaire' beneficiaire.code_interne %}" class="text-xs px-3 py-1.5 border rounded-md hover:bg-gray-50 inline-block"><i class="fas fa-scale-balanced mr-1"></i>Recours DALO (Cerfa 15036)</a></p>
     <form method="post" action="{% url 'logement:indigne_nouveau' %}" class="mt-1" id="indigne-nouveau">{% csrf_token %}
         <input type="hidden" name="code_interne" value="{{ beneficiaire.code_interne }}">
         <input type="hidden" name="origine" value="VAD">

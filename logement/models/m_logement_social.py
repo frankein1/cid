@@ -77,3 +77,19 @@ class DemandeLogementSocial(models.Model):
     def alerte_renouvellement(self):
         prochain = self.prochain_renouvellement()
         return bool(prochain and (prochain - timezone.localdate()).days <= 30)
+
+    def dalo_hors_delais(self, aujourdhui=None):
+        """Recours DALO en cours au-delà du délai (6e mois après le dépôt, configurable par LOGEMENT_DALO_DELAI_MOIS).
+        Retourne la date du 6e mois, à partir du mois suivant celui-ci (la notification part alors), sinon None."""
+        from dateutil.relativedelta import relativedelta
+        from django.conf import settings
+        if not (self.dalo_depose and self.dalo_date) or self.dalo_etat not in ('', 'EN_COURS'):
+            return None
+        seuil = self.dalo_date + relativedelta(months=getattr(settings, 'LOGEMENT_DALO_DELAI_MOIS', 6))
+        debut_notification = seuil.replace(day=1) + relativedelta(months=1)
+        aujourd = aujourdhui or timezone.localdate()
+        return seuil if aujourd >= debut_notification else None
+
+    @property
+    def alerte_dalo(self):
+        return self.dalo_hors_delais() is not None
