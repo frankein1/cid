@@ -1,6 +1,6 @@
 # Relation Usager (RU)
 
-Le module `ru` reprend la note de procédure n° 39 du 19 mai 2022 et ses annexes, dont le modèle `RapportsocialàtransmettreauSAS.dotm` fourni dans cette demande. L'objectif est le transfert d'information dans CID et le PDF comme support prioritaire; l'impression reste possible, sans constituer le parcours normal.
+Le SAS (Service d'Action Sociale) est le service départemental qui reçoit les demandes ; la logique du circuit reste la même dans tous les Départements. Le module `ru` reprend la note de procédure n° 39 du 19 mai 2022 et ses annexes, dont le modèle `RapportsocialàtransmettreauSAS.dotm` fourni dans cette demande. L'objectif est le transfert d'information dans CID et le PDF comme support prioritaire; l'impression reste possible, sans constituer le parcours normal.
 
 ## Parcours et notifications
 

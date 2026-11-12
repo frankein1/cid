@@ -1357,7 +1357,7 @@ page('dalo-recours', qui="Agents de la MDS de l'usager (saisie et impression)",
 
 page('ru-saisir', qui="Agents du SAS (saisine reçue par le SAS) ; agents des MDS (saisine reçue directement)",
      ou="Menu « Relation Usager » → Enregistrer une demande", duree="10 minutes",
-     intro="Enregistrez une demande reçue par courrier, contact, courriel, plateforme ou autre canal, puis transmettez-la à la MDS choisie. Le délai de réponse ne commence qu'à cet envoi.",
+     intro="Enregistrez une demande reçue par courrier, contact, courriel, plateforme ou autre canal, puis transmettez-la à la MDS choisie. Le délai de réponse ne commence qu'à cet envoi. Le SAS (Service d'Action Sociale) est le service départemental qui reçoit ces demandes.",
      avant=["La liste Relation Usager montre les demandes de votre périmètre : pour une MDS, seulement celles qui lui ont été transmises.",
             "Préparez le nom de l'usager, l'objet de la demande et la référence SAP si elle existe : ils servent à retrouver le dossier."],
      etapes=[

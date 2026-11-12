@@ -1,7 +1,7 @@
 <!-- docs/aide/memo/ru-saisir.md -->
 # Saisir une demande RU et la transmettre à la MDS — aide-mémoire
 
-**Qui :** agents du SAS, agents des MDS (saisine reçue directement) · **Fiche illustrée :** [ru-saisir.html](../ru-saisir.html)
+**Qui :** agents du SAS (Service d'Action Sociale, service départemental), agents des MDS (saisine reçue directement) · **Fiche illustrée :** [ru-saisir.html](../ru-saisir.html)
 
 1. Menu **Relation Usager** → **Enregistrer une demande**.
 2. Renseigner le canal, la date de réception, l'identité, le motif et la demande (uniquement les éléments utiles au traitement).
