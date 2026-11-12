@@ -31,6 +31,7 @@ class SignalementHabitatIndigne(models.Model):
     donnees = models.JSONField(default=dict, blank=True, help_text="Rubriques 1 à 8 de la fiche PDLHI")
 
     # Permis de louer : deux cases indépendantes (ville soumise / logement soumis)
+    date_saisine = models.DateField("Date de saisine de la MDS", null=True, blank=True)
     permis_ville = models.BooleanField("Ville soumise au permis de louer", default=False)
     permis_logement = models.BooleanField("Logement soumis au permis de louer", default=False)
 

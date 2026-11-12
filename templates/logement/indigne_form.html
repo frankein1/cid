@@ -55,9 +55,12 @@
     {% endfor %}
 
     <section class="bg-white border rounded-lg p-4 space-y-3">
-      <h2 class="font-semibold">Rapport de visite à domicile</h2>
-      <p class="text-xs text-gray-500">Signé par le TS. Modifier le rapport retire la signature.</p>
-      <textarea name="rapport_vad" rows="6" class="{{ inp }}">{{ s.rapport_vad }}</textarea>
+      <h2 class="font-semibold">Note de visite à domicile – lutte contre le mal logement</h2>
+      <label class="block text-sm">Date de saisine de la MDS (obligatoire avant signature)
+        <input type="date" name="date_saisine" value="{{ s.date_saisine|date:'Y-m-d' }}" class="{{ inp }} max-w-xs">
+      </label>
+      <p class="text-xs text-gray-500">Le texte d'introduction est proposé : modifiez-le librement. Sautez des lignes pour séparer les paragraphes ; commencez chaque point de la visite par « &gt; ». Signé par le TS ; toute modification retire la signature.</p>
+      <textarea name="rapport_vad" rows="22" class="{{ inp }} font-mono leading-relaxed">{{ rapport_affiche }}</textarea>
     </section>
 
     <div class="text-right">

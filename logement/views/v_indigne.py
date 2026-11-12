@@ -5,9 +5,12 @@
 # =============================================================================
 # logement/views/v_indigne.py
 """Lutte contre le logement indigne : signalement, rapport de VAD (signé TS), fiche PDLHI (signée cadre), suivi."""
+from datetime import datetime
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.core.exceptions import ValidationError
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -15,7 +18,7 @@ from django.views.decorators.http import require_POST
 from mds.models import UserMDSProfile
 
 from ..models import SignalementHabitatIndigne
-from ..services import indigne
+from ..services import indigne, indigne_rapport
 from .v_copp import _date, _usager
 
 
@@ -150,7 +153,8 @@ def indigne_modifier(request, pk):
         s.donnees = nouvelles
         s.origine = p.get('origine') if p.get('origine') in dict(SignalementHabitatIndigne.ORIGINES) else s.origine
         s.permis_ville, s.permis_logement = bool(p.get('permis_ville')), bool(p.get('permis_logement'))
-        rapport = (p.get('rapport_vad') or '').strip()
+        s.date_saisine = _date(p.get('date_saisine'))
+        rapport = (p.get('rapport_vad') or '').replace('\r\n', '\n').strip()
         modifie_vad = rapport != s.rapport_vad
         s.rapport_vad = rapport
         creneau_id = p.get('creneau') or None
@@ -173,7 +177,8 @@ def indigne_modifier(request, pk):
         return redirect('logement:indigne_detail', pk=s.pk)
     return render(request, 'logement/indigne_form.html', {
         's': s, 'sections': _champs_formulaire(s), 'origines': SignalementHabitatIndigne.ORIGINES,
-        'rdvs': _rdvs_usager(s)[:40]})
+        'rdvs': _rdvs_usager(s)[:40],
+        'rapport_affiche': s.rapport_vad or indigne_rapport.introduction(s)})
 
 
 @login_required
@@ -189,8 +194,13 @@ def indigne_action(request, pk):
     if action == 'signer_vad' and ecrire and s.statut != s.CLOS:
         if not s.rapport_vad:
             messages.error(request, "Rédigez le rapport de VAD avant de le signer.")
+        elif not s.date_saisine:
+            messages.error(request, "Renseignez la date de saisine de la MDS avant de signer la note.")
         else:
             s.vad_signee_par, s.vad_date_signature = request.user, maintenant
+            if s.creneau_id and s.creneau.statut == 'RESERVE':
+                s.creneau.statut = 'VENU_RECU'
+                s.creneau.save(update_fields=['statut'])
             _journaliser_vad(s, request.user)
             s.tracer(request.user, "Rapport de VAD signé",
                      "versé au journal de l'usager" if s.beneficiaire_id else "")
@@ -215,6 +225,12 @@ def indigne_action(request, pk):
         s.bascule_dalo = bool(p.get('bascule_dalo'))
         s.tracer(request.user, "Suivi mis à jour")
         messages.success(request, "Suivi enregistré.")
+    elif action == 'creer_rdv_vad' and ecrire and s.statut != s.CLOS:
+        msg = _creer_rdv_vad(request, s)
+        if msg:
+            messages.error(request, msg)
+        else:
+            messages.success(request, "Rendez-vous de visite créé dans le planning.")
     elif action == 'clore' and ecrire and s.statut == s.ENVOYE:
         s.statut = s.CLOS
         s.tracer(request.user, "Signalement clos")
@@ -223,4 +239,56 @@ def indigne_action(request, pk):
         return redirect('logement:indigne_detail', pk=s.pk)
     s.save()
     return redirect('logement:indigne_detail', pk=s.pk)
+
+
+def _heure(v):
+    try:
+        return datetime.strptime(v or '', '%H:%M').time()
+    except ValueError:
+        return None
+
+
+def _creer_rdv_vad(request, s):
+    """Rendez-vous VAD depuis le signalement, avec les règles du planning (horaires, date, conflit de l'agent).
+    Retourne un message d'erreur, ou None si le rendez-vous est créé."""
+    from planning.agenda import conflits_agent
+    from planning.models import CreneauRdv
+    if s.creneau_id:
+        return "Ce signalement a déjà un rendez-vous de visite."
+    if not s.beneficiaire_id:
+        return "Une visite à domicile concerne un usager : rattachez-le au signalement."
+    if s.beneficiaire.mds_id != s.mds_id:
+        return "Usager hors de la MDS du signalement."
+    p = request.POST
+    date, debut, fin = _date(p.get('date')), _heure(p.get('heure_debut')), _heure(p.get('heure_fin'))
+    if not (date and debut and fin):
+        return "Date et heures du rendez-vous à renseigner."
+    if s.date_saisine and date < s.date_saisine:
+        return "Le rendez-vous ne peut pas précéder la saisine de la MDS."
+    rdv = CreneauRdv(date=date, heure_debut=debut, heure_fin=fin, beneficiaire=s.beneficiaire, mds=s.mds,
+                     agent=request.user, nature='VAD', domaine='SOCIAL', modalite='VAD', statut='RESERVE',
+                     cree_par=request.user, reserve_par=request.user, date_reservation=timezone.now())
+    try:
+        rdv.full_clean(exclude=['salle', 'agent', 'beneficiaire', 'mds'])
+    except ValidationError as e:
+        return " ".join(m for msgs in e.message_dict.values() for m in msgs) if hasattr(e, 'message_dict') \
+            else " ".join(e.messages)
+    conflit = conflits_agent(request.user, date, debut, fin).first()
+    if conflit:
+        return (f"Vous êtes déjà pris(e) de {conflit.heure_debut:%H:%M} à {conflit.heure_fin:%H:%M} ce jour-là.")
+    rdv.save()
+    s.creneau = rdv
+    s.tracer(request.user, "Rendez-vous de visite créé", f"{date:%d/%m/%Y} {debut:%H:%M}")
+    return None
+
+
+@login_required
+def indigne_note_pdf(request, pk):
+    s, voir, _ = _acces(request, pk)
+    if not voir:
+        return HttpResponseForbidden("Réservé aux agents de la MDS du signalement.")
+    agent = s.vad_signee_par if s.vad_signee else request.user
+    rep = HttpResponse(indigne_rapport.note_pdf(s, agent), content_type='application/pdf')
+    rep['Content-Disposition'] = f'inline; filename="VAD_{s.pk}.pdf"'
+    return rep
 

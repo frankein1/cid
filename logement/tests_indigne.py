@@ -85,7 +85,7 @@ class LogementIndigneTests(TestCase):
         c_ts.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
         s.refresh_from_db()
         self.assertFalse(s.vad_signee, "pas de signature sur un rapport vide")
-        c_ts.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "Logement humide."})
+        c_ts.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "rapport_vad": "Logement humide."})
         c_ts.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
         c_ts.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_fiche"})
         s.refresh_from_db()
@@ -103,22 +103,22 @@ class LogementIndigneTests(TestCase):
 
     def test_modification_apres_signature_retire_les_signatures(self):
         s = self.nouveau(code="IN-1")
-        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "A"})
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "rapport_vad": "A"})
         self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
         self.client_de(self.cadre).post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_fiche"})
         s.refresh_from_db()
         self.assertTrue(s.vad_signee and s.fiche_signee)
-        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "B"})
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "rapport_vad": "B"})
         s.refresh_from_db()
         self.assertFalse(s.vad_signee, "rapport modifié : signature TS retirée")
         self.assertTrue(s.fiche_signee, "fiche inchangée : signature cadre conservée")
-        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "surface": "18"})
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "surface": "18"})
         s.refresh_from_db()
         self.assertFalse(s.fiche_signee, "fiche modifiée : signature cadre retirée")
 
     def test_suivi_cloture_et_figement(self):
         s = self.nouveau(code="IN-1")
-        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "A"})
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "rapport_vad": "A"})
         self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
         self.client_de(self.cadre).post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_fiche"})
         self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/action/", {"action": "envoyer"})
@@ -153,7 +153,7 @@ class LogementIndigneTests(TestCase):
                                         statut='VENU_RECU')
         s = self.nouveau(code="IN-1")
         c = self.client_de(self.ts)
-        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "creneau": rdv.pk,
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "creneau": rdv.pk,
                                                         "rapport_vad": "Humidité dans la chambre."})
         c.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
         s.refresh_from_db()
@@ -163,7 +163,7 @@ class LogementIndigneTests(TestCase):
         self.assertEqual(self.b.entretiens.count(), 1)
         self.assertIn(s, rdv.signalements_indigne.all())
         # rapport modifié : signature retirée et entrée du journal retirée
-        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "creneau": rdv.pk, "rapport_vad": "Autre texte."})
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "date_saisine": "2026-11-02", "creneau": rdv.pk, "rapport_vad": "Autre texte."})
         s.refresh_from_db()
         self.assertFalse(s.vad_signee)
         self.assertEqual(self.b.entretiens.count(), 0)
@@ -184,4 +184,122 @@ class LogementIndigneTests(TestCase):
     def test_bouton_sur_fiche_usager(self):
         self.assertContains(self.client_de(self.ts).get(f"/beneficiaire/{self.b.code_interne}/"),
                             'id="indigne-nouveau"')
+
+    def _rdv_cadre(self, decalage=7):
+        from datetime import timedelta
+        from django.utils import timezone
+        return timezone.localdate() + timedelta(days=decalage)
+
+    def test_introduction_reprend_famille_saisine_et_visite(self):
+        from datetime import date, time
+        from planning.models import CreneauRdv
+        s = self.nouveau(code="IN-1")
+        s.date_saisine = date(2026, 11, 2)
+        s.save()
+        rdv = CreneauRdv.objects.create(date=date(2026, 11, 5), heure_debut=time(9), heure_fin=time(9, 30),
+                                        beneficiaire=self.b, mds=self.mds, agent=self.ts, modalite='VAD')
+        s.creneau = rdv
+        s.save()
+        page = self.client_de(self.ts).get(f"/logement/indigne/{s.pk}/modifier/")
+        self.assertContains(page, "la famille ESSAI a contacté nos services")
+        self.assertContains(page, "La MDS a été saisie le 02/11/2026.")
+        self.assertContains(page, "réalisé le 05/11/2026 en présence de la famille")
+        s.refresh_from_db()
+        self.assertEqual(s.rapport_vad, "", "l'introduction est proposée, pas enregistrée")
+
+    def test_rapport_garde_sauts_de_ligne_et_puces(self):
+        s = self.nouveau(code="IN-1")
+        texte = "Intro.\r\n\r\n> Humidité dans la chambre.\r\n> Fenêtre sans joint."
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": texte})
+        s.refresh_from_db()
+        self.assertEqual(s.rapport_vad, "Intro.\n\n> Humidité dans la chambre.\n> Fenêtre sans joint.")
+
+    def test_signature_exige_date_de_saisine_et_passe_la_visite_realisee(self):
+        from datetime import date, time
+        from planning.models import CreneauRdv
+        s = self.nouveau(code="IN-1")
+        rdv = CreneauRdv.objects.create(date=date(2026, 11, 5), heure_debut=time(9), heure_fin=time(9, 30),
+                                        beneficiaire=self.b, mds=self.mds, agent=self.ts, modalite='VAD',
+                                        statut='RESERVE')
+        c = self.client_de(self.ts)
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "Texte.", "creneau": rdv.pk})
+        c.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
+        s.refresh_from_db()
+        self.assertFalse(s.vad_signee, "pas de signature sans date de saisine")
+        c.post(f"/logement/indigne/{s.pk}/modifier/", {"origine": "VAD", "rapport_vad": "Texte.", "creneau": rdv.pk,
+                                                        "date_saisine": "2026-11-02"})
+        c.post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
+        s.refresh_from_db()
+        rdv.refresh_from_db()
+        self.assertTrue(s.vad_signee)
+        self.assertEqual(rdv.statut, 'VENU_RECU')
+
+    def test_note_pdf_a4(self):
+        import io
+        from pypdf import PdfReader
+        s = self.nouveau(code="IN-1")
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/modifier/", {
+            "origine": "VAD", "date_saisine": "2026-11-02", "rapport_vad": "Intro.\n\n> Humidité dans la chambre."})
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/action/", {"action": "signer_vad"})
+        r = self.client_de(self.ts).get(f"/logement/indigne/{s.pk}/note-vad.pdf")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.content.startswith(b'%PDF'))
+        texte = PdfReader(io.BytesIO(r.content)).pages[0].extract_text()
+        self.assertIn("Visite à Domicile, lutte contre le mal logement", texte)
+        self.assertIn("Humidité dans la chambre", texte)
+        self.assertIn("Direction des Territoires et de l'Action Sociale", texte)
+        self.assertEqual(self.client_de(self.hors).get(f"/logement/indigne/{s.pk}/note-vad.pdf").status_code, 403)
+
+    def test_rdv_vad_depuis_le_signalement(self):
+        from planning.models import CreneauRdv
+        s = self.nouveau(code="IN-1")
+        d = self._rdv_cadre()
+        self.client_de(self.ts).post(f"/logement/indigne/{s.pk}/action/", {
+            "action": "creer_rdv_vad", "date": d.isoformat(), "heure_debut": "10:00", "heure_fin": "10:30"})
+        s.refresh_from_db()
+        self.assertIsNotNone(s.creneau)
+        self.assertEqual((s.creneau.modalite, s.creneau.nature, s.creneau.beneficiaire, s.creneau.agent),
+                         ('VAD', 'VAD', self.b, self.ts))
+        self.assertEqual(CreneauRdv.objects.filter(beneficiaire=self.b).count(), 1)
+
+    def test_rdv_vad_refuses(self):
+        from datetime import date, time, timedelta
+        from django.utils import timezone
+        from planning.models import CreneauRdv
+        from .models import SignalementHabitatIndigne as SHI
+        c = self.client_de(self.ts)
+        s = self.nouveau(code="IN-1")
+        futur = self._rdv_cadre()
+        essais = [
+            {"date": futur, "heure_debut": "08:30", "heure_fin": "09:00"},                   # avant 9h
+            {"date": timezone.localdate() - timedelta(days=3), "heure_debut": "10:00", "heure_fin": "10:30"},  # passé
+        ]
+        for e in essais:
+            c.post(f"/logement/indigne/{s.pk}/action/", dict(action="creer_rdv_vad", **{k: (v.isoformat() if hasattr(v, 'isoformat') else v) for k, v in e.items()}))
+        s.refresh_from_db()
+        self.assertIsNone(s.creneau)
+        # date antérieure à la saisine
+        s.date_saisine = futur
+        s.save()
+        c.post(f"/logement/indigne/{s.pk}/action/", {"action": "creer_rdv_vad", "date": (futur - timedelta(days=1)).isoformat(),
+                                                    "heure_debut": "10:00", "heure_fin": "10:30"})
+        s.refresh_from_db()
+        self.assertIsNone(s.creneau)
+        # conflit avec un autre rendez-vous de l'agent
+        CreneauRdv.objects.create(date=futur, heure_debut=time(10), heure_fin=time(11), beneficiaire=self.b,
+                                  mds=self.mds, agent=self.ts, modalite='MDS')
+        c.post(f"/logement/indigne/{s.pk}/action/", {"action": "creer_rdv_vad", "date": futur.isoformat(),
+                                                    "heure_debut": "10:00", "heure_fin": "10:30"})
+        s.refresh_from_db()
+        self.assertIsNone(s.creneau)
+        # usager d'une autre MDS
+        autre_usager = Beneficiaire.objects.create(code_interne="IN-3", civilite="M.", nom="HORS", prenom="Luc",
+                                                   date_naissance="1975-01-01", adresse="5 rue E", code_postal="13500",
+                                                   ville="Martigues", mds=self.autre)
+        s3 = SHI.objects.create(beneficiaire=autre_usager, mds=self.mds, origine='VAD', cree_par=self.ts)
+        c.post(f"/logement/indigne/{s3.pk}/action/", {"action": "creer_rdv_vad", "date": futur.isoformat(),
+                                                     "heure_debut": "14:00", "heure_fin": "14:30"})
+        s3.refresh_from_db()
+        self.assertIsNone(s3.creneau)
+        self.assertEqual(CreneauRdv.objects.filter(beneficiaire=autre_usager).count(), 0)
 
