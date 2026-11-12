@@ -26,6 +26,23 @@ class RecoursDALO(models.Model):
     LOGEMENTS = [('PROPRIETAIRE', "Propriétaire occupant"), ('SOCIAL', "Locataire d'un logement social"),
                  ('PRIVE', "Locataire ou sous-locataire d'un logement privé"), ('AUTRE', "Autre")]
 
+    RESSOURCES_NATURES = [
+        ('SALAIRE', "Salaire ou revenu d'activité"), ('RETRAITE', "Retraite"),
+        ('CHOMAGE', "Allocation chômage / indemnités"), ('PENSION', "Pension alimentaire reçue"),
+        ('PENSION_INVALIDITE', "Pension d'invalidité"), ('ALLOCATIONS', "Allocations familiales"),
+        ('AAH', "Allocation d'adulte handicapé (AAH)"), ('AEEH', "Allocation d'éducation d'enfant handicapé (AEEH)"),
+        ('AJPP', "Allocation journalière de présence parentale (AJPP)"), ('RSA', "Revenu de solidarité active (RSA)"),
+        ('PAJE', "Allocation jeune enfant (PAJE)"), ('ASPA', "ASPA (ex. minimum vieillesse)"),
+        ('BOURSE', "Bourse étudiant"), ('AUTRES', "Autres (hors APL, ALS, ALF)"),
+        ('PENSION_VERSEE', "Pension alimentaire que vous versez"), ('PRIME_ACTIVITE', "Prime d'activité versée"),
+        ('ABSENCE', "Absence de ressources"),
+    ]
+    COLONNES_RESSOURCES = [('vous', "Vous-même"), ('p1', "Autre personne 1"), ('p2', "Autre personne 2"),
+                           ('p3', "Autre personne 3")]
+    CONTRATS = [('CDI', "CDI"), ('CDD', "CDD"), ('INTERIM', "Intérim"), ('AUTRES', "Autres")]
+    OUI_NON = [('OUI', "Oui"), ('NON', "Non")]
+    NB_LIEUX = 8  # vous-même + 7 personnes du tableau de la rubrique 5
+
     beneficiaire = models.OneToOneField('beneficiaire.Beneficiaire', on_delete=models.CASCADE,
                                         related_name='recours_dalo')
     civilite = models.CharField(max_length=5, blank=True, choices=[('M', "Monsieur"), ('MME', "Madame")])
@@ -67,6 +84,15 @@ class RecoursDALO(models.Model):
     assistant_commune = models.CharField(max_length=100, blank=True)
     assistant_telephone = models.CharField(max_length=20, blank=True)
     argumentaire = models.TextField("11. Argumentaire libre", blank=True)
+    ressources_mois = models.CharField("6. Ressources mensuelles du mois de", max_length=40, blank=True)
+    ressources = models.JSONField("6. Ressources mensuelles", default=dict, blank=True,
+                                  help_text="Clé « NATURE|vous », « NATURE|p1 »… → montant mensuel")
+    ressources_annee_avis = models.CharField("6. Année du dernier avis d'impôt", max_length=4, blank=True)
+    pcb = models.CharField("6. Aidé par un point conseil budget", max_length=3, blank=True, choices=OUI_NON)
+    surendettement = models.CharField("6. Dossier de surendettement déposé", max_length=3, blank=True,
+                                      choices=OUI_NON)
+    lieux_travail = models.JSONField("7. Lieux de travail ou d'activité", default=list, blank=True,
+                                     help_text="Ligne 0 : vous-même ; lignes 1 à 7 : personnes du tableau 5")
     date_modification = models.DateTimeField(auto_now=True)
     modifie_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='recours_dalo_modifies')

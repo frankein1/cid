@@ -10,7 +10,7 @@
     <a href="{% url 'logement:dalo_pdf' b.code_interne %}" target="_blank" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm"><i class="fas fa-file-pdf mr-1"></i>Générer le Cerfa rempli</a>
   </div>
   <p class="text-sm text-gray-600 mb-5">Les rubriques sont préremplies depuis la fiche usager et la demande de logement. Vérifiez-les avant de générer le formulaire. Le PDF reste modifiable pour les rubriques restantes.</p>
-  <p class="text-xs text-gray-500 mb-5">À remplir à la main par le requérant : section 6 (ressources), section 7 (lieux de travail), section 10.2 et déclaration sur l'honneur.</p>
+  <p class="text-xs text-gray-500 mb-5">Reste à faire à la main par le requérant : la déclaration sur l'honneur (rubrique 11), à signer.</p>
 
   <form method="post" class="space-y-5">{% csrf_token %}
     <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
@@ -47,6 +47,52 @@
     </section>
 
     <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
+      <div class="font-semibold">6. Vos ressources</div>
+      <p class="text-xs text-gray-500">Montants mensuels actuels, pour vous et les personnes à loger. Joignez les justificatifs des trois derniers mois.</p>
+      <label class="block md:w-1/2">Ressources mensuelles du mois de<input name="ressources_mois" value="{{ r.ressources_mois }}" class="{{ inp }}" placeholder="ex. octobre 2026"></label>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-xs">
+          <thead><tr class="text-left text-gray-600"><th class="py-1 pr-2">Nature des ressources</th>{% for col, lc in colonnes_ressources %}<th class="py-1 pr-2">{{ lc }}</th>{% endfor %}</tr></thead>
+          <tbody>
+          {% for code, libelle, cellules in ressources_lignes %}
+            <tr class="border-t"><td class="py-1 pr-2">{{ libelle }}</td>
+              {% for col, lc, valeur in cellules %}<td class="py-1 pr-2"><input name="res_{{ code }}_{{ col }}" value="{{ valeur }}" class="{{ inp }}" inputmode="decimal" placeholder="€"></td>{% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="grid md:grid-cols-4 gap-3">
+        <label>Année du dernier avis d'impôt<input name="ressources_annee_avis" value="{{ r.ressources_annee_avis }}" class="{{ inp }}" maxlength="4"></label>
+        <label>Aidé par un point conseil budget<select name="pcb" class="{{ inp }}"><option value="">—</option>{% for c, l in oui_non %}<option value="{{ c }}" {% if r.pcb == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+        <label>Dossier de surendettement déposé<select name="surendettement" class="{{ inp }}"><option value="">—</option>{% for c, l in oui_non %}<option value="{{ c }}" {% if r.surendettement == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
+      <div class="font-semibold">7. Lieux de travail ou d'activité</div>
+      <p class="text-xs text-gray-500">Ligne 1 : vous-même ; lignes suivantes : les personnes de la rubrique 5. Le type de contrat des lignes 6 et 7 du formulaire PDF n'est pas repris : à compléter à la main (champs dupliqués dans le formulaire officiel).</p>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-xs">
+          <thead><tr class="text-left text-gray-600"><th class="py-1 pr-2">Personne</th><th class="py-1 pr-2">Activité</th><th class="py-1 pr-2">Contrat</th><th class="py-1 pr-2">Employeur / lieu</th><th class="py-1 pr-2">Commune</th><th class="py-1 pr-2">Transport</th><th class="py-1 pr-2">Temps</th></tr></thead>
+          <tbody>
+          {% for i, l in lieux %}
+            <tr class="border-t align-top">
+              <td class="py-1 pr-2">{% if i == 0 %}<span class="font-medium">Vous-même</span>{% else %}<input name="lieu{{ i }}_nom" value="{{ l.nom }}" class="{{ inp }}" placeholder="Nom Prénom">{% endif %}</td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_activite" value="{{ l.activite }}" class="{{ inp }}" placeholder="salarié, chômage…"></td>
+              <td class="py-1 pr-2"><select name="lieu{{ i }}_contrat" class="{{ inp }}"><option value="">—</option>{% for c, lc in contrats %}<option value="{{ c }}" {% if l.contrat == c %}selected{% endif %}>{{ lc }}</option>{% endfor %}</select></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_entreprise" value="{{ l.entreprise }}" class="{{ inp }}"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_commune" value="{{ l.commune }}" class="{{ inp }}"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_transport" value="{{ l.transport }}" class="{{ inp }}" placeholder="bus, voiture…"></td>
+              <td class="py-1 pr-2"><input name="lieu{{ i }}_temps" value="{{ l.temps }}" class="{{ inp }}" placeholder="min"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-xl border p-5 text-sm space-y-3">
       <div class="font-semibold">8. Motifs du recours</div>
       <div class="grid md:grid-cols-2 gap-2">
         {% for code, libelle in situations %}
@@ -68,7 +114,7 @@
     </section>
 
     <section class="bg-white rounded-xl border p-5 grid md:grid-cols-3 gap-3 text-sm">
-      <div class="md:col-span-3 font-semibold">10.1.1 Personne qui vous assiste</div>
+      <div class="md:col-span-3 font-semibold">9. Personne ou structure qui vous aide</div>
       <label>Nom<input name="assistant_nom" value="{{ r.assistant_nom }}" class="{{ inp }}"></label>
       <label>Organisme<input name="assistant_organisme" value="{{ r.assistant_organisme }}" class="{{ inp }}"></label>
       <label>Téléphone<input name="assistant_telephone" value="{{ r.assistant_telephone }}" class="{{ inp }}"></label>
@@ -79,7 +125,7 @@
     </section>
 
     <section class="bg-white rounded-xl border p-5 text-sm space-y-2">
-      <div class="font-semibold">11. Argumentaire libre</div>
+      <div class="font-semibold">10. Argumentaire libre</div>
       <textarea name="argumentaire" rows="8" class="{{ inp }}">{{ r.argumentaire }}</textarea>
     </section>
 

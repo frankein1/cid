@@ -141,3 +141,24 @@ class RecoursDaloCerfaTests(TestCase):
     def test_acces_refuse_hors_mds(self):
         self.assertEqual(self.client_de(self.hors).get("/logement/dalo/DA-1/").status_code, 403)
         self.assertEqual(self.client_de(self.hors).get("/logement/dalo/DA-1/cerfa.pdf").status_code, 403)
+
+    def test_ressources_lieux_et_cases_dans_le_pdf(self):
+        r = RecoursDALO.objects.get_or_create(beneficiaire=self.b)[0]
+        r.ressources_mois, r.ressources_annee_avis = 'octobre 2026', '2025'
+        r.ressources = {'SALAIRE|vous': '1200', 'AAH|p1': '900', 'PENSION_INVALIDITE|p3': '250'}
+        r.pcb, r.surendettement = 'OUI', 'NON'
+        r.lieux_travail = [{'activite': 'salarié', 'contrat': 'CDD', 'entreprise': 'Crèche', 'commune': 'Port-de-Bouc'},
+                           {'nom': 'Dupont Léo', 'contrat': 'INTERIM'}] + [{} for _ in range(6)]
+        r.save()
+        rep = self.client_de(self.ts).get("/logement/dalo/DA-1/cerfa.pdf")
+        champs = PdfReader(io.BytesIO(rep.content)).get_fields()
+        self.assertEqual(str(champs['6. Salaire vous-même'].get('/V')), '1200')
+        self.assertEqual(str(champs['6. AAH autre personne 1'].get('/V')), '900')
+        self.assertEqual(str(champs['6. Pension invalidité autre personne 3'].get('/V')), '250')
+        self.assertEqual(str(champs['6. Ressources'].get('/V')), 'octobre 2026')
+        self.assertEqual(str(champs['7. Type contrat'].get('/V')), 'CDD')
+        self.assertEqual(str(champs['7. Type contrat L1'].get('/V')), 'Intérim')
+        self.assertEqual(str(champs['7. Lieu de travail - Nom 1'].get('/V')), 'Dupont Léo')
+        self.assertEqual(str(champs['7. Type contrat L2'].get('/V')), '')  # pré-sélection CDI effacée
+        self.assertEqual(str(champs['Case à cocher 34'].get('/V')), '/Oui')
+        self.assertEqual(str(champs['Case à cocher 37'].get('/V')), '/Oui')

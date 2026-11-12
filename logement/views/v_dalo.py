@@ -69,6 +69,10 @@ def _preremplir(r, b, user):
             naissance = autre.date_naissance.strftime('%d/%m/%Y') if autre.date_naissance else ''
             lignes.append(f"{autre.nom};{autre.prenom};{naissance};{lien.get_type_lien_display()}")
         r.personnes = "\n".join(lignes)
+    if not r.lieux_travail:
+        r.lieux_travail = [{} for _ in range(RecoursDALO.NB_LIEUX)]
+        for i, morceaux in enumerate([l.split(';') for l in (r.personnes or '').splitlines() if l.strip()][:7], 1):
+            r.lieux_travail[i] = {'nom': ' '.join(m for m in morceaux[:2] if m).strip()}
     prof = UserMDSProfile.objects.filter(user=user, actif=True).order_by('-principale').select_related('mds').first()
     mds = prof.mds if prof else b.mds
     vide('assistant_nom', (user.get_full_name() or user.username))
@@ -89,6 +93,22 @@ def _enregistrer(r, p, user):
     r.nationalite = p.get('nationalite') if p.get('nationalite') in dict(RecoursDALO.NATIONALITES) else ''
     r.logement = p.get('logement') if p.get('logement') in dict(RecoursDALO.LOGEMENTS) else ''
     r.situations = [c for c in p.getlist('situations') if c in dict(RecoursDALO.SITUATIONS)]
+    r.ressources_mois = (p.get('ressources_mois') or '').strip()[:40]
+    r.ressources_annee_avis = re.sub(r'\D', '', p.get('ressources_annee_avis') or '')[:4]
+    r.pcb = p.get('pcb') if p.get('pcb') in dict(RecoursDALO.OUI_NON) else ''
+    r.surendettement = p.get('surendettement') if p.get('surendettement') in dict(RecoursDALO.OUI_NON) else ''
+    r.ressources = {f'{code}|{col}': (p.get(f'res_{code}_{col}') or '').strip()[:20]
+                    for code, _ in RecoursDALO.RESSOURCES_NATURES for col, _ in RecoursDALO.COLONNES_RESSOURCES
+                    if (p.get(f'res_{code}_{col}') or '').strip()}
+    r.lieux_travail = [{
+        'nom': (p.get(f'lieu{i}_nom') or '').strip()[:120],
+        'activite': (p.get(f'lieu{i}_activite') or '').strip()[:120],
+        'contrat': p.get(f'lieu{i}_contrat') if p.get(f'lieu{i}_contrat') in dict(RecoursDALO.CONTRATS) else '',
+        'entreprise': (p.get(f'lieu{i}_entreprise') or '').strip()[:150],
+        'commune': (p.get(f'lieu{i}_commune') or '').strip()[:100],
+        'transport': (p.get(f'lieu{i}_transport') or '').strip()[:60],
+        'temps': (p.get(f'lieu{i}_temps') or '').strip()[:20],
+    } for i in range(RecoursDALO.NB_LIEUX)]
     r.modifie_par = user
     r.save()
 
@@ -106,7 +126,13 @@ def dalo_formulaire(request, code_interne):
     _preremplir(r, b, request.user)
     return render(request, 'logement/dalo_form.html', {
         'b': b, 'r': r, 'situations': RecoursDALO.SITUATIONS, 'nationalites': RecoursDALO.NATIONALITES,
-        'logements': RecoursDALO.LOGEMENTS, 'civilites': [('M', "Monsieur"), ('MME', "Madame")]})
+        'logements': RecoursDALO.LOGEMENTS, 'civilites': [('M', "Monsieur"), ('MME', "Madame")],
+        'ressources_lignes': [(code, libelle, [(col, lc, (r.ressources or {}).get(f'{code}|{col}', ''))
+                                               for col, lc in RecoursDALO.COLONNES_RESSOURCES])
+                              for code, libelle in RecoursDALO.RESSOURCES_NATURES],
+        'colonnes_ressources': RecoursDALO.COLONNES_RESSOURCES,
+        'contrats': RecoursDALO.CONTRATS, 'oui_non': RecoursDALO.OUI_NON,
+        'lieux': list(enumerate(r.lieux_travail))})
 
 
 @login_required
