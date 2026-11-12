@@ -69,7 +69,8 @@ def statistiques(user, annee=None):
                 'choix': [(libelle, sum(1 for v in valeurs if v == code)) for code, libelle in choix],
                 'sans': sum(1 for v in valeurs if v not in dict(choix)),
             })
-        reponses.append({'titre': titre, 'lignes': lignes})
+        if lignes:  # une section sans réponse oui / non / je ne sais pas n'a pas de tableau
+            reponses.append({'titre': titre, 'lignes': lignes})
 
     occupants = []
     for code, libelle in indigne.STATUT_OCCUPANT:
