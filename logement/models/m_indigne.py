@@ -31,6 +31,7 @@ class SignalementHabitatIndigne(models.Model):
     donnees = models.JSONField(default=dict, blank=True, help_text="Rubriques 1 à 8 de la fiche PDLHI")
 
     # Permis de louer : deux cases indépendantes (ville soumise / logement soumis)
+    date_saisine = models.DateField("Date de saisine de la MDS", null=True, blank=True)
     permis_ville = models.BooleanField("Ville soumise au permis de louer", default=False)
     permis_logement = models.BooleanField("Logement soumis au permis de louer", default=False)
 
@@ -39,6 +40,12 @@ class SignalementHabitatIndigne(models.Model):
     vad_signee_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                        related_name='vad_signees_indigne')
     vad_date_signature = models.DateTimeField(null=True, blank=True)
+
+    # Rapport de VAD relié au rendez-vous du planning et à l'entretien du journal de l'usager (dossier usager)
+    creneau = models.ForeignKey('planning.CreneauRdv', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='signalements_indigne', verbose_name="Visite (rendez-vous du planning)")
+    entretien = models.ForeignKey('beneficiaire.EntretienSocial', on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='signalements_indigne', verbose_name="Entrée du journal")
 
     # Fiche PDLHI : signée par le cadre (responsable de la MDS)
     fiche_signee_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

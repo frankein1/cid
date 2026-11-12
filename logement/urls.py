@@ -21,6 +21,7 @@ urlpatterns = [
     path('indigne/<int:pk>/', views.indigne_detail, name='indigne_detail'),
     path('indigne/<int:pk>/modifier/', views.indigne_modifier, name='indigne_modifier'),
     path('indigne/<int:pk>/action/', views.indigne_action, name='indigne_action'),
+    path('indigne/<int:pk>/note-vad.pdf', views.indigne_note_pdf, name='indigne_note_pdf'),
     path('copp/nouvelle/<str:code_interne>/', views.copp_nouvelle, name='copp_nouvelle'),
     path('copp/<int:pk>/', views.copp_detail, name='copp_detail'),
     path('copp/<int:pk>/modifier/', views.copp_modifier, name='copp_modifier'),

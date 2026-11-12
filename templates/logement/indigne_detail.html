@@ -9,7 +9,9 @@
       {% if s.beneficiaire %}{{ s.beneficiaire.nom }} {{ s.beneficiaire.prenom }}{% else %}Hors suivi MDS{% endif %}
       <span class="text-base font-normal text-gray-500">· {{ s.get_origine_display }}</span>
     </h1>
-    <span class="px-3 py-1 rounded bg-gray-100 text-sm">{{ s.get_statut_display }}</span>
+    <div class="flex items-center gap-3">
+      <span class="px-3 py-1 rounded bg-gray-100 text-sm">{{ s.get_statut_display }}</span>
+    </div>
   </div>
 
   {% if messages %}{% for m in messages %}<div class="p-3 rounded bg-blue-50 text-sm">{{ m }}</div>{% endfor %}{% endif %}
@@ -20,6 +22,9 @@
     <p>Fiche PDLHI (cadre) : {% if s.fiche_signee %}signée par {{ s.fiche_signee_par.get_full_name|default:s.fiche_signee_par.username }} le {{ s.fiche_date_signature|date:"d/m/Y" }}{% else %}non signée{% endif %}</p>
     <p>Permis de louer : ville {% if s.permis_ville %}soumise{% else %}non soumise{% endif %} · logement {% if s.permis_logement %}soumis{% else %}non soumis{% endif %}</p>
     {% if s.date_envoi %}<p>Envoyée au PDLHI le {{ s.date_envoi|date:"d/m/Y" }}</p>{% endif %}
+    {% if s.date_saisine %}<p>Saisine de la MDS le {{ s.date_saisine|date:"d/m/Y" }}</p>{% endif %}
+    {% if s.creneau %}<p>Visite liée au planning : {{ s.creneau.date|date:"d/m/Y" }} {{ s.creneau.heure_debut|time:"H:i" }}</p>{% endif %}
+    {% if s.entretien %}<p>Rapport de VAD versé au journal de l'usager (entretien du {{ s.entretien.date|date:"d/m/Y" }}).</p>{% endif %}
   </section>
 
   {% if ecrire and s.modifiable %}
@@ -45,6 +50,20 @@
     </form>
     {% endif %}
   </div>
+  {% endif %}
+
+  {% if ecrire and s.statut != 'CLOS' and s.beneficiaire and not s.creneau %}
+  <section class="bg-white border rounded-lg p-4 space-y-3 text-sm">
+    <h2 class="font-semibold">Rendez-vous de visite à domicile</h2>
+    <form method="post" action="{% url 'logement:indigne_action' s.pk %}" class="flex flex-wrap items-end gap-3">{% csrf_token %}
+      <input type="hidden" name="action" value="creer_rdv_vad">
+      <label>Date <input type="date" name="date" required class="px-2 py-1 border rounded"></label>
+      <label>De <input type="time" name="heure_debut" value="09:00" required class="px-2 py-1 border rounded"></label>
+      <label>À <input type="time" name="heure_fin" value="09:30" required class="px-2 py-1 border rounded"></label>
+      <button class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold">Prendre rendez-vous VAD</button>
+    </form>
+    <p class="text-xs text-gray-500">Le rendez-vous est créé dans le planning, au nom de l'agent, avec les règles du planning (9h–17h, pas de date passée, pas de conflit).</p>
+  </section>
   {% endif %}
 
   {% if peut_suivre %}
@@ -77,8 +96,9 @@
   {% endfor %}
 
   <section class="bg-white border rounded-lg p-4 text-sm">
-    <h2 class="font-semibold mb-2">Rapport de visite à domicile</h2>
-    <p class="whitespace-pre-line">{{ s.rapport_vad|default:"—" }}</p>
+    <h2 class="font-semibold mb-2">Note de visite à domicile – lutte contre le mal logement</h2>
+    {% if s.rapport_vad %}<a href="{% url 'logement:indigne_note_pdf' s.pk %}" target="_blank" class="text-blue-700 hover:underline text-sm"><i class="fas fa-file-pdf mr-1"></i>Note VAD (PDF A4)</a>{% endif %}
+    <p class="whitespace-pre-line mt-2">{{ s.rapport_vad|default:"—" }}</p>
   </section>
 
   <section class="bg-white border rounded-lg p-4 text-sm">
