@@ -212,3 +212,12 @@ But : montrer les **statistiques de l'accompagnement** avec des effectifs au-des
 9. **IP et professionnel qui suit la famille** : `chef_mds1`, IP de FAM11 (Thomas LEGRAND) → bloc « Binôme » : Agent Social 1, référent de la famille, n'est pas proposé ; « Désigner quand même… » pour passer outre. IP de FAM8 : binôme confirmé par le cadre, motif affiché.
 
 Chaque famille de démonstration a une AS référente (référent MDS), répartie entre les agents de sa MDS.
+
+## Logement indigne et recours DALO
+
+- **FAM2-SOP** : signalement VAD envoyé au PDLHI (enquête de salubrité, bascule DALO) avec des réponses oui, non et « je ne sais pas » ; **recours DALO** préparé (Cerfa 15036*02, ressources, lieux de travail). Le recours est préremplissable depuis la fiche usager.
+- **FAM3-CLA** : signalement du locataire en préparation (aucune signature).
+- **FAM5-SAR** : signalement du bailleur clos après travaux.
+- **Hors suivi MDS** : signalement de la commune sans usager, renvoyé au CIAS ou CCAS.
+
+Les statistiques de l'habitat indigne (« Logement indigne » › « Statistiques ») et leur export CSV s'appuient sur ces données.

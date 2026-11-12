@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 py-8">
   <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-house-circle-exclamation text-red-600 mr-2"></i>Lutte contre le logement indigne</h1>
-  <p class="text-sm text-gray-600 mt-1">Signalements au Pôle départemental de lutte contre l'habitat indigne (PDLHI).</p>
+  <p class="text-sm text-gray-600 mt-1">Signalements au Pôle départemental de lutte contre l'habitat indigne (PDLHI). <a href="{% url 'logement:indigne_stats' %}" class="underline text-red-700"><i class="fas fa-chart-column mr-1"></i>Statistiques</a></p>
 
   <form method="post" action="{% url 'logement:indigne_nouveau' %}" class="mt-6 p-4 bg-white border rounded-lg flex flex-wrap gap-3 items-end">{% csrf_token %}
     <label class="text-sm">Origine

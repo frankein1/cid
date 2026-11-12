@@ -1,0 +1,69 @@
+<!-- /templates/logement/indigne_stats.html -->
+{% extends "base.html" %}
+{% block title %}Statistiques – logement indigne{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <a href="{% url 'logement:indigne_liste' %}" class="text-sm text-gray-500 hover:underline"><i class="fas fa-arrow-left mr-1"></i>Signalements</a>
+  <div class="flex flex-wrap items-end justify-between gap-3 mt-2 mb-4">
+    <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-chart-column text-red-600 mr-2"></i>Statistiques – logement indigne</h1>
+    <div class="flex flex-wrap items-end gap-2 text-sm">
+      <form method="get" class="flex items-end gap-2">
+        <label>Année
+          <select name="annee" class="block mt-1 px-2 py-1 border rounded">
+            <option value="">Toutes</option>
+            {% for a in annees %}<option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>{% endfor %}
+          </select>
+        </label>
+        <button class="px-3 py-1.5 border rounded-md">Afficher</button>
+      </form>
+      <a href="?{% if annee %}annee={{ annee }}&{% endif %}format=csv" class="px-3 py-1.5 bg-gray-900 text-white rounded-md"><i class="fas fa-file-csv mr-1"></i>Exporter (CSV)</a>
+    </div>
+  </div>
+  <p class="text-xs text-gray-500 mb-6">Chiffres agrégés, sans identité d'usager. Les « je ne sais pas » sont comptés à part, et « non renseigné » regroupe les rubriques vides.</p>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <section class="bg-white border rounded-lg p-4">
+      <h2 class="font-semibold mb-2">Synthèse</h2>
+      <table class="w-full text-sm">{% for libelle, n in s.synthese %}<tr class="border-t"><td class="py-1">{{ libelle }}</td><td class="py-1 text-right font-semibold">{{ n }}</td></tr>{% endfor %}</table>
+    </section>
+    <section class="bg-white border rounded-lg p-4 space-y-4">
+      <div>
+        <h2 class="font-semibold mb-2">Origine</h2>
+        <table class="w-full text-sm">{% for libelle, n in s.origines %}<tr class="border-t"><td class="py-1">{{ libelle }}</td><td class="py-1 text-right">{{ n }}</td></tr>{% endfor %}</table>
+      </div>
+      <div>
+        <h2 class="font-semibold mb-2">Statut du signalement</h2>
+        <table class="w-full text-sm">{% for libelle, n in s.statuts %}<tr class="border-t"><td class="py-1">{{ libelle }}</td><td class="py-1 text-right">{{ n }}</td></tr>{% endfor %}</table>
+      </div>
+      <div>
+        <h2 class="font-semibold mb-2">Statut de l'occupant</h2>
+        <table class="w-full text-sm">{% for libelle, n in s.occupants %}<tr class="border-t"><td class="py-1">{{ libelle }}</td><td class="py-1 text-right">{{ n }}</td></tr>{% endfor %}</table>
+      </div>
+    </section>
+  </div>
+
+  {% for bloc in s.reponses %}
+  <section class="bg-white border rounded-lg p-4 mt-6">
+    <h2 class="font-semibold mb-2">{{ bloc.titre }}</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-gray-600 text-xs"><th class="py-1 pr-3">Rubrique</th>{% with premiere=bloc.lignes|first %}{% for libelle, n in premiere.choix %}<th class="py-1 pr-3 text-right">{{ libelle }}</th>{% endfor %}{% endwith %}<th class="py-1 text-right">Non renseigné</th></tr></thead>
+        <tbody>
+          {% for ligne in bloc.lignes %}
+          <tr class="border-t"><td class="py-1 pr-3">{{ ligne.label }}</td>{% for libelle, n in ligne.choix %}<td class="py-1 pr-3 text-right">{{ n }}</td>{% endfor %}<td class="py-1 text-right text-gray-500">{{ ligne.sans }}</td></tr>
+          {% empty %}<tr><td class="py-1 text-gray-500">Aucune rubrique.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+
+  {% if s.par_mds %}
+  <section class="bg-white border rounded-lg p-4 mt-6">
+    <h2 class="font-semibold mb-2">Par MDS</h2>
+    <table class="w-full text-sm">{% for nom, n in s.par_mds %}<tr class="border-t"><td class="py-1">{{ nom }}</td><td class="py-1 text-right">{{ n }}</td></tr>{% endfor %}</table>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

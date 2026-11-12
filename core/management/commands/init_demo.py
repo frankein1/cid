@@ -206,6 +206,7 @@ class Command(BaseCommand):
             self.ateliers()
             self.budgets()
             self.logement()
+            self.indigne_dalo()
             self.journal()
             from core.demo_presentation import creer as presentation
             presentation(self)
@@ -288,6 +289,9 @@ class Command(BaseCommand):
         PrescriptionInsertion.objects.filter(pk__in=prescriptions).delete()
         ContratInsertion.objects.filter(pk__in=contrats).delete()
         RecoursAFASE.objects.filter(demande__beneficiaire__in=benefs).delete()
+        from logement.models import RecoursDALO, SignalementHabitatIndigne
+        SignalementHabitatIndigne.objects.filter(beneficiaire__in=benefs).delete()
+        RecoursDALO.objects.filter(beneficiaire__in=benefs).delete()
         DemandeAide.objects.filter(pk__in=aides).delete()
         ips.delete()
         CreneauRdv.objects.filter(pk__in=creneaux).delete()
@@ -1123,6 +1127,69 @@ class Command(BaseCommand):
         a.refresh_from_db()
         S.enregistrer_reponse(a, ts, A.ACCORD, j - timedelta(days=18), "Premier rendez-vous fixé avec l'intervenante")
         self.stdout.write("✅ Orientation ASELL : 2 fiches fictives, 2 opérateurs fictifs")
+
+    def indigne_dalo(self):
+        """Habitat indigne (VAD, locataire, bailleur, commune) et recours DALO fictifs sur les familles de démonstration."""
+        from logement.models import RecoursDALO, SignalementHabitatIndigne as SI
+        from mds.models import MDS
+        SI.objects.filter(beneficiaire__code_interne__in=["FAM2-SOP", "FAM3-CLA", "FAM5-SAR"]).delete()
+        SI.objects.filter(beneficiaire__isnull=True, origine="COMMUNE", mds__code_mds__in=["MDSTEST1", "MDSTEST2"]).delete()
+        RecoursDALO.objects.filter(beneficiaire__code_interne__in=["FAM2-SOP", "FAM3-CLA"]).delete()
+        j, ts = self.j, self.ts
+        mds_test = MDS.objects.filter(code_mds="MDSTEST1").first() or self.b["FAM2-SOP"].mds
+
+        def signalement(code, origine, statut, donnees, **champs):
+            b = self.b[code] if code else None
+            return SI.objects.create(beneficiaire=b, mds=(b.mds if b else mds_test), origine=origine, statut=statut,
+                                     donnees=donnees, cree_par=ts, **champs)
+
+        # 1. Visite à domicile du TS : fiche envoyée au PDLHI, enquête de salubrité, bascule DALO
+        signalement("FAM2-SOP", "VAD", SI.ENVOYE, {
+            "statut_occupant": "locataire", "adultes": "2", "enfants": "2 (années 2015 et 2018)", "caf_allocataire": "oui",
+            "hlm": "non", "typologie": "T3", "surface": "58", "localisation": "3e étage, sans ascenseur (fictif)",
+            "bail_date": "01/09/2019", "bail_duree": "3 ans", "loyer": "560", "charges": "40", "date_entree": "01/09/2019",
+            "eclairage_communs": "non", "stockage_gaz": "nsp", "elements_instables": "oui", "elements_degrades": "oui",
+            "fil_apparent": "nsp", "piece_enterree": "non", "fenetres_exterieur": "oui", "allumage_jour": "oui",
+            "piece_9m2": "non", "toilettes": "oui", "salle_eau": "oui", "cuisine": "oui", "revetements": "oui",
+            "peintures_ecaillees": "oui", "menuiseries_fonctionnement": "mauvais", "menuiseries_vetuste": "mauvais",
+            "menuiseries_etancheite": "nsp", "eau_potable": "reseau", "humidite": "oui", "ventilation": "non",
+            "installation_electrique": "mauvais", "chauffage": "oui", "eau_chaude": "oui", "eaux_usees": "nsp",
+            "remarque_equipements": "(fictif)", "proprietaire_nom": "M. Bailleur EXEMPLE",
+            "proprietaire_adresse": "4 rue Fictive 13110 Port-de-Bouc", "proprietaire_tel": "04 00 00 00 99",
+            "rongeurs": "oui", "insectes": "non", "punaises": "nsp", "commentaires": "Visite de démonstration (fictif).",
+            "info_proprietaire": "oui", "demarche_relogement": "oui", "acceptation_enquete": "oui"},
+            date_saisine=j - timedelta(days=60), permis_ville=True, permis_logement=True,
+            rapport_vad="Logement sombre, humidité sur les murs de la chambre, menuiseries hors d'usage (fictif).",
+            vad_signee_par=ts, vad_date_signature=timezone.now() - timedelta(days=55),
+            date_envoi=j - timedelta(days=20), reponse_pdlhi="Enquête programmée (fictif).",
+            enquete_salubrite=True, suite="Relogement en cours (fictif).", bascule_dalo=True)
+        # 2. Signalement du locataire, en préparation (aucune signature)
+        signalement("FAM3-CLA", "LOCATAIRE", SI.BROUILLON, {
+            "statut_occupant": "locataire", "eclairage_communs": "oui", "humidite": "oui", "rongeurs": "nsp"},
+            date_saisine=j - timedelta(days=10))
+        # 3. Signalement du bailleur, clos après travaux
+        signalement("FAM5-SAR", "BAILLEUR", SI.CLOS, {
+            "statut_occupant": "locataire", "chauffage": "non", "eau_chaude": "non", "piece_9m2": "oui"},
+            date_saisine=j - timedelta(days=150), permis_ville=True, date_envoi=j - timedelta(days=120),
+            reponse_pdlhi="Travaux réalisés par le bailleur (fictif).", suite="Dossier clos après travaux (fictif).")
+        # 4. Signalement de la commune, hors suivi MDS : renvoyé au CIAS ou CCAS
+        signalement(None, "COMMUNE", SI.ENVOYE, {"statut_occupant": "sans_titre", "eclairage_communs": "oui",
+                                                 "fil_apparent": "oui"},
+                    date_saisine=j - timedelta(days=35), permis_ville=True, date_envoi=j - timedelta(days=30),
+                    suite="Courrier renvoyé au CIAS (fictif).")
+        # Recours DALO de la famille FAM2-SOP (son dossier de demande de logement porte déjà la date de dépôt)
+        RecoursDALO.objects.update_or_create(beneficiaire=self.b["FAM2-SOP"], defaults={
+            "civilite": "MME", "nationalite": "FR", "logement": "PRIVE", "situations": ["INSALUBRE", "DELAI"],
+            "nature_local": "Appartement (fictif)",
+            "personnes": "EXEMPLE;Enfant;02/03/2015;Enfant\nEXEMPLE;Autre;05/06/2018;Enfant",
+            "ressources_mois": j.strftime("%m/%Y"), "ressources_annee_avis": str(j.year - 1),
+            "ressources": {"SALAIRE|vous": "1350", "PRIME_ACTIVITE|vous": "120", "ALLOCATIONS|vous": "150"},
+            "pcb": "NON", "surendettement": "NON",
+            "lieux_travail": [{"activite": "salarié", "contrat": "CDI", "entreprise": "Entreprise (fictif)",
+                               "commune": "Port-de-Bouc", "transport": "bus", "temps": "30"}] + [{} for _ in range(7)],
+            "assistant_nom": "Assistant social (fictif)", "assistant_organisme": "MDS de démonstration",
+            "argumentaire": "Logement insalubre, pièce sans fenêtre sur l'extérieur, famille en attente depuis plus de six ans (fictif).",
+            "modifie_par": ts})
 
     def logement_social_copp(self):
         """Demandes de logement social, séances fictives de la commission des publics prioritaires et deux saisines."""
