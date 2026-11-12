@@ -6,13 +6,16 @@
 # ru/tests.py
 from datetime import date
 from types import SimpleNamespace
+from unittest import mock
 
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.exceptions import ValidationError
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from core.signature import initiales_utilisateur, libelle_signature
 from .models import DemandeRelationUsager, FicheRetourSAS
-from .views import _peut_modifier_traitement
+from .views import _peut_modifier_traitement, traitement
 
 
 class DelaiRUTests(SimpleTestCase):
@@ -105,3 +108,37 @@ class VerrouAvantVisaTests(SimpleTestCase):
                 est_cloturee=statut == DemandeRelationUsager.Statut.CLOTUREE,
             )
             self.assertEqual(_peut_modifier_traitement(cadre, demande), attendu, statut)
+
+
+class TraitementRefusTests(TestCase):
+    """Si la transmission est refusée, les modifications restent enregistrées et l'utilisateur le sait."""
+
+    def _appel(self, exc):
+        user = SimpleNamespace(
+            pk=1, is_authenticated=True, is_superuser=False, is_active=True,
+            a_la_capacite=lambda code: False,
+        )
+        demande = SimpleNamespace(pk=7, est_cloturee=False, agent_assigne=None)
+        updated = mock.Mock(agent_assigne=None)
+        form = mock.Mock(is_valid=mock.Mock(return_value=True))
+        form.save.return_value = updated
+        request = RequestFactory().post("/ru/7/traitement/", {"action": "soumettre"})
+        request.user = user
+        setattr(request, "session", {})
+        setattr(request, "_messages", FallbackStorage(request))
+        with mock.patch("ru.views._demande_pour_user", return_value=demande), \
+                mock.patch("ru.views._peut_modifier_traitement", return_value=True), \
+                mock.patch("ru.views.TraitementRUForm", return_value=form), \
+                mock.patch("ru.views.soumettre_evaluation", side_effect=exc):
+            reponse = traitement(request, 7)
+        return reponse, updated, [m.message for m in get_messages(request)]
+
+    def test_saisie_conservee_et_manque_affiche(self):
+        exc = ValidationError("Complétez la problématique repérée avant la transmission au cadre.")
+        reponse, updated, messages_affiches = self._appel(exc)
+        updated.save.assert_called_once()
+        self.assertEqual(reponse.status_code, 302)
+        self.assertEqual(len(messages_affiches), 1)
+        self.assertIn("Modifications enregistrées", messages_affiches[0])
+        self.assertIn("la transmission au cadre n'a pas été effectuée", messages_affiches[0])
+        self.assertIn("Complétez la problématique", messages_affiches[0])

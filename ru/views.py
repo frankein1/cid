@@ -212,6 +212,12 @@ def transmettre_mds(request, pk):
     return redirect("ru:detail", pk=demande.pk)
 
 
+def _signaler_refus(request, exc, action_refusee):
+    """Les modifications du formulaire sont déjà enregistrées : le dire à l'utilisateur."""
+    texte = " ".join(exc.messages) if isinstance(exc, ValidationError) else str(exc)
+    messages.error(request, f"Modifications enregistrées, mais {action_refusee}. {texte}")
+
+
 @login_required
 @require_POST
 def traitement(request, pk):
@@ -235,13 +241,13 @@ def traitement(request, pk):
             try:
                 affecter_a_un_travailleur(demande, updated.agent_assigne, request.user)
             except (PermissionDenied, ValidationError) as exc:
-                messages.error(request, str(exc))
+                _signaler_refus(request, exc, "l'affectation n'a pas été effectuée")
                 return redirect("ru:detail", pk=demande.pk)
         elif action == "soumettre":
             try:
                 soumettre_evaluation(demande, request.user)
             except (PermissionDenied, ValidationError) as exc:
-                messages.error(request, str(exc))
+                _signaler_refus(request, exc, "la transmission au cadre n'a pas été effectuée")
                 return redirect("ru:detail", pk=demande.pk)
         else:
             journaliser(demande, "MISE_A_JOUR_EVALUATION", request.user)
