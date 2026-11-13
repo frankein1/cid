@@ -119,8 +119,6 @@ def controler_rapport(situation):
         manques.append("le classement sans suite ne peut pas être combiné à une autre proposition")
     if "CLASSEMENT" in cellule.propositions and not cellule.argumentation.strip():
         manques.append("l'argumentation du classement sans suite")
-    if "PROTECTION_JURIDIQUE" in cellule.propositions:
-        manques.extend(pieces_protection_manquantes(situation))
     return manques
 
 
@@ -151,6 +149,19 @@ def enregistrer_protection(situation, user, donnees):
         setattr(situation, champ, valeur)
     situation.save()
     journaliser(situation, user, "PROTECTION", "Informations de protection juridique mises à jour")
+    return situation
+
+
+@transaction.atomic
+def enregistrer_fiche(situation, user, donnees):
+    """Fiche de renseignements saisie dans CID (remplace le formulaire papier du parquet)."""
+    _verifier(peut_evaluer(user, situation), "Vous ne pouvez pas modifier cette fiche.")
+    _verifier(situation.statut in ('EVALUATION', 'RAPPORT', 'VALIDEE'), "Cette fiche n'est plus modifiable.")
+    if situation.statut != 'EVALUATION':
+        _verifier(peut_piloter(user, situation), "Seul le cadre peut modifier la fiche après soumission.")
+    situation.fiche = {cle: valeur for cle, valeur in donnees.items() if valeur not in (None, '')}
+    situation.save(update_fields=['fiche', 'date_modification'])
+    journaliser(situation, user, "FICHE", "Fiche de renseignements mise à jour")
     return situation
 
 

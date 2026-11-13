@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Fiche de renseignements – {{ situation.numero }} – CID{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <p class="text-sm font-semibold uppercase tracking-wide text-blue-700">Protection juridique · {{ situation.numero }}</p>
+  <h1 class="text-2xl font-bold text-gray-900">Fiche de renseignements sur la personne à protéger</h1>
+  <p class="text-gray-600 mt-1 mb-2">Saisie dans CID pour tous les parquets : aucune impression n'est nécessaire pour remplir la fiche.</p>
+  <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+    Imprimez le formulaire du parquet uniquement en cas de nécessité absolue. Sinon, transmettez les informations par le canal prévu par le parquet.
+  </p>
+  <div class="mb-6 text-sm">
+    <span class="text-gray-700">Identité déjà saisie au recueil : {{ situation.libelle_personne }}.</span>
+  </div>
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    {% for titre, champs in groupes %}
+    <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
+      <h2 class="font-semibold text-gray-900">{{ titre }}</h2>
+      {% for champ in champs %}
+      <div>
+        <div class="text-sm font-medium text-gray-700">{{ champ.label }}</div>
+        {{ champ }}
+      </div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+    <div class="flex items-center gap-3">
+      <button class="px-5 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800">Enregistrer la fiche</button>
+      <a href="{{ retour }}" class="text-gray-600 hover:underline">Retour à la situation</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -29,11 +29,11 @@ Les propositions sont : classement sans suite, signalement police, accompagnemen
 
 Une annexe n'est proposée que si la cellule retient la proposition correspondante. Les signatures se font à la main après impression.
 
-**Non générées** : les fiches de renseignements des parquets (Aix 9.1, Marseille 9.2, Tarascon). Ce sont des formulaires scannés, non remplissables : il faut les imprimer et les compléter.
+**Fiches de renseignements des parquets** (Aix 9.1, Marseille 9.2, Tarascon) : saisies dans CID (page « Fiche » du dossier, masque de saisie par rubriques), puis téléchargées en PDF **remplissable** (formulaire AcroForm, prérempli avec l'identité et les données saisies). Règle : on n'imprime qu'en cas de nécessité absolue. Les rubriques reproduites sont des reconstructions à faire valider.
 
 ## Protection juridique
 
-Le rapport ne peut être soumis que si les pièces exigées par le parquet sont renseignées : parquet compétent, mesure demandée, acte de naissance, fiche de renseignements, certificat médical circonstancié (ou motif de son absence).
+Le rapport ne peut être soumis que si le parquet compétent et la mesure demandée sont renseignés, ainsi que les propositions et le référent. Les pièces du parquet (acte de naissance, fiche de renseignements, certificat médical ou motif de son absence) **ne bloquent pas** la soumission : un message rappelle aux agents d'y penser, sur la fiche et après soumission.
 
 ## MASP
 

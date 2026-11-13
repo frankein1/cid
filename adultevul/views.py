@@ -18,11 +18,12 @@ from mds.models import UserMDSProfile
 from .forms import (
     CelluleForm, MaspForm, MotifForm, ProtectionForm, QualificationForm, RenvoiForm, SituationForm,
 )
+from .fiche import PARQUETS, CHAMPS, FicheForm, fiche_pdf
 from .pdf import ANNEXES, annexe_disponible, rendre_annexe
 from .models import MesureMASP, PROPOSITIONS, STATUTS, SituationAdulteVulnerable
 from .services import (
     cloturer, constituer_cellule, controler_rapport, creer_situation, decider, enregistrer_cellule,
-    enregistrer_masp, enregistrer_protection, peut_decider, peut_evaluer, peut_piloter, qualifier,
+    enregistrer_fiche, enregistrer_masp, enregistrer_protection, peut_decider, peut_evaluer, peut_piloter, qualifier,
     renvoyer_rapport, soumettre_rapport, valider_rapport, pieces_protection_manquantes,
 )
 
@@ -102,6 +103,8 @@ def detail(request, pk):
                                 and situation.statut in ('EVALUATION', 'RAPPORT', 'VALIDEE')
                                 and peut_evaluer(user, situation)),
         'manques_protection': pieces_protection_manquantes(situation) if cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions else [],
+        'peut_fiche': bool(cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions
+                           and situation.statut in ('EVALUATION', 'RAPPORT', 'VALIDEE') and peut_evaluer(user, situation)),
         'masp': getattr(situation, 'masp', None),
         'peut_masp': bool(cellule and 'MASP' in cellule.propositions and peut_evaluer(user, situation)
                           and situation.statut in ('VALIDEE', 'DECIDEE', 'CLOTUREE')),
@@ -180,6 +183,11 @@ def soumettre(request, pk):
     try:
         soumettre_rapport(situation, request.user)
         messages.success(request, "Rapport soumis au visa de l'adjoint Cohésion sociale.")
+        if situation.cellule and 'PROTECTION_JURIDIQUE' in situation.cellule.propositions:
+            from .services import pieces_protection_manquantes
+            rappel = pieces_protection_manquantes(situation)
+            if rappel:
+                messages.warning(request, "Rappel pour le parquet, à vérifier avant l'envoi : " + ", ".join(rappel) + ".")
     except (PermissionDenied, ValidationError) as exc:
         messages.error(request, " ".join(getattr(exc, 'messages', [str(exc)])))
     return redirect(situation.get_absolute_url())
@@ -307,3 +315,46 @@ def masp(request, pk):
         'sous_titre': situation.numero + " – " + situation.libelle_personne,
         'bouton': "Enregistrer le suivi", 'retour': situation.get_absolute_url(),
     })
+
+
+@login_required
+def fiche(request, pk):
+    user = request.user
+    situation = _situation_pour_user(user, pk)
+    if request.method == 'POST':
+        form = FicheForm(request.POST, fiche=situation.fiche)
+        if form.is_valid():
+            try:
+                enregistrer_fiche(situation, user, form.cleaned_data)
+                messages.success(request, "Fiche de renseignements enregistrée.")
+                return redirect(situation.get_absolute_url())
+            except (PermissionDenied, ValidationError) as exc:
+                messages.error(request, " ".join(getattr(exc, 'messages', [str(exc)])))
+    else:
+        form = FicheForm(fiche=situation.fiche)
+    groupes = []
+    deja = set()
+    for titre, cles in PARQUETS['AIX']['sections']:
+        groupes.append((titre, [form[c] for c in cles]))
+        deja.update(cles)
+    restants = [c for c in CHAMPS if c not in deja]
+    if restants:
+        groupes.append(("Autres renseignements", [form[c] for c in restants]))
+    return render(request, 'adultevul/fiche.html', {
+        'form': form, 'situation': situation, 'groupes': groupes, 'retour': situation.get_absolute_url(),
+    })
+
+
+@login_required
+def fiche_parquet_pdf(request, pk, tribunal):
+    """Formulaire du parquet, en PDF remplissable à l'écran. À n'imprimer qu'en cas de nécessité absolue."""
+    situation = _situation_pour_user(request.user, pk)
+    if tribunal not in PARQUETS:
+        raise Http404("Parquet inconnu.")
+    buffer = BytesIO()
+    fiche_pdf(situation, tribunal, buffer)
+    buffer.seek(0)
+    reponse = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    reponse["Content-Disposition"] = f'inline; filename="{situation.numero}-fiche-{tribunal.lower()}.pdf"'
+    reponse["Cache-Control"] = "private, no-store"
+    return reponse

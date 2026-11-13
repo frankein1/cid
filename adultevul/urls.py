@@ -22,5 +22,7 @@ urlpatterns = [
     path("<int:pk>/cloturer/", views.cloturer_view, name="cloturer"),
     path("<int:pk>/protection/", views.protection, name="protection"),
     path("<int:pk>/masp/", views.masp, name="masp"),
+    path("<int:pk>/fiche/", views.fiche, name="fiche"),
+    path("<int:pk>/fiche/<str:tribunal>.pdf", views.fiche_parquet_pdf, name="fiche_parquet_pdf"),
     path("<int:pk>/annexe/<str:numero>.pdf", views.annexe_pdf, name="annexe_pdf"),
 ]
