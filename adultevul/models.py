@@ -72,6 +72,20 @@ URGENCES = [
     ('HUIT_JOURS', 'Urgente : rapport sous 8 jours'),
     ('DEUX_MOIS', 'Courante : rapport sous 2 mois'),
 ]
+TRIBUNAUX = [
+    ('AIX', 'TGI Aix-en-Provence (annexe 9.1)'),
+    ('MARSEILLE', 'TGI Marseille (annexe 9.2)'),
+    ('TARASCON', 'TGI Tarascon (fiche propre au parquet)'),
+]
+MESURES_PROTECTION = [
+    ('TUTELLE', 'Tutelle'),
+    ('CURATELLE', 'Curatelle'),
+    ('SAUVEGARDE', 'Sauvegarde de justice'),
+]
+NIVEAUX_MASP = [
+    ('I', 'Niveau I : sans perception des prestations sociales'),
+    ('II', 'Niveau II : avec perception et gestion des prestations sociales'),
+]
 MODALITES = [
     ('VAD', 'Visite à domicile'),
     ('CONVOCATION', 'Convocation à la MDS'),
@@ -141,6 +155,15 @@ class SituationAdulteVulnerable(models.Model):
     decideur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='av_decidees')
     date_cloture = models.DateTimeField(null=True, blank=True)
+
+    # --- protection juridique (annexes 9 et 9 bis)
+    tribunal = models.CharField("Parquet compétent", max_length=12, choices=TRIBUNAUX, blank=True)
+    mesure_protection = models.CharField("Mesure demandée", max_length=12, choices=MESURES_PROTECTION, blank=True)
+    pj_acte_naissance = models.BooleanField("Pièce : acte de naissance ou justificatif d'état civil", default=False)
+    pj_fiche = models.BooleanField("Pièce : fiche de renseignements complétée", default=False)
+    pj_certificat = models.BooleanField("Pièce : certificat médical circonstancié (expert)", default=False)
+    pj_certificat_absence = models.TextField(
+        "Si le certificat ne peut pas être fourni : motif à expliquer au procureur", blank=True)
 
     cree_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name='av_creees')
@@ -216,6 +239,26 @@ class CelluleEvaluation(models.Model):
     @property
     def verrouillee(self):
         return self.situation.statut in ('RAPPORT', 'VALIDEE', 'DECIDEE', 'CLOTUREE')
+
+
+class MesureMASP(models.Model):
+    """Suivi d'un MASP (mesure d'accompagnement social personnalisé), géré dans CID (annexe 6)."""
+    situation = models.OneToOneField(SituationAdulteVulnerable, on_delete=models.CASCADE, related_name='masp')
+    niveau = models.CharField("Niveau", max_length=3, choices=NIVEAUX_MASP, default='I')
+    date_demande = models.DateField("Date de la demande au SPM", null=True, blank=True)
+    date_debut = models.DateField("Début de la mesure", null=True, blank=True)
+    date_echeance = models.DateField("Échéance", null=True, blank=True)
+    date_reevaluation = models.DateField("Réévaluation du plan d'action", null=True, blank=True)
+    referent_nom = models.CharField("Nom du référent social", max_length=150, blank=True)
+    referent_qualite = models.CharField("Qualité du référent", max_length=150, blank=True)
+    notes = models.TextField("Suivi", blank=True)
+
+    def __str__(self):
+        return f"MASP {self.get_niveau_display()} – {self.situation.numero}"
+
+    @property
+    def prestations_gerees(self):
+        return self.niveau == 'II'
 
 
 class HistoriqueAV(models.Model):

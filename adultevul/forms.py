@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 
 from mds.models import UserMDSProfile
 from .models import (
-    CelluleEvaluation, MODALITES, PROPOSITIONS, SituationAdulteVulnerable, URGENCES,
+    CelluleEvaluation, MesureMASP, MODALITES, PROPOSITIONS, SituationAdulteVulnerable, URGENCES,
 )
 
 User = get_user_model()
@@ -111,3 +111,37 @@ class RenvoiForm(forms.Form):
 
 class MotifForm(forms.Form):
     commentaire = forms.CharField(label="Décision administrative", widget=forms.Textarea(attrs={'rows': 4, **CHAMP}))
+
+
+class ProtectionForm(forms.ModelForm):
+    """Protection juridique (annexe 9) : parquet, mesure et pièces exigées."""
+    class Meta:
+        model = SituationAdulteVulnerable
+        fields = ['tribunal', 'mesure_protection', 'pj_acte_naissance', 'pj_fiche', 'pj_certificat',
+                  'pj_certificat_absence']
+        widgets = {'pj_certificat_absence': forms.Textarea(attrs={'rows': 3, **CHAMP})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['tribunal'].widget.attrs.update(CHAMP)
+        self.fields['mesure_protection'].widget.attrs.update(CHAMP)
+
+
+class MaspForm(forms.ModelForm):
+    """Suivi MASP (annexe 6) : niveau, dates et référent."""
+    class Meta:
+        model = MesureMASP
+        fields = ['niveau', 'date_demande', 'date_debut', 'date_echeance', 'date_reevaluation',
+                  'referent_nom', 'referent_qualite', 'notes']
+        widgets = {
+            'date_demande': forms.DateInput(attrs={'type': 'date', **CHAMP}),
+            'date_debut': forms.DateInput(attrs={'type': 'date', **CHAMP}),
+            'date_echeance': forms.DateInput(attrs={'type': 'date', **CHAMP}),
+            'date_reevaluation': forms.DateInput(attrs={'type': 'date', **CHAMP}),
+            'notes': forms.Textarea(attrs={'rows': 4, **CHAMP}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nom, champ in self.fields.items():
+            champ.widget.attrs.setdefault('class', CHAMP['class'])

@@ -15,12 +15,15 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from mds.models import UserMDSProfile
-from .forms import CelluleForm, MotifForm, QualificationForm, RenvoiForm, SituationForm
+from .forms import (
+    CelluleForm, MaspForm, MotifForm, ProtectionForm, QualificationForm, RenvoiForm, SituationForm,
+)
 from .pdf import ANNEXES, annexe_disponible, rendre_annexe
-from .models import PROPOSITIONS, STATUTS, SituationAdulteVulnerable
+from .models import MesureMASP, PROPOSITIONS, STATUTS, SituationAdulteVulnerable
 from .services import (
     cloturer, constituer_cellule, controler_rapport, creer_situation, decider, enregistrer_cellule,
-    peut_decider, peut_evaluer, peut_piloter, qualifier, renvoyer_rapport, soumettre_rapport, valider_rapport,
+    enregistrer_masp, enregistrer_protection, peut_decider, peut_evaluer, peut_piloter, qualifier,
+    renvoyer_rapport, soumettre_rapport, valider_rapport, pieces_protection_manquantes,
 )
 
 
@@ -95,6 +98,13 @@ def detail(request, pk):
         'cellule': cellule,
         'cellule_propositions': PROPOSITIONS,
         'annexes': [(n, libelle) for n, libelle in ANNEXES.items() if annexe_disponible(situation, n)],
+        'peut_protection': bool(cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions
+                                and situation.statut in ('EVALUATION', 'RAPPORT', 'VALIDEE')
+                                and peut_evaluer(user, situation)),
+        'manques_protection': pieces_protection_manquantes(situation) if cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions else [],
+        'masp': getattr(situation, 'masp', None),
+        'peut_masp': bool(cellule and 'MASP' in cellule.propositions and peut_evaluer(user, situation)
+                          and situation.statut in ('VALIDEE', 'DECIDEE', 'CLOTUREE')),
         'historique': situation.historique.select_related('auteur').all(),
         'manques': controler_rapport(situation) if soumettre_possible and cellule else [],
         'peut_qualifier': situation.statut == 'RECUE' and peut_piloter(user, situation),
@@ -252,3 +262,48 @@ def annexe_pdf(request, pk, numero):
     reponse["Content-Disposition"] = f'attachment; filename="{situation.numero}-annexe-{numero}.pdf"'
     reponse["Cache-Control"] = "private, no-store"
     return reponse
+
+
+@login_required
+def protection(request, pk):
+    user = request.user
+    situation = _situation_pour_user(user, pk)
+    if request.method == 'POST':
+        form = ProtectionForm(request.POST, instance=situation)
+        if form.is_valid():
+            try:
+                enregistrer_protection(situation, user, form.cleaned_data)
+                messages.success(request, "Informations de protection juridique enregistrées.")
+                return redirect(situation.get_absolute_url())
+            except (PermissionDenied, ValidationError) as exc:
+                messages.error(request, " ".join(getattr(exc, 'messages', [str(exc)])))
+    else:
+        form = ProtectionForm(instance=situation)
+    return render(request, 'adultevul/formulaire.html', {
+        'form': form, 'titre': "Protection juridique : parquet, mesure et pièces (annexe 9)",
+        'sous_titre': situation.numero + " – " + situation.libelle_personne,
+        'bouton': "Enregistrer", 'retour': situation.get_absolute_url(),
+    })
+
+
+@login_required
+def masp(request, pk):
+    user = request.user
+    situation = _situation_pour_user(user, pk)
+    existante = getattr(situation, 'masp', None)
+    if request.method == 'POST':
+        form = MaspForm(request.POST, instance=existante)
+        if form.is_valid():
+            try:
+                enregistrer_masp(situation, user, {**form.cleaned_data})
+                messages.success(request, "Suivi MASP enregistré.")
+                return redirect(situation.get_absolute_url())
+            except (PermissionDenied, ValidationError) as exc:
+                messages.error(request, " ".join(getattr(exc, 'messages', [str(exc)])))
+    else:
+        form = MaspForm(instance=existante)
+    return render(request, 'adultevul/formulaire.html', {
+        'form': form, 'titre': "Suivi MASP (annexe 6)",
+        'sous_titre': situation.numero + " – " + situation.libelle_personne,
+        'bouton': "Enregistrer le suivi", 'retour': situation.get_absolute_url(),
+    })

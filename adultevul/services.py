@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import CelluleEvaluation, HistoriqueAV, PROPOSITIONS
+from .models import CelluleEvaluation, HistoriqueAV, MesureMASP, PROPOSITIONS
 
 
 def journaliser(situation, user, action, detail=""):
@@ -119,7 +119,52 @@ def controler_rapport(situation):
         manques.append("le classement sans suite ne peut pas être combiné à une autre proposition")
     if "CLASSEMENT" in cellule.propositions and not cellule.argumentation.strip():
         manques.append("l'argumentation du classement sans suite")
+    if "PROTECTION_JURIDIQUE" in cellule.propositions:
+        manques.extend(pieces_protection_manquantes(situation))
     return manques
+
+
+def pieces_protection_manquantes(situation):
+    """Pièces exigées par le parquet pour une demande de protection (annexe 9, sous peine d'irrecevabilité)."""
+    manques = []
+    if not situation.tribunal:
+        manques.append("le parquet compétent")
+    if not situation.mesure_protection:
+        manques.append("la mesure demandée (tutelle, curatelle ou sauvegarde)")
+    if not situation.pj_acte_naissance:
+        manques.append("la copie de l'acte de naissance ou d'un justificatif d'état civil")
+    if not situation.pj_fiche:
+        manques.append("la fiche de renseignements complétée")
+    if not situation.pj_certificat and not situation.pj_certificat_absence.strip():
+        manques.append("le certificat médical circonstancié, ou le motif de son absence")
+    return manques
+
+
+@transaction.atomic
+def enregistrer_protection(situation, user, donnees):
+    """Parquet, mesure et pièces jointes (annexe 9). Modifiable tant que le rapport n'est pas visé."""
+    _verifier(peut_evaluer(user, situation), "Vous ne pouvez pas modifier ces informations.")
+    _verifier(situation.statut in ('EVALUATION', 'RAPPORT', 'VALIDEE'), "Cette étape n'est plus modifiable.")
+    if situation.statut != 'EVALUATION':
+        _verifier(peut_piloter(user, situation), "Seul le cadre peut modifier le rapport après soumission.")
+    for champ, valeur in donnees.items():
+        setattr(situation, champ, valeur)
+    situation.save()
+    journaliser(situation, user, "PROTECTION", "Informations de protection juridique mises à jour")
+    return situation
+
+
+@transaction.atomic
+def enregistrer_masp(situation, user, donnees):
+    """Suivi MASP dans CID (annexe 6), une fois la mesure proposée et décidée."""
+    _verifier(peut_piloter(user, situation) or peut_evaluer(user, situation), "Accès refusé au suivi MASP.")
+    _verifier("MASP" in situation.cellule.propositions, "Aucun MASP n'a été proposé dans cette situation.")
+    mesure, _ = MesureMASP.objects.get_or_create(situation=situation, defaults={'niveau': donnees['niveau']})
+    for champ, valeur in donnees.items():
+        setattr(mesure, champ, valeur)
+    mesure.save()
+    journaliser(situation, user, "MASP", f"Suivi MASP niveau {mesure.niveau}")
+    return mesure
 
 
 @transaction.atomic

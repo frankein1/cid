@@ -120,6 +120,16 @@
         <p class="text-sm text-gray-500">Aucune action disponible pour vous à cette étape.</p>
         {% endif %}
       </section>
+      {% if cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions or cellule and 'MASP' in cellule.propositions %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+        <h2 class="font-semibold text-gray-900">Protection et MASP</h2>
+        {% if peut_protection %}<a href="{% url 'adultevul:protection' situation.pk %}" class="text-sm text-blue-700 hover:underline">Parquet, mesure et pièces jointes (annexe 9)</a>{% endif %}
+        {% if manques_protection %}<p class="text-sm text-amber-800">Pièces à compléter : {{ manques_protection|join:", " }}.</p>{% endif %}
+        {% if peut_masp %}<a href="{% url 'adultevul:masp' situation.pk %}" class="block text-sm text-blue-700 hover:underline">Suivi MASP (annexe 6)</a>{% endif %}
+        {% if masp %}<p class="text-sm">MASP niveau {{ masp.get_niveau_display }} · référent : {{ masp.referent_nom|default:"—" }} · échéance {{ masp.date_echeance|date:'d/m/Y'|default:"—" }}</p>{% endif %}
+      </section>
+      {% endif %}
+
       {% if annexes %}
       <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <h2 class="font-semibold text-gray-900 mb-3">Annexes à imprimer</h2>

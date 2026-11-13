@@ -280,3 +280,56 @@ def qualifier_et_cellule(test):
                                            argumentation=""), [test.ts])
     s.refresh_from_db()
     return s
+
+
+class ProtectionEtMASPTests(BaseAdulteVulnerable):
+    def setUp(self):
+        super().setUp()
+        self.s = qualifier_et_cellule(self)
+        self.s.cellule.propositions = ["PROTECTION_JURIDIQUE"]
+        self.s.cellule.argumentation = "Altération constatée."
+        self.s.cellule.save()
+
+    def test_pieces_protection_bloquent_la_soumission(self):
+        from .services import pieces_protection_manquantes
+        self.assertEqual(len(pieces_protection_manquantes(self.s)), 5)
+        with self.assertRaises(ValidationError) as ctx:
+            soumettre_rapport(self.s, self.cadre)
+        self.assertIn("le parquet compétent", str(ctx.exception))
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.statut, "EVALUATION")
+
+    def test_pieces_completes_permettent_la_soumission(self):
+        from .services import enregistrer_protection
+        enregistrer_protection(self.s, self.ts, dict(
+            tribunal="AIX", mesure_protection="TUTELLE", pj_acte_naissance=True, pj_fiche=True,
+            pj_certificat=False, pj_certificat_absence="Expert non joignable, à désigner par le procureur."))
+        soumettre_rapport(self.s, self.cadre)
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.statut, "RAPPORT")
+
+    def test_masp_seulement_si_propose(self):
+        from .services import enregistrer_masp
+        donnees = dict(niveau="I", referent_nom="Léa Martin", referent_qualite="TS")
+        with self.assertRaises(PermissionDenied):
+            enregistrer_masp(self.s, self.cadre, donnees)
+        self.s.cellule.propositions = ["MASP"]
+        self.s.cellule.save()
+        self.s.statut = "VALIDEE"
+        self.s.save()
+        mesure = enregistrer_masp(self.s, self.cadre, donnees)
+        self.assertEqual(mesure.referent_nom, "Léa Martin")
+        self.assertFalse(mesure.prestations_gerees)
+
+    def test_annexes_protection_et_masp(self):
+        from io import BytesIO
+        from .pdf import rendre_annexe
+        self.s.cellule.propositions = ["MASP", "PSYCHIATRIE", "ARS", "PROTECTION_JURIDIQUE"]
+        self.s.cellule.save()
+        self.s.tribunal = "MARSEILLE"
+        self.s.mesure_protection = "CURATELLE"
+        self.s.save()
+        for numero in ("6", "7", "7bis", "8", "8bis", "9", "9bis"):
+            tampon = BytesIO()
+            rendre_annexe(self.s, numero, tampon)
+            self.assertTrue(tampon.getvalue().startswith(b"%PDF"), numero)

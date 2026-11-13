@@ -25,9 +25,24 @@ ANNEXES = {
     '3bis': "Annexe 3 bis – Courrier de transmission au procureur (services de police)",
     '4': "Annexe 4 – Classement sans suite",
     '5': "Annexe 5 – Rapport d'évaluation : accompagnement social non contractualisé",
+    '6': "Annexe 6 – Rapport d'évaluation : demande de MASP niveau I ou II",
+    '7': "Annexe 7 – Rapport d'évaluation : intervention auprès des services de psychiatrie",
+    '7bis': "Annexe 7 bis – Courrier de transmission au médecin chef du service de psychiatrie",
+    '8': "Annexe 8 – Rapport de signalement au médecin inspecteur de l'ARS",
+    '8bis': "Annexe 8 bis – Courrier de transmission au médecin inspecteur de l'ARS",
+    '9': "Annexe 9 – Rapport de signalement en vue d'une protection juridique",
+    '9bis': "Annexe 9 bis – Courrier de transmission au procureur (protection juridique)",
 }
 # Annexe liée à chaque proposition de la cellule
-PROPOSITION_POUR_ANNEXE = {'3': 'POLICE', '3bis': 'POLICE', '4': 'CLASSEMENT', '5': 'ACCOMPAGNEMENT'}
+PROPOSITION_POUR_ANNEXE = {
+    '3': 'POLICE', '3bis': 'POLICE', '4': 'CLASSEMENT', '5': 'ACCOMPAGNEMENT', '6': 'MASP',
+    '7': 'PSYCHIATRIE', '7bis': 'PSYCHIATRIE', '8': 'ARS', '8bis': 'ARS',
+    '9': 'PROTECTION_JURIDIQUE', '9bis': 'PROTECTION_JURIDIQUE',
+}
+COURRIER_TGI = [
+    "Monsieur le Procureur de la République, près le tribunal judiciaire,",
+    "Objet : signalement en vue d'une mesure de protection juridique d'un majeur.",
+]
 
 
 def _texte(valeur):
@@ -147,6 +162,92 @@ def _titre(numero, st):
     return [_p(ANNEXES[numero], st["titre"]), Spacer(1, 6)]
 
 
+def _masp_contenu(situation, st):
+    masp = getattr(situation, 'masp', None)
+    niveau = masp.get_niveau_display() if masp else "à préciser"
+    return [
+        _p("Direction de la cohésion sociale – Service de la protection des majeurs", st["entete"]),
+        _p("Renseignements administratifs", st["section"]),
+        _tableau(_identite(situation) + [("Mesure demandée", niveau)], [48 * mm, 130 * mm]),
+        _p("Situation vis-à-vis de l'emploi, conditions de logement", st["section"]),
+        _p(situation.personne_adresse or "—", st["cellule"]),
+        _p("Données budgétaires au moment de la demande (à compléter)", st["section"]),
+        _tableau([("Ressources du mois", " "), ("Charges du mois (loyer, énergie, assurances, impôts…)", " "),
+                  ("Total général", " ")], [80 * mm, 98 * mm]),
+        _p("Référent social", st["section"]),
+        _p(f"{masp.referent_nom} – {masp.referent_qualite}" if masp else "—", st["cellule"]),
+        _p("Analyse et proposition", st["section"]),
+        _p(situation.cellule.argumentation or situation.cellule.plan_action, st["cellule"]),
+    ]
+
+
+def _signalement_contenu(situation, numero, st):
+    """Rapports 7, 8 et 9 : mêmes rubriques, orientées vers le destinataire."""
+    cellule = situation.cellule
+    destinataire = {'7': "Médecin chef du service de psychiatrie",
+                    '8': "Médecin inspecteur de l'ARS",
+                    '9': "Procureur de la République : demande de protection juridique"}[numero]
+    lignes = [("Destinataire", destinataire), ("Nom", situation.personne_nom),
+              ("Prénom", situation.personne_prenom), ("Date de naissance", situation.personne_naissance),
+              ("Adresse", situation.personne_adresse)]
+    if numero == '9':
+        lignes += [("Parquet", situation.get_tribunal_display()), ("Mesure demandée", situation.get_mesure_protection_display())]
+    contenu = [_p(destinataire, st["section"]), _tableau(lignes, [48 * mm, 130 * mm]),
+               _p("Origine et nature de l'information préoccupante", st["section"]),
+               _p(situation.faits, st["cellule"]),
+               _p("Contexte et parcours de la personne", st["section"]),
+               _p(situation.evenement_declencheur or "—", st["cellule"]),
+               _p("Intervention des services sociaux, médicaux et médico-sociaux", st["section"]),
+               _p(cellule.investigations or "—", st["cellule"]),
+               _p("Analyse et conclusion", st["section"]),
+               _p(cellule.argumentation or "—", st["cellule"])]
+    if numero == '7':
+        contenu += [_p("Proposition d'intervention sollicitée auprès des services de psychiatrie", st["section"]),
+                    _p(cellule.plan_action, st["cellule"])]
+    elif numero == '8':
+        contenu += [_p("Intervention sollicitée auprès de l'Agence régionale de santé", st["section"]),
+                    _p(cellule.plan_action, st["cellule"])]
+    else:
+        contenu += [_p("Mesure proposée (tutelle, curatelle, sauvegarde de justice)", st["section"]),
+                    _p(situation.get_mesure_protection_display(), st["cellule"]),
+                    _p("Avis de l'intéressé(e) : à compléter", st["cellule"]),
+                    _p("Pièces jointes : copie d'un justificatif d'état civil ; fiche de renseignements du "
+                       "parquet concerné ; certificat médical circonstancié (expert choisi sur la liste du procureur).",
+                       st["cellule"])]
+    return contenu
+
+
+def _courrier_contenu(situation, numero, st):
+    if numero == '7bis':
+        objet = f"Objet : signalement de la situation de {situation.libelle_personne}."
+        corps = ["Je tiens à vous alerter sur la situation de l'intéressé(e).",
+                 "Je vous serais obligé de bien vouloir me faire connaître la suite à donner à ce signalement."]
+        destinataire = ["Monsieur le Médecin chef", "du service de psychiatrie"]
+    elif numero == '8bis':
+        objet = f"Objet : signalement de la situation de {situation.libelle_personne}."
+        corps = ["Je tiens à vous alerter sur la situation de l'intéressé(e) suite :",
+                 "– à un refus de soins de sa part ;",
+                 "– à l'impossibilité de mettre en place une prise en charge médicale.",
+                 "Je vous serais obligé de bien vouloir me faire connaître la suite à donner à ce signalement."]
+        destinataire = ["Monsieur le Médecin inspecteur de l'Agence régionale de santé",
+                        "Immeuble M'Square, 132 bd de Paris, 13003 Marseille"]
+    else:
+        objet = "Objet : signalement en vue d'une mesure de protection juridique d'un majeur."
+        corps = ["J'ai l'honneur de vous faire parvenir : le rapport d'évaluation sociale, la fiche de "
+                 "renseignements dûment remplie, la copie d'un justificatif d'état civil, le certificat médical "
+                 "circonstancié.",
+                 "Je vous serais obligé de bien vouloir me faire connaître votre décision."]
+        destinataire = ["Monsieur le Procureur de la République", "près le tribunal judiciaire"]
+    contenu = [Paragraph("<br/>".join(_texte(d) for d in destinataire), st["texte"]),
+               _p(objet, st["texte"]), _p(f"Concernant : {situation.libelle_personne}, domicilié(e) : "
+                                          f"{situation.personne_adresse or '—'}", st["texte"])]
+    contenu += [_p(c, st["texte"]) for c in corps]
+    contenu += [Spacer(1, 12), _p("Pour la Présidente du Conseil départemental, et par délégation,", st["cellule"]),
+                _p("Le directeur de la Maison départementale de la solidarité", st["cellule"]),
+                Spacer(1, 16), _p("Signature :", st["cellule"])]
+    return contenu
+
+
 def rendre_annexe(situation, numero, destination):
     """Génère l'annexe demandée dans destination (fichier ou buffer)."""
     if numero not in ANNEXES:
@@ -169,6 +270,12 @@ def rendre_annexe(situation, numero, destination):
                      _p("Argumentation et conclusion : demande d'intervention des services de police.",
                         st["section"]),
                      _p(situation.cellule.argumentation, st["cellule"])] + _signatures(st)
+    elif numero == '6':
+        histoire += _masp_contenu(situation, st) + _signatures(st)
+    elif numero in ('7', '8', '9'):
+        histoire += _signalement_contenu(situation, numero, st) + _signatures(st)
+    elif numero in ('7bis', '8bis', '9bis'):
+        histoire += _courrier_contenu(situation, numero, st)
     elif numero == '3bis':
         histoire += [
             _p("Monsieur le Procureur de la République, près le tribunal judiciaire,", st["texte"]),
