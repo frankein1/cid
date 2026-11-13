@@ -123,8 +123,17 @@
       {% if cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions or cellule and 'MASP' in cellule.propositions %}
       <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
         <h2 class="font-semibold text-gray-900">Protection et MASP</h2>
-        {% if peut_protection %}<a href="{% url 'adultevul:protection' situation.pk %}" class="text-sm text-blue-700 hover:underline">Parquet, mesure et pièces jointes (annexe 9)</a>{% endif %}
-        {% if manques_protection %}<p class="text-sm text-amber-800">Pièces à compléter : {{ manques_protection|join:", " }}.</p>{% endif %}
+        {% if peut_protection %}<a href="{% url 'adultevul:protection' situation.pk %}" class="block text-sm text-blue-700 hover:underline">Parquet, mesure et pièces jointes (annexe 9)</a>{% endif %}
+        {% if peut_fiche %}<a href="{% url 'adultevul:fiche' situation.pk %}" class="block text-sm text-blue-700 hover:underline">Fiche de renseignements (saisie dans CID)</a>{% endif %}
+        {% if situation.tribunal %}
+        <div class="text-sm">
+          <a href="{% url 'adultevul:fiche_parquet_pdf' situation.pk situation.tribunal %}" target="_blank" class="text-blue-700 hover:underline">Formulaire du parquet à l'écran (PDF remplissable)</a>
+          <div class="text-xs text-gray-500">À n'imprimer qu'en cas de nécessité absolue.</div>
+        </div>
+        {% endif %}
+        {% if manques_protection %}
+        <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">Rappel pour le parquet, à vérifier avant l'envoi : {{ manques_protection|join:", " }}.</p>
+        {% endif %}
         {% if peut_masp %}<a href="{% url 'adultevul:masp' situation.pk %}" class="block text-sm text-blue-700 hover:underline">Suivi MASP (annexe 6)</a>{% endif %}
         {% if masp %}<p class="text-sm">MASP niveau {{ masp.get_niveau_display }} · référent : {{ masp.referent_nom|default:"—" }} · échéance {{ masp.date_echeance|date:'d/m/Y'|default:"—" }}</p>{% endif %}
       </section>
@@ -138,7 +147,7 @@
           <li><a class="text-blue-700 hover:underline" href="{% url 'adultevul:annexe_pdf' situation.pk numero %}"><i class="fas fa-file-pdf mr-1"></i>{{ libelle }}</a></li>
           {% endfor %}
         </ul>
-        <p class="text-xs text-gray-500 mt-2">Les zones de signature restent à signer à la main après impression.</p>
+        <p class="text-xs text-gray-500 mt-2">Saisissez les informations dans CID : n'imprimez qu'en cas de nécessité absolue. Les signatures se font à la main.</p>
       </section>
       {% endif %}
 
