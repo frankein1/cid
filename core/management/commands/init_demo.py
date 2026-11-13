@@ -208,6 +208,7 @@ class Command(BaseCommand):
             self.logement()
             self.indigne_dalo()
             self.ru_demo()
+            self.adultevul_demo()
             self.journal()
             from core.demo_presentation import creer as presentation
             presentation(self)
@@ -243,6 +244,8 @@ class Command(BaseCommand):
     def supprimer(self):
         from ru.models import DemandeRelationUsager as DRU
         DRU.objects.filter(objet__startswith="[démo]").delete()
+        from adultevul.models import SituationAdulteVulnerable as SAV
+        SAV.objects.filter(faits__startswith="[démo]").delete()
         from AidFi.models.m_generique import DemandeAide
         from AidFi.models.m_recours import RecoursAFASE
         from beneficiaire.models import Beneficiaire
@@ -1195,6 +1198,58 @@ class Command(BaseCommand):
         # 6. Réorientation par le SAS, en attente de la fiche retour
         creer("MOREAU", "Karim", "Demande d'aide alimentaire", D.Statut.A_TRAITER_SAS, D.Circuit.SAS,
               j - timedelta(days=1), canal="CONTACT")
+
+    def adultevul_demo(self):
+        """Adultes vulnérables : une situation à qualifier, une évaluation en cours, un rapport visé (fictives)."""
+        from datetime import date as jour
+        from datetime import timedelta
+        from adultevul.models import CelluleEvaluation, HistoriqueAV, SituationAdulteVulnerable as SAV
+        from core.models import Profil
+        from django.core.management import call_command
+        from io import StringIO
+
+        call_command("init_capacites", stdout=StringIO())
+        call_command("init_profils", stdout=StringIO())
+        for user, code in ((self.cadre, "AV_PILOTE"), (self.ts, "AV_EVALUATEUR")):
+            user.profils.add(Profil.objects.get(code=code))
+        mds1, ts, cadre, j = self.mds1, self.ts, self.cadre, self.j
+
+        def creer(nom, prenom, statut, faits, **champs):
+            situation = SAV.objects.create(
+                personne_nom=nom, personne_prenom=prenom, personne_adresse="Adresse fictive, Port-de-Bouc",
+                personne_naissance=jour(1948, 3, 14), mds=mds1, statut=statut, faits=f"[démo] {faits}",
+                origine="FAMILLE", mode_recueil="TELEPHONE", elements=["CARENCE"], recue_par=ts, cree_par=ts,
+                date_reception=j - timedelta(days=12), **champs)
+            HistoriqueAV.objects.create(situation=situation, auteur=ts, action="RECUEIL",
+                                        detail="Recueil fictif")
+            return situation
+
+        creer("FICTIF", "Madeleine", "RECUE",
+              "Voisine inquiète : personne âgée isolée, frigo vide, plus de chauffage depuis une semaine (fictif).")
+
+        evaluation = creer("FICTIF", "Gérard", "EVALUATION",
+                           "Signalement d'une personne âgée qui refuse les soins et ne répond plus aux visites (fictif).")
+        CelluleEvaluation.objects.create(
+            situation=evaluation, date_cellule=j - timedelta(days=5), urgence="DEUX_MOIS",
+            participants="Adjoint Cohésion sociale, TS référent, médecin de la MDS (fictifs)",
+            modalites="VAD", investigations="Trois visites à domicile et un appel au médecin traitant (fictif).",
+            plan_action="Visite à domicile hebdomadaire, MASP niveau I à étudier, bilan dans 30 jours (fictif).",
+            propositions=["MASP", "ARS"], argumentation="")
+        evaluation.cellule.referents.add(ts)
+
+        proposition = creer("FICTIF", "Odette", "VALIDEE",
+                            "Personne vulnérable, altération des facultés constatée, demande de protection (fictif).",
+                            tribunal="AIX", mesure_protection="TUTELLE", pj_acte_naissance=True, pj_fiche=True,
+                            pj_certificat=True)
+        CelluleEvaluation.objects.create(
+            situation=proposition, date_cellule=j - timedelta(days=20), urgence="DEUX_MOIS",
+            participants="Adjoint Cohésion sociale, psychologue, TS référent (fictifs)",
+            modalites="CONVOCATION", investigations="Deux rendez-vous à la MDS et un avis médical (fictif).",
+            plan_action="Demande de protection juridique au procureur (fictif).",
+            propositions=["PROTECTION_JURIDIQUE"],
+            argumentation="Altération médicalement constatée qui empêche l'expression de sa volonté (fictif).",
+            date_rapport=timezone.now() - timedelta(days=3))
+        proposition.cellule.referents.add(ts)
 
     def indigne_dalo(self):
         """Habitat indigne (VAD, locataire, bailleur, commune) et recours DALO fictifs sur les familles de démonstration."""

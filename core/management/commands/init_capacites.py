@@ -60,6 +60,8 @@ CAPACITES = [
     ('ip_pief', "IP – Inspecteur enfance famille : visa des rapports, validation des saisines du procureur"),
     ('ip_piloter', "IP – Piloter les IP de sa MDS (réunions, binôme, visas, saisines)"),
     ('ip_evaluer', "IP – Peut faire partie d'un binôme d'évaluation"),
+    ('av_piloter', "Adultes vulnérables – Piloter les situations de sa MDS (qualification, cellule, visa)"),
+    ('av_evaluer', "Adultes vulnérables – Peut faire partie d'une cellule d'évaluation (référent)"),
     ('afase_controle', 'AFASE – UAGAF, unité administrative de gestion des aides financières (dossiers transmis par les MDS, demande de paiement au logiciel comptable)'),
     # --- RSA – INSERTION ---
     ('voir_journal_activite', "Consulter le journal d'activité des dossiers de sa MDS (consultations, modifications, exports)"),

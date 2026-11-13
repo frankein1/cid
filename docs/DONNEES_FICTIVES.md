@@ -233,3 +233,11 @@ Les statistiques de l'habitat indigne (« Logement indigne » › « Statistique
 - **MOREAU Karim** : réorientation en attente de la fiche retour du SAS.
 
 Les demandes de démonstration portent le préfixe « [démo] » dans leur objet ; la remise à zéro les supprime.
+
+## Adultes vulnérables (adultevul)
+
+- **FICTIF Madeleine** : information recueillie, à qualifier par le cadre.
+- **FICTIF Gérard** : cellule d'évaluation constituée, investigations en cours, MASP et signalement ARS proposés.
+- **FICTIF Odette** : rapport visé, protection juridique demandée (TGI Aix, tutelle, pièces complètes).
+
+Les situations de démonstration portent le préfixe « [démo] » dans leur texte des faits ; la remise à zéro les supprime. Les comptes `cadre` et `ts` reçoivent les profils AV_PILOTE et AV_EVALUATEUR.

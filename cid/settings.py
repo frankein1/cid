@@ -125,6 +125,7 @@ INSTALLED_APPS = [
     'insertion',
     'logement',
     'ru',
+    'adultevul',
 ]
 
 # ============================================================

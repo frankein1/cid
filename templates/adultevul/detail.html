@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}{{ situation.numero }} – CID{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+  <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wide text-blue-700">Adulte vulnérable · {{ situation.numero }}</p>
+      <h1 class="text-3xl font-bold text-gray-900">{{ situation.libelle_personne }}</h1>
+      <p class="text-gray-600 mt-1">MDS compétente : {{ situation.mds.nom|default:"non renseignée" }} · reçue le {{ situation.date_reception|date:'d/m/Y' }}</p>
+    </div>
+    <span class="rounded-full px-3 py-1 text-sm font-semibold self-start {{ situation.badge }}">{{ situation.get_statut_display }}</span>
+  </div>
+
+  {% if situation.danger_immediat %}
+  <div class="rounded-xl bg-red-50 border border-red-200 p-4 text-red-800 text-sm">
+    <strong>Danger immédiat signalé.</strong> En cas d'extrême urgence : appeler les pompiers, puis la police (directement ou via le parquet).
+  </div>
+  {% endif %}
+
+  {% if situation.rapport_en_retard %}
+  <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900 text-sm">
+    Date limite de rapport dépassée ({{ situation.date_limite_rapport|date:'d/m/Y' }}).
+  </div>
+  {% endif %}
+
+  {% if messages %}{% for m in messages %}<div class="rounded-lg p-3 text-sm {% if m.tags == 'error' %}bg-red-50 text-red-800{% else %}bg-emerald-50 text-emerald-800{% endif %}">{{ m }}</div>{% endfor %}{% endif %}
+
+  <div class="grid gap-6 md:grid-cols-3">
+    <div class="md:col-span-2 space-y-6">
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-3">Recueil (annexe 1)</h2>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div><dt class="text-gray-500">Mode de recueil</dt><dd>{{ situation.get_mode_recueil_display }}</dd></div>
+          <div><dt class="text-gray-500">Origine</dt><dd>{{ situation.get_origine_display }}{% if situation.institution %} : {{ situation.institution }}{% endif %}</dd></div>
+          <div><dt class="text-gray-500">Signalant</dt><dd>{{ situation.signalant_nom|default:"anonyme ou non renseigné" }} {{ situation.signalant_qualite }}</dd></div>
+          <div><dt class="text-gray-500">Personne</dt><dd>{{ situation.personne_adresse|default:"adresse non renseignée"|linebreaksbr }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-gray-500">Faits rapportés</dt><dd class="whitespace-pre-line">{{ situation.faits }}</dd></div>
+          {% if situation.intervenants_actuels %}<div class="sm:col-span-2"><dt class="text-gray-500">Intervenants actuels</dt><dd class="whitespace-pre-line">{{ situation.intervenants_actuels }}</dd></div>{% endif %}
+          {% if situation.elements %}<div class="sm:col-span-2"><dt class="text-gray-500">Éléments</dt><dd>{{ situation.elements|join:", " }}</dd></div>{% endif %}
+        </dl>
+      </section>
+
+      {% if situation.statut == 'NON_QUALIFIEE' or situation.motif_qualification %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-2">Qualification</h2>
+        <p class="text-sm text-gray-700 whitespace-pre-line">{{ situation.motif_qualification }}</p>
+      </section>
+      {% endif %}
+
+      {% if cellule %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-gray-900">Cellule d'évaluation (annexe 2)</h2>
+          {% if peut_editer_cellule %}<a href="{% url 'adultevul:cellule' situation.pk %}" class="text-sm text-blue-700 hover:underline">Modifier</a>{% endif %}
+        </div>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div><dt class="text-gray-500">Date</dt><dd>{{ cellule.date_cellule|date:'d/m/Y' }}</dd></div>
+          <div><dt class="text-gray-500">Rapport attendu</dt><dd>{{ cellule.get_urgence_display }}{% if situation.date_limite_rapport %} – avant le {{ situation.date_limite_rapport|date:'d/m/Y' }}{% endif %}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-gray-500">Composition</dt><dd class="whitespace-pre-line">{{ cellule.participants|default:"—" }}</dd></div>
+          <div><dt class="text-gray-500">Référents</dt><dd>{% for u in cellule.referents.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</dd></div>
+          <div><dt class="text-gray-500">Rencontre</dt><dd>{{ cellule.get_modalites_display }}{% if cellule.modalites_precision %} : {{ cellule.modalites_precision }}{% endif %}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-gray-500">Investigations</dt><dd class="whitespace-pre-line">{{ cellule.investigations|default:"—" }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-gray-500">Plan d'action</dt><dd class="whitespace-pre-line">{{ cellule.plan_action|default:"—" }}</dd></div>
+          <div class="sm:col-span-2"><dt class="text-gray-500">Propositions</dt><dd>{% for code, label in cellule_propositions %}{% if code in cellule.propositions %}<div>• {{ label }}</div>{% endif %}{% empty %}—{% endfor %}</dd></div>
+          {% if cellule.argumentation %}<div class="sm:col-span-2"><dt class="text-gray-500">Argumentation</dt><dd class="whitespace-pre-line">{{ cellule.argumentation }}</dd></div>{% endif %}
+        </dl>
+        {% if manques %}
+        <div class="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+          Avant la transmission au visa, il manque : {{ manques|join:", " }}.
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-3">Journal</h2>
+        <ol class="text-sm space-y-2">
+          {% for h in historique %}
+          <li><span class="text-gray-500">{{ h.date|date:'d/m/Y H:i' }}</span> · {{ h.auteur.get_full_name|default:h.auteur.username|default:"—" }} · <strong>{{ h.action }}</strong>{% if h.detail %} – {{ h.detail }}{% endif %}</li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+
+    <aside class="space-y-4">
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+        <h2 class="font-semibold text-gray-900">Actions</h2>
+        {% if peut_qualifier %}
+        <form method="post" action="{% url 'adultevul:qualifier' situation.pk %}" class="space-y-2">
+          {% csrf_token %}
+          <p class="text-sm font-medium text-gray-700">Qualifier l'information</p>
+          <label class="block text-sm"><input type="radio" name="qualifiee" value="oui" required> Qualifiée : constituer la cellule</label>
+          <label class="block text-sm"><input type="radio" name="qualifiee" value="non"> Non qualifiée</label>
+          <textarea name="motif" rows="3" required placeholder="Motif" class="w-full rounded-lg border-gray-300 text-sm"></textarea>
+          <button class="w-full px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800">Enregistrer la qualification</button>
+        </form>
+        {% endif %}
+        {% if peut_constituer %}<a href="{% url 'adultevul:cellule' situation.pk %}" class="block text-center px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold hover:bg-blue-800">Constituer la cellule d'évaluation</a>{% endif %}
+        {% if peut_soumettre %}
+        <form method="post" action="{% url 'adultevul:soumettre' situation.pk %}">
+          {% csrf_token %}
+          <button class="w-full px-3 py-2 rounded-lg bg-purple-700 text-white text-sm font-semibold hover:bg-purple-800">Soumettre le rapport au visa</button>
+        </form>
+        {% endif %}
+        {% if peut_viser %}
+        <form method="post" action="{% url 'adultevul:viser' situation.pk %}">
+          {% csrf_token %}
+          <button class="w-full px-3 py-2 rounded-lg bg-indigo-700 text-white text-sm font-semibold hover:bg-indigo-800">Viser le rapport</button>
+        </form>
+        <a href="{% url 'adultevul:renvoyer' situation.pk %}" class="block text-center text-sm text-amber-800 hover:underline">Renvoyer pour compléments</a>
+        {% endif %}
+        {% if peut_decider %}<a href="{% url 'adultevul:decider' situation.pk %}" class="block text-center px-3 py-2 rounded-lg bg-teal-700 text-white text-sm font-semibold hover:bg-teal-800">Décision administrative</a>{% endif %}
+        {% if peut_cloturer %}
+        <form method="post" action="{% url 'adultevul:cloturer' situation.pk %}">
+          {% csrf_token %}
+          <button class="w-full px-3 py-2 rounded-lg bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900">Clôturer</button>
+        </form>
+        {% endif %}
+        {% if not peut_qualifier and not peut_constituer and not peut_soumettre and not peut_viser and not peut_decider and not peut_cloturer and not peut_editer_cellule %}
+        <p class="text-sm text-gray-500">Aucune action disponible pour vous à cette étape.</p>
+        {% endif %}
+      </section>
+      {% if cellule and 'PROTECTION_JURIDIQUE' in cellule.propositions or cellule and 'MASP' in cellule.propositions %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+        <h2 class="font-semibold text-gray-900">Protection et MASP</h2>
+        {% if peut_protection %}<a href="{% url 'adultevul:protection' situation.pk %}" class="text-sm text-blue-700 hover:underline">Parquet, mesure et pièces jointes (annexe 9)</a>{% endif %}
+        {% if manques_protection %}<p class="text-sm text-amber-800">Pièces à compléter : {{ manques_protection|join:", " }}.</p>{% endif %}
+        {% if peut_masp %}<a href="{% url 'adultevul:masp' situation.pk %}" class="block text-sm text-blue-700 hover:underline">Suivi MASP (annexe 6)</a>{% endif %}
+        {% if masp %}<p class="text-sm">MASP niveau {{ masp.get_niveau_display }} · référent : {{ masp.referent_nom|default:"—" }} · échéance {{ masp.date_echeance|date:'d/m/Y'|default:"—" }}</p>{% endif %}
+      </section>
+      {% endif %}
+
+      {% if annexes %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-3">Annexes à imprimer</h2>
+        <ul class="text-sm space-y-2">
+          {% for numero, libelle in annexes %}
+          <li><a class="text-blue-700 hover:underline" href="{% url 'adultevul:annexe_pdf' situation.pk numero %}"><i class="fas fa-file-pdf mr-1"></i>{{ libelle }}</a></li>
+          {% endfor %}
+        </ul>
+        <p class="text-xs text-gray-500 mt-2">Les zones de signature restent à signer à la main après impression.</p>
+      </section>
+      {% endif %}
+
+      {% if situation.decision_commentaire %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-2">Décision administrative</h2>
+        <p class="text-sm whitespace-pre-line">{{ situation.decision_commentaire }}</p>
+        <p class="text-xs text-gray-500 mt-2">{{ situation.date_decision|date:'d/m/Y' }}</p>
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

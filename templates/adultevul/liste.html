@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Adultes vulnérables – CID{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wide text-blue-700">Information préoccupante</p>
+      <h1 class="text-3xl font-bold text-gray-900">Adultes vulnérables</h1>
+      <p class="text-gray-600 mt-1">Recueil, qualification, cellule d'évaluation, rapport, visa et décision.</p>
+    </div>
+    <a href="{% url 'adultevul:creer' %}" class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800">
+      <i class="fas fa-plus mr-2"></i>Recueillir une information
+    </a>
+  </div>
+
+  <form method="get" class="bg-white border border-gray-200 rounded-xl p-4 mb-5 grid gap-3 md:grid-cols-4 items-end">
+    <label class="text-sm font-medium text-gray-700">État
+      <select name="statut" class="mt-1 block w-full rounded-lg border-gray-300">
+        <option value="">Tous</option>
+        {% for code, label in statuts %}<option value="{{ code }}" {% if statut_selectionne == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="flex items-center gap-2 text-sm text-gray-700 pb-2">
+      <input type="checkbox" name="ouvertes" value="1" {% if request.GET.ouvertes == '1' %}checked{% endif %}> Situations ouvertes uniquement
+    </label>
+    <button class="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900">Filtrer</button>
+  </form>
+
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+    {% if situations %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Numéro</th>
+            <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Personne</th>
+            <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">MDS</th>
+            <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Reçue le</th>
+            <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">État</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for s in situations %}
+          <tr class="hover:bg-blue-50/40 {% if s.rapport_en_retard %}bg-red-50{% endif %}">
+            <td class="px-4 py-3 whitespace-nowrap"><a class="font-semibold text-blue-700 hover:underline" href="{{ s.get_absolute_url }}">{{ s.numero }}</a></td>
+            <td class="px-4 py-3">{{ s.libelle_personne }}{% if s.danger_immediat %} <span class="ml-2 rounded-full px-2 py-0.5 text-xs bg-red-100 text-red-800">Danger immédiat</span>{% endif %}</td>
+            <td class="px-4 py-3">{{ s.mds.nom|default:"—" }}</td>
+            <td class="px-4 py-3 whitespace-nowrap">{{ s.date_reception|date:'d/m/Y' }}</td>
+            <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-xs {{ s.badge }}">{{ s.get_statut_display }}</span>{% if s.rapport_en_retard %}<div class="text-xs font-bold text-red-700">Rapport en retard</div>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-14 px-6">
+      <i class="fas fa-inbox text-4xl text-gray-300"></i>
+      <p class="mt-3 text-gray-700 font-medium">Aucune situation dans votre périmètre.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
