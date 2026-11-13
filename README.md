@@ -15,7 +15,7 @@ Prérequis : Python 3.10 ou plus récent (`runtime.txt`), PostgreSQL.
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # à créer : voir la liste des variables ci-dessous
+# créer un fichier .env avec les variables ci-dessous
 python manage.py migrate
 python manage.py install --no-input   # profils, MDS fictives, types de données
 python manage.py init_demo            # données de démonstration (facultatif)
