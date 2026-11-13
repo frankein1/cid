@@ -22,7 +22,7 @@ python manage.py init_demo            # données de démonstration (facultatif)
 python manage.py runserver
 ```
 
-Variables utiles : `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `ALWAYSDATA_NAME` / `ALWAYSDATA_USER` / `ALWAYSDATA_PASSWORD` / `ALWAYSDATA_HOST` (base PostgreSQL) ou `DATABASE_URL` (hébergement type Render). Les valeurs par défaut ne servent qu'au développement.
+Variables utiles : `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, base PostgreSQL : 'NAME','USER','PASSWORD','HOST' ou `DATABASE_URL` (hébergement type Render). Les valeurs par défaut ne servent qu'au développement.
 
 ## Architecture
 
