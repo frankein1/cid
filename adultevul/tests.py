@@ -290,14 +290,32 @@ class ProtectionEtMASPTests(BaseAdulteVulnerable):
         self.s.cellule.argumentation = "Altération constatée."
         self.s.cellule.save()
 
-    def test_pieces_protection_bloquent_la_soumission(self):
+    def test_pieces_protection_ne_bloquent_pas_la_soumission(self):
         from .services import pieces_protection_manquantes
         self.assertEqual(len(pieces_protection_manquantes(self.s)), 5)
-        with self.assertRaises(ValidationError) as ctx:
-            soumettre_rapport(self.s, self.cadre)
-        self.assertIn("le parquet compétent", str(ctx.exception))
+        soumettre_rapport(self.s, self.cadre)
         self.s.refresh_from_db()
-        self.assertEqual(self.s.statut, "EVALUATION")
+        self.assertEqual(self.s.statut, "RAPPORT")
+
+    def test_rappel_des_pieces_dans_la_page(self):
+        self.client.force_login(self.ts)
+        reponse = self.client.get(self.s.get_absolute_url())
+        self.assertContains(reponse, "Rappel pour le parquet")
+
+    def test_fiche_saisie_et_pdf_remplissable(self):
+        from io import BytesIO
+        from .fiche import PARQUETS, fiche_pdf
+        from .services import enregistrer_fiche
+        enregistrer_fiche(self.s, self.ts, {"ressources": "Retraite 1 200 €", "secu": "1 48 03 13 000 000 00"})
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.fiche["ressources"], "Retraite 1 200 €")
+        for tribunal in PARQUETS:
+            tampon = BytesIO()
+            fiche_pdf(self.s, tribunal, tampon)
+            contenu = tampon.getvalue()
+            self.assertTrue(contenu.startswith(b"%PDF"), tribunal)
+            self.assertIn(b"/AcroForm", contenu, tribunal)
+            self.assertIn(b"/FT /Tx", contenu, tribunal)
 
     def test_pieces_completes_permettent_la_soumission(self):
         from .services import enregistrer_protection
@@ -333,3 +351,16 @@ class ProtectionEtMASPTests(BaseAdulteVulnerable):
             tampon = BytesIO()
             rendre_annexe(self.s, numero, tampon)
             self.assertTrue(tampon.getvalue().startswith(b"%PDF"), numero)
+
+    def test_pages_fiche_et_pdf_parquet(self):
+        self.client.force_login(self.ts)
+        self.assertEqual(self.client.get(f"/adultevul/{self.s.pk}/fiche/").status_code, 200)
+        reponse = self.client.post(f"/adultevul/{self.s.pk}/fiche/", {"secu": "1 48", "necessite": "Test"})
+        self.assertEqual(reponse.status_code, 302)
+        self.s.refresh_from_db()
+        self.assertEqual(self.s.fiche["secu"], "1 48")
+        self.s.tribunal = "TARASCON"
+        self.s.save()
+        reponse = self.client.get(f"/adultevul/{self.s.pk}/fiche/TARASCON.pdf")
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(reponse["Content-Type"], "application/pdf")

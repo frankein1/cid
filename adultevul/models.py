@@ -145,6 +145,7 @@ class SituationAdulteVulnerable(models.Model):
     date_cloture = models.DateTimeField(null=True, blank=True)
 
     # --- protection juridique (annexes 9 et 9 bis)
+    fiche = models.JSONField("Fiche de renseignements (saisie dans CID)", default=dict, blank=True)
     tribunal = models.CharField("Parquet compétent", max_length=12, choices=TRIBUNAUX, blank=True)
     mesure_protection = models.CharField("Mesure demandée", max_length=12, choices=MESURES_PROTECTION, blank=True)
     pj_acte_naissance = models.BooleanField("Pièce : acte de naissance ou justificatif d'état civil", default=False)
