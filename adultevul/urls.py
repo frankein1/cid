@@ -20,4 +20,5 @@ urlpatterns = [
     path("<int:pk>/renvoyer/", views.renvoyer, name="renvoyer"),
     path("<int:pk>/decider/", views.decider_view, name="decider"),
     path("<int:pk>/cloturer/", views.cloturer_view, name="cloturer"),
+    path("<int:pk>/annexe/<str:numero>.pdf", views.annexe_pdf, name="annexe_pdf"),
 ]

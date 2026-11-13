@@ -233,3 +233,50 @@ class VuesAdulteVulnerableTests(BaseAdulteVulnerable):
         s = self.recueillie()
         self.client.force_login(self.autre_cadre)
         self.assertEqual(self.client.get(s.get_absolute_url()).status_code, 404)
+
+
+class AnnexesAdulteVulnerableTests(BaseAdulteVulnerable):
+    def setUp(self):
+        super().setUp()
+        self.s = qualifier_et_cellule(self)
+
+    def test_annexes_pdf_generees(self):
+        from io import BytesIO
+        from .pdf import ANNEXES, rendre_annexe
+        self.s.cellule.propositions = ["POLICE", "CLASSEMENT", "ACCOMPAGNEMENT"]
+        self.s.cellule.argumentation = "Argumentation de test"
+        self.s.cellule.save()
+        for numero in ANNEXES:
+            tampon = BytesIO()
+            rendre_annexe(self.s, numero, tampon)
+            self.assertTrue(tampon.getvalue().startswith(b"%PDF"), numero)
+
+    def test_annexe_liee_a_une_proposition_seulement(self):
+        from .pdf import annexe_disponible
+        self.assertTrue(annexe_disponible(self.s, "1"))
+        self.assertTrue(annexe_disponible(self.s, "2"))
+        self.assertFalse(annexe_disponible(self.s, "4"))
+        self.s.cellule.propositions = ["CLASSEMENT"]
+        self.s.cellule.save()
+        self.assertTrue(annexe_disponible(self.s, "4"))
+        self.assertFalse(annexe_disponible(self.s, "5"))
+
+    def test_telechargement_et_refus(self):
+        self.client.force_login(self.ts)
+        reponse = self.client.get(f"/adultevul/{self.s.pk}/annexe/1.pdf")
+        self.assertEqual(reponse.status_code, 200)
+        self.assertEqual(reponse["Content-Type"], "application/pdf")
+        self.assertEqual(self.client.get(f"/adultevul/{self.s.pk}/annexe/4.pdf").status_code, 404)
+        self.assertEqual(self.client.get(f"/adultevul/{self.s.pk}/annexe/99.pdf").status_code, 404)
+        self.client.force_login(self.autre_cadre)
+        self.assertEqual(self.client.get(f"/adultevul/{self.s.pk}/annexe/1.pdf").status_code, 404)
+
+
+def qualifier_et_cellule(test):
+    s = creer_situation(test.situation(), test.ts)
+    qualifier(s, test.cadre, True, "Carence avérée")
+    constituer_cellule(s, test.cadre, dict(date_cellule=date.today(), urgence="DEUX_MOIS",
+                                           plan_action="Visite", propositions=["ACCOMPAGNEMENT"],
+                                           argumentation=""), [test.ts])
+    s.refresh_from_db()
+    return s

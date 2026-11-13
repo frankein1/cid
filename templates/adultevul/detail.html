@@ -120,6 +120,18 @@
         <p class="text-sm text-gray-500">Aucune action disponible pour vous à cette étape.</p>
         {% endif %}
       </section>
+      {% if annexes %}
+      <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-900 mb-3">Annexes à imprimer</h2>
+        <ul class="text-sm space-y-2">
+          {% for numero, libelle in annexes %}
+          <li><a class="text-blue-700 hover:underline" href="{% url 'adultevul:annexe_pdf' situation.pk numero %}"><i class="fas fa-file-pdf mr-1"></i>{{ libelle }}</a></li>
+          {% endfor %}
+        </ul>
+        <p class="text-xs text-gray-500 mt-2">Les zones de signature restent à signer à la main après impression.</p>
+      </section>
+      {% endif %}
+
       {% if situation.decision_commentaire %}
       <section class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
         <h2 class="font-semibold text-gray-900 mb-2">Décision administrative</h2>

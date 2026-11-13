@@ -4,15 +4,19 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 # adultevul/views.py
+from io import BytesIO
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from mds.models import UserMDSProfile
 from .forms import CelluleForm, MotifForm, QualificationForm, RenvoiForm, SituationForm
+from .pdf import ANNEXES, annexe_disponible, rendre_annexe
 from .models import PROPOSITIONS, STATUTS, SituationAdulteVulnerable
 from .services import (
     cloturer, constituer_cellule, controler_rapport, creer_situation, decider, enregistrer_cellule,
@@ -90,6 +94,7 @@ def detail(request, pk):
         'situation': situation,
         'cellule': cellule,
         'cellule_propositions': PROPOSITIONS,
+        'annexes': [(n, libelle) for n, libelle in ANNEXES.items() if annexe_disponible(situation, n)],
         'historique': situation.historique.select_related('auteur').all(),
         'manques': controler_rapport(situation) if soumettre_possible and cellule else [],
         'peut_qualifier': situation.statut == 'RECUE' and peut_piloter(user, situation),
@@ -233,3 +238,17 @@ def cloturer_view(request, pk):
     except (PermissionDenied, ValidationError) as exc:
         messages.error(request, " ".join(getattr(exc, 'messages', [str(exc)])))
     return redirect(situation.get_absolute_url())
+
+
+@login_required
+def annexe_pdf(request, pk, numero):
+    situation = _situation_pour_user(request.user, pk)
+    if numero not in ANNEXES or not annexe_disponible(situation, numero):
+        raise Http404("Cette annexe n'est pas disponible pour cette situation.")
+    buffer = BytesIO()
+    rendre_annexe(situation, numero, buffer)
+    buffer.seek(0)
+    reponse = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    reponse["Content-Disposition"] = f'attachment; filename="{situation.numero}-annexe-{numero}.pdf"'
+    reponse["Cache-Control"] = "private, no-store"
+    return reponse
