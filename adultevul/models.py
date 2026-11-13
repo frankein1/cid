@@ -93,18 +93,6 @@ MODALITES = [
 ]
 
 
-def cadre_pilote(mds):
-    """Cadre qui pilote les situations d'une MDS : le responsable de la MDS, à défaut le cadre de proximité."""
-    from mds.models import UserMDSProfile
-    if not mds:
-        return None
-    ump = UserMDSProfile.objects.filter(
-        mds=mds, actif=True, user__is_active=True, herite_de__isnull=True, fonction__in=[
-            UserMDSProfile.DIRECTEUR, UserMDSProfile.ADJOINT_ENFANCE, UserMDSProfile.CADRE_PROXIMITE,
-        ]).select_related('user').first()
-    return ump.user if ump else None
-
-
 class SituationAdulteVulnerable(models.Model):
     # --- recueil (annexe 1)
     numero = models.CharField(max_length=20, unique=True, db_index=True, editable=False)
