@@ -30,6 +30,16 @@ class Command(BaseCommand):
 
         PROFILS = [
             {
+                "code": "AV_PILOTE",
+                "nom": "Adultes vulnérables – cadre de MDS (qualification, visa)",
+                "capacites": ['peut_voir', 'peut_lister', 'av_piloter', 'av_evaluer']
+            },
+            {
+                "code": "AV_EVALUATEUR",
+                "nom": "Adultes vulnérables – travailleur social évaluateur",
+                "capacites": ['peut_voir', 'av_evaluer']
+            },
+            {
                 "code": "RU_SAS",
                 "nom": "Relation Usager – gestion SAS",
                 "capacites": ['ru_gerer_sas']
