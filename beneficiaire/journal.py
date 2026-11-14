@@ -17,7 +17,8 @@ from django.utils import timezone
 log = logging.getLogger(__name__)
 
 GENRES = [("entretien", "Entretiens"), ("rdv", "Rendez-vous"), ("aide", "Aides financières"),
-          ("rsa", "RSA – Insertion"), ("atelier", "Ateliers"), ("budget", "Budget")]
+          ("rsa", "RSA – Insertion"), ("atelier", "Ateliers"), ("budget", "Budget"),
+          ("note", "Notes personnelles")]
 
 
 @dataclass
@@ -33,6 +34,7 @@ class Ligne:
     types: list = field(default_factory=list)
     entretien: object = None
     creneau: object = None        # RDV réalisé sans compte rendu : proposer d'en rédiger un
+    note: object = None           # note personnelle (visible de son auteur seul, ou de la MDS destinataire)
 
     @property
     def cle(self):
@@ -107,7 +109,24 @@ def _budgets(b, user):
                     url=reverse('beneficiaire:budget_foyer', args=[b.code_interne]), auteur=_nom(bf.cree_par))
 
 
-SOURCES = {"entretien": _entretiens, "rdv": _rdv, "aide": _aides, "rsa": _rsa, "atelier": _ateliers, "budget": _budgets}
+def _notes(b, user):
+    from .models_journal import NotePersonnelle
+    for n in NotePersonnelle.objects.filter(beneficiaire=b).select_related('auteur', 'transmise_a_mds'):
+        if not n.peut_lire(user):
+            continue
+        local = timezone.localtime(n.date_note)
+        if n.auteur_id == user.pk:
+            if n.transmise_a_mds_id:
+                statut = f"transmise à {n.transmise_a_mds} le {timezone.localtime(n.transmise_le):%d/%m/%y}" if n.transmise_le else "transmise"
+            else:
+                statut = "suivra le dossier au prochain transfert" if n.a_transmettre else "reste à votre MDS"
+        else:
+            statut = "transmise par la MDS précédente"
+        yield Ligne(local.date(), local.time(), "note", "Note personnelle", statut, auteur=_nom(n.auteur), note=n)
+
+
+SOURCES = {"entretien": _entretiens, "rdv": _rdv, "aide": _aides, "rsa": _rsa, "atelier": _ateliers, "budget": _budgets,
+           "note": _notes}
 
 
 def journal(b, user, genres=None, type_code=None):
