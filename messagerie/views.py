@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages as django_messages
 from django.db.models import Q, Count, Prefetch, Max
 from django.utils import timezone
+from django.db import transaction
 from django.http import JsonResponse
 from io import BytesIO  # ✅ AJOUTÉ pour create_from_buffer()
 from .models import ISSUE_CHOICES, MODE_CONTACT_CHOICES, MOTIFS_CONTACT, Message, StatutLecture
@@ -60,6 +61,26 @@ def _choix_multiples(valeurs, choix):
     """Les valeurs reconnues, sans doublon, dans l'ordre de la liste de choix."""
     retenues = set(valeurs) & set(dict(choix))
     return [code for code, _ in choix if code in retenues]
+
+
+def _mds_principale(user):
+    """MDS de rattachement principale (ou première active) d'un agent."""
+    from mds.models import UserMDSProfile
+    ump = UserMDSProfile.objects.filter(user=user, actif=True).select_related('mds').order_by('-principale').first()
+    return ump.mds if ump else None
+
+
+def _est_cadre(user, mds):
+    """Cadre de cette MDS : profil de gestion local (peut_gerer_utilisateurs)."""
+    from mds.models import UserMDSProfile
+    return bool(mds) and UserMDSProfile.objects.filter(
+        user=user, mds=mds, actif=True, peut_gerer_utilisateurs=True).exists()
+
+
+def _reaffectation_en_attente(message):
+    return ('REAFFECTATION' in (message.motifs_contact or []) and message.beneficiaire is not None
+            and message.mds_demandeuse_id is not None and message.mds_demandeuse_id != message.beneficiaire.mds_id
+            and not message.decision_reaffectation)
 
 
 def _participe(message, user):
@@ -220,6 +241,8 @@ def voir_message(request, message_id):
         'fil': fil,
         'motifs_contact_choices': MOTIFS_CONTACT,
         'issue_choices': ISSUE_CHOICES,
+        'reaffectation_en_attente': _reaffectation_en_attente(message),
+        'peut_decider_reaffectation': _reaffectation_en_attente(message) and _est_cadre(request.user, message.beneficiaire.mds),
     }
     return render(request, 'messagerie/voir_message.html', context)
 
@@ -281,6 +304,11 @@ def nouveau_message(request, beneficiaire_id=None):
                 cree_par=request.user
             )
             
+            # Demande de réaffectation : mémoriser la MDS qui la formule
+            if beneficiaire_obj and 'REAFFECTATION' in nouveau_msg.motifs_contact:
+                nouveau_msg.mds_demandeuse = _mds_principale(request.user)
+                nouveau_msg.save(update_fields=['mds_demandeuse'])
+
             # Attacher les documents GED existants
             if docs_ged_ids:
                 nouveau_msg.pieces_jointes.set(_documents_autorises(docs_ged_ids, request.user))
@@ -432,6 +460,69 @@ def nb_messages_non_lus(request):
     ).count()
     
     return JsonResponse({'nb_non_lus': nb})
+
+
+@login_required
+@require_POST
+def decider_reaffectation(request, message_id):
+    """Décision du cadre de la MDS de l'usager sur une demande de réaffectation : transfert ou refus motivé."""
+    from beneficiaire.transfert import membres_famille, transferer
+    message = get_object_or_404(Message, id=message_id, beneficiaire__isnull=False)
+    usager = message.beneficiaire
+    if not _reaffectation_en_attente(message):
+        django_messages.error(request, "Cette demande n'est pas en attente de décision.")
+        return redirect('messagerie:voir_message', message_id=message.id)
+    if not _est_cadre(request.user, usager.mds):
+        django_messages.error(request, "Seul le cadre de la MDS de l'usager peut répondre à une demande de réaffectation.")
+        return redirect('messagerie:voir_message', message_id=message.id)
+
+    decision = request.POST.get('decision')
+    motif_refus = (request.POST.get('motif_refus') or '').strip()
+    if decision not in ('accepter', 'refuser'):
+        django_messages.error(request, "Choisissez une décision.")
+        return redirect('messagerie:voir_message', message_id=message.id)
+    if decision == 'refuser' and not motif_refus:
+        django_messages.error(request, "Indiquez le motif du refus : il est transmis à la MDS demandeuse.")
+        return redirect('messagerie:voir_message', message_id=message.id)
+
+    mds_demandeuse = message.mds_demandeuse
+    maintenant = timezone.now()
+    with transaction.atomic():
+        if decision == 'accepter':
+            a_transferer = [m['personne'] for m in membres_famille(usager) if m['coche']]
+            transferer(usager, a_transferer, mds_demandeuse, request.user, request=request)
+            resultat = 'ACCEPTEE'
+            texte = (f"Votre demande de réaffectation est acceptée : {usager.prenom} {usager.nom.upper()} "
+                     f"a été transféré vers la MDS {mds_demandeuse.nom} le {timezone.localtime(maintenant).strftime('%d/%m/%Y à %H:%M')}.")
+        else:
+            resultat = 'REFUSEE'
+            texte = (f"Votre demande de réaffectation pour {usager.prenom} {usager.nom.upper()} est refusée.\n\n"
+                     f"Motif : {motif_refus}")
+
+        message.decision_reaffectation = resultat
+        message.decision_reaffectation_par = request.user
+        message.decision_reaffectation_le = maintenant
+        message.motif_refus = motif_refus if resultat == 'REFUSEE' else ''
+        if message.reponse_le is None:
+            message.reponse_le = maintenant
+        message.save(update_fields=['decision_reaffectation', 'decision_reaffectation_par',
+                                    'decision_reaffectation_le', 'motif_refus', 'reponse_le', 'updated_at'])
+
+        reponse = Message.objects.create(
+            expediteur=request.user,
+            destinataire=message.expediteur,
+            beneficiaire=usager,
+            objet=f"Réponse à la demande de réaffectation : {usager.prenom} {usager.nom.upper()}",
+            contenu=texte,
+            priorite='importante',
+            motif='changement_situation',
+            reponse_a=message,
+            cree_par=request.user,
+        )
+        StatutLecture.objects.create(message=reponse, utilisateur=message.expediteur, type_reception='destinataire')
+
+    django_messages.success(request, "Décision enregistrée. La demande est close et la MDS demandeuse est prévenue.")
+    return redirect('messagerie:voir_message', message_id=message.id)
 
 
 @login_required

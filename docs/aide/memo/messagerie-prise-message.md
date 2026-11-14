@@ -9,3 +9,10 @@
 
 - Un seul message par contact : il sert aussi à compter les contacts.
 - Vous ne voyez pas la fiche de l'usager si vous n'êtes pas de sa MDS ; votre message reste visible de vous, de ses destinataires et de sa MDS.
+
+## Réaffectation (cadre de la MDS d'origine)
+
+- Message avec le motif **Réaffectation** : seul le **cadre** de la MDS d'origine décide.
+- **Accepter** : l'usager et les membres de son foyer cochés sont transférés ; la MDS demandeuse reçoit une réponse.
+- **Refuser** : motif obligatoire, transmis dans la réponse. L'usager ne bouge pas.
+- Demande close dans les deux cas, une seule décision possible.

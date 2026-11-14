@@ -769,6 +769,10 @@ page('messagerie-prise-message', qui="Tous les agents connectés", ou="Annuaire 
          ("Suivre la réponse", [],
           ["Le destinataire, agent de la MDS qui suit l'usager, ouvre le message et renseigne la <b>prise de message</b> : type de réponse, texte, et case <b>Réponse effectuée</b>.",
            "La date de réponse est enregistrée à la première validation de la case."], []),
+         ("Demander une réaffectation", [],
+          ["Pour un usager qui a déménagé et dépend d'une autre MDS, cochez le motif <b>Réaffectation</b> : le message est adressé à la MDS d'origine.",
+           "Seul le <b>cadre</b> de la MDS d'origine peut répondre : il <b>accepte</b> (l'usager et les membres de son foyer cochés sont transférés) ou <b>refuse</b> en indiquant le motif, transmis dans la réponse.",
+           "Dans les deux cas, la demande est close."], []),
      ],
      savoir=["Vous ne voyez pas la fiche de cet usager : elle reste réservée à sa MDS. Votre message, lui, reste visible de la MDS qui le suit et de vous."],
      ensuite=['messagerie', 'beneficiaire-chercher'])

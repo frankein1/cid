@@ -97,6 +97,27 @@
                 <dd>{{ message.date_rappel|date:"d/m/Y"|default:"non précisé" }}</dd>
             </dl>
 
+            {% if 'REAFFECTATION' in message.motifs_contact %}
+            <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 text-sm mb-4" id="demande-reaffectation">
+                <p class="font-semibold text-gray-900">Demande de réaffectation</p>
+                <p class="mt-1">Formulée par la MDS {{ message.mds_demandeuse.nom|default:"non précisée" }} ({{ message.expediteur.get_full_name|default:message.expediteur.username }}).</p>
+                {% if message.decision_reaffectation %}
+                <p class="mt-2"><strong>{{ message.get_decision_reaffectation_display }}</strong> par {{ message.decision_reaffectation_par.get_full_name|default:message.decision_reaffectation_par.username }} le {{ message.decision_reaffectation_le|date:"d/m/Y à H:i" }}.</p>
+                {% if message.motif_refus %}<p class="mt-1 whitespace-pre-line">Motif : {{ message.motif_refus }}</p>{% endif %}
+                {% elif peut_decider_reaffectation %}
+                <form method="post" action="{% url 'messagerie:decider_reaffectation' message.id %}" class="space-y-3 mt-3" id="form-decision-reaffectation">
+                    {% csrf_token %}
+                    <label class="flex items-start gap-2"><input type="radio" name="decision" value="accepter" class="mt-1"> <span>Accepter : transférer l'usager et les membres de son foyer cochés dans sa fiche vers la MDS demandeuse. La demande est close.</span></label>
+                    <label class="flex items-start gap-2"><input type="radio" name="decision" value="refuser" class="mt-1"> <span>Refuser : le motif ci-dessous est transmis à la MDS demandeuse. La demande est close.</span></label>
+                    <textarea name="motif_refus" rows="3" placeholder="Motif du refus (obligatoire en cas de refus)" class="w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md">Valider la décision</button>
+                </form>
+                {% elif reaffectation_en_attente %}
+                <p class="mt-2">En attente de la décision du cadre de la MDS {{ message.beneficiaire.mds.nom }}. Seul le cadre peut répondre : transmettez-lui ce message.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if message.reponse_le %}
             <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm mb-4" id="reponse-effectuee">
                 <p><strong>Réponse effectuée le {{ message.reponse_le|date:"d/m/Y à H:i" }}</strong>{% if message.issue %} — {{ message.get_issue_display }}{% endif %}</p>

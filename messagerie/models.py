@@ -41,6 +41,12 @@ MOTIFS_CONTACT = [
 ]
 
 
+DECISION_REAFFECTATION_CHOICES = [
+    ('ACCEPTEE', 'Demande acceptée : transfert effectué'),
+    ('REFUSEE', 'Demande refusée'),
+]
+
+
 class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
     """Message 1-à-1 avec copie optionnelle et pièces jointes GED"""
     
@@ -109,6 +115,17 @@ class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
         related_name='reponses'
     )
     
+    # Demande de réaffectation (motif REAFFECTATION) : MDS demandeuse, décision du cadre de la MDS d'origine
+    mds_demandeuse = models.ForeignKey(
+        'mds.MDS', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes_reaffectation',
+        help_text="MDS qui demande la réaffectation de l'usager")
+    decision_reaffectation = models.CharField(
+        max_length=10, blank=True, choices=DECISION_REAFFECTATION_CHOICES)
+    decision_reaffectation_par = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='decisions_reaffectation')
+    decision_reaffectation_le = models.DateTimeField(null=True, blank=True)
+    motif_refus = models.TextField(blank=True)
+
     # Métadonnées
     PRIORITE_CHOICES = [
         ('normale', 'Normale'),

@@ -15,7 +15,15 @@ Document de référence pour le développement. Les textes d'aide sont dans `doc
 
 - Modes : courrier, accueil physique, téléphone, courriel.
 - Motifs : logement, insertion, aide financière, adulte vulnérable, budget / CESF, réaffectation, autre.
-  La réaffectation demande à la MDS d'origine de réaffecter l'usager à la MDS qui le reçoit : le circuit de réaffectation (qui peut valider, quelle action) reste à vérifier et n'est pas implémenté.
+
+## Demande de réaffectation (motif « Réaffectation »)
+
+- L'agent d'une MDS qui reçoit un usager suivi ailleurs prend un message avec le motif Réaffectation. La MDS demandeuse est mémorisée (`mds_demandeuse`).
+- Le message est adressé à un agent de la MDS d'origine ; seul le **cadre** de cette MDS (`peut_gerer_utilisateurs`) décide (`messagerie:decider_reaffectation`).
+- **Accepter** : transfert de l'usager et des membres de son foyer cochés (`beneficiaire/transfert.py`, `transferer`), puis réponse à la MDS demandeuse. La demande est close.
+- **Refuser** : motif obligatoire, transmis dans la réponse à la MDS demandeuse. La demande est close, l'usager ne bouge pas.
+- Une seule décision par demande.
+- Non implémenté (à définir) : la feuille de transfert signée par le cadre, jointe au dossier ; l'expurgation des notes personnelles du travailleur social avant envoi.
 - Issues : courrier, répondeur, injoignable, entretien en présentiel, entretien téléphonique, courriel.
 
 ## Non implémenté
@@ -23,7 +31,7 @@ Document de référence pour le développement. Les textes d'aide sont dans `doc
 - Bouton de transfert central vers le module adapté depuis les résultats de recherche.
 - Avertissement à l'envoi d'une pièce jointe non indexée à la GED.
 - Suppression automatique 15 jours après clôture d'un message (avec journalisation).
-- Circuits MDS de tri et fusion / réaffectation de doublons (après décision sur l'import SAP).
+- Circuits MDS de tri et fusion de doublons (après décision sur l'import SAP).
 
 ## Tests
 

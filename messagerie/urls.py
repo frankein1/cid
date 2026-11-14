@@ -18,5 +18,6 @@ urlpatterns = [
     path('message/<int:message_id>/', views.voir_message, name='voir_message'),
     path('repondre/<int:message_id>/', views.repondre_message, name='repondre_message'),
     path('reponse-usager/<int:message_id>/', views.reponse_usager, name='reponse_usager'),
+    path('decision-reaffectation/<int:message_id>/', views.decider_reaffectation, name='decider_reaffectation'),
     path('api/nb-non-lus/', views.nb_messages_non_lus, name='nb_non_lus'),
 ]
