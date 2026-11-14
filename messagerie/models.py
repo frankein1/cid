@@ -94,6 +94,10 @@ class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
         default='normale'
     )
     
+    # Prise de message usager : date à laquelle l'agent doit rappeler (J+3 jours ouvrés par défaut côté formulaire)
+    date_rappel = models.DateField(
+        "Rappel souhaité avant le", null=True, blank=True,
+        help_text="Renseignée pour une prise de message : l'agent doit rappeler l'usager avant cette date.")
     # Motifs approfondis
     MOTIF_CHOICES = [
         # Dossier et suivi

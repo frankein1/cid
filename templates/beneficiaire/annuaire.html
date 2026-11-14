@@ -18,6 +18,16 @@
     <button class="px-3 py-1.5 bg-blue-600 text-white rounded"><i class="fas fa-search mr-1"></i>Chercher</button>
   </form>
   {% if message %}<div class="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-900">{{ message }}</div>{% endif %}
+  {% if aucun_resultat %}
+  <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center justify-between gap-3" id="annuaire-creation">
+    <p class="text-sm text-gray-700"><strong>Cet usager n'est pas connu de CID.</strong> Vous pouvez le créer : le formulaire sera prérempli avec les critères saisis.</p>
+    {% if peut_creer %}
+    <a href="{{ creation_url }}" class="px-3 py-1.5 bg-blue-600 text-white rounded text-sm"><i class="fas fa-user-plus mr-1"></i>Créer cet usager</a>
+    {% else %}
+    <span class="text-xs text-gray-500">Capacité « création » requise pour créer un usager.</span>
+    {% endif %}
+  </div>
+  {% endif %}
   {% if lignes %}
   <div class="bg-white rounded-xl border overflow-x-auto" id="annuaire-resultats">
     <table class="min-w-full text-sm">
@@ -32,7 +42,7 @@
           <td class="px-3 py-2">{{ b.date_naissance|date:"d/m/Y"|default:"—" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %}</td>
           <td class="px-3 py-2 font-mono">{{ b.code_interne }}</td>
           <td class="px-3 py-2">{{ b.mds.nom|default:"—" }}{% if b.statut != 'ACTIF' %} <span class="text-xs text-gray-500">({{ b.get_statut_display|lower }})</span>{% endif %}</td>
-          <td class="px-3 py-2 text-right">{% if l.acces %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline">Ouvrir la fiche</a>{% endif %}</td>
+          <td class="px-3 py-2 text-right whitespace-nowrap">{% if l.acces %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline mr-3">Ouvrir la fiche</a>{% endif %}{% if l.acces == 'complet' %}<a href="{% url 'messagerie:nouveau_message_beneficiaire' b.pk %}?prise=1" class="text-green-700 hover:underline font-semibold"><i class="fas fa-phone-volume mr-1"></i>Prendre un message</a>{% endif %}</td>
         </tr>
       {% endwith %}{% endfor %}
       </tbody>

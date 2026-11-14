@@ -25,6 +25,29 @@ except ImportError:
     UserMDSProfile = None
 
 
+
+DELAI_RAPPEL_JOURS_OUVRES = 3
+
+
+def jours_ouvres_apres(jour, nb):
+    """Le jour situé nb jours ouvrés (lundi-vendredi) après `jour`. Les jours fériés ne sont pas pris en compte."""
+    from datetime import timedelta
+    restants = nb
+    while restants:
+        jour += timedelta(days=1)
+        if jour.weekday() < 5:
+            restants -= 1
+    return jour
+
+
+def _date_saisie(valeur):
+    from django.utils.dateparse import parse_date
+    try:
+        return parse_date((valeur or '').strip()) or None
+    except ValueError:
+        return None
+
+
 def _participe(message, user):
     """Seuls l'expéditeur, le destinataire et la personne en copie accèdent à un message."""
     return user in (message.expediteur, message.destinataire, message.copie)
@@ -201,7 +224,8 @@ def nouveau_message(request, beneficiaire_id=None):
         contenu = request.POST.get('contenu')
         priorite = request.POST.get('priorite', 'normale')
         motif = request.POST.get('motif', 'autre')
-        beneficiaire_id_post = request.POST.get('beneficiaire')
+        # Depuis une fiche ou l'annuaire, l'usager vient de l'URL : il est retenu si le champ n'est pas renseigné
+        beneficiaire_id_post = request.POST.get('beneficiaire') or beneficiaire_id
         
         # NOUVEAU : Catégorie GED pour les documents
         categorie_ged = request.POST.get('categorie_ged', 'divers')
@@ -239,6 +263,7 @@ def nouveau_message(request, beneficiaire_id=None):
                 contenu=contenu,
                 priorite=priorite,
                 motif=motif,
+                date_rappel=_date_saisie(request.POST.get('date_rappel')),
                 cree_par=request.user
             )
             
@@ -298,12 +323,15 @@ def nouveau_message(request, beneficiaire_id=None):
     # Catégories GED disponibles
     categories_ged = DocumentCategorie.choices
     
+    prise_message = bool(beneficiaire) and request.GET.get('prise') == '1'
     context = {
         'utilisateurs': utilisateurs,
         'mes_documents': mes_documents,
         'beneficiaires': beneficiaires,
         'beneficiaire': beneficiaire,
         'categories_ged': categories_ged,
+        'prise_message': prise_message,
+        'rappel_defaut': jours_ouvres_apres(timezone.localdate(), DELAI_RAPPEL_JOURS_OUVRES),
     }
     return render(request, 'messagerie/nouveau_message.html', context)
 

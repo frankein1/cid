@@ -72,13 +72,16 @@ with sync_playwright() as p:
     pg.goto(B+'/beneficiaire/FAM9-CEL/'); shot(pg,'chercher','04', None, top=True)
     # ---------------- créer
     pg.goto(B+'/beneficiaire/'); pg.fill('input[name=nom]','FONTAINE'); pg.press('input[name=nom]','Enter'); pg.wait_for_load_state()
-    shot(pg,'creer','01','a[href$="/beneficiaire/ajouter/"].bg-green-600')
-    pg.goto(B+'/beneficiaire/ajouter/')
+    shot(pg,'creer','01','a[href$="/beneficiaire/annuaire/"].bg-green-600')
+    # la création passe par l'annuaire : recherche sans résultat, puis « Créer cet usager » (formulaire prérempli)
+    pg.goto(B+'/beneficiaire/annuaire/?nom=FONTAINE&prenom=In%C3%A8s&date_naissance=1991-03-14')
+    pg.click('a:has-text("Créer cet usager")'); pg.wait_for_load_state()
     pg.select_option('select[name=civilite]','MME'); pg.fill('input[name=nom]','FONTAINE'); pg.fill('input[name=prenom]','Inès')
     pg.select_option('select[name=marital_status]','CELIBATAIRE'); pg.fill('input[name=date_naissance]','14/03/1991')
     pg.fill('input[name=lieu_naissance]','Martigues'); pg.fill('input[name=telephone_mobile]','0600000000')
     pg.fill('textarea[name=adresse]','4 allée des Mimosas'); pg.fill('input[name=code_postal]','13110'); pg.fill('input[name=ville]','Port-de-Bouc')
     pg.select_option('select[name=mds]', index=1); pg.wait_for_timeout(500)
+    pg.check('input[name=confirme_creation]')
     shot(pg,'creer','02','select[name=civilite]'); shot(pg,'creer','03','#mainForm button[type=submit]')
     soumettre(pg,'#mainForm'); code=pg.url.rstrip('/').split('/')[-1]; assert code.startswith('BEN-'), pg.url
     shot(pg,'creer','04',None, top=True)
