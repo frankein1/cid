@@ -23,7 +23,7 @@ Document de référence pour le développement. Les textes d'aide sont dans `doc
 - **Accepter** : transfert de l'usager et des membres de son foyer cochés (`beneficiaire/transfert.py`, `transferer`), puis réponse à la MDS demandeuse. La demande est close.
 - **Refuser** : motif obligatoire, transmis dans la réponse à la MDS demandeuse. La demande est close, l'usager ne bouge pas.
 - Une seule décision par demande.
-- Non implémenté (à définir) : la feuille de transfert signée par le cadre, jointe au dossier ; l'expurgation des notes personnelles du travailleur social avant envoi.
+- Non implémenté (à définir) : la feuille de transfert signée par le cadre, jointe au dossier. L'expurgation des notes personnelles du travailleur social est traitée par le journal : voir `docs/JOURNAL_NOTES.md`.
 - Issues : courrier, répondeur, injoignable, entretien en présentiel, entretien téléphonique, courriel.
 
 ## Non implémenté
@@ -31,6 +31,7 @@ Document de référence pour le développement. Les textes d'aide sont dans `doc
 - Bouton de transfert central vers le module adapté depuis les résultats de recherche.
 - Avertissement à l'envoi d'une pièce jointe non indexée à la GED.
 - Suppression automatique 15 jours après clôture d'un message (avec journalisation).
+- Feuille de transfert signée par le cadre, jointe au dossier.
 - Circuits MDS de tri et fusion de doublons (après décision sur l'import SAP).
 
 ## Tests

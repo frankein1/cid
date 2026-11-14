@@ -11,3 +11,4 @@
 - Documents et aides suivent les personnes transférées ; les aides en cours passent à la nouvelle MDS.
 - Référent remis à zéro : en désigner un (**Modifier**).
 - Message automatique au référent sortant et au responsable de l'ancienne MDS.
+- Vos **notes personnelles** ne partent que si vous les avez cochées « suit le dossier » ; les autres restent à votre compte (*Mes notes*).

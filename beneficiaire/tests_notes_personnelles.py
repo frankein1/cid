@@ -18,7 +18,8 @@ from core.models import Profil, User
 from mds.models import MDS, UserMDSProfile
 
 
-class NotesPersonnellesTests(TestCase):
+class FixturesNotes:
+    """Fixtures et aides partagées par les tests de notes (pas de tests ici, pour ne pas les exécuter deux fois)."""
     def setUp(self):
         for cmd in ("init_capacites", "init_profils"):
             call_command(cmd, stdout=StringIO())
@@ -49,6 +50,7 @@ class NotesPersonnellesTests(TestCase):
             data["a_transmettre"] = "oui"
         return self.client_de(user).post(f"/beneficiaire/{self.b.code_interne}/journal/note/", data)
 
+class NotesPersonnellesTests(FixturesNotes, TestCase):
     def test_note_datee_et_saisie_par_la_mds(self):
         self.noter(self.ts, "Demande de logement en 08/26")
         n = NotePersonnelle.objects.get()
@@ -102,7 +104,7 @@ class NotesPersonnellesTests(TestCase):
         self.assertContains(r, "Après transfert")
 
 
-class ReprisePuisArchivageTests(NotesPersonnellesTests):
+class ReprisePuisArchivageTests(FixturesNotes, TestCase):
     def test_reprise_lecture_seule_des_notes_et_synthèses_privees(self):
         from beneficiaire.models_journal import EntretienSocial
         EntretienSocial.objects.create(beneficiaire=self.b, auteur=self.ts, objet="Point", mode="RDV",
