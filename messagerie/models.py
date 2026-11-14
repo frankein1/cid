@@ -36,6 +36,7 @@ MOTIFS_CONTACT = [
     ('AIDE_FINANCIERE', 'Aide financière'),
     ('ADULTE_VULNERABLE', 'Adulte vulnérable'),
     ('BUDGET_CESF', 'Budget (CESF)'),
+    ('REAFFECTATION', 'Réaffectation'),
     ('AUTRE', 'Autre'),
 ]
 

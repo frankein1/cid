@@ -14,7 +14,8 @@ Document de référence pour le développement. Les textes d'aide sont dans `doc
 ## Listes validées (14/11)
 
 - Modes : courrier, accueil physique, téléphone, courriel.
-- Motifs : logement, insertion, aide financière, adulte vulnérable, budget / CESF, autre.
+- Motifs : logement, insertion, aide financière, adulte vulnérable, budget / CESF, réaffectation, autre.
+  La réaffectation demande à la MDS d'origine de réaffecter l'usager à la MDS qui le reçoit : le circuit de réaffectation (qui peut valider, quelle action) reste à vérifier et n'est pas implémenté.
 - Issues : courrier, répondeur, injoignable, entretien en présentiel, entretien téléphonique, courriel.
 
 ## Non implémenté

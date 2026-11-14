@@ -67,6 +67,10 @@ class PriseMessageTests(TestCase):
         self.assertEqual(m.motifs_contact, ["LOGEMENT", "INSERTION"])
         self.assertEqual(m.date_rappel, date(2026, 11, 20))
 
+    def test_motif_reaffectation_enregistre(self):
+        self.prendre(self.client_de(self.accueil), objet="Réaffectation", motifs_contact=["REAFFECTATION"])
+        self.assertEqual(Message.objects.get(objet="Réaffectation").motifs_contact, ["REAFFECTATION"])
+
     def test_valeurs_inconnues_ignorees(self):
         self.prendre(self.client_de(self.accueil), objet="Valeurs bidon", mode_contact="PIGEON",
                      motifs_contact=["LOGEMENT", "INVENTE"])

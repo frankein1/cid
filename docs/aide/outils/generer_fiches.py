@@ -763,7 +763,7 @@ page('messagerie-prise-message', qui="Tous les agents connectés", ou="Annuaire 
            "Sur sa ligne, cliquez sur <span class=\"clic\">Prendre un message</span>."], []),
          ("Écrire le message", [],
           ["<b>Mode de contact demandé</b> (facultatif) : courrier, accueil physique, téléphone ou courriel.",
-           "<b>Motifs</b> : cochez un ou plusieurs motifs (logement, insertion, aide financière, adulte vulnérable, budget / CESF, autre).",
+           "<b>Motifs</b> : cochez un ou plusieurs motifs (logement, insertion, aide financière, adulte vulnérable, budget / CESF, réaffectation, autre).",
            "Indiquez la <b>date de rappel</b>, le <b>destinataire</b>, l'<b>objet</b> et le <b>message</b>, puis cliquez sur <span class=\"clic\">Envoyer</span>."],
           [("attention", "Pour un même contact, envoyez <b>un seul</b> message : il sert aussi à compter les contacts.")]),
          ("Suivre la réponse", [],
