@@ -43,43 +43,28 @@
         </h1>
 
         <form method="post" enctype="multipart/form-data">
+                {% if prise_message %}
+                <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-900" id="prise-message">
+                    <p class="font-semibold"><i class="fas fa-phone-volume mr-1"></i>Prise de message pour {{ beneficiaire.prenom }} {{ beneficiaire.nom|upper }}</p>
+                    <p class="mt-1">Téléphone à rappeler : <strong>{{ beneficiaire.telephone_mobile|default:beneficiaire.telephone_fixe|default:"non renseigné" }}</strong>. Indiquez le message laissé, l'agent qui doit rappeler et la date limite.</p>
+                </div>
+                {% endif %}
             {% csrf_token %}
             
             <div class="space-y-4">
                 <!-- Bénéficiaire concerné avec recherche -->
-                <div class="relative">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user mr-1"></i>
-                        Bénéficiaire concerné
-                    </label>
-                    
-                    {% if beneficiaire %}
-                    <!-- Bénéficiaire pré-sélectionné (depuis fiche bénéficiaire) -->
+                {% if beneficiaire %}
+                <!-- Usager concerné : désigné depuis l'annuaire, jamais choisi dans une liste -->
+                <div>
                     <input type="hidden" name="beneficiaire" value="{{ beneficiaire.id }}">
-                    <div class="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+                    <div class="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-50" id="usager-concerne">
                         <i class="fas fa-user-check text-green-600 mr-2"></i>
-                        <strong>{{ beneficiaire.nom }} {{ beneficiaire.prenom }}</strong>
-                        {% if beneficiaire.numero_caf %}
-                        - N° CAF: {{ beneficiaire.numero_caf }}
-                        {% endif %}
+                        <strong>{{ beneficiaire.nom|upper }} {{ beneficiaire.prenom }}</strong>
+                        — né(e) le {{ beneficiaire.date_naissance|date:"d/m/Y" }}, {{ beneficiaire.ville|default:"ville non renseignée" }}
+                        <span class="text-xs text-gray-500">(MDS {{ beneficiaire.mds.nom|default:"—" }})</span>
                     </div>
-                    {% else %}
-                    <!-- Recherche de bénéficiaire -->
-                    <input type="hidden" name="beneficiaire" id="beneficiaire-id">
-                    <input 
-                        type="text" 
-                        id="beneficiaire-search"
-                        placeholder="Tapez le nom, prénom ou numéro CAF..."
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                        autocomplete="off"
-                    >
-                    <div id="beneficiaire-results" class="autocomplete-results hidden"></div>
-                    <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-info-circle"></i>
-                        Facultatif - Tapez au moins 2 caractères pour rechercher
-                    </p>
-                    {% endif %}
                 </div>
+                {% endif %}
 
                 <!-- Destinataire -->
                 <div>
@@ -124,6 +109,7 @@
 
                 <!-- Motif et Priorité -->
                 <div class="grid grid-cols-2 gap-4">
+                    {% if not beneficiaire %}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             <i class="fas fa-tag mr-1"></i>Motif
@@ -167,6 +153,7 @@
                             <option value="autre">Autre motif</option>
                         </select>
                     </div>
+                    {% endif %}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Priorité</label>
                         <select name="priorite" 
@@ -176,7 +163,34 @@
                             <option value="urgente">Urgente</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rappel souhaité avant le</label>
+                        <input type="date" name="date_rappel" value="{{ rappel_defaut|date:'Y-m-d' }}"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                    </div>
                 </div>
+
+                {% if beneficiaire %}
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" for="mode_contact">Mode de contact demandé <span class="text-xs text-gray-500">(facultatif)</span></label>
+                        <select name="mode_contact" id="mode_contact" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                            <option value="">Non précisé</option>
+                            {% for code, libelle in mode_contact_choices %}
+                            <option value="{{ code }}">{{ libelle }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <fieldset>
+                        <legend class="block text-sm font-medium text-gray-700 mb-2">Motifs de contact <span class="text-xs text-gray-500">(plusieurs possibles)</span></legend>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            {% for code, libelle in motifs_contact_choices %}
+                            <label class="flex items-center gap-2"><input type="checkbox" name="motifs_contact" value="{{ code }}"> {{ libelle }}</label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                </div>
+                {% endif %}
 
                 <!-- Contenu -->
                 <div>
@@ -261,101 +275,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    {% if not beneficiaire %}
-    // Autocomplétion pour la recherche de bénéficiaire
-    const searchInput = document.getElementById('beneficiaire-search');
-    const resultsDiv = document.getElementById('beneficiaire-results');
-    const beneficiaireIdInput = document.getElementById('beneficiaire-id');
-    let selectedIndex = -1;
-    let results = [];
-
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        if (query.length < 2) {
-            resultsDiv.classList.add('hidden');
-            beneficiaireIdInput.value = '';
-            return;
-        }
-
-        // Appel AJAX
-        fetch(`{% url 'messagerie:rechercher_beneficiaire' %}?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                results = data.results;
-                displayResults(results);
-            })
-            .catch(error => console.error('Erreur recherche:', error));
-    });
-
-    function displayResults(items) {
-        if (items.length === 0) {
-            resultsDiv.innerHTML = '<div class="p-4 text-gray-500 text-sm">Aucun bénéficiaire trouvé</div>';
-            resultsDiv.classList.remove('hidden');
-            return;
-        }
-
-        resultsDiv.innerHTML = items.map((item, index) => `
-            <div class="autocomplete-item" data-index="${index}" data-id="${item.id}">
-                <div class="font-medium">${item.nom} ${item.prenom}</div>
-                <div class="text-xs text-gray-500">N° CAF: ${item.numero_caf || 'Non renseigné'}</div>
-            </div>
-        `).join('');
-        
-        resultsDiv.classList.remove('hidden');
-        
-        // Ajouter les événements de clic
-        resultsDiv.querySelectorAll('.autocomplete-item').forEach(item => {
-            item.addEventListener('click', function() {
-                selectBeneficiaire(this.dataset.id, this.textContent.trim());
-            });
-        });
-    }
-
-    function selectBeneficiaire(id, text) {
-        beneficiaireIdInput.value = id;
-        searchInput.value = text.split('\n')[0]; // Première ligne (nom prénom)
-        resultsDiv.classList.add('hidden');
-    }
-
-    // Navigation au clavier
-    searchInput.addEventListener('keydown', function(e) {
-        const items = resultsDiv.querySelectorAll('.autocomplete-item');
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-            updateSelection(items);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedIndex = Math.max(selectedIndex - 1, 0);
-            updateSelection(items);
-        } else if (e.key === 'Enter' && selectedIndex >= 0) {
-            e.preventDefault();
-            items[selectedIndex].click();
-        } else if (e.key === 'Escape') {
-            resultsDiv.classList.add('hidden');
-        }
-    });
-
-    function updateSelection(items) {
-        items.forEach((item, index) => {
-            if (index === selectedIndex) {
-                item.classList.add('selected');
-                item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('selected');
-            }
-        });
-    }
-
-    // Fermer les résultats si on clique ailleurs
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
-            resultsDiv.classList.add('hidden');
-        }
-    });
-    {% endif %}
 
     // Afficher la section catégorie GED si des fichiers sont sélectionnés
     const fichiersInput = document.getElementById('fichiers-input');

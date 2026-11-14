@@ -11,15 +11,39 @@ doubles saisies.
 On ne voit que l'identité de base : nom, prénom, nom de naissance, date et lieu de naissance, code usager, MDS.
 La recherche exige un identifiant exact (code usager, n° CAF, téléphone) ou deux éléments parmi nom, prénom, date de
 naissance et adresse : on ne peut pas parcourir l'annuaire. Les orthographes proches sont proposées à part. Chaque recherche est inscrite au journal d'activité."""
+from datetime import datetime, timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import render
+from django.urls import reverse
+from django.utils import timezone
 
 from core.journal import journaliser
 
 from .models import Beneficiaire
 
 MAX_RESULTATS = 20
+AUCUN_RESULTAT = "Aucun usager ne correspond : il n'est peut-être pas encore connu de CID."
+# Une recherche concluante (résultats ou réponse « aucun ») ouvre la création pendant ce délai.
+CLE_SESSION_RECHERCHE = 'annuaire_recherche_ts'
+DUREE_RECHERCHE = timedelta(minutes=60)
+
+
+def recherche_recente(request):
+    """True si l'agent a fait une recherche concluante dans l'annuaire il y a moins de DUREE_RECHERCHE."""
+    ts = request.session.get(CLE_SESSION_RECHERCHE)
+    if not ts:
+        return False
+    try:
+        moment = datetime.fromisoformat(ts)
+    except (TypeError, ValueError):
+        return False
+    return timezone.now() - moment <= DUREE_RECHERCHE
+
+
+def effacer_recherche(request):
+    request.session.pop(CLE_SESSION_RECHERCHE, None)
 
 
 def rechercher(code="", caf="", telephone="", nom="", prenom="", date_naissance=None, adresse=""):
@@ -66,7 +90,7 @@ def rechercher(code="", caf="", telephone="", nom="", prenom="", date_naissance=
             resultats.append(b)
     if len(resultats) > MAX_RESULTATS:
         return resultats[:MAX_RESULTATS], f"Plus de {MAX_RESULTATS} réponses : précisez la recherche."
-    return resultats, "" if resultats else "Aucun usager ne correspond : il n'est peut-être pas encore connu de CID."
+    return resultats, "" if resultats else AUCUN_RESULTAT
 
 
 def criteres(get):
@@ -82,10 +106,28 @@ def annuaire_usagers(request):
     resultats, message, cherche = [], "", any(c.values())
     if cherche:
         resultats, message = rechercher(**c)
+        if resultats or message == AUCUN_RESULTAT:
+            request.session[CLE_SESSION_RECHERCHE] = timezone.now().isoformat()
         journaliser('READ', "Annuaire des usagers : recherche", request=request, details={
             'criteres': {k: (str(v) if k not in ('caf', 'telephone') else 'oui') for k, v in c.items() if v},
             'resultats': [b.code_interne for b in resultats]})
     lignes = [{'b': b, 'acces': b.niveau_acces(request.user)} for b in resultats]
+    from .views import user_peut_creer  # import local : évite un cycle entre les deux modules
     return render(request, 'beneficiaire/annuaire.html', {
         'c': c, 'lignes': lignes, 'message': message, 'cherche': cherche,
-        'date_naissance': request.GET.get('date_naissance', '')})
+        'date_naissance': request.GET.get('date_naissance', ''),
+        'aucun_resultat': message == AUCUN_RESULTAT,
+        'peut_creer': user_peut_creer(request.user),
+        'creation_url': _url_creation(c),
+    })
+
+
+def _url_creation(c):
+    """Lien vers la création, prérempli avec ce qui a été recherché (le formulaire reste à valider)."""
+    params = {'nom': c['nom'], 'prenom': c['prenom'], 'telephone': c['telephone'], 'adresse': c['adresse']}
+    if c['date_naissance']:
+        params['date_naissance'] = c['date_naissance'].isoformat()
+    params = {k: v for k, v in params.items() if v}
+    base = reverse('beneficiaire:ajouter_beneficiaire')
+    from urllib.parse import urlencode
+    return f"{base}?{urlencode(params)}" if params else base

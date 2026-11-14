@@ -84,6 +84,74 @@
         </div>
         {% endfor %}
 
+        {% if message.beneficiaire %}
+        <!-- Prise de message usager -->
+        <div class="mt-6 pt-6 border-t border-gray-200" id="prise-message-detail">
+            <h2 class="font-semibold text-gray-900 mb-2"><i class="fas fa-phone-volume mr-1"></i>Prise de message : {{ message.beneficiaire.nom|upper }} {{ message.beneficiaire.prenom }}</h2>
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
+                <dt class="text-gray-500">Mode de contact demandé</dt>
+                <dd>{{ message.get_mode_contact_display|default:"non précisé" }}</dd>
+                <dt class="text-gray-500">Motifs</dt>
+                <dd>{% for code, libelle in motifs_contact_choices %}{% if code in message.motifs_contact %}{{ libelle }}<br>{% endif %}{% empty %}{% endfor %}{% if not message.motifs_contact %}non précisé{% endif %}</dd>
+                <dt class="text-gray-500">Rappel souhaité avant le</dt>
+                <dd>{{ message.date_rappel|date:"d/m/Y"|default:"non précisé" }}</dd>
+            </dl>
+
+            {% if 'REAFFECTATION' in message.motifs_contact %}
+            <div class="rounded-md border border-indigo-200 bg-indigo-50 p-4 text-sm mb-4" id="demande-reaffectation">
+                <p class="font-semibold text-gray-900">Demande de réaffectation</p>
+                <p class="mt-1">Formulée par la MDS {{ message.mds_demandeuse.nom|default:"non précisée" }} ({{ message.expediteur.get_full_name|default:message.expediteur.username }}).</p>
+                {% if message.decision_reaffectation %}
+                <p class="mt-2"><strong>{{ message.get_decision_reaffectation_display }}</strong> par {{ message.decision_reaffectation_par.get_full_name|default:message.decision_reaffectation_par.username }} le {{ message.decision_reaffectation_le|date:"d/m/Y à H:i" }}.</p>
+                {% if message.motif_refus %}<p class="mt-1 whitespace-pre-line">Motif : {{ message.motif_refus }}</p>{% endif %}
+                {% elif peut_decider_reaffectation %}
+                <form method="post" action="{% url 'messagerie:decider_reaffectation' message.id %}" class="space-y-3 mt-3" id="form-decision-reaffectation">
+                    {% csrf_token %}
+                    <label class="flex items-start gap-2"><input type="radio" name="decision" value="accepter" class="mt-1"> <span>Accepter : transférer l'usager et les membres de son foyer cochés dans sa fiche vers la MDS demandeuse. La demande est close.</span></label>
+                    <label class="flex items-start gap-2"><input type="radio" name="decision" value="refuser" class="mt-1"> <span>Refuser : le motif ci-dessous est transmis à la MDS demandeuse. La demande est close.</span></label>
+                    <textarea name="motif_refus" rows="3" placeholder="Motif du refus (obligatoire en cas de refus)" class="w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-md">Valider la décision</button>
+                </form>
+                {% elif reaffectation_en_attente %}
+                <p class="mt-2">En attente de la décision du cadre de la MDS {{ message.beneficiaire.mds.nom }}. Seul le cadre peut répondre : transmettez-lui ce message.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if message.reponse_le %}
+            <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm mb-4" id="reponse-effectuee">
+                <p><strong>Réponse effectuée le {{ message.reponse_le|date:"d/m/Y à H:i" }}</strong>{% if message.issue %} — {{ message.get_issue_display }}{% endif %}</p>
+                {% if message.reponse_texte %}<p class="mt-2 whitespace-pre-line">{{ message.reponse_texte }}</p>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if message.destinataire == request.user %}
+            <form method="post" action="{% url 'messagerie:reponse_usager' message.id %}" class="space-y-3 text-sm" id="form-reponse-usager">
+                {% csrf_token %}
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1" for="issue">Issue de la réponse <span class="text-xs text-gray-500">(facultatif)</span></label>
+                    <select name="issue" id="issue" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        <option value="">Non précisée</option>
+                        {% for code, libelle in issue_choices %}
+                        <option value="{{ code }}"{% if message.issue == code %} selected{% endif %}>{{ libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1" for="reponse_texte">Réponse <span class="text-xs text-gray-500">(facultatif)</span></label>
+                    <textarea name="reponse_texte" id="reponse_texte" rows="3" class="w-full border border-gray-300 rounded-md px-3 py-2">{{ message.reponse_texte }}</textarea>
+                </div>
+                <label class="flex items-center gap-2 font-medium">
+                    <input type="checkbox" name="reponse_effectuee" value="oui" {% if message.reponse_le %}checked disabled{% endif %}>
+                    Réponse effectuée
+                    {% if message.reponse_le %}<span class="text-xs text-gray-500">(date déjà enregistrée)</span>{% endif %}
+                </label>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md">Enregistrer la réponse</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Bouton répondre -->
         <div class="mt-6 pt-6 border-t border-gray-200">
             <a href="{% url 'messagerie:repondre_message' message.id %}" 
