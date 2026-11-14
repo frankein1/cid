@@ -167,6 +167,17 @@ def archiver(beneficiaire, user, motif, commentaire=""):
     if beneficiaire.pk in exclus([beneficiaire.pk]):
         raise ErreurRGPD("Dossier lié à une information préoccupante ou à un suivi enfance : jamais archivé.")
     activite = derniere_activite([beneficiaire.pk]).get(beneficiaire.pk)
+    # Feuilles jaunes : notes personnelles et synthèses privées sont détruites avant l'archivage
+    from core.models import AuditLog
+    from beneficiaire.models_journal import EntretienSocial, NotePersonnelle
+    nb_notes = beneficiaire.notes_personnelles.count()
+    nb_synth = EntretienSocial.objects.filter(beneficiaire=beneficiaire).exclude(synthese_privee='').count()
+    beneficiaire.notes_personnelles.all().delete()
+    EntretienSocial.objects.filter(beneficiaire=beneficiaire).exclude(synthese_privee='').update(synthese_privee='')
+    if nb_notes or nb_synth:
+        AuditLog.log_action(user, 'DELETE', f"Archivage : {nb_notes} note(s) et {nb_synth} synthèse(s) privée(s) détruites",
+                            objet=beneficiaire)
+        commentaire = (commentaire + f" ; notes détruites : {nb_notes}, synthèses privées : {nb_synth}").strip(" ;")
     Beneficiaire.tous.filter(pk=beneficiaire.pk).update(
         statut_avant_archivage=beneficiaire.statut, statut='ARCHIVE', date_archivage=timezone.now(),
         archive_par=user, motif_archivage=motif)

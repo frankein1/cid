@@ -81,7 +81,10 @@ class EntretienSocial(AuditedMixin):
         return any(t.legal for t in self.types.all())
 
     def peut_lire_prive(self, user):
-        return user.is_authenticated and user.pk == self.auteur_id
+        """Synthèse privée : son auteur, et le référent actuel de l'usager en reprise (lecture seule)."""
+        if not user.is_authenticated:
+            return False
+        return user.pk == self.auteur_id or self.beneficiaire.referent_mds_id == user.pk
 
     def peut_modifier(self, user):
         return user.is_authenticated and (user.pk == self.auteur_id or user.is_superuser)
@@ -111,10 +114,13 @@ class NotePersonnelle(models.Model):
         return f"Note du {self.date_note:%d/%m/%y %H:%M} sur {self.beneficiaire}"
 
     def peut_lire(self, user):
-        """L'auteur ; et, une fois transmise, les agents de la MDS destinataire."""
+        """L'auteur ; le référent actuel de l'usager en reprise (lecture seule) ; et, une fois transmise,
+        les agents de la MDS destinataire."""
         if not user.is_authenticated:
             return False
         if self.auteur_id == user.pk:
+            return True
+        if self.beneficiaire.referent_mds_id == user.pk:
             return True
         if not self.transmise_a_mds_id:
             return False

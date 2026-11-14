@@ -100,3 +100,33 @@ class NotesPersonnellesTests(TestCase):
         transferer(self.b, [self.b], self.accueil, self.cadre)
         r = self.client_de(self.ts).get("/beneficiaire/journal/mes-notes/")
         self.assertContains(r, "Après transfert")
+
+
+class ReprisePuisArchivageTests(NotesPersonnellesTests):
+    def test_reprise_lecture_seule_des_notes_et_synthèses_privees(self):
+        from beneficiaire.models_journal import EntretienSocial
+        EntretienSocial.objects.create(beneficiaire=self.b, auteur=self.ts, objet="Point", mode="RDV",
+                                       date=date(2026, 11, 3), synthese_privee="Synthèse privée du TS")
+        self.noter(self.ts, "Note du TS")
+        self.b.referent_mds = self.collegue
+        self.b.save(update_fields=['referent_mds'])
+        url = f"/beneficiaire/{self.b.code_interne}/journal/"
+        r = self.client_de(self.collegue).get(url)
+        self.assertContains(r, "Note du TS")
+        self.assertContains(r, "Synthèse privée du TS")
+        n = NotePersonnelle.objects.get()
+        self.client_de(self.collegue).post(f"/beneficiaire/journal/note/{n.pk}/supprimer/")
+        self.assertTrue(NotePersonnelle.objects.filter(pk=n.pk).exists())
+        self.assertNotContains(self.client_de(self.cadre).get(url), "Synthèse privée du TS")
+
+    def test_archivage_detruit_les_feuilles_jaunes_avant(self):
+        from beneficiaire.archivage import MOTIFS, archiver
+        from beneficiaire.models_journal import EntretienSocial
+        EntretienSocial.objects.create(beneficiaire=self.b, auteur=self.ts, objet="Point", mode="RDV",
+                                       date=date(2026, 11, 3), synthese_privee="Synthèse à détruire")
+        self.noter(self.ts, "Note à détruire")
+        archiver(self.b, self.cadre, MOTIFS[0][0])
+        self.b.refresh_from_db()
+        self.assertEqual(self.b.statut, 'ARCHIVE')
+        self.assertFalse(NotePersonnelle.objects.filter(beneficiaire=self.b).exists())
+        self.assertEqual(EntretienSocial.objects.get(beneficiaire=self.b).synthese_privee, '')

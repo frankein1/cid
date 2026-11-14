@@ -71,7 +71,7 @@
             {% if e.personnes_presentes.all %}Avec : {% for p in e.personnes_presentes.all %}{{ p.prenom }} {{ p.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}. {% endif %}
             {% if e.co_intervenants.all %}Co-intervenant(s) : {% for u in e.co_intervenants.all %}{{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% endif %}</p>{% endif %}
           {% if e.synthese %}<p class="text-sm text-gray-800 mt-2 whitespace-pre-line">{{ e.synthese }}</p>{% endif %}
-          {% if e.synthese_privee and e.auteur_id == user.pk %}<div class="mt-2 p-2 rounded bg-gray-50 border border-dashed text-sm text-gray-700 whitespace-pre-line"><i class="fas fa-lock text-gray-400 mr-1" title="Visible par vous seul(e)"></i>{{ e.synthese_privee }}</div>{% endif %}
+          {% if e.synthese_privee and l.prive_visible %}<div class="mt-2 p-2 rounded bg-gray-50 border border-dashed text-sm text-gray-700 whitespace-pre-line"><i class="fas fa-lock text-gray-400 mr-1" title="Visible par vous seul(e)"></i>{{ e.synthese_privee }}</div>{% endif %}
           {% if e.orientation or e.orientation_precision %}<p class="text-sm mt-2"><i class="fas fa-share text-gray-400 mr-1"></i>Orientation : {{ e.orientation|default:"" }}{% if e.orientation_precision %} — {{ e.orientation_precision }}{% endif %}</p>{% endif %}
           {% if e.suite_a_donner %}<p class="text-sm mt-2 {% if e.suite_faite %}text-gray-400 line-through{% else %}text-amber-800{% endif %}"><i class="fas fa-flag mr-1"></i>{{ e.suite_a_donner }}{% if e.echeance %} (pour le {{ e.echeance|date:"d/m/Y" }}){% endif %}</p>{% endif %}
         {% endif %}{% endwith %}

@@ -35,6 +35,7 @@ class Ligne:
     entretien: object = None
     creneau: object = None        # RDV réalisé sans compte rendu : proposer d'en rédiger un
     note: object = None           # note personnelle (visible de son auteur seul, ou de la MDS destinataire)
+    prive_visible: bool = False   # synthèse privée d'un entretien lisible par cet agent
 
     @property
     def cle(self):
@@ -51,7 +52,8 @@ def _entretiens(b, user):
               .prefetch_related('types', 'co_intervenants', 'personnes_presentes')):
         types = list(e.types.all())
         yield Ligne(e.date, e.heure, "entretien", e.objet, e.get_mode_display(), auteur=_nom(e.auteur),
-                    legal=any(t.legal for t in types), types=types, entretien=e)
+                    legal=any(t.legal for t in types), types=types, entretien=e,
+                    prive_visible=e.peut_lire_prive(user))
 
 
 def _rdv(b, user):
@@ -120,8 +122,10 @@ def _notes(b, user):
                 statut = f"transmise à {n.transmise_a_mds} le {timezone.localtime(n.transmise_le):%d/%m/%y}" if n.transmise_le else "transmise"
             else:
                 statut = "suivra le dossier au prochain transfert" if n.a_transmettre else "reste à votre MDS"
-        else:
+        elif n.transmise_a_mds_id:
             statut = "transmise par la MDS précédente"
+        else:
+            statut = "écrite par un autre travailleur social (lecture seule)"
         yield Ligne(local.date(), local.time(), "note", "Note personnelle", statut, auteur=_nom(n.auteur), note=n)
 
 
