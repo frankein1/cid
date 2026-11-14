@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-5" id="annuaire">
   <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-address-book text-blue-600 mr-2"></i>Annuaire des usagers</h1>
-  <p class="text-sm text-gray-600">Vérifiez si un usager est déjà connu de CID et à quelle MDS il est rattaché, puis saisissez votre dossier avec son <b>code usager CID</b> ou son <b>n° CAF</b> : on évite ainsi les doubles saisies. Seule l'identité de base s'affiche ; chaque recherche est inscrite au journal d'activité.</p>
+  <p class="text-sm text-gray-600">Vérifiez si un usager est déjà connu de CID. Pour chaque personne, vous voyez son nom, son prénom, sa date de naissance, sa ville de résidence, son code usager et sa MDS de rattachement. Vous pouvez lui <b>prendre un message</b> ; seuls les agents de sa MDS peuvent ouvrir sa fiche. Chaque recherche est inscrite au journal d'activité.</p>
   <form method="get" class="bg-white rounded-xl border p-4 grid md:grid-cols-6 gap-3 items-end text-sm" id="annuaire-form">
     <label class="flex flex-col">Code usager CID<input name="code" value="{{ c.code }}" class="border rounded px-2 py-1"></label>
     <label class="flex flex-col">N° CAF<input name="caf" value="{{ c.caf }}" class="border rounded px-2 py-1"></label>
@@ -32,17 +32,24 @@
   <div class="bg-white rounded-xl border overflow-x-auto" id="annuaire-resultats">
     <table class="min-w-full text-sm">
       <thead class="bg-gray-50 text-left text-gray-600"><tr>
-        <th class="px-3 py-2">Nom, prénom</th><th class="px-3 py-2">Nom de naissance</th><th class="px-3 py-2">Né(e) le, à</th>
-        <th class="px-3 py-2">Code usager CID</th><th class="px-3 py-2">MDS de rattachement</th><th></th></tr></thead>
+        <th class="px-3 py-2">Nom</th><th class="px-3 py-2">Prénom</th><th class="px-3 py-2">Date de naissance</th>
+        <th class="px-3 py-2">Ville de résidence</th><th class="px-3 py-2">Code usager</th><th class="px-3 py-2">MDS</th><th class="px-3 py-2"></th></tr></thead>
       <tbody class="divide-y">
       {% for l in lignes %}{% with b=l.b %}
         <tr>
-          <td class="px-3 py-2 font-semibold">{{ b.nom|upper }} {{ b.prenom }}{% if b.proche %} <span class="ml-1 text-xs font-normal px-2 py-0.5 rounded bg-amber-100 text-amber-800">orthographe proche</span>{% endif %}</td>
-          <td class="px-3 py-2">{{ b.nom_naissance|upper|default:"—" }}</td>
-          <td class="px-3 py-2">{{ b.date_naissance|date:"d/m/Y"|default:"—" }}{% if b.lieu_naissance %}, {{ b.lieu_naissance }}{% endif %}</td>
+          <td class="px-3 py-2 font-semibold">{{ b.nom|upper }}{% if b.proche %} <span class="ml-1 text-xs font-normal px-2 py-0.5 rounded bg-amber-100 text-amber-800">orthographe proche</span>{% endif %}</td>
+          <td class="px-3 py-2">{{ b.prenom }}</td>
+          <td class="px-3 py-2">{{ b.date_naissance|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-3 py-2">{{ b.ville|default:"—" }}</td>
           <td class="px-3 py-2 font-mono">{{ b.code_interne }}</td>
           <td class="px-3 py-2">{{ b.mds.nom|default:"—" }}{% if b.statut != 'ACTIF' %} <span class="text-xs text-gray-500">({{ b.get_statut_display|lower }})</span>{% endif %}</td>
-          <td class="px-3 py-2 text-right whitespace-nowrap">{% if l.acces %}<a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline mr-3">Ouvrir la fiche</a>{% endif %}{% if l.acces == 'complet' %}<a href="{% url 'messagerie:nouveau_message_beneficiaire' b.pk %}?prise=1" class="text-green-700 hover:underline font-semibold"><i class="fas fa-phone-volume mr-1"></i>Prendre un message</a>{% endif %}</td>
+          <td class="px-3 py-2 text-right whitespace-nowrap">
+            <a href="{% url 'messagerie:nouveau_message_beneficiaire' b.pk %}?prise=1" class="text-green-700 hover:underline font-semibold mr-3"><i class="fas fa-phone-volume mr-1"></i>Prendre un message</a>
+            {% if l.acces == 'complet' %}
+            <a href="{% url 'beneficiaire:detail_beneficiaire' b.code_interne %}" class="text-blue-700 hover:underline mr-3">Ouvrir la fiche</a>
+            <a href="{% url 'beneficiaire:transferer_beneficiaire' b.code_interne %}" class="text-gray-700 hover:underline">Transférer</a>
+            {% endif %}
+          </td>
         </tr>
       {% endwith %}{% endfor %}
       </tbody>

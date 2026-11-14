@@ -9,12 +9,13 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib import messages as django_messages
 from django.db.models import Q, Count, Prefetch, Max
 from django.utils import timezone
 from django.http import JsonResponse
 from io import BytesIO  # ✅ AJOUTÉ pour create_from_buffer()
-from .models import Message, StatutLecture
+from .models import ISSUE_CHOICES, MODE_CONTACT_CHOICES, MOTIFS_CONTACT, Message, StatutLecture
 from ged.models import DocumentGED, DocumentType, DocumentCategorie
 from django.contrib.contenttypes.models import ContentType
 from core.models import User
@@ -48,9 +49,27 @@ def _date_saisie(valeur):
         return None
 
 
+
+def _choix(valeur, choix):
+    """Renvoie la valeur si elle figure dans la liste de choix, sinon une chaîne vide."""
+    valeurs = dict(choix)
+    return valeur if valeur in valeurs else ''
+
+
+def _choix_multiples(valeurs, choix):
+    """Les valeurs reconnues, sans doublon, dans l'ordre de la liste de choix."""
+    retenues = set(valeurs) & set(dict(choix))
+    return [code for code, _ in choix if code in retenues]
+
+
 def _participe(message, user):
-    """Seuls l'expéditeur, le destinataire et la personne en copie accèdent à un message."""
-    return user in (message.expediteur, message.destinataire, message.copie)
+    """Expéditeur, destinataire, personne en copie ; et, pour un message lié à un usager, les agents de la MDS de cet usager."""
+    if user in (message.expediteur, message.destinataire, message.copie):
+        return True
+    if message.beneficiaire_id and message.beneficiaire.mds_id:
+        from mds.models import UserMDSProfile
+        return UserMDSProfile.objects.filter(user=user, actif=True, mds_id=message.beneficiaire.mds_id).exists()
+    return False
 
 
 def _documents_autorises(ids, user):
@@ -199,6 +218,8 @@ def voir_message(request, message_id):
     context = {
         'message': message,
         'fil': fil,
+        'motifs_contact_choices': MOTIFS_CONTACT,
+        'issue_choices': ISSUE_CHOICES,
     }
     return render(request, 'messagerie/voir_message.html', context)
 
@@ -208,14 +229,8 @@ def nouveau_message(request, beneficiaire_id=None):
     """Créer un nouveau message"""
     
     # ✅ SÉCURITÉ MDS : VÉRIFIER AVANT création bénéficiaire_obj
-    beneficiaire = None
-    if beneficiaire_id:
-        beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id)
-        
-        # ✅ CORRECTION : SÉCURITÉ APRÈS get_object_or_404 (variable existe)
-        if not beneficiaire.peut_etre_vu_par(request.user):
-            django_messages.error(request, "Accès refusé à ce bénéficiaire.")
-            return redirect('messagerie:nouveau_message')
+    # Un usager ne se désigne que depuis l'annuaire : tout agent connecté peut lui laisser un message
+    beneficiaire = get_object_or_404(Beneficiaire, pk=beneficiaire_id) if beneficiaire_id else None
     
     if request.method == 'POST':
         destinataire_id = request.POST.get('destinataire')
@@ -241,9 +256,6 @@ def nouveau_message(request, beneficiaire_id=None):
             
             if beneficiaire_id_post:
                 beneficiaire_obj = Beneficiaire.objects.get(pk=beneficiaire_id_post)
-                if not beneficiaire_obj.peut_etre_vu_par(request.user):
-                    django_messages.error(request, "Accès refusé à ce bénéficiaire.")
-                    return redirect('messagerie:nouveau_message')
             
             type_pj = _type_piece_jointe(categorie_ged, bool(beneficiaire_obj)) if fichiers_nouveaux else None
             erreurs = _erreurs_fichiers(fichiers_nouveaux, type_pj) if fichiers_nouveaux else []
@@ -263,7 +275,9 @@ def nouveau_message(request, beneficiaire_id=None):
                 contenu=contenu,
                 priorite=priorite,
                 motif=motif,
-                date_rappel=_date_saisie(request.POST.get('date_rappel')),
+                date_rappel=_date_saisie(request.POST.get('date_rappel')) if beneficiaire_obj else None,
+                mode_contact=_choix(request.POST.get('mode_contact'), MODE_CONTACT_CHOICES) if beneficiaire_obj else '',
+                motifs_contact=_choix_multiples(request.POST.getlist('motifs_contact'), MOTIFS_CONTACT) if beneficiaire_obj else [],
                 cree_par=request.user
             )
             
@@ -308,17 +322,6 @@ def nouveau_message(request, beneficiaire_id=None):
         uploaded_by=request.user
     ).order_by('-date_creation')[:20]
     
-    # Liste des bénéficiaires
-    if beneficiaire_id:
-        # Si on vient d'une fiche bénéficiaire : UNIQUEMENT ce bénéficiaire
-        beneficiaires = Beneficiaire.objects.filter(pk=beneficiaire_id)
-    else:
-        # Si on est dans la messagerie : SEULEMENT les bénéficiaires actifs
-        # Limité aux 100 derniers pour ne pas surcharger
-        beneficiaires = Beneficiaire.objects.filter(
-            est_decede=False,
-            date_sortie__isnull=True
-        ).order_by('-date_modification')[:100]
     
     # Catégories GED disponibles
     categories_ged = DocumentCategorie.choices
@@ -327,8 +330,9 @@ def nouveau_message(request, beneficiaire_id=None):
     context = {
         'utilisateurs': utilisateurs,
         'mes_documents': mes_documents,
-        'beneficiaires': beneficiaires,
         'beneficiaire': beneficiaire,
+        'mode_contact_choices': MODE_CONTACT_CHOICES,
+        'motifs_contact_choices': MOTIFS_CONTACT,
         'categories_ged': categories_ged,
         'prise_message': prise_message,
         'rappel_defaut': jours_ouvres_apres(timezone.localdate(), DELAI_RAPPEL_JOURS_OUVRES),
@@ -431,33 +435,19 @@ def nb_messages_non_lus(request):
 
 
 @login_required
-def rechercher_beneficiaire(request):
-    """Recherche AJAX de bénéficiaires"""
-    query = request.GET.get('q', '').strip()
-    
-    if len(query) < 2:
-        return JsonResponse({'results': []})
-    
-    beneficiaires = Beneficiaire.objects.filter(
-        Q(nom__icontains=query) | 
-        Q(prenom__icontains=query) |
-        Q(numero_caf__icontains=query) |
-        Q(nir__icontains=query),
-        est_decede=False,
-        date_sortie__isnull=True
-    ).select_related('mds').order_by('nom', 'prenom')[:200]
-    # Seulement les usagers que l'agent peut voir (sa MDS) : la recherche portait sur tout le département
-    beneficiaires = [b for b in beneficiaires if b.peut_etre_vu_par(request.user)][:20]
+@require_POST
+def reponse_usager(request, message_id):
+    """Réponse du destinataire d'une prise de message : issue, texte, « Réponse effectuée » (date et heure)."""
+    message = get_object_or_404(Message, id=message_id, beneficiaire__isnull=False)
+    if message.destinataire != request.user:
+        django_messages.error(request, "Seul le destinataire peut renseigner la réponse.")
+        return redirect('messagerie:voir_message', message_id=message.id)
 
-    results = [
-        {
-            'id': b.id,
-            'text': f"{b.nom} {b.prenom} - {b.numero_caf or 'Sans n°'}",
-            'nom': b.nom,
-            'prenom': b.prenom,
-            'numero_caf': b.numero_caf or ''
-        }
-        for b in beneficiaires
-    ]
-    
-    return JsonResponse({'results': results})
+    message.issue = _choix(request.POST.get('issue'), ISSUE_CHOICES)
+    message.reponse_texte = (request.POST.get('reponse_texte') or '').strip()
+    if request.POST.get('reponse_effectuee') == 'oui' and message.reponse_le is None:
+        message.reponse_le = timezone.now()
+    message.save(update_fields=['issue', 'reponse_texte', 'reponse_le', 'updated_at'])
+    django_messages.success(request, "Réponse enregistrée.")
+    return redirect('messagerie:voir_message', message_id=message.id)
+

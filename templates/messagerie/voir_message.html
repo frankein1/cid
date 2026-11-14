@@ -84,6 +84,53 @@
         </div>
         {% endfor %}
 
+        {% if message.beneficiaire %}
+        <!-- Prise de message usager -->
+        <div class="mt-6 pt-6 border-t border-gray-200" id="prise-message-detail">
+            <h2 class="font-semibold text-gray-900 mb-2"><i class="fas fa-phone-volume mr-1"></i>Prise de message : {{ message.beneficiaire.nom|upper }} {{ message.beneficiaire.prenom }}</h2>
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
+                <dt class="text-gray-500">Mode de contact demandé</dt>
+                <dd>{{ message.get_mode_contact_display|default:"non précisé" }}</dd>
+                <dt class="text-gray-500">Motifs</dt>
+                <dd>{% for code, libelle in motifs_contact_choices %}{% if code in message.motifs_contact %}{{ libelle }}<br>{% endif %}{% empty %}{% endfor %}{% if not message.motifs_contact %}non précisé{% endif %}</dd>
+                <dt class="text-gray-500">Rappel souhaité avant le</dt>
+                <dd>{{ message.date_rappel|date:"d/m/Y"|default:"non précisé" }}</dd>
+            </dl>
+
+            {% if message.reponse_le %}
+            <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm mb-4" id="reponse-effectuee">
+                <p><strong>Réponse effectuée le {{ message.reponse_le|date:"d/m/Y à H:i" }}</strong>{% if message.issue %} — {{ message.get_issue_display }}{% endif %}</p>
+                {% if message.reponse_texte %}<p class="mt-2 whitespace-pre-line">{{ message.reponse_texte }}</p>{% endif %}
+            </div>
+            {% endif %}
+
+            {% if message.destinataire == request.user %}
+            <form method="post" action="{% url 'messagerie:reponse_usager' message.id %}" class="space-y-3 text-sm" id="form-reponse-usager">
+                {% csrf_token %}
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1" for="issue">Issue de la réponse <span class="text-xs text-gray-500">(facultatif)</span></label>
+                    <select name="issue" id="issue" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        <option value="">Non précisée</option>
+                        {% for code, libelle in issue_choices %}
+                        <option value="{{ code }}"{% if message.issue == code %} selected{% endif %}>{{ libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-gray-700 mb-1" for="reponse_texte">Réponse <span class="text-xs text-gray-500">(facultatif)</span></label>
+                    <textarea name="reponse_texte" id="reponse_texte" rows="3" class="w-full border border-gray-300 rounded-md px-3 py-2">{{ message.reponse_texte }}</textarea>
+                </div>
+                <label class="flex items-center gap-2 font-medium">
+                    <input type="checkbox" name="reponse_effectuee" value="oui" {% if message.reponse_le %}checked disabled{% endif %}>
+                    Réponse effectuée
+                    {% if message.reponse_le %}<span class="text-xs text-gray-500">(date déjà enregistrée)</span>{% endif %}
+                </label>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md">Enregistrer la réponse</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Bouton répondre -->
         <div class="mt-6 pt-6 border-t border-gray-200">
             <a href="{% url 'messagerie:repondre_message' message.id %}" 

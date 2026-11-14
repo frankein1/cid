@@ -14,6 +14,32 @@ from core.mixins import AuditedMixin  # ← Seulement celui-ci
 from ged.models import DocumentGED
 
 
+# Prise de message usager : listes validées le 14/11 (voir docs/PRISE_MESSAGE.md)
+MODE_CONTACT_CHOICES = [
+    ('COURRIER', 'Courrier'),
+    ('ACCUEIL_PHYSIQUE', 'Accueil physique'),
+    ('TELEPHONE', 'Téléphone'),
+    ('COURRIEL', 'Courriel'),
+]
+ISSUE_CHOICES = [
+    ('COURRIER', 'Courrier'),
+    ('REPONDEUR', 'Répondeur'),
+    ('INJOIGNABLE', 'Injoignable'),
+    ('ENTRETIEN_PRESENTIEL', 'Entretien en présentiel'),
+    ('ENTRETIEN_TELEPHONIQUE', 'Entretien téléphonique'),
+    ('COURRIEL', 'Courriel'),
+]
+# Motifs de contact : plusieurs cases possibles. Chaque nouveau module ajoute les siens.
+MOTIFS_CONTACT = [
+    ('LOGEMENT', 'Logement'),
+    ('INSERTION', 'Insertion'),
+    ('AIDE_FINANCIERE', 'Aide financière'),
+    ('ADULTE_VULNERABLE', 'Adulte vulnérable'),
+    ('BUDGET_CESF', 'Budget (CESF)'),
+    ('AUTRE', 'Autre'),
+]
+
+
 class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
     """Message 1-à-1 avec copie optionnelle et pièces jointes GED"""
     
@@ -94,6 +120,13 @@ class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
         default='normale'
     )
     
+    # Prise de message usager (message lié à un bénéficiaire) : mode demandé, motifs, réponse du destinataire
+    mode_contact = models.CharField("Mode de contact demandé", max_length=20, choices=MODE_CONTACT_CHOICES,
+                                    blank=True, default='')
+    motifs_contact = models.JSONField("Motifs de contact", default=list, blank=True)
+    issue = models.CharField("Issue de la réponse", max_length=30, choices=ISSUE_CHOICES, blank=True, default='')
+    reponse_texte = models.TextField("Réponse", blank=True, default='')
+    reponse_le = models.DateTimeField("Réponse effectuée le", null=True, blank=True)
     # Prise de message usager : date à laquelle l'agent doit rappeler (J+3 jours ouvrés par défaut côté formulaire)
     date_rappel = models.DateField(
         "Rappel souhaité avant le", null=True, blank=True,

@@ -17,6 +17,6 @@ urlpatterns = [
     path('nouveau/<int:beneficiaire_id>/', views.nouveau_message, name='nouveau_message_beneficiaire'),
     path('message/<int:message_id>/', views.voir_message, name='voir_message'),
     path('repondre/<int:message_id>/', views.repondre_message, name='repondre_message'),
+    path('reponse-usager/<int:message_id>/', views.reponse_usager, name='reponse_usager'),
     path('api/nb-non-lus/', views.nb_messages_non_lus, name='nb_non_lus'),
-    path('api/rechercher-beneficiaire/', views.rechercher_beneficiaire, name='rechercher_beneficiaire'),  # NOUVEAU
 ]
