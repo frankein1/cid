@@ -210,11 +210,40 @@ class Command(BaseCommand):
             self.ru_demo()
             self.adultevul_demo()
             self.journal()
+            self.messagerie_et_notes()
             from core.demo_presentation import creer as presentation
             presentation(self)
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
+
+    # ------------------------------------------------------------------ réaffectation et notes personnelles
+    def messagerie_et_notes(self):
+        """Une demande de réaffectation en attente (la MDS TEST 02 demande VIDAL Nolan à la MDS TEST 01, décision du
+        cadre) et deux notes personnelles d'Agent Social 1 sur PEREZ Laura : l'une suit le dossier, l'autre reste à son
+        compte."""
+        from beneficiaire.models import Beneficiaire
+        from beneficiaire.models_journal import NotePersonnelle
+        from messagerie.models import Message
+        nolan = Beneficiaire.tous.get(code_interne="FAM4-NOL")
+        laura = Beneficiaire.tous.get(code_interne="FAM8-LAU")
+        maintenant = timezone.now()
+        Message.objects.create(
+            expediteur=self.u("as1_mds2"), destinataire=self.cadre, beneficiaire=nolan, mds_demandeuse=self.mds2,
+            objet="[démo] Demande de réaffectation : VIDAL Nolan",
+            contenu="[démo] Nolan vit désormais à Martigues, sur le secteur de la MDS TEST 02. Merci de répondre "
+                    "à la demande de réaffectation.",
+            priorite="importante", motif="changement_situation", mode_contact="TELEPHONE",
+            motifs_contact=["REAFFECTATION"], date_rappel=self.j + timedelta(days=3))
+        NotePersonnelle.objects.create(
+            beneficiaire=laura, auteur=self.u("as1_mds1"), a_transmettre=True,
+            date_note=maintenant - timedelta(days=4),
+            contenu="[démo] Mila a vu la PMI la semaine dernière. Rappeler la mère pour le rendez-vous de suivi.")
+        NotePersonnelle.objects.create(
+            beneficiaire=laura, auteur=self.u("as1_mds1"), a_transmettre=False,
+            date_note=maintenant - timedelta(days=2),
+            contenu="[démo] Impression personnelle après l'entretien : Laura semble épuisée, à surveiller.")
+        self.stdout.write("✅ Messagerie : demande de réaffectation en attente ; notes personnelles (une transmissible)")
 
     # ------------------------------------------------------------------ archivage RGPD
     def rgpd(self):
@@ -243,7 +272,11 @@ class Command(BaseCommand):
     @transaction.atomic
     def supprimer(self):
         from ru.models import DemandeRelationUsager as DRU
+        from beneficiaire.models_journal import NotePersonnelle
+        from messagerie.models import Message as MessageDemo
         DRU.objects.filter(objet__startswith="[démo]").delete()
+        NotePersonnelle.objects.filter(contenu__startswith="[démo]").delete()
+        MessageDemo.objects.filter(objet__startswith="[démo]").delete()
         from adultevul.models import SituationAdulteVulnerable as SAV
         SAV.objects.filter(faits__startswith="[démo]").delete()
         from AidFi.models.m_generique import DemandeAide
