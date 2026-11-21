@@ -98,6 +98,20 @@ def _titre(demande):
     return f"{b.prenom} {b.nom.upper()} (dossier {demande.pk})"
 
 
+def _enregistrer_envoi(demande):
+    """Papier du dossier envoyé au service de contrôle : les pièces numérisées (pages réelles) et, pour chaque pièce
+    exigée absente de la GED, le minimum de pages du papier à joindre. L'envoi est imprimé : il ne compte donc pas
+    dans les pages évitées."""
+    from logement.models import EnvoiDossier
+    from logement.services import envoi
+    pieces = demande.pieces_justificatives.filter(document_ged__isnull=False).select_related('document_ged')
+    pages_par_code = {}
+    for code, _libelle in PIECES_REQUISES_AFASE:
+        docs = pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,)))
+        pages_par_code[code] = sum(envoi.pages_document(p.document_ged) for p in docs)
+    envoi.enregistrer(demande, "AFASE", demande.mds, EnvoiDossier.IMPRIME, envoi.pages_pieces(pages_par_code))
+
+
 # -----------------------------------------------------------------------------
 # Étapes
 # -----------------------------------------------------------------------------
@@ -123,7 +137,8 @@ def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
                           'motif_renvoi'])
     demande.statut, demande._acteur = 'TRANSMISE_CONTROLE', user
     demande.save(update_fields=['statut'])
-    controleurs = User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE',
+    _enregistrer_envoi(demande)
+    controleurs =User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE',
                                       profils__actif=True).distinct()
     _prevenir(user, controleurs, demande, f"AFASE à contrôler : {_titre(demande)}",
               f"La MDS {demande.mds} transmet l'AFASE n° {demande.pk} accordée pour "

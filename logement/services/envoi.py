@@ -56,6 +56,25 @@ def pages_document(doc):
     return (pages_a4(octets) or 1) if nom.lower().endswith('.pdf') else 1
 
 
+# Pages minimales d'un dossier par type de pièce (codes de PIECES_REQUISES_AFASE). Le papier réel est compté ; ces
+# minimums couvrent les cas où la numérisation n'a qu'une page (un livret de famille fait au moins 4 pages, deux
+# pièces d'identité au moins). Les justificatifs (domicile et motif) comptent 3 pages au minimum à eux deux.
+PAGES_MIN_PAR_PIECE = {'IDENTITE': 2, 'LIVRET_FAMILLE': 4, 'RIB': 1, 'DOMICILE': 1, 'FACTURE_DEVIS': 1}
+JUSTIFICATIFS = ('DOMICILE', 'FACTURE_DEVIS')
+JUSTIFICATIFS_MIN = 3
+
+
+def pages_pieces(pages_par_code):
+    """Pages d'un envoi papier pour les pièces exigées. `pages_par_code` : {code: pages réelles des pièces de ce
+    code (0 si aucune)}. Chaque type compte au moins son minimum ; les justificatifs ensemble au moins 3 pages."""
+    total = sum(max(reel, PAGES_MIN_PAR_PIECE.get(code, 1))
+                for code, reel in pages_par_code.items() if code not in JUSTIFICATIFS)
+    justifs = sum(pages_par_code.get(c, 0) for c in JUSTIFICATIFS)
+    if any(c in pages_par_code for c in JUSTIFICATIFS):
+        total += max(JUSTIFICATIFS_MIN, justifs)
+    return total
+
+
 def lettre_mds(mds):
     from mds.models import MDS
     return "MDSP" if mds and mds.type_mds == MDS.PROXIMITE else "MDST"
