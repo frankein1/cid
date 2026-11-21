@@ -1,6 +1,11 @@
 <!-- templates/core/journal_activite.html -->
 {% extends "base.html" %}
 {% block title %}Journal d'activité{% endblock %}
+{% block retour %}
+{% if beneficiaire %}
+<a href="{% url 'beneficiaire:detail_beneficiaire' beneficiaire.code_interne %}" class="inline-flex items-center gap-1 text-sm text-blue-700 hover:underline mb-4"><i class="fas fa-arrow-left"></i> Retour à la fiche de l'usager</a>
+{% endif %}
+{% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 py-8 space-y-5">
     <div class="flex flex-wrap justify-between items-start gap-3">

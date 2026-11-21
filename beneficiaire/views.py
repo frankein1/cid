@@ -107,6 +107,9 @@ def user_peut_agir_sur_beneficiaire(user, beneficiaire):
 @login_required
 def liste_beneficiaires(request):
     """Recherche multicritère de bénéficiaires."""
+    # Liste complète retirée (choix de Fred) : toute recherche passe par l'annuaire, qui montre aussi les doublons.
+    from django.shortcuts import redirect
+    return redirect('beneficiaire:annuaire')
     nom = request.GET.get('nom', '').strip()
     prenom = request.GET.get('prenom', '').strip()
     identifiant = request.GET.get('identifiant', '').strip()
