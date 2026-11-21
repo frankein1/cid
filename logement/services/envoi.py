@@ -102,7 +102,8 @@ def envoyer_mail(destinataires, objet, message, pdf, nom_pdf, documents, reply_t
     """Envoie le PDF et les pièces de la GED ; retourne la liste des pièces jointes réellement attachées."""
     m = EmailMessage(subject=objet, body=message, from_email=settings.DEFAULT_FROM_EMAIL, to=destinataires,
                      reply_to=[reply_to] if reply_to else None)
-    m.attach(nom_pdf, pdf, 'application/pdf')
+    if pdf:
+        m.attach(nom_pdf, pdf, 'application/pdf')
     jointes = []
     for doc in documents:
         c = contenu_document(doc)

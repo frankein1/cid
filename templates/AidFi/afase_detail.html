@@ -198,6 +198,9 @@
                     {% if can_transmettre %}
                     <form method="post" action="{% url 'AidFi:afase_transmettre' demande.id %}" class="space-y-2 text-sm border-t pt-3">
                         {% csrf_token %}
+                        <p class="font-semibold">Envoi au service de contrôle :</p>
+                        <label class="flex items-center gap-2"><input type="radio" name="mode_envoi" value="MAIL" checked> par mail à l'UAGAF (pièces jointes de la GED)</label>
+                        <label class="flex items-center gap-2"><input type="radio" name="mode_envoi" value="IMPRIME"> imprimé (si l'UAGAF l'exige)</label>
                         <p class="font-semibold">Paiement à :</p>
                         <label class="flex items-center gap-2"><input type="radio" name="paiement_a" value="FAMILLE" {% if decision.paiement_a != "ORGANISME" %}checked{% endif %}> la famille (RIB de la famille)</label>
                         <label class="flex items-center gap-2"><input type="radio" name="paiement_a" value="ORGANISME" {% if decision.paiement_a == "ORGANISME" %}checked{% endif %}> un organisme (CLSH, colonie, cantine… : son RIB)</label>

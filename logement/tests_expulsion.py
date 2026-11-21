@@ -177,7 +177,8 @@ class AnnuaireEtRattachementTests(_Base):
         r = c.get("/beneficiaire/annuaire/?nom=martin&prenom=cla")      # nom de naissance + prénom
         self.assertContains(r, "EX-1")
         self.assertContains(r, "MDS ESSAI")
-        self.assertContains(r, "Marseille")
+        self.assertContains(r, "Port-de-Bouc")                          # ville de résidence, pas le lieu de naissance
+        self.assertNotContains(r, "Marseille")
         self.assertNotContains(r, "3 rue C")                            # pas d'adresse
         self.assertNotContains(r, "Ouvrir la fiche")
         self.assertContains(c.get("/beneficiaire/annuaire/?caf=1234567"), "EX-1")

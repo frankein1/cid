@@ -320,3 +320,5 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "ne-pas-repondre@cid.invalid")
+# Adresses de l'UAGAF pour les AFASE envoyées par mail (séparées par des virgules) ; à défaut, les agents du service
+AFASE_UAGAF_EMAILS = [e.strip() for e in os.environ.get("AFASE_UAGAF_EMAILS", "").split(",") if e.strip()]

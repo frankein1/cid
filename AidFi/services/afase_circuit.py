@@ -98,18 +98,52 @@ def _titre(demande):
     return f"{b.prenom} {b.nom.upper()} (dossier {demande.pk})"
 
 
-def _enregistrer_envoi(demande):
-    """Papier du dossier envoyé au service de contrôle : les pièces numérisées (pages réelles) et, pour chaque pièce
-    exigée absente de la GED, le minimum de pages du papier à joindre. L'envoi est imprimé : il ne compte donc pas
-    dans les pages évitées."""
-    from logement.models import EnvoiDossier
+def _pieces_et_pages(demande):
+    """(documents de la GED joints au dossier, pages d'un envoi papier ou par mail : pièces réelles, au minimum
+    par type de pièce)."""
     from logement.services import envoi
     pieces = demande.pieces_justificatives.filter(document_ged__isnull=False).select_related('document_ged')
-    pages_par_code = {}
+    pages_par_code, documents = {}, []
     for code, _libelle in PIECES_REQUISES_AFASE:
-        docs = pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,)))
+        docs = list(pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,))))
+        documents += [p.document_ged for p in docs]
         pages_par_code[code] = sum(envoi.pages_document(p.document_ged) for p in docs)
-    envoi.enregistrer(demande, "AFASE", demande.mds, EnvoiDossier.IMPRIME, envoi.pages_pieces(pages_par_code))
+    return documents, envoi.pages_pieces(pages_par_code)
+
+
+def _adresses_uagaf():
+    """Adresses de l'UAGAF : AFASE_UAGAF_EMAILS (variable d'environnement), sinon les agents du service de contrôle."""
+    from django.conf import settings
+    from core.models import User
+    if getattr(settings, 'AFASE_UAGAF_EMAILS', None):
+        return list(settings.AFASE_UAGAF_EMAILS)
+    return list(User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE', profils__actif=True)
+                .exclude(email='').values_list('email', flat=True).distinct())
+
+
+def _envoyer_dossier(demande, user, mode):
+    """Envoi du dossier au service de contrôle ; enregistre l'envoi (pages évitées si envoi par mail)."""
+    from logement.models import EnvoiDossier
+    from logement.services import envoi
+    documents, pages = _pieces_et_pages(demande)
+    if mode == EnvoiDossier.MAIL:
+        if not envoi.mail_configure():
+            raise CircuitErreur("La messagerie de CID n'est pas réglée : choisissez l'envoi imprimé.")
+        destinataires = _adresses_uagaf()
+        if not destinataires:
+            raise CircuitErreur("Aucune adresse de l'UAGAF n'est réglée (variable AFASE_UAGAF_EMAILS).")
+        d = demande.decision
+        objet = envoi.objet_mail(demande.mds, f"AFASE n° {demande.pk}", demande.beneficiaire)
+        message = (f"Dossier AFASE complet, transmis par {user.get_full_name() or user.username}.\n"
+                   f"Montant accordé : {d.montant_accorde} € ; paiement à : {d.get_paiement_a_display()}"
+                   f"{' – ' + d.organisme_paiement if d.organisme_paiement else ''}.\n"
+                   f"Pièces jointes : {len(documents)} document(s), environ {pages} page(s).")
+        try:
+            envoi.envoyer_mail(destinataires, objet, message, None, None, documents,
+                               reply_to=demande.mds.email if demande.mds else None)
+        except Exception as e:                                       # noqa: BLE001
+            raise CircuitErreur(f"L'envoi par mail à l'UAGAF a échoué : {e}") from e
+    envoi.enregistrer(demande, "AFASE", demande.mds, mode, pages)
 
 
 # -----------------------------------------------------------------------------
@@ -117,7 +151,7 @@ def _enregistrer_envoi(demande):
 # -----------------------------------------------------------------------------
 
 @transaction.atomic
-def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
+def transmettre(demande, user, paiement_a, organisme, identites_confirmees, mode=None):
     from core.models import User
     if not peut_transmettre(user, demande):
         raise CircuitErreur("Ce dossier ne peut pas être transmis.")
@@ -137,7 +171,8 @@ def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
                           'motif_renvoi'])
     demande.statut, demande._acteur = 'TRANSMISE_CONTROLE', user
     demande.save(update_fields=['statut'])
-    _enregistrer_envoi(demande)
+    from logement.models import EnvoiDossier
+    _envoyer_dossier(demande, user, mode or EnvoiDossier.MAIL)
     controleurs =User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE',
                                       profils__actif=True).distinct()
     _prevenir(user, controleurs, demande, f"AFASE à contrôler : {_titre(demande)}",
