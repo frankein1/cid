@@ -8,6 +8,7 @@
 
 La statistique est collective (« nous avons économisé N pages par rapport aux anciens usages ») : par MDS et pour
 le Département, jamais par agent (choix de Fred, 8/11/2026)."""
+import csv
 import io
 
 from django.conf import settings
@@ -68,6 +69,35 @@ def compter(code, pages_dossier, pages_pieces):
     r = regle(code)
     min_dossier, min_pieces = (r.pages_dossier, r.pages_pieces_jointes) if r else (0, 0)
     return max(min_dossier, pages_dossier), max(min_pieces, pages_pieces)
+
+
+COLONNES_REGLES = ('code', 'libelle', 'pages_dossier', 'pages_pieces_jointes')
+
+
+def importer_regles(texte):
+    """Importe le minimum de pages par type depuis le texte d'un CSV (séparateur « ; »). Une ligne existante est mise
+    à jour, une nouvelle créée ; les autres lignes ne sont pas supprimées. Retourne (créés, mis à jour) ; lève
+    ValueError avec un message lisible si le fichier est invalide (rien n'est alors enregistré)."""
+    from logement.models import ReglePagesEnvoi
+    lignes = list(csv.DictReader(io.StringIO(texte), delimiter=';'))
+    if not lignes or any(c not in lignes[0] for c in COLONNES_REGLES):
+        raise ValueError("En-tête attendu : " + ";".join(COLONNES_REGLES))
+    valides = []
+    for n, ligne in enumerate(lignes, start=2):
+        try:
+            code = ligne['code'].strip().upper()
+            dossier, pieces = int(ligne['pages_dossier']), int(ligne['pages_pieces_jointes'])
+            if not code or min(dossier, pieces) < 0:
+                raise ValueError
+        except (ValueError, TypeError, AttributeError):
+            raise ValueError(f"Ligne {n} invalide : code vide ou pages non entières positives.")
+        valides.append((code, ligne['libelle'].strip(), dossier, pieces))
+    crees = maj = 0
+    for code, libelle, dossier, pieces in valides:
+        _, cree = ReglePagesEnvoi.objects.update_or_create(code=code, defaults={
+            'libelle': libelle, 'pages_dossier': dossier, 'pages_pieces_jointes': pieces})
+        crees, maj = crees + cree, maj + (not cree)
+    return crees, maj
 
 
 def pages_documents(documents):
