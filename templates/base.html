@@ -51,7 +51,6 @@
                                 <i class="fas fa-chevron-down ml-1 text-xs"></i>
                             </button>
                             <div id="ben-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                <a href="{% url 'beneficiaire:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Liste complète</a>
                                 <a href="{% url 'beneficiaire:annuaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rechercher / créer un usager</a>
                                 <a href="{% url 'beneficiaire:annuaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Annuaire (toutes MDS)</a>
                             </div>
@@ -351,7 +350,6 @@
                 {% endif %}
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Bénéficiaires</p>
-                <a href="{% url 'beneficiaire:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-users mr-2 w-4"></i>Liste complète</a>
                 <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-plus mr-2 w-4"></i>Rechercher / créer un usager</a>
                 <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-address-book mr-2 w-4"></i>Annuaire (toutes MDS)</a>
                 {% endif %}
@@ -454,6 +452,11 @@
     {% endif %}
 
     <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block retour %}
+        {% if request.path != '/' %}
+        <a href="#" data-retour class="inline-flex items-center gap-1 text-sm text-blue-700 hover:underline mb-4"><i class="fas fa-arrow-left"></i> Retour</a>
+        {% endif %}
+        {% endblock %}
         {% block content %}{% endblock %}
     </main>
 
@@ -518,5 +521,13 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+<script>
+document.querySelectorAll('[data-retour]').forEach(function (a) {
+  a.addEventListener('click', function (e) {
+    e.preventDefault();
+    if (window.history.length > 1) { window.history.back(); } else { window.location.href = '/'; }
+  });
+});
+</script>
 </body>
 </html>

@@ -120,7 +120,7 @@ class Command(BaseCommand):
                   # clés de recherche de l'annuaire : recalculées sur les valeurs fictives (sinon le vrai nom
                   # resterait lisible sous sa forme phonétique)
                   "nom_phonetique", "nom_naissance_phonetique", "prenom_phonetique", "telephone_mobile_cle",
-                  "telephone_fixe_cle"]
+                  "telephone_fixe_cle", "adresse_cle"]
         champs = [c for c in champs if any(f.name == c for f in B._meta.concrete_fields)]
         for b in B._base_manager.all().iterator():
             b.nom = _choix(NOMS, self.sel + (b.nom or "").upper())

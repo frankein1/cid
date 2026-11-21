@@ -19,6 +19,8 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 
+from core.phonetique import cle, norme
+
 from core.journal import journaliser
 
 from .models import Beneficiaire
@@ -46,15 +48,51 @@ def effacer_recherche(request):
     request.session.pop(CLE_SESSION_RECHERCHE, None)
 
 
+def _distance(a, b):
+    """Distance de Levenshtein : nombre de lettres à ajouter, retirer ou changer pour passer de a à b."""
+    if a == b:
+        return 0
+    precedente = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        courante = [i]
+        for j, cb in enumerate(b, 1):
+            courante.append(min(precedente[j] + 1, courante[j - 1] + 1, precedente[j - 1] + (ca != cb)))
+        precedente = courante
+    return precedente[-1]
+
+
+def _nom_proche(demande, trouve):
+    """Faute de frappe tolérée (moop → monop) ou même prononciation (Frederik → Frédéric). Une lettre de différence
+    jusqu'à 5 caractères, deux au-delà. Un nom absent ne correspond à rien."""
+    a, b = norme(demande), norme(trouve)
+    if not a or not b:
+        return False
+    if cle(demande) == cle(trouve):
+        return True
+    return _distance(a, b) <= (1 if len(a) <= 5 else 2)
+
+
+def _date_proche(demandee, trouvee):
+    """Date identique, jour et mois inversés, ou un seul chiffre différent (ex. 1987 pour 1977 ; 02/03 pour 03/02)."""
+    if demandee == trouvee:
+        return True
+    if demandee.year == trouvee.year and demandee.day == trouvee.month and demandee.month == trouvee.day:
+        return True
+    a, b = demandee.strftime("%Y%m%d"), trouvee.strftime("%Y%m%d")
+    return sum(x != y for x, y in zip(a, b)) == 1
+
+
 def rechercher(code="", caf="", telephone="", nom="", prenom="", date_naissance=None, adresse=""):
     """Renvoie (résultats, message). Critères insuffisants → aucun résultat et une explication.
 
     Seuls, un identifiant exact suffit : code usager CID, n° CAF ou téléphone. Sinon il faut deux éléments parmi nom,
-    prénom, date de naissance et adresse (même incomplète : « rue montmirail »). Après les réponses exactes viennent
-    les « orthographes proches » (même prononciation : Frederik → Frédéric, Frédérique…), marquées `proche`."""
-    from core.phonetique import chiffres, cle
+    prénom, date de naissance et adresse (même incomplète : « rue montmirail », « port de bouc »). Les réponses exactes
+    viennent d'abord ; s'il en reste de la place, les réponses « proches » (faute de frappe, nom à la même
+    prononciation, date à un chiffre près ou jour et mois inversés) suivent, marquées `proche`. La ville est comparée
+    sans accents, tirets ni espaces. L'agent vérifie toujours la date de naissance."""
+    from core.phonetique import chiffres
     code, caf, nom, prenom = (code or "").strip().upper(), (caf or "").strip(), (nom or "").strip(), (prenom or "").strip()
-    mots_adresse = [m for m in (adresse or "").replace(",", " ").split() if len(m) >= 2][:6]
+    mots_adresse = [m for m in (norme(x) for x in (adresse or "").replace(",", " ").split()) if len(m) >= 2][:6]
     tel = chiffres(telephone)
     qs = Beneficiaire.objects.select_related('mds').exclude(statut='ARCHIVE')
     noms = len(nom) >= 2, len(prenom) >= 2
@@ -65,29 +103,36 @@ def rechercher(code="", caf="", telephone="", nom="", prenom="", date_naissance=
     elif len(tel) == 9:
         qs, noms = qs.filter(Q(telephone_mobile_cle=tel) | Q(telephone_fixe_cle=tel)), (False, False)
     elif sum((*noms, bool(date_naissance), bool(mots_adresse))) >= 2:
-        if date_naissance:
-            qs = qs.filter(date_naissance=date_naissance)
         for m in mots_adresse:
-            qs = qs.filter(Q(adresse__icontains=m) | Q(ville__icontains=m) | Q(code_postal=m))
+            qs = qs.filter(Q(adresse_cle__contains=m) | Q(ville_cle__contains=m) | Q(code_postal=m))
     else:
         return [], ("Indiquez le code usager CID, le n° CAF ou le téléphone, ou deux éléments parmi : nom, prénom, "
                     "date de naissance, adresse.")
     exacts = qs
+    if date_naissance:
+        exacts = exacts.filter(date_naissance=date_naissance)
     if noms[0]:
         exacts = exacts.filter(Q(nom__icontains=nom) | Q(nom_naissance__icontains=nom))
     if noms[1]:
         exacts = exacts.filter(prenom__icontains=prenom)
     resultats = list(exacts.order_by('nom', 'prenom')[:MAX_RESULTATS + 1])
-    if any(noms) and len(resultats) <= MAX_RESULTATS:
-        proches = qs.exclude(pk__in=[b.pk for b in resultats])
-        if noms[0] and cle(nom):
-            proches = proches.filter(Q(nom_phonetique=cle(nom)) | Q(nom_naissance_phonetique=cle(nom))
-                                     | Q(nom__icontains=nom) | Q(nom_naissance__icontains=nom))
-        if noms[1] and cle(prenom):
-            proches = proches.filter(Q(prenom_phonetique=cle(prenom)) | Q(prenom__icontains=prenom))
-        for b in proches.order_by('nom', 'prenom')[:MAX_RESULTATS + 1 - len(resultats)]:
-            b.proche = True
-            resultats.append(b)
+    if (any(noms) or date_naissance) and len(resultats) <= MAX_RESULTATS:
+        deja = {b.pk for b in resultats}
+        retenus = []
+        for pk, n, nn, p, d in qs.exclude(pk__in=deja).values_list(
+                'pk', 'nom', 'nom_naissance', 'prenom', 'date_naissance').iterator():
+            if noms[0] and not (_nom_proche(nom, n) or _nom_proche(nom, nn or "")):
+                continue
+            if noms[1] and not _nom_proche(prenom, p):
+                continue
+            if date_naissance and not (d and _date_proche(date_naissance, d)):
+                continue
+            retenus.append(pk)
+        if retenus:
+            for b in Beneficiaire.objects.select_related('mds').filter(pk__in=retenus).order_by('nom', 'prenom')[
+                    :MAX_RESULTATS + 1 - len(resultats)]:
+                b.proche = True
+                resultats.append(b)
     if len(resultats) > MAX_RESULTATS:
         return resultats[:MAX_RESULTATS], f"Plus de {MAX_RESULTATS} réponses : précisez la recherche."
     return resultats, "" if resultats else AUCUN_RESULTAT

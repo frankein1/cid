@@ -46,3 +46,10 @@ def chiffres(telephone):
     """Numéro de téléphone réduit à ses 9 derniers chiffres (+33 6…, 06 …, 06.…, 0033… se comparent)."""
     d = re.sub(r"\D", "", telephone or "")
     return d[-9:] if len(d) >= 9 else d
+
+
+def norme(texte):
+    """Forme comparable d'un texte libre (ville, adresse) : sans accents, en minuscules, sans tirets, espaces ni
+    ponctuation. « Port-de-Bouc », « port de bouc » et « portdebouc » donnent « portdebouc »."""
+    t = unicodedata.normalize("NFKD", texte or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", t.lower())

@@ -119,3 +119,49 @@ class AnnuaireCreationTests(TestCase):
         self.assertEqual(jours_ouvres_apres(vendredi, 3), date(2026, 11, 18))  # vendredi + 3 jours ouvrés = mercredi
         lundi = date(2026, 11, 9)
         self.assertEqual(jours_ouvres_apres(lundi, 3), date(2026, 11, 12))
+
+
+class RechercheToleranteTests(TestCase):
+    """Fautes de frappe sur le nom et le prénom, date à un chiffre près (ou jour et mois inversés), villes écrites
+    avec ou sans tirets, espaces ou accents."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from datetime import date
+        from mds.models import MDS
+        mds = MDS.objects.create(code_mds="TST01", nom="MDS TEST 01", adresse="1 rue A", code_postal="13110", ville="Port-de-Bouc")
+        cls.monop = Beneficiaire.objects.create(
+            nom="MONOP", prenom="Jean", date_naissance=date(1977, 3, 2), mds=mds,
+            ville="Port-de-Bouc", adresse="12 rue de la Mer", code_postal="13110")
+        Beneficiaire.objects.create(
+            nom="DUPONT", prenom="Jeanne", date_naissance=date(1990, 1, 1), mds=mds,
+            ville="Marseille", adresse="3 avenue du Prado", code_postal="13008")
+
+    def test_faute_de_frappe_sur_le_nom(self):
+        from beneficiaire.views_annuaire import rechercher
+        resultats, _ = rechercher(nom="moop", prenom="jean")
+        self.assertIn(self.monop, resultats)
+        self.assertTrue(resultats[0].proche)
+
+    def test_date_a_un_chiffre_pres(self):
+        from datetime import date
+        from beneficiaire.views_annuaire import rechercher
+        resultats, _ = rechercher(nom="monop", date_naissance=date(1971, 3, 2))
+        self.assertIn(self.monop, resultats)
+
+    def test_jour_et_mois_inverses(self):
+        from datetime import date
+        from beneficiaire.views_annuaire import rechercher
+        resultats, _ = rechercher(nom="monop", date_naissance=date(1977, 2, 3))
+        self.assertIn(self.monop, resultats)
+
+    def test_ville_sans_tirets_ni_espaces(self):
+        from beneficiaire.views_annuaire import rechercher
+        for ville in ("port de bouc", "portdebouc", "Port-de-Bouc", "Port-De-Bouc"):
+            resultats, _ = rechercher(nom="monop", adresse=ville)
+            self.assertIn(self.monop, resultats, ville)
+
+    def test_faute_ne_fait_pas_tout_remonter(self):
+        from beneficiaire.views_annuaire import rechercher
+        resultats, _ = rechercher(nom="zzzz", prenom="Yann")
+        self.assertEqual(resultats, [])
