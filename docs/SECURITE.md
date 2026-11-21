@@ -33,6 +33,18 @@ Les modules à accès restreint (protection de l'enfance, adultes vulnérables, 
 - Les **documents de la GED** sont chiffrés en AES-256-GCM, avec une clé par fichier (`CHIFFREMENT_GED.md`). La clé maîtresse est confiée à la DSI (variable d'environnement ou gestionnaire de clés). Sans elle, les fichiers ne sont pas lisibles.
 - Le transport passe par HTTPS en production (à la charge de l'hébergeur).
 
+## Stockage des documents
+
+Ordre de choix, dans `ged/storage.py` :
+
+1. **pCloud** (WebDAV), dès que `PCLOUD_USER` et `PCLOUD_PASSWORD` sont définis. C'est le mode de production. Une erreur de pCloud remonte à l'utilisateur : il n'y a aucun repli.
+2. **Stockage temporaire** (`/tmp/ged_docs`) sur Render si pCloud n'est pas configuré. **Ces fichiers disparaissent au redémarrage ou au redéploiement de l'instance.**
+3. **SeaweedFS** dans les autres cas. En cas d'échec, le code bascule **en silence** sur le stockage temporaire (avertissement dans les journaux seulement).
+
+SeaweedFS n'est donc pas utilisé en production : il reste une option pour un hébergement propre. Les tests remplacent le stockage par un dossier temporaire (`ged/tests_securite.py`).
+
+Une vérification est à faire avant toute mise en service : pCloud doit être configuré sur l'instance, sinon les documents seraient écrits dans le stockage temporaire.
+
 ## Conservation et RGPD
 
 - Durées de conservation par type de donnée : `RGPD_DUREES.md`.

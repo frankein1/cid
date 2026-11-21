@@ -28,7 +28,7 @@ Variables utiles : `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, base PostgreSQL : 'NA
 
 - **Django** : une application par domaine (`beneficiaire`, `ged`, `planning`, `insertion`, `logement`, `protection_enfance`, `adultevul`, `ru`, `connecteurs`, etc.). `core` contient les utilisateurs, profils, capacités, journal et outils communs.
 - **Base** : PostgreSQL.
-- **Documents** : GED chiffrée (`docs/CHIFFREMENT_GED.md`), stockage SeaweedFS ou équivalent.
+- **Documents** : GED chiffrée (`docs/CHIFFREMENT_GED.md`), stockage pCloud en production (SeaweedFS en option, stockage temporaire en secours : voir `docs/SECURITE.md`).
 - **Calcul des droits** : moteur OpenFisca, installé dans un environnement séparé à cause de ses dépendances (`requirements-openfisca.txt`, `docs/SIMULATION_DROITS.md`).
 - **Intégrations** : ProConnect, API Particulier (bac à sable), RDV Service Public (passerelle désactivée par défaut).
 
