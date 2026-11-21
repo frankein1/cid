@@ -154,8 +154,8 @@ class LogementCOPPTests(TestCase):
         r = c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail", "destinataire": "copp@exemple.fr"})
         self.assertContains(r, "J'ai envoyé le dossier par mail")
         self.assertFalse(EnvoiDossier.objects.exists())
-        c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail_confirme", "pages": "6"})
-        self.assertEqual(EnvoiDossier.objects.get().pages, 6)
+        c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail_confirme"})
+        self.assertEqual(EnvoiDossier.objects.count(), 1)              # comptées d'après le PDF, pas d'après un champ
 
     def test_fsl_visa_imprimer_et_signature(self):
         self.client_de(self.ts).post("/logement/fsl/nouvelle/CO-1/", {"type_aide": "ACCES"})

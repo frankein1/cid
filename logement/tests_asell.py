@@ -60,7 +60,7 @@ class AsellTests(_Base):
                                                                "objet": "Orientation", "message": "Bonjour"})
         a.refresh_from_db()
         self.assertEqual((a.statut, len(mail.outbox)), (A.ENVOYEE, 1))
-        self.assertTrue(EnvoiDossier.objects.filter(nature="ASELL", mode="MAIL").exists())
+        self.assertTrue(EnvoiDossier.objects.filter(nature="Orientation ASELL", mode="MAIL").exists())
         self.assertEqual(self.ts_c.post(f"/logement/asell/{a.pk}/", {"evaluation": "x"}).status_code, 403)   # envoyée
         self.ts_c.post(f"/logement/asell/{a.pk}/action/", {"action": "reponse", "reponse": "ACCORD", "detail": "Début en décembre"})
         a.refresh_from_db()

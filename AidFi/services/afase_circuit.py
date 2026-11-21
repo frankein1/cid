@@ -98,17 +98,14 @@ def _titre(demande):
     return f"{b.prenom} {b.nom.upper()} (dossier {demande.pk})"
 
 
-def _pieces_et_pages(demande):
-    """(documents de la GED joints au dossier, pages d'un envoi papier ou par mail : pièces réelles, au minimum
-    par type de pièce)."""
+def _pieces_et_documents(demande):
+    """(documents de la GED joints au dossier, pages réelles de ces pièces)."""
     from logement.services import envoi
     pieces = demande.pieces_justificatives.filter(document_ged__isnull=False).select_related('document_ged')
-    pages_par_code, documents = {}, []
+    documents = []
     for code, _libelle in PIECES_REQUISES_AFASE:
-        docs = list(pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,))))
-        documents += [p.document_ged for p in docs]
-        pages_par_code[code] = sum(envoi.pages_document(p.document_ged) for p in docs)
-    return documents, envoi.pages_pieces(pages_par_code)
+        documents += [p.document_ged for p in pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,)))]
+    return documents, envoi.pages_documents(documents)
 
 
 def _adresses_uagaf():
@@ -125,7 +122,7 @@ def _envoyer_dossier(demande, user, mode):
     """Envoi du dossier au service de contrôle ; enregistre l'envoi (pages évitées si envoi par mail)."""
     from logement.models import EnvoiDossier
     from logement.services import envoi
-    documents, pages = _pieces_et_pages(demande)
+    documents, pages_pieces = _pieces_et_documents(demande)
     if mode == EnvoiDossier.MAIL:
         if not envoi.mail_configure():
             raise CircuitErreur("La messagerie de CID n'est pas réglée : choisissez l'envoi imprimé.")
@@ -137,13 +134,13 @@ def _envoyer_dossier(demande, user, mode):
         message = (f"Dossier AFASE complet, transmis par {user.get_full_name() or user.username}.\n"
                    f"Montant accordé : {d.montant_accorde} € ; paiement à : {d.get_paiement_a_display()}"
                    f"{' – ' + d.organisme_paiement if d.organisme_paiement else ''}.\n"
-                   f"Pièces jointes : {len(documents)} document(s), environ {pages} page(s).")
+                   f"Pièces jointes : {len(documents)} document(s).")
         try:
             envoi.envoyer_mail(destinataires, objet, message, None, None, documents,
                                reply_to=demande.mds.email if demande.mds else None)
         except Exception as e:                                       # noqa: BLE001
             raise CircuitErreur(f"L'envoi par mail à l'UAGAF a échoué : {e}") from e
-    envoi.enregistrer(demande, "AFASE", demande.mds, mode, pages)
+    envoi.enregistrer(demande, "AFASE", demande.mds, mode, 0, pages_pieces)   # l'AFASE n'a pas de PDF : dossier = 0
 
 
 # -----------------------------------------------------------------------------

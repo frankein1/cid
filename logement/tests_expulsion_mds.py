@@ -104,7 +104,7 @@ class ExpulsionMDSTests(_Base):
         self.assertEqual(g.statut, G.ENVOYE)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].reply_to, [self.mds.email] if self.mds.email else [])
-        self.assertTrue(EnvoiDossier.objects.filter(nature="DSF", mode="MAIL").exists())
+        self.assertTrue(EnvoiDossier.objects.filter(nature="Diagnostic social et financier (expulsion)", mode="MAIL").exists())
         self.assertTrue(EtapeExpulsion.objects.filter(dossier=self.d, type_etape="DSF").exists())
 
     def test_carence_menage_inconnu_de_cid(self):

@@ -46,8 +46,8 @@ class EnvoiAFASETests(SimpleTestCase):
         self.assertIn("AFASE n° 7", objet)
         self.assertIsNone(pdf)
         self.assertEqual(documents, [])
-        # Aucune pièce réelle : minimums 4 + 2 + 1 + 3 (justificatifs) = 10 pages, évitées car envoyées par mail
-        self.assertEqual(enregistrer.call_args.args[3:], ('MAIL', 10))
+        # Aucune pièce réelle : le minimum du CSV (AFASE : dossier 4 + pièces 5) est compté à l'enregistrement
+        self.assertEqual((enregistrer.call_args.args[1], enregistrer.call_args.args[3:]), ('AFASE', ('MAIL', 0, 0)))
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', AFASE_UAGAF_EMAILS=[])
     def test_sans_adresse_uagaf_refus_explicite(self):
@@ -59,4 +59,4 @@ class EnvoiAFASETests(SimpleTestCase):
     def test_envoi_imprime_ne_demande_pas_de_messagerie(self):
         with mock.patch('logement.services.envoi.enregistrer') as enregistrer:
             circuit._envoyer_dossier(_dossier(), USER, 'IMPRIME')
-        self.assertEqual(enregistrer.call_args.args[3:], ('IMPRIME', 10))
+        self.assertEqual((enregistrer.call_args.args[1], enregistrer.call_args.args[3:]), ('AFASE', ('IMPRIME', 0, 0)))

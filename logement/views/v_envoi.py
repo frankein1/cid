@@ -51,6 +51,7 @@ class _Dossier:
             dossier = obj.dossier
             carence = obj.type_document == DiagnosticExpulsion.CARENCE
             self.libelle = "Bordereau de carence" if carence else "DSF"
+            self.code_envoi = "CARENCE" if carence else "DSF"
             audience = f" – audience du {dossier.date_audience:%d/%m/%Y}" if dossier.date_audience else ""
             self.intitule = ("Bordereau de carence" if carence else "Diagnostic social et financier") + audience
             self.retour = reverse('logement:diagnostic_detail', args=[obj.pk])
@@ -105,6 +106,11 @@ class _Dossier:
             self.nom_personne = obj.nom_complet
         if self.b is not None:
             self.nom_personne = f"{self.b.nom.upper()} {self.b.prenom}"
+
+    @property
+    def code(self):
+        """Code du type de dossier dans le CSV des minimums de pages (FSL, COPP, DSF…)."""
+        return getattr(self, 'code_envoi', self.nature.upper())
 
     def peut_envoyer(self, user):
         if self.nature == 'hebergement':
@@ -221,16 +227,17 @@ def envoi_dossier(request, nature, pk):
                 dos.obj.tracer(request.user, "Envoi sans pièce(s)", f"{' ; '.join(manque)} — {justif}")
                 dos.obj.save()
         pdf = dos.pdf()
-        pages = envoi.pages_a4(pdf) + sum(envoi.pages_document(d) for d in joints)
+        pages_dossier, pages_pieces = envoi.pages_a4(pdf), envoi.pages_documents(joints)
+        pages = sum(envoi.compter(dos.code, pages_dossier, pages_pieces))
         if action == 'imprimer':
             dos.marquer_envoye(request.user, EnvoiDossier.IMPRIME)
-            envoi.enregistrer(dos.obj, dos.libelle, dos.mds, EnvoiDossier.IMPRIME, pages)
+            envoi.enregistrer(dos.obj, dos.code, dos.mds, EnvoiDossier.IMPRIME, pages_dossier, pages_pieces, dos.libelle)
             messages.success(request, f"Envoi papier enregistré ({pages} pages). Le PDF s'ouvre pour l'impression.")
             return redirect(dos.retour + "?imprimer=1")
         if action == 'mail_confirme':
             if dos.envoyable:
                 dos.marquer_envoye(request.user, EnvoiDossier.MAIL)
-            envoi.enregistrer(dos.obj, dos.libelle, dos.mds, EnvoiDossier.MAIL, int(request.POST.get('pages') or pages))
+            envoi.enregistrer(dos.obj, dos.code, dos.mds, EnvoiDossier.MAIL, pages_dossier, pages_pieces, dos.libelle)
             messages.success(request, "Envoi par mail enregistré : merci pour le papier économisé.")
             return redirect(dos.retour)
         if action == 'mail':
@@ -252,7 +259,7 @@ def envoi_dossier(request, nature, pk):
                     messages.error(request, f"L'envoi a échoué : {e}")
                 else:
                     dos.marquer_envoye(request.user, EnvoiDossier.MAIL)
-                    envoi.enregistrer(dos.obj, dos.libelle, dos.mds, EnvoiDossier.MAIL, pages)
+                    envoi.enregistrer(dos.obj, dos.code, dos.mds, EnvoiDossier.MAIL, pages_dossier, pages_pieces, dos.libelle)
                     messages.success(request, f"Dossier envoyé par mail à {', '.join(destinataires)} ({pages} pages "
                                               f"non imprimées).")
                     return redirect(dos.retour)
