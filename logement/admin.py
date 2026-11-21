@@ -15,6 +15,7 @@ from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, Convoca
                      FormulaireOfficiel, GestionnaireFSL, SaisineCOPP)
 from .models import OperateurASELL, OrientationASELL
 from .models import RecoursDALO
+from .models import ReglePagesEnvoi
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
                      RappelHebergement, SignalementHabitatIndigne, StructureHebergement)
 
@@ -123,6 +124,14 @@ class SaisineCOPPAdmin(admin.ModelAdmin):
 class DemandeLogementSocialAdmin(admin.ModelAdmin):
     list_display = ['beneficiaire', 'nud', 'date_creation', 'dalo_depose', 'dalo_etat']
     raw_id_fields = ['beneficiaire']
+
+
+@admin.register(ReglePagesEnvoi)
+class ReglePagesEnvoiAdmin(admin.ModelAdmin):
+    """Minimums de pages par type de dossier : importés depuis logement/donnees/pages_envois.csv (commande
+    importer_pages_envois) ; modifiables ici pour chaque structure."""
+    list_display = ['code', 'libelle', 'pages_dossier', 'pages_pieces_jointes']
+    search_fields = ['code', 'libelle']
 
 
 @admin.register(EnvoiDossier)

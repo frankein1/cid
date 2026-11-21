@@ -19,6 +19,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 
@@ -163,17 +164,30 @@ def liste_beneficiaires(request):
 
 @login_required
 def ajouter_beneficiaire(request):
-    """✅ CORRIGÉ : Vérification capacité + MDS"""
+    """Création d'un usager : uniquement après une recherche concluante dans l'annuaire.
+
+    Le formulaire est prérempli avec les critères recherchés. L'agent doit confirmer que l'usager n'existe pas.
+    Après la création, la recherche est effacée (une recherche = une création) ; si l'agent venait pour un message
+    (`suite=message`), il repart vers la prise de message de l'usager créé.
+    """
+    from .views_annuaire import effacer_recherche, recherche_recente
     if not user_peut_creer(request.user):
         messages.error(request, "Capacité 'peut_creer' requise.")
         return redirect('core:dashboard')
+    if not recherche_recente(request):
+        messages.warning(request, "Recherchez d'abord l'usager dans l'annuaire : la création se fait depuis l'annuaire.")
+        return redirect('beneficiaire:annuaire')
 
+    suite = request.POST.get('suite') or request.GET.get('suite', '')
     if request.method == "POST":
         form = BeneficiaireForm(request.POST)
-        if form.is_valid():
+        confirme = request.POST.get('confirme_creation') == 'oui'
+        if not confirme:
+            messages.error(request, "Confirmez que cet usager n'existe pas dans l'annuaire avant de le créer.")
+        elif form.is_valid():
             benef = form.save(commit=False)
             benef.cree_par = request.user
-            
+
             # ✅ Rattachement automatique à la MDS de l'utilisateur
             from mds.models import UserMDSProfile
             profile = UserMDSProfile.objects.filter(
@@ -181,13 +195,20 @@ def ajouter_beneficiaire(request):
             ).first()
             if profile and profile.mds:
                 benef.mds = profile.mds
-                
+
             benef.save()
-            messages.success(request, f"Bénéficiaire {benef.prenom} {benef.nom} ajouté.")
+            effacer_recherche(request)
+            messages.success(request, f"Bénéficiaire {benef.prenom} {benef.nom} créé.")
+            if suite == 'message':
+                return redirect(reverse('messagerie:nouveau_message_beneficiaire', args=[benef.pk]) + '?prise=1')
             return redirect("beneficiaire:detail_beneficiaire", code_interne=benef.code_interne)
     else:
-        form = BeneficiaireForm()
-    return render(request, "beneficiaire/ajouter_beneficiaire.html", {"form": form})
+        from django.utils.dateparse import parse_date
+        g = request.GET
+        initial = {'nom': g.get('nom', ''), 'prenom': g.get('prenom', ''), 'telephone_mobile': g.get('telephone', ''),
+                   'adresse': g.get('adresse', ''), 'date_naissance': parse_date(g.get('date_naissance', '') or '')}
+        form = BeneficiaireForm(initial={k: v for k, v in initial.items() if v})
+    return render(request, "beneficiaire/ajouter_beneficiaire.html", {"form": form, "suite": suite})
 
 @login_required
 def modifier_beneficiaire(request, code_interne):

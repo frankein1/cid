@@ -120,12 +120,21 @@
                     </div>
                 </div>
 
+                <div class="rounded-md bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+                    <p class="mb-2">La création se fait depuis l'annuaire, après une recherche sans résultat.</p>
+                    <label class="flex items-start gap-2">
+                        <input type="checkbox" name="confirme_creation" value="oui" required class="mt-1">
+                        <span><strong>Souhaitez-vous créer cet usager ?</strong> Je confirme que l'usager n'existe pas dans l'annuaire.</span>
+                    </label>
+                </div>
+                <input type="hidden" name="suite" value="{{ suite }}">
+
                 <div class="flex justify-end space-x-4 pt-6 border-t">
-                    <a href="{% url 'beneficiaire:liste' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        <i class="fas fa-arrow-left mr-2"></i>Retour
+                    <a href="{% url 'beneficiaire:annuaire' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i>Retour à l'annuaire
                     </a>
                     <button type="submit" class="px-6 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 transition">
-                        <i class="fas fa-save mr-2"></i>Enregistrer le bénéficiaire
+                        <i class="fas fa-save mr-2"></i>Créer l'usager
                     </button>
                 </div>
             </form>

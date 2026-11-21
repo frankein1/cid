@@ -204,9 +204,10 @@ def afase_transmettre(request, demande_id):
     if request.method != "POST":
         return HttpResponseForbidden()
     try:
+        mode = "IMPRIME" if request.POST.get("mode_envoi") == "IMPRIME" else "MAIL"
         circuit.transmettre(demande, request.user, request.POST.get("paiement_a"),
-                            request.POST.get("organisme_paiement", ""), request.POST.get("identites") == "on")
-        messages.success(request, "Dossier transmis à l'UAGAF.")
+                            request.POST.get("organisme_paiement", ""), request.POST.get("identites") == "on", mode)
+        messages.success(request, "Dossier transmis à l'UAGAF" + (" par mail." if mode == "MAIL" else " (imprimé)."))
     except circuit.CircuitErreur as e:
         messages.error(request, str(e))
     return redirect("AidFi:afase_detail", demande_id=demande.id)

@@ -98,12 +98,57 @@ def _titre(demande):
     return f"{b.prenom} {b.nom.upper()} (dossier {demande.pk})"
 
 
+def _pieces_et_documents(demande):
+    """(documents de la GED joints au dossier, pages réelles de ces pièces)."""
+    from logement.services import envoi
+    pieces = demande.pieces_justificatives.filter(document_ged__isnull=False).select_related('document_ged')
+    documents = []
+    for code, _libelle in PIECES_REQUISES_AFASE:
+        documents += [p.document_ged for p in pieces.filter(type_piece__in=PIECES_EQUIVALENTES.get(code, (code,)))]
+    return documents, envoi.pages_documents(documents)
+
+
+def _adresses_uagaf():
+    """Adresses de l'UAGAF : AFASE_UAGAF_EMAILS (variable d'environnement), sinon les agents du service de contrôle."""
+    from django.conf import settings
+    from core.models import User
+    if getattr(settings, 'AFASE_UAGAF_EMAILS', None):
+        return list(settings.AFASE_UAGAF_EMAILS)
+    return list(User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE', profils__actif=True)
+                .exclude(email='').values_list('email', flat=True).distinct())
+
+
+def _envoyer_dossier(demande, user, mode):
+    """Envoi du dossier au service de contrôle ; enregistre l'envoi (pages évitées si envoi par mail)."""
+    from logement.models import EnvoiDossier
+    from logement.services import envoi
+    documents, pages_pieces = _pieces_et_documents(demande)
+    if mode == EnvoiDossier.MAIL:
+        if not envoi.mail_configure():
+            raise CircuitErreur("La messagerie de CID n'est pas réglée : choisissez l'envoi imprimé.")
+        destinataires = _adresses_uagaf()
+        if not destinataires:
+            raise CircuitErreur("Aucune adresse de l'UAGAF n'est réglée (variable AFASE_UAGAF_EMAILS).")
+        d = demande.decision
+        objet = envoi.objet_mail(demande.mds, f"AFASE n° {demande.pk}", demande.beneficiaire)
+        message = (f"Dossier AFASE complet, transmis par {user.get_full_name() or user.username}.\n"
+                   f"Montant accordé : {d.montant_accorde} € ; paiement à : {d.get_paiement_a_display()}"
+                   f"{' – ' + d.organisme_paiement if d.organisme_paiement else ''}.\n"
+                   f"Pièces jointes : {len(documents)} document(s).")
+        try:
+            envoi.envoyer_mail(destinataires, objet, message, None, None, documents,
+                               reply_to=demande.mds.email if demande.mds else None)
+        except Exception as e:                                       # noqa: BLE001
+            raise CircuitErreur(f"L'envoi par mail à l'UAGAF a échoué : {e}") from e
+    envoi.enregistrer(demande, "AFASE", demande.mds, mode, 0, pages_pieces)   # l'AFASE n'a pas de PDF : dossier = 0
+
+
 # -----------------------------------------------------------------------------
 # Étapes
 # -----------------------------------------------------------------------------
 
 @transaction.atomic
-def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
+def transmettre(demande, user, paiement_a, organisme, identites_confirmees, mode=None):
     from core.models import User
     if not peut_transmettre(user, demande):
         raise CircuitErreur("Ce dossier ne peut pas être transmis.")
@@ -123,7 +168,9 @@ def transmettre(demande, user, paiement_a, organisme, identites_confirmees):
                           'motif_renvoi'])
     demande.statut, demande._acteur = 'TRANSMISE_CONTROLE', user
     demande.save(update_fields=['statut'])
-    controleurs = User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE',
+    from logement.models import EnvoiDossier
+    _envoyer_dossier(demande, user, mode or EnvoiDossier.MAIL)
+    controleurs =User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE',
                                       profils__actif=True).distinct()
     _prevenir(user, controleurs, demande, f"AFASE à contrôler : {_titre(demande)}",
               f"La MDS {demande.mds} transmet l'AFASE n° {demande.pk} accordée pour "

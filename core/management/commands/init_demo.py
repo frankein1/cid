@@ -210,11 +210,40 @@ class Command(BaseCommand):
             self.ru_demo()
             self.adultevul_demo()
             self.journal()
+            self.messagerie_et_notes()
             from core.demo_presentation import creer as presentation
             presentation(self)
             self.insertion()
             self.rgpd()
         self.stdout.write(self.style.SUCCESS("🎉 Jeu de données fictives créé (voir docs/DONNEES_FICTIVES.md)."))
+
+    # ------------------------------------------------------------------ réaffectation et notes personnelles
+    def messagerie_et_notes(self):
+        """Une demande de réaffectation en attente (la MDS TEST 02 demande VIDAL Nolan à la MDS TEST 01, décision du
+        cadre) et deux notes personnelles d'Agent Social 1 sur PEREZ Laura : l'une suit le dossier, l'autre reste à son
+        compte."""
+        from beneficiaire.models import Beneficiaire
+        from beneficiaire.models_journal import NotePersonnelle
+        from messagerie.models import Message
+        nolan = Beneficiaire.tous.get(code_interne="FAM4-NOL")
+        laura = Beneficiaire.tous.get(code_interne="FAM8-LAU")
+        maintenant = timezone.now()
+        Message.objects.create(
+            expediteur=self.u("as1_mds2"), destinataire=self.cadre, beneficiaire=nolan, mds_demandeuse=self.mds2,
+            objet="[démo] Demande de réaffectation : VIDAL Nolan",
+            contenu="[démo] Nolan vit désormais à Martigues, sur le secteur de la MDS TEST 02. Merci de répondre "
+                    "à la demande de réaffectation.",
+            priorite="importante", motif="changement_situation", mode_contact="TELEPHONE",
+            motifs_contact=["REAFFECTATION"], date_rappel=self.j + timedelta(days=3))
+        NotePersonnelle.objects.create(
+            beneficiaire=laura, auteur=self.u("as1_mds1"), a_transmettre=True,
+            date_note=maintenant - timedelta(days=4),
+            contenu="[démo] Mila a vu la PMI la semaine dernière. Rappeler la mère pour le rendez-vous de suivi.")
+        NotePersonnelle.objects.create(
+            beneficiaire=laura, auteur=self.u("as1_mds1"), a_transmettre=False,
+            date_note=maintenant - timedelta(days=2),
+            contenu="[démo] Impression personnelle après l'entretien : Laura semble épuisée, à surveiller.")
+        self.stdout.write("✅ Messagerie : demande de réaffectation en attente ; notes personnelles (une transmissible)")
 
     # ------------------------------------------------------------------ archivage RGPD
     def rgpd(self):
@@ -243,7 +272,11 @@ class Command(BaseCommand):
     @transaction.atomic
     def supprimer(self):
         from ru.models import DemandeRelationUsager as DRU
+        from beneficiaire.models_journal import NotePersonnelle
+        from messagerie.models import Message as MessageDemo
         DRU.objects.filter(objet__startswith="[démo]").delete()
+        NotePersonnelle.objects.filter(contenu__startswith="[démo]").delete()
+        MessageDemo.objects.filter(objet__startswith="[démo]").delete()
         from adultevul.models import SituationAdulteVulnerable as SAV
         SAV.objects.filter(faits__startswith="[démo]").delete()
         from AidFi.models.m_generique import DemandeAide
@@ -978,7 +1011,7 @@ class Command(BaseCommand):
         circuit.demander_visa(d, self.ts)
         circuit.avis_cadre(d, self.cadre, True, "")
         circuit.envoyer(d, self.ts, self.j - timedelta(days=40), mode="MAIL")
-        envoi.enregistrer(d, "FSL accès au logement", d.mds, "MAIL", 18)
+        envoi.enregistrer(d, "FSL", d.mds, "MAIL", 18, 0)
         circuit.enregistrer_reponse(d, self.ts, DemandeFSL.ACCORDEE, self.j - timedelta(days=12), subvention=1470,
                                     garantie="4 mois sur 12", commentaire="Accord (fictif).")
         # Énergie : facture de régularisation de moins de 500 €, instruite par un agent administratif, envoyée
@@ -991,7 +1024,7 @@ class Command(BaseCommand):
         circuit.demander_visa(d, admin)
         circuit.avis_cadre(d, self.cadre, True, "")
         circuit.envoyer(d, admin, self.j - timedelta(days=3), mode="MAIL")
-        envoi.enregistrer(d, "FSL impayés d'électricité, de gaz", d.mds, "MAIL", 9)
+        envoi.enregistrer(d, "FSL", d.mds, "MAIL", 9, 0)
         # Eau : en préparation par le travailleur social
         creer("FAM2-SOP", {"distributeur": "Distributeur d'eau EXEMPLE", "date_facture": (self.j - timedelta(days=20)).strftime("%d/%m/%Y"),
                            "montant_facture": "286", "surendettement": "NON"}, "EAU")
@@ -1049,7 +1082,7 @@ class Command(BaseCommand):
             quand = timezone.now() - timedelta(days=il_y_a)
             F.objects.filter(pk=f.pk).update(date_envoi=j - timedelta(days=il_y_a), cree_le=quand - timedelta(days=1),
                                              date_validation_cadre=quand)
-            envoi.enregistrer(f, "Hébergement d'urgence", f.dossier.mds, EnvoiDossier.MAIL, 3)
+            envoi.enregistrer(f, "HEBERGEMENT", f.dossier.mds, EnvoiDossier.MAIL, 3, 0)
             f.refresh_from_db()
 
         # VIDAL Nolan : en rupture familiale, démarches engagées, pas encore de fiche (orientation vers l'État conseillée)
@@ -1129,7 +1162,7 @@ class Command(BaseCommand):
         a.save()
         S.marquer_envoyee(a, ts, "MAIL")
         A.objects.filter(pk=a.pk).update(date_envoi=j - timedelta(days=30), cree_le=timezone.now() - timedelta(days=31))
-        envoi.enregistrer(a, "ASELL", a.mds, EnvoiDossier.MAIL, 2)
+        envoi.enregistrer(a, "ASELL", a.mds, EnvoiDossier.MAIL, 2, 0)
         a.refresh_from_db()
         S.enregistrer_reponse(a, ts, A.ACCORD, j - timedelta(days=18), "Premier rendez-vous fixé avec l'intervenante")
         self.stdout.write("✅ Orientation ASELL : 2 fiches fictives, 2 opérateurs fictifs")
@@ -1357,7 +1390,7 @@ class Command(BaseCommand):
                                        date_decision=seances[0].date)
         s.tracer(self.ts, "Envoyée à la commission par mail", str(seances[0]))
         s.save()
-        envoi.enregistrer(s, "COPP", s.mds, "MAIL", 7)
+        envoi.enregistrer(s, "COPP", s.mds, "MAIL", 7, 0)
         self.stdout.write("✅ Demandes de logement et commission des publics prioritaires fictives ajoutées")
 
     def expulsions(self):
@@ -1502,7 +1535,7 @@ class Command(BaseCommand):
         M.marquer_transmis(g, self.ts, "MAIL")
         G.objects.filter(pk=g.pk).update(date_envoi=j - timedelta(days=75))
         d.etapes.filter(type_etape="DSF", saisi_par=self.ts, date=j).update(date=j - timedelta(days=75))
-        envoi.enregistrer(g, "DSF", d.mds, EnvoiDossier.MAIL, 5)
+        envoi.enregistrer(g, "DSF", d.mds, EnvoiDossier.MAIL, 5, 0)
         self.expulsions_commissions(D)
 
     def expulsions_commissions(self, D):

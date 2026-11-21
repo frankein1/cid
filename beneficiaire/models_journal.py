@@ -81,7 +81,52 @@ class EntretienSocial(AuditedMixin):
         return any(t.legal for t in self.types.all())
 
     def peut_lire_prive(self, user):
-        return user.is_authenticated and user.pk == self.auteur_id
+        """Synthèse privée : son auteur, et le référent actuel de l'usager en reprise (lecture seule)."""
+        if not user.is_authenticated:
+            return False
+        return user.pk == self.auteur_id or self.beneficiaire.referent_mds_id == user.pk
 
     def peut_modifier(self, user):
         return user.is_authenticated and (user.pk == self.auteur_id or user.is_superuser)
+
+
+class NotePersonnelle(models.Model):
+    """Note datée d'un travailleur social sur un usager (prise de notes de travail). Privée à son auteur ; le
+    travailleur social décide, note par note, si elle suit le dossier à la MDS d'accueil lors d'un transfert.
+    L'auteur peut la supprimer à tout moment, transfert ou non."""
+    beneficiaire = models.ForeignKey('beneficiaire.Beneficiaire', on_delete=models.CASCADE, related_name='notes_personnelles')
+    auteur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='notes_personnelles')
+    date_note = models.DateTimeField("Date et heure", default=timezone.now)
+    contenu = models.TextField("Note")
+    a_transmettre = models.BooleanField(
+        "Suit le dossier en cas de transfert", default=False,
+        help_text="Si coché, la note est transmise à la MDS d'accueil lors d'un transfert de l'usager.")
+    transmise_a_mds = models.ForeignKey('mds.MDS', on_delete=models.SET_NULL, null=True, blank=True,
+                                        related_name='notes_transmises', verbose_name="Transmise à la MDS")
+    transmise_le = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-date_note', '-pk']
+        verbose_name = "Note personnelle"
+        verbose_name_plural = "Notes personnelles"
+
+    def __str__(self):
+        return f"Note du {self.date_note:%d/%m/%y %H:%M} sur {self.beneficiaire}"
+
+    def peut_lire(self, user):
+        """L'auteur ; le référent actuel de l'usager en reprise (lecture seule) ; et, une fois transmise,
+        les agents de la MDS destinataire."""
+        if not user.is_authenticated:
+            return False
+        if self.auteur_id == user.pk:
+            return True
+        if self.beneficiaire.referent_mds_id == user.pk:
+            return True
+        if not self.transmise_a_mds_id:
+            return False
+        from mds.models import UserMDSProfile
+        return UserMDSProfile.objects.filter(user=user, mds_id=self.transmise_a_mds_id, actif=True).exists()
+
+    def peut_gerer(self, user):
+        """Modifier le choix de transmission ou supprimer : l'auteur seul."""
+        return user.is_authenticated and self.auteur_id == user.pk

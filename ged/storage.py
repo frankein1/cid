@@ -18,6 +18,12 @@ import logging
 
 from . import chiffrement
 
+
+def _dossier_temporaire():
+    """Dossier des fichiers de repli quand SeaweedFS est indisponible (réglable pour les tests)."""
+    return getattr(settings, 'GED_DOSSIER_TEMPORAIRE', '/tmp/ged_docs')
+
+
 logger = logging.getLogger(__name__)
 
 def is_render_environment():
@@ -67,7 +73,7 @@ class SeaweedFSStorage(Storage):
         self.volume_url = volume_url or getattr(settings, 'SEAWEEDFS_VOLUME_URL', 'http://localhost:8080')
 
         # Toujours prêt pour relire d'anciens fichiers temporaires
-        self.temp_dir = '/tmp/ged_docs'
+        self.temp_dir = _dossier_temporaire()
 
         # --- MODE pCloud (prioritaire) ---
         self.use_pcloud = pcloud_configure()
@@ -82,7 +88,7 @@ class SeaweedFSStorage(Storage):
         self.use_temporary = is_render_environment()
 
         if self.use_temporary:
-            self.temp_dir = '/tmp/ged_docs'
+            self.temp_dir = _dossier_temporaire()
             os.makedirs(self.temp_dir, exist_ok=True)
             logger.info(f"📁 Stockage TEMPORAIRE activé: {self.temp_dir}")
         else:
@@ -104,7 +110,7 @@ class SeaweedFSStorage(Storage):
             except Exception as e:
                 logger.warning(f"SeaweedFS échoué, fallback temporaire: {e}")
                 self.use_temporary = True
-                self.temp_dir = '/tmp/ged_docs'
+                self.temp_dir = _dossier_temporaire()
                 os.makedirs(self.temp_dir, exist_ok=True)
                 return self._save_temporary(name, content)
     

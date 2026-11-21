@@ -7,6 +7,7 @@
 """Demande de logement social, commission des publics prioritaires, envoi par mail / impression, papier économisé,
 visa du cadre. Données fictives ; aucun vrai formulaire."""
 import io
+import tempfile
 from datetime import date, timedelta
 from io import StringIO
 
@@ -32,7 +33,9 @@ def png():
     return buf.getvalue()
 
 
-@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+# Les pièces déposées vont dans un dossier temporaire propre au test (pas dans /tmp/ged_docs, partagé).
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                   GED_DOSSIER_TEMPORAIRE=tempfile.mkdtemp(prefix='ged_essai_copp_'))
 class LogementCOPPTests(TestCase):
     def setUp(self):
         for cmd in ("init_capacites", "init_profils"):
@@ -151,8 +154,8 @@ class LogementCOPPTests(TestCase):
         r = c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail", "destinataire": "copp@exemple.fr"})
         self.assertContains(r, "J'ai envoyé le dossier par mail")
         self.assertFalse(EnvoiDossier.objects.exists())
-        c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail_confirme", "pages": "6"})
-        self.assertEqual(EnvoiDossier.objects.get().pages, 6)
+        c.post(f"/logement/envoi/copp/{s.pk}/", {"action": "mail_confirme"})
+        self.assertEqual(EnvoiDossier.objects.count(), 1)              # comptées d'après le PDF, pas d'après un champ
 
     def test_fsl_visa_imprimer_et_signature(self):
         self.client_de(self.ts).post("/logement/fsl/nouvelle/CO-1/", {"type_aide": "ACCES"})

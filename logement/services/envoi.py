@@ -56,6 +56,25 @@ def pages_document(doc):
     return (pages_a4(octets) or 1) if nom.lower().endswith('.pdf') else 1
 
 
+def regle(code):
+    """Minimum de pages du type de dossier (fichier CSV importé), ou None s'il n'existe pas encore."""
+    from logement.models import ReglePagesEnvoi
+    return ReglePagesEnvoi.objects.filter(code=code).first()
+
+
+def compter(code, pages_dossier, pages_pieces):
+    """(pages du dossier, pages des pièces jointes) comptées : le plus grand entre le minimum du CSV et le réel.
+    Un type absent du CSV ne compte que le réel."""
+    r = regle(code)
+    min_dossier, min_pieces = (r.pages_dossier, r.pages_pieces_jointes) if r else (0, 0)
+    return max(min_dossier, pages_dossier), max(min_pieces, pages_pieces)
+
+
+def pages_documents(documents):
+    """Pages réelles de documents de la GED (pièces jointes)."""
+    return sum(pages_document(d) for d in documents)
+
+
 def lettre_mds(mds):
     from mds.models import MDS
     return "MDSP" if mds and mds.type_mds == MDS.PROXIMITE else "MDST"
@@ -74,16 +93,23 @@ def mail_configure():
     return 'dummy' not in settings.EMAIL_BACKEND
 
 
-def enregistrer(obj, nature, mds, mode, pages):
+def enregistrer(obj, code, mds, mode, pages_dossier, pages_pieces, libelle=None):
+    """Enregistre un envoi. `code` : type de dossier (AFASE, FSL, COPP…) ; pages réelles en entrée, comptées ensuite
+    avec le minimum du CSV. La nature affichée est le libellé du CSV, sinon `libelle`, sinon le code."""
+    pages_dossier, pages_pieces = compter(code, pages_dossier, pages_pieces)
+    r = regle(code)
     return EnvoiDossier.objects.create(content_type=ContentType.objects.get_for_model(obj), object_id=obj.pk,
-                                       nature=nature, mds=mds, mode=mode, pages=pages)
+                                       nature=r.libelle if r else (libelle or code), mds=mds, mode=mode,
+                                       pages_dossier=pages_dossier, pages_pieces=pages_pieces,
+                                       pages=pages_dossier + pages_pieces)
 
 
 def envoyer_mail(destinataires, objet, message, pdf, nom_pdf, documents, reply_to=None):
     """Envoie le PDF et les pièces de la GED ; retourne la liste des pièces jointes réellement attachées."""
     m = EmailMessage(subject=objet, body=message, from_email=settings.DEFAULT_FROM_EMAIL, to=destinataires,
                      reply_to=[reply_to] if reply_to else None)
-    m.attach(nom_pdf, pdf, 'application/pdf')
+    if pdf:
+        m.attach(nom_pdf, pdf, 'application/pdf')
     jointes = []
     for doc in documents:
         c = contenu_document(doc)

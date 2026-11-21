@@ -75,7 +75,7 @@ class CommissionsTests(_Base):
                                                                        "objet": "Actualisation", "message": "Bonjour"})
         p.refresh_from_db()
         self.assertEqual((p.statut, len(mail.outbox)), (P.TRANSMISE, 1))
-        self.assertTrue(EnvoiDossier.objects.filter(nature="Actualisation", mode="MAIL").exists())
+        self.assertTrue(EnvoiDossier.objects.filter(nature="Actualisation de commission", mode="MAIL").exists())
         # avis : le Service Logement (ou le cadre) ; l'étape s'ajoute au dossier
         self.assertEqual(self.ts_c.post(f"/logement/expulsions/passage/{p.pk}/action/",
                                         {"action": "avis", "avis": "DELAI"}).status_code, 403)

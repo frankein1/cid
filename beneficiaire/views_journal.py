@@ -13,6 +13,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from core.models.audit import AuditLog
 from django.views.decorators.http import require_POST
 
 from core.models import User
@@ -22,7 +23,7 @@ from planning.models import CreneauRdv
 from . import journal as jr
 from .budget import membres_du_foyer
 from .models import Beneficiaire
-from .models_journal import EntretienSocial, TypeAccompagnement
+from .models_journal import EntretienSocial, NotePersonnelle, TypeAccompagnement
 from .views import user_peut_agir_sur_beneficiaire
 
 CHAMP = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm'
@@ -139,3 +140,63 @@ def suite_faite(request, pk):
                                                   require_https=request.is_secure()):
         return redirect(retour)
     return redirect('beneficiaire:mes_suites')
+
+
+@login_required
+@require_POST
+def note_nouvelle(request, code_interne):
+    """Prise de note datée sur l'usager : réservée à l'équipe de la MDS de l'usager."""
+    b, refus = _usager(request, code_interne, ecriture=True)
+    if refus:
+        return refus
+    contenu = (request.POST.get('contenu') or '').strip()
+    if not contenu:
+        messages.error(request, "La note est vide.")
+    else:
+        NotePersonnelle.objects.create(beneficiaire=b, auteur=request.user, contenu=contenu,
+                                       a_transmettre=request.POST.get('a_transmettre') == 'oui')
+        messages.success(request, "Note enregistrée.")
+    return redirect('beneficiaire:journal', code_interne=code_interne)
+
+
+@login_required
+@require_POST
+def note_transmission(request, pk):
+    """L'auteur décide si la note suit le dossier lors d'un transfert."""
+    note = get_object_or_404(NotePersonnelle.objects.select_related('beneficiaire'), pk=pk)
+    if not note.peut_gerer(request.user):
+        return HttpResponseForbidden("Réservé à l'auteur de la note.")
+    note.a_transmettre = request.POST.get('a_transmettre') == 'oui'
+    note.save(update_fields=['a_transmettre'])
+    messages.success(request, "Choix de transmission enregistré.")
+    retour = request.POST.get('retour', '')
+    if retour and url_has_allowed_host_and_scheme(retour, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return redirect(retour)
+    return redirect('beneficiaire:mes_notes')
+
+
+@login_required
+@require_POST
+def note_supprimer(request, pk):
+    """Suppression par l'auteur, à tout moment, transfert ou non."""
+    note = get_object_or_404(NotePersonnelle.objects.select_related('beneficiaire'), pk=pk)
+    if not note.peut_gerer(request.user):
+        return HttpResponseForbidden("Réservé à l'auteur de la note.")
+    code = note.beneficiaire.code_interne
+    AuditLog.log_action(request.user, 'DELETE', "Note personnelle supprimée", objet=note.beneficiaire, request=request)
+    note.delete()
+    messages.success(request, "Note supprimée.")
+    retour = request.POST.get('retour', '')
+    if retour and url_has_allowed_host_and_scheme(retour, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return redirect(retour)
+    return redirect('beneficiaire:journal', code_interne=code)
+
+
+@login_required
+def mes_notes(request):
+    """Toutes les notes personnelles de l'agent, y compris après un transfert de l'usager."""
+    notes = (NotePersonnelle.objects.filter(auteur=request.user).select_related('beneficiaire', 'transmise_a_mds')
+             .order_by('-date_note', '-pk'))
+    return render(request, 'beneficiaire/mes_notes.html', {'notes': notes})

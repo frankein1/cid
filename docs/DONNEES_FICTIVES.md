@@ -45,6 +45,8 @@ Sur Render, `render_start.py` lance `init2` puis `init_demo` à chaque démarrag
 
 Le **super-administrateur** n'est pas créé ici : `install` le crée avec le mot de passe de la variable `ADMIN_PASSWORD`.
 
+**Réinitialiser un mot de passe** (Admin → Utilisateurs → action « Réinitialiser le mot de passe (et forcer le changement) ») donne un mot de passe **provisoire** : initiales du prénom et du nom, puis la date du jour (jjmmaaaa), par exemple `AS01112026` ; il faut le changer à la connexion suivante. Pour un compte de démonstration, le mot de passe `demo123&` revient à la prochaine réinitialisation du jeu.
+
 ## MDS
 
 - **MDS TEST 01**, Port-de-Bouc : **MDS de territoire**, avec ses salles (init2).
@@ -224,7 +226,7 @@ Les statistiques de l'habitat indigne (« Logement indigne » › « Statistique
 
 ## Relation usager (RU)
 
-- Compte **ru_sas** (Sylvie Sas, profil RU_SAS) : enregistre et finalise les demandes du SAS. Mot de passe de démonstration.
+- Compte **ru_sas** (Sylvie Sas, profil RU_SAS) : enregistre et finalise les demandes du SAS. Mot de passe de démonstration (`demo123&`), comme les autres comptes.
 - **BOYER Théo** : saisine reçue par le SAS, pas encore transmise à une MDS.
 - **DURAND Lina** : évaluation en cours par le travailleur social de MDS TEST 01, en retard, avec une relance.
 - **ROUX Amina** : évaluation complète, en attente du visa du cadre.
@@ -240,4 +242,16 @@ Les demandes de démonstration portent le préfixe « [démo] » dans leur objet
 - **FICTIF Gérard** : cellule d'évaluation constituée, investigations en cours, MASP et signalement ARS proposés.
 - **FICTIF Odette** : rapport visé, protection juridique demandée (TGI Aix, tutelle, pièces complètes).
 
-Les situations de démonstration portent le préfixe « [démo] » dans leur texte des faits ; la remise à zéro les supprime. Les comptes `cadre` et `ts` reçoivent les profils AV_PILOTE et AV_EVALUATEUR.
+Les situations de démonstration portent le préfixe « [démo] » dans leur texte des faits ; la remise à zéro les supprime. `chef_mds1` (cadre) reçoit le profil AV_PILOTE, et `as1_mds1` (travailleur social) le profil AV_EVALUATEUR.
+
+## Messagerie : réaffectation et notes personnelles
+
+- **Demande de réaffectation en attente** : `as1_mds2` (MDS TEST 02) demande la réaffectation de **VIDAL Nolan** (FAM4-NOL, suivi par la MDS TEST 01), motif *Réaffectation*, adressée à `chef_mds1`. La décision revient au cadre de la MDS TEST 01 : accepter (transfert) ou refuser avec motif. `chef_mds1` décide ; `as1_mds2` voit « En attente de la décision du cadre ». Le message porte le préfixe « [démo] ».
+- **Notes personnelles** (journal) : deux notes d'`as1_mds1` sur **PEREZ Laura** (FAM8-LAU). La première suit le dossier en cas de transfert, la seconde reste à son compte. À voir dans *Journal de l'accompagnement* (compte `as1_mds1`) et dans *Mes notes*. Les notes portent le préfixe « [démo] ».
+
+Parcours complémentaires :
+10. **Réaffectation** : `chef_mds1` ouvre le message de VIDAL Nolan, puis accepte ou refuse la demande (refus : motif obligatoire). Après acceptation, VIDAL Nolan passe à la MDS TEST 02 ; `as1_mds2` reçoit la réponse.
+11. **Notes personnelles** : `as1_mds1` relit ses deux notes sur PEREZ Laura, change le choix « suit le dossier » de la seconde, puis la supprime. Une note transmise reste visible de la MDS destinataire après un transfert.
+
+**Instances déjà en service (Render, alwaysdata)** : ces situations ne sont créées qu'à la création du jeu. Pour les obtenir, menu **Données de démonstration** (super-administrateur) ou `python manage.py init_demo --reinitialiser` ; la réinitialisation supprime aussi les anciennes situations « [démo] ».
+

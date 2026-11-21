@@ -14,6 +14,39 @@ from core.mixins import AuditedMixin  # ← Seulement celui-ci
 from ged.models import DocumentGED
 
 
+# Prise de message usager : listes validées le 14/11 (voir docs/PRISE_MESSAGE.md)
+MODE_CONTACT_CHOICES = [
+    ('COURRIER', 'Courrier'),
+    ('ACCUEIL_PHYSIQUE', 'Accueil physique'),
+    ('TELEPHONE', 'Téléphone'),
+    ('COURRIEL', 'Courriel'),
+]
+ISSUE_CHOICES = [
+    ('COURRIER', 'Courrier'),
+    ('REPONDEUR', 'Répondeur'),
+    ('INJOIGNABLE', 'Injoignable'),
+    ('ENTRETIEN_PRESENTIEL', 'Entretien en présentiel'),
+    ('ENTRETIEN_TELEPHONIQUE', 'Entretien téléphonique'),
+    ('COURRIEL', 'Courriel'),
+]
+# Motifs de contact : plusieurs cases possibles. Chaque nouveau module ajoute les siens.
+MOTIFS_CONTACT = [
+    ('LOGEMENT', 'Logement'),
+    ('INSERTION', 'Insertion'),
+    ('AIDE_FINANCIERE', 'Aide financière'),
+    ('ADULTE_VULNERABLE', 'Adulte vulnérable'),
+    ('BUDGET_CESF', 'Budget (CESF)'),
+    ('REAFFECTATION', 'Réaffectation'),
+    ('AUTRE', 'Autre'),
+]
+
+
+DECISION_REAFFECTATION_CHOICES = [
+    ('ACCEPTEE', 'Demande acceptée : transfert effectué'),
+    ('REFUSEE', 'Demande refusée'),
+]
+
+
 class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
     """Message 1-à-1 avec copie optionnelle et pièces jointes GED"""
     
@@ -82,6 +115,17 @@ class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
         related_name='reponses'
     )
     
+    # Demande de réaffectation (motif REAFFECTATION) : MDS demandeuse, décision du cadre de la MDS d'origine
+    mds_demandeuse = models.ForeignKey(
+        'mds.MDS', on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes_reaffectation',
+        help_text="MDS qui demande la réaffectation de l'usager")
+    decision_reaffectation = models.CharField(
+        max_length=10, blank=True, choices=DECISION_REAFFECTATION_CHOICES)
+    decision_reaffectation_par = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='decisions_reaffectation')
+    decision_reaffectation_le = models.DateTimeField(null=True, blank=True)
+    motif_refus = models.TextField(blank=True)
+
     # Métadonnées
     PRIORITE_CHOICES = [
         ('normale', 'Normale'),
@@ -94,6 +138,17 @@ class Message(AuditedMixin):  # ✅ Seulement AuditedMixin
         default='normale'
     )
     
+    # Prise de message usager (message lié à un bénéficiaire) : mode demandé, motifs, réponse du destinataire
+    mode_contact = models.CharField("Mode de contact demandé", max_length=20, choices=MODE_CONTACT_CHOICES,
+                                    blank=True, default='')
+    motifs_contact = models.JSONField("Motifs de contact", default=list, blank=True)
+    issue = models.CharField("Issue de la réponse", max_length=30, choices=ISSUE_CHOICES, blank=True, default='')
+    reponse_texte = models.TextField("Réponse", blank=True, default='')
+    reponse_le = models.DateTimeField("Réponse effectuée le", null=True, blank=True)
+    # Prise de message usager : date à laquelle l'agent doit rappeler (J+3 jours ouvrés par défaut côté formulaire)
+    date_rappel = models.DateField(
+        "Rappel souhaité avant le", null=True, blank=True,
+        help_text="Renseignée pour une prise de message : l'agent doit rappeler l'usager avant cette date.")
     # Motifs approfondis
     MOTIF_CHOICES = [
         # Dossier et suivi

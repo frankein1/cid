@@ -95,6 +95,11 @@ def transferer(beneficiaire, membres, mds_destination, demandeur, request=None):
         p.referent_mds = None          # le référent appartenait à l'ancienne MDS
         p.save(update_fields=['mds', 'referent_mds'])
 
+        # Notes personnelles : seules celles que leur auteur a cochées suivent le dossier
+        p.notes_personnelles.update(transmise_a_mds=None, transmise_le=None)
+        p.notes_personnelles.filter(a_transmettre=True).update(transmise_a_mds=mds_destination,
+                                                               transmise_le=timezone.now())
+
         AuditLog.log_action(
             demandeur, 'UPDATE',
             f"Transfert de MDS : {t.mds_origine} → {mds_destination}",
