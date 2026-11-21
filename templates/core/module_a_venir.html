@@ -17,7 +17,7 @@
             {% for p in module.prevu %}<li>{{ p }}</li>{% endfor %}
         </ul>
         <div class="mt-8 flex flex-wrap gap-3 text-sm">
-            <a href="{% url 'beneficiaire:liste' %}" class="px-4 py-2 border rounded-md hover:bg-gray-50"><i class="fas fa-users mr-1"></i>Bénéficiaires</a>
+            <a href="{% url 'beneficiaire:annuaire' %}" class="px-4 py-2 border rounded-md hover:bg-gray-50"><i class="fas fa-users mr-1"></i>Bénéficiaires</a>
             <a href="{% url 'planning:calendrier_rdv' %}" class="px-4 py-2 border rounded-md hover:bg-gray-50"><i class="fas fa-calendar-alt mr-1"></i>Planning</a>
         </div>
     </div>
