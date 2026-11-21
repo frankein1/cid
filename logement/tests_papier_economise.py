@@ -10,9 +10,11 @@ avec un fichier temporaire."""
 import tempfile
 from pathlib import Path
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
 
 from logement.models import ReglePagesEnvoi
 from logement.services import envoi
@@ -60,6 +62,22 @@ class ImportCSVTests(TestCase):
             "code;libelle;pages_dossier;pages_pieces_jointes\ncopp;Saisine COPP;4;1\n"))
         self.assertEqual(ReglePagesEnvoi.objects.filter(code='COPP').count(), 1)
         self.assertEqual(envoi.compter('COPP', 0, 0), (4, 1))
+
+    def test_import_depuis_l_admin(self):
+        from django.contrib.auth import get_user_model
+        admin = get_user_model().objects.create_superuser('admin_pages', 'a@exemple.fr', 'motdepasse-test-1')
+        self.client.force_login(admin)
+        fichier = SimpleUploadedFile('pages.csv', "code;libelle;pages_dossier;pages_pieces_jointes\nFSL;Demande FSL;2;1\n".encode('utf-8'))
+        r = self.client.post(reverse('admin:logement_reglepagesenvoi_importer'), {'fichier': fichier}, follow=True)
+        self.assertContains(r, "1 mis à jour")
+        self.assertEqual(envoi.compter('FSL', 0, 0), (2, 1))
+
+    def test_import_admin_refuse_aux_non_habilites(self):
+        from django.contrib.auth import get_user_model
+        u = get_user_model().objects.create_user('pas_admin', 'b@exemple.fr', 'motdepasse-test-2')
+        self.client.force_login(u)
+        r = self.client.get(reverse('admin:logement_reglepagesenvoi_importer'))
+        self.assertIn(r.status_code, (302, 403))
 
     def test_valeur_invalide_refusee(self):
         chemin = self._csv("code;libelle;pages_dossier;pages_pieces_jointes\nFSL;Demande FSL;quatre;0\n")

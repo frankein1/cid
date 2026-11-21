@@ -1,0 +1,20 @@
+{# logement/templates/admin/logement/reglepagesenvoi/importer.html #}
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Accueil</a> &rsaquo;
+  <a href="{% url 'admin:logement_reglepagesenvoi_changelist' %}">Minimums de pages par type de dossier</a> &rsaquo;
+  Importer
+</div>
+{% endblock %}
+{% block content %}
+<p>Chaque ligne du fichier fixe le minimum de pages d'un type de dossier : le dossier et les pièces jointes sont
+comptés à part, et l'envoi compte le plus grand entre ce minimum et les pages réelles. Une ligne au code déjà connu
+est mise à jour ; les autres types ne sont pas supprimés.</p>
+<p>Modèle : <code>code;libelle;pages_dossier;pages_pieces_jointes</code>, séparateur « ; », encodage UTF-8.</p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Importer" class="default">
+</form>
+{% endblock %}

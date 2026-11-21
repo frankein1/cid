@@ -1,0 +1,6 @@
+{# logement/templates/admin/logement/reglepagesenvoi/change_list.html #}
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}
+  <li><a href="{% url 'admin:logement_reglepagesenvoi_importer' %}">Importer un CSV</a></li>
+  {{ block.super }}
+{% endblock %}

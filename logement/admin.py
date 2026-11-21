@@ -6,7 +6,10 @@
 # logement/admin.py
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
@@ -16,6 +19,7 @@ from .models import (CommissionExpulsion, CommissionPublicsPrioritaires, Convoca
 from .models import OperateurASELL, OrientationASELL
 from .models import RecoursDALO
 from .models import ReglePagesEnvoi
+from .services.envoi import importer_regles
 from .models import (DemarcheHebergement, DestinataireHebergement, DossierHebergement, FicheHebergement,
                      RappelHebergement, SignalementHabitatIndigne, StructureHebergement)
 
@@ -126,12 +130,44 @@ class DemandeLogementSocialAdmin(admin.ModelAdmin):
     raw_id_fields = ['beneficiaire']
 
 
+class ImportReglesForm(forms.Form):
+    fichier = forms.FileField(label="Fichier CSV (séparateur « ; »)",
+                              help_text="En-tête : code;libelle;pages_dossier;pages_pieces_jointes")
+
+
 @admin.register(ReglePagesEnvoi)
 class ReglePagesEnvoiAdmin(admin.ModelAdmin):
-    """Minimums de pages par type de dossier : importés depuis logement/donnees/pages_envois.csv (commande
-    importer_pages_envois) ; modifiables ici pour chaque structure."""
+    """Minimums de pages par type de dossier, comptés avec les pages réelles. Chaque structure peut les modifier ici
+    ou importer son fichier CSV (bouton « Importer un CSV »)."""
     list_display = ['code', 'libelle', 'pages_dossier', 'pages_pieces_jointes']
     search_fields = ['code', 'libelle']
+    change_list_template = 'admin/logement/reglepagesenvoi/change_list.html'
+
+    def get_urls(self):
+        return [path('importer/', self.admin_site.admin_view(self.importer), name='logement_reglepagesenvoi_importer')
+                ] + super().get_urls()
+
+    def importer(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        if request.method == 'POST':
+            form = ImportReglesForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    texte = request.FILES['fichier'].read().decode('utf-8-sig')
+                    crees, maj = importer_regles(texte)
+                except UnicodeDecodeError:
+                    messages.error(request, "Le fichier doit être en UTF-8.")
+                except ValueError as e:
+                    messages.error(request, str(e))
+                else:
+                    messages.success(request, f"Import terminé : {crees} type(s) créé(s), {maj} mis à jour.")
+                    return redirect('admin:logement_reglepagesenvoi_changelist')
+        else:
+            form = ImportReglesForm()
+        contexte = dict(self.admin_site.each_context(request), opts=self.model._meta, form=form,
+                        title="Importer les minimums de pages")
+        return TemplateResponse(request, 'admin/logement/reglepagesenvoi/importer.html', contexte)
 
 
 @admin.register(EnvoiDossier)
