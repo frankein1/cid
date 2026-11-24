@@ -105,67 +105,6 @@ def user_peut_agir_sur_beneficiaire(user, beneficiaire):
 # =============================================================================
 
 @login_required
-def liste_beneficiaires(request):
-    """Recherche multicritère de bénéficiaires."""
-    # Liste complète retirée (choix de Fred) : toute recherche passe par l'annuaire, qui montre aussi les doublons.
-    from django.shortcuts import redirect
-    return redirect('beneficiaire:annuaire')
-    nom = request.GET.get('nom', '').strip()
-    prenom = request.GET.get('prenom', '').strip()
-    identifiant = request.GET.get('identifiant', '').strip()
-    ville_cp = request.GET.get('ville_cp', '').strip()
-    date_naiss = request.GET.get('date_naiss', '')
-
-    beneficiaires = None
-    
-    if nom or prenom or identifiant or ville_cp or date_naiss:
-        filters = Q()
-        if nom:
-            filters &= Q(nom__icontains=nom)
-        if prenom:
-            filters &= Q(prenom__icontains=prenom)
-        if identifiant:
-            filters &= (
-                Q(nir__icontains=identifiant) | 
-                Q(numero_caf__icontains=identifiant) |
-                Q(numero_france_travail__icontains=identifiant) | 
-                Q(numero_fiscal__icontains=identifiant) |
-                Q(numero_dossier_pmi__icontains=identifiant) |
-                Q(code_interne__icontains=identifiant) |
-                Q(telephone_mobile__icontains=identifiant)
-            )
-        if ville_cp:
-            filters &= (Q(ville__icontains=ville_cp) | Q(code_postal__icontains=ville_cp))
-        if date_naiss:
-            filters &= Q(date_naissance=date_naiss)
-
-        beneficiaires = Beneficiaire.objects.filter(filters)
-    
-    # CORE : l'administrateur et la consultation transversale cherchent dans toutes les MDS ;
-    # sinon capacité 'peut_voir' + MDS de rattachement
-    recherche_globale = (request.user.a_la_capacite('peut_administrer')
-                         or request.user.a_la_capacite('peut_consulter_tous_usagers'))
-    if beneficiaires is not None and not recherche_globale:
-        if not request.user.a_la_capacite('peut_voir'):
-            beneficiaires = Beneficiaire.objects.none()
-        else:
-            from mds.models import UserMDSProfile
-            mds_ids = UserMDSProfile.objects.filter(
-                user=request.user, actif=True
-            ).values_list('mds_id', flat=True)
-            beneficiaires = beneficiaires.filter(mds_id__in=mds_ids)
-    
-    # Trier et optimiser les requêtes
-    if beneficiaires is not None:
-        beneficiaires = beneficiaires.select_related('mds', 'referent_mds').order_by('nom', 'prenom')
-
-    return render(request, 'beneficiaire/liste_beneficiaires.html', {
-        'beneficiaires': beneficiaires,
-        'nom': nom, 'prenom': prenom, 'identifiant': identifiant,
-        'ville_cp': ville_cp, 'date_naiss': date_naiss,
-    })
-
-@login_required
 def ajouter_beneficiaire(request):
     """Création d'un usager : uniquement après une recherche concluante dans l'annuaire.
 
@@ -264,7 +203,7 @@ def detail_beneficiaire(request, code_interne):
     niveau = beneficiaire.niveau_acces(request.user)
     if niveau is None:
         messages.error(request, "Accès refusé à ce bénéficiaire.")
-        return redirect('beneficiaire:liste')
+        return redirect('beneficiaire:annuaire')
     acces_restreint = (niveau == 'restreint')
     
     inclure_sortis = request.GET.get("inclure_sortis", "non") == "oui"

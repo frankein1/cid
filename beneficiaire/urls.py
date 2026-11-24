@@ -15,11 +15,13 @@ from . import views, views_rgpd
 
 from . import views_annuaire, views_budget, views_journal, views_stats  # noqa: E402
 
+from django.views.generic import RedirectView
+
 app_name = 'beneficiaire'
 
 urlpatterns = [
     # Liste et recherche
-    path('', views.liste_beneficiaires, name='liste'),
+    path('', RedirectView.as_view(pattern_name='beneficiaire:annuaire', permanent=True)),   # ancienne liste : annuaire
 
     # Archivage RGPD (avant les routes <code_interne>/)
     path('rgpd/archivage/', views_rgpd.rgpd_archivage, name='rgpd_archivage'),
