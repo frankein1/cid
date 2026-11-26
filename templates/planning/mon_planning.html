@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Mon planning{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold">Mon planning</h1>
+            <p class="text-sm text-gray-600">Mes rendez-vous des {{ horizon }} prochains jours · {{ nb_rdv }} à venir</p>
+        </div>
+        <div class="text-sm">
+            {% if traites %}
+                <a href="?" class="underline text-blue-700">Masquer les traités</a>
+            {% else %}
+                <a href="?traites=1" class="underline text-blue-700">Afficher les traités</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for jour, rdvs in jours %}
+    <h2 class="text-lg font-semibold mt-6 mb-2">{{ jour|date:"l j F Y" }}</h2>
+    <div class="overflow-x-auto bg-white rounded-lg shadow mb-4">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-left">
+                <tr>
+                    <th class="px-3 py-2">Heure</th>
+                    <th class="px-3 py-2">N° CID</th>
+                    <th class="px-3 py-2">Nom et prénoms</th>
+                    <th class="px-3 py-2">Motif</th>
+                    <th class="px-3 py-2">Lieu</th>
+                    <th class="px-3 py-2">Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rdvs %}
+                <tr class="border-t">
+                    <td class="px-3 py-2 font-semibold">{{ r.heure }}</td>
+                    <td class="px-3 py-2"><a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=r.code %}" class="underline text-blue-700">{{ r.code }}</a></td>
+                    <td class="px-3 py-2">{{ r.nom }}</td>
+                    <td class="px-3 py-2">{{ r.motif }}</td>
+                    <td class="px-3 py-2">{{ r.lieu }}</td>
+                    <td class="px-3 py-2">{{ r.statut }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% empty %}
+    <p class="bg-gray-50 border px-4 py-6 rounded text-center text-gray-500">Aucun rendez-vous à venir sur cette période.</p>
+    {% endfor %}
+</div>
+{% endblock %}
