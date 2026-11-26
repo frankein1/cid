@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Permanences du jour{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h1 class="text-2xl font-bold">Permanences du {{ jour|date:"l j F Y" }}</h1>
+            {% if mds %}<p class="text-sm text-gray-600">MDS : {{ mds.nom }} · {{ nb_a_traiter }} rendez-vous à traiter</p>{% endif %}
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'planning:permanences_du_jour_date' jour_precedent|date:'Y-m-d' %}" class="bg-gray-500 text-white px-3 py-2 rounded">← Veille</a>
+            <a href="{% url 'planning:permanences_du_jour' %}" class="bg-blue-600 text-white px-3 py-2 rounded">Aujourd'hui</a>
+            <a href="{% url 'planning:permanences_du_jour_date' jour_suivant|date:'Y-m-d' %}" class="bg-gray-500 text-white px-3 py-2 rounded">Lendemain →</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-3 px-4 py-2 rounded {% if message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not mds %}
+        <p class="bg-yellow-50 border border-yellow-200 px-4 py-3 rounded">Aucune MDS n'est rattachée à votre compte : demandez au cadre de la régler.</p>
+    {% else %}
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex gap-2 text-sm">
+            {% if traites %}
+                <a href="?" class="underline text-blue-700">Masquer les traités</a>
+            {% else %}
+                <a href="?traites=1" class="underline text-blue-700">Afficher les traités</a>
+            {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'planning:permanences_du_jour_pdf' jour|date:'Y-m-d' %}{% if traites %}?traites=1{% endif %}"
+               class="bg-gray-700 text-white px-3 py-2 rounded text-sm">Télécharger le PDF</a>
+            <form method="post" action="{% url 'planning:permanences_du_jour_mail' jour|date:'Y-m-d' %}" class="flex items-center gap-2">
+                {% csrf_token %}
+                <input type="email" name="email" value="{{ email_defaut }}" required placeholder="adresse mail"
+                       class="border rounded px-2 py-2 text-sm">
+                <button type="submit" class="bg-gray-200 px-3 py-2 rounded text-sm">Envoyer le PDF par mail</button>
+            </form>
+        </div>
+    </div>
+    <p class="text-xs text-gray-500 mb-3">Ces informations sont personnelles : ne les imprimez que si nécessaire et ne les transmettez qu'aux agents concernés.</p>
+
+    <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-left">
+                <tr>
+                    <th class="px-3 py-2">Heure</th>
+                    <th class="px-3 py-2">N° CID</th>
+                    <th class="px-3 py-2">Nom et prénoms</th>
+                    <th class="px-3 py-2">Date de naissance</th>
+                    <th class="px-3 py-2">Adresse</th>
+                    <th class="px-3 py-2">Téléphone</th>
+                    <th class="px-3 py-2">Motif</th>
+                    <th class="px-3 py-2">Lieu</th>
+                    <th class="px-3 py-2">Agent</th>
+                    <th class="px-3 py-2">Présence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lignes %}
+                <tr class="border-t align-top">
+                    <td class="px-3 py-2 font-semibold">{{ l.heure }}</td>
+                    <td class="px-3 py-2"><a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=l.code %}" class="underline text-blue-700">{{ l.code }}</a></td>
+                    <td class="px-3 py-2">{{ l.nom }}</td>
+                    <td class="px-3 py-2">{{ l.naissance }}</td>
+                    <td class="px-3 py-2">{{ l.adresse }}<br>{{ l.cp_ville }}</td>
+                    <td class="px-3 py-2">{{ l.telephone }}</td>
+                    <td class="px-3 py-2">{{ l.motif }}</td>
+                    <td class="px-3 py-2">{{ l.lieu }}</td>
+                    <td class="px-3 py-2">{{ l.agent }}</td>
+                    <td class="px-3 py-2">
+                        {% if l.traite %}
+                            <span class="text-gray-600">{{ l.statut }}</span>
+                        {% endif %}
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% for code, libelle in issues %}
+                            <form method="post" action="{% url 'planning:issue_rdv' creneau_id=l.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="statut" value="{{ code }}">
+                                <input type="hidden" name="retour" value="{{ request.get_full_path }}">
+                                <button type="submit" class="border rounded px-2 py-1 text-xs hover:bg-gray-100">{{ libelle }}</button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="10" class="px-3 py-6 text-center text-gray-500">Aucune permanence à traiter pour ce jour.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

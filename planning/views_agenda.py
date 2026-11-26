@@ -26,6 +26,7 @@ from .agenda import (est_premiere_fois, evenement, evenement_indisponibilite, le
 from .forms import ISSUES_RDV, RdvAgentForm
 from .models import CreneauRdv, HistoriqueCreneau, JourBloque
 from .utils import est_jour_ferie
+from .views_permanences_jour import ACCUEIL_ISSUES, accueil_de_la_mds
 
 # Nature → ancien type_rdv (pour les écrans qui l'affichent encore)
 ANCIEN_TYPE = {'VAD': 'VISITE_DOMICILE', 'HORS_PERMANENCE': 'HORS_PERMANENCE',
@@ -109,12 +110,15 @@ def issue_rdv(request, creneau_id):
     if rdv.nature == 'REUNION':
         if not rdv.peut_gerer_reunion(request.user):
             return HttpResponseForbidden("Une réunion se gère par celui qui l'a convoquée ou par un cadre.")
-    elif not rdv.voit_le_detail(request.user):
-        return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
+    elif not (rdv.voit_le_detail(request.user) or accueil_de_la_mds(request.user, rdv)):
+        return HttpResponseForbidden("Réservé à l'agent du rendez-vous, au cadre et à l'accueil de la MDS.")
     statut = request.POST.get('statut')
     if statut not in dict(ISSUES_RDV) or (statut == 'VAD_ABSENT' and rdv.nature != 'VAD'):
         messages.error(request, "Issue du rendez-vous non valable.")
         return redirect(_retour(request))
+    if not rdv.voit_le_detail(request.user) and statut not in ACCUEIL_ISSUES:
+        # L'accueil note seulement venu ou absent ; « venu non reçu » relève du travailleur social
+        return HttpResponseForbidden("L'accueil ne peut noter que « venu et reçu » ou « absent ».")
 
     ancien = rdv.get_statut_display()
     rdv.statut = statut
@@ -135,6 +139,12 @@ def issue_rdv(request, creneau_id):
     if (b and statut == 'VENU_RECU' and rdv.premiere_fois and b.referent_mds_id is None
             and rdv.agent and rdv.agent.a_la_capacite('peut_instruire')):
         b.referent_mds = rdv.agent
+        b.save(update_fields=['referent_mds'])
+    # Venu non reçu ou absent : si l'agent n'a jamais reçu l'usager, il n'est plus désigné référent
+    if (b and statut in ('VENU_NON_RECU', 'ABSENT') and b.referent_mds_id and rdv.agent_id == b.referent_mds_id
+            and not CreneauRdv.objects.filter(beneficiaire=b, agent_id=rdv.agent_id, statut='VENU_RECU')
+            .exclude(pk=rdv.pk).exists()):
+        b.referent_mds = None
         b.save(update_fields=['referent_mds'])
     messages.success(request, f"Rendez-vous du {rdv.date:%d/%m/%Y} : {rdv.get_statut_display().lower()}.")
     return redirect(_retour(request))
