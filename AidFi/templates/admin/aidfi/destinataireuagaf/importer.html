@@ -1,0 +1,20 @@
+{# AidFi/templates/admin/aidfi/destinataireuagaf/importer.html #}
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Accueil</a> &rsaquo;
+  <a href="{% url 'admin:AidFi_destinataireuagaf_changelist' %}">Destinataires de l'UAGAF</a> &rsaquo;
+  Importer
+</div>
+{% endblock %}
+{% block content %}
+<p>Chaque ligne du fichier désigne une adresse qui reçoit les AFASE envoyées par mail à l'UAGAF. Une adresse déjà
+connue est mise à jour ; les autres ne sont pas supprimées. Mettre <code>non</code> dans la colonne <code>actif</code>
+désactive une adresse sans la supprimer.</p>
+<p>Modèle : <code>nom;email;actif</code>, séparateur « ; », encodage UTF-8.</p>
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" value="Importer" class="default">
+</form>
+{% endblock %}

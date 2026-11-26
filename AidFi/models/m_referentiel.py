@@ -112,3 +112,18 @@ class MotifRefusAFASE(models.Model):
 
     def __str__(self):
         return f"{self.code} – {self.libelle}"
+
+
+class DestinataireUAGAF(models.Model):
+    """Adresse de l'UAGAF pour l'envoi des AFASE par mail. Saisie ou importée (CSV) dans l'administration."""
+    nom = models.CharField("Service ou agent", max_length=200)
+    email = models.EmailField("Adresse mail", unique=True)
+    actif = models.BooleanField("Reçoit les envois", default=True)
+
+    class Meta:
+        ordering = ['nom']
+        verbose_name = "Destinataire de l'UAGAF (envoi par mail)"
+        verbose_name_plural = "Destinataires de l'UAGAF (envoi par mail)"
+
+    def __str__(self):
+        return f"{self.nom} <{self.email}>"

@@ -8,7 +8,7 @@
 from types import SimpleNamespace
 from unittest import mock
 
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
 from AidFi.services import afase_circuit as circuit
 
@@ -29,7 +29,7 @@ def _dossier():
 USER = SimpleNamespace(get_full_name=lambda: "Agent Test", username="as1_mds1")
 
 
-class EnvoiAFASETests(SimpleTestCase):
+class EnvoiAFASETests(TestCase):
     @override_settings(EMAIL_BACKEND='dummy')
     def test_mail_refuse_si_messagerie_non_reglee(self):
         with self.assertRaisesMessage(circuit.CircuitErreur, "messagerie de CID n'est pas réglée"):
