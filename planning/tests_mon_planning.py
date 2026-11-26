@@ -56,6 +56,14 @@ class MonPlanningTests(TestCase):
         ids = [x['heure'] for _, rdvs in r.context['jours'] for x in rdvs]
         self.assertEqual(ids, ["09:00", "14:00"])
 
+    def test_co_intervention_listee(self):
+        co = self.rdv(date.today() + timedelta(days=1), time(16), "RESERVE", self.autre)
+        co.co_intervenants.add(self.ts)
+        r = self.client.get("/planning/mon-planning/")
+        heures = [x['heure'] for _, rdvs in r.context['jours'] for x in rdvs]
+        self.assertIn("16:00", heures)
+        self.assertEqual(heures.count("16:00"), 1)
+
     def test_classement_par_date_puis_heure(self):
         r = self.client.get("/planning/mon-planning/")
         self.assertEqual(len(r.context['jours']), 1)

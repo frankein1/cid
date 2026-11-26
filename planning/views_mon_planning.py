@@ -5,11 +5,11 @@
 # =============================================================================
 # planning/views_mon_planning.py
 """« Mon planning » : les prochains rendez-vous de l'agent connecté, classés par date puis par heure.
-Les rendez-vous traités sont masqués (case « afficher les traités »). Seuls les rendez-vous dont l'agent est titulaire
-sont listés."""
+Les rendez-vous traités sont masqués (case « afficher les traités »). Sont listés les rendez-vous dont l'agent est titulaire ou co-intervenant."""
 from datetime import date, timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import render
 
 from planning.models import CreneauRdv
@@ -23,9 +23,9 @@ def mon_planning(request):
     aujourd_hui = date.today()
     fin = aujourd_hui + timedelta(days=HORIZON_JOURS)
     traites = request.GET.get('traites') == '1'
-    qs = (CreneauRdv.objects.filter(agent=request.user, beneficiaire__isnull=False,
-                                    date__range=(aujourd_hui, fin))
-          .select_related('beneficiaire', 'salle').order_by('date', 'heure_debut', 'pk'))
+    qs = (CreneauRdv.objects.filter(Q(agent=request.user) | Q(co_intervenants=request.user),
+                                    beneficiaire__isnull=False, date__range=(aujourd_hui, fin))
+          .select_related('beneficiaire', 'salle').distinct().order_by('date', 'heure_debut', 'pk'))
     qs = qs.filter(statut__in=STATUTS_TRAITES) if traites else qs.exclude(statut__in=STATUTS_TRAITES)
     jours = {}
     for c in qs:
