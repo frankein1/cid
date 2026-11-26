@@ -11,7 +11,7 @@ VERSION COMPLÈTE avec accueil et exports
 """
 
 from django.urls import path
-from . import views, views_agenda
+from . import views, views_agenda, views_permanences_jour
 
 app_name = 'planning'
 
@@ -59,6 +59,10 @@ urlpatterns = [
     # PLANNING ACCUEIL (NOUVEAU)
     # ==========================
     path('accueil/', views.planning_accueil_jour, name='planning_accueil_jour'),
+    path('permanences-du-jour/', views_permanences_jour.permanences_du_jour, name='permanences_du_jour'),
+    path('permanences-du-jour/<str:date_str>/', views_permanences_jour.permanences_du_jour, name='permanences_du_jour_date'),
+    path('permanences-du-jour/<str:date_str>/pdf/', views_permanences_jour.permanences_du_jour_pdf, name='permanences_du_jour_pdf'),
+    path('permanences-du-jour/<str:date_str>/mail/', views_permanences_jour.permanences_du_jour_mail, name='permanences_du_jour_mail'),
     path('accueil/<str:date_str>/', views.planning_accueil_jour, name='planning_accueil_jour_date'),
     path('accueil/semaine/', views.planning_accueil_semaine, name='planning_accueil_semaine'),
     path('accueil/semaine/<str:date_str>/', views.planning_accueil_semaine, name='planning_accueil_semaine_date'),

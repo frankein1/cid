@@ -26,6 +26,7 @@ from .agenda import (est_premiere_fois, evenement, evenement_indisponibilite, le
 from .forms import ISSUES_RDV, RdvAgentForm
 from .models import CreneauRdv, HistoriqueCreneau, JourBloque
 from .utils import est_jour_ferie
+from .views_permanences_jour import accueil_de_la_mds
 
 # Nature → ancien type_rdv (pour les écrans qui l'affichent encore)
 ANCIEN_TYPE = {'VAD': 'VISITE_DOMICILE', 'HORS_PERMANENCE': 'HORS_PERMANENCE',
@@ -109,8 +110,8 @@ def issue_rdv(request, creneau_id):
     if rdv.nature == 'REUNION':
         if not rdv.peut_gerer_reunion(request.user):
             return HttpResponseForbidden("Une réunion se gère par celui qui l'a convoquée ou par un cadre.")
-    elif not rdv.voit_le_detail(request.user):
-        return HttpResponseForbidden("Réservé à l'agent du rendez-vous et au cadre.")
+    elif not (rdv.voit_le_detail(request.user) or accueil_de_la_mds(request.user, rdv)):
+        return HttpResponseForbidden("Réservé à l'agent du rendez-vous, au cadre et à l'accueil de la MDS.")
     statut = request.POST.get('statut')
     if statut not in dict(ISSUES_RDV) or (statut == 'VAD_ABSENT' and rdv.nature != 'VAD'):
         messages.error(request, "Issue du rendez-vous non valable.")
