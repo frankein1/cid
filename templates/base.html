@@ -63,29 +63,41 @@
                                 <i class="fas fa-hands-helping mr-2"></i>Accompagnement
                                 <i class="fas fa-chevron-down ml-1 text-xs"></i>
                             </button>
-                            <div id="acc-menu" class="hidden absolute left-0 mt-2 w-60 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                {% if user.is_superuser or user|a_la_capacite:'peut_valider' or user|a_la_capacite:'stats_departement' or user|a_la_capacite:'peut_administrer' %}
-                                <a href="{% url 'beneficiaire:statistiques_accompagnement' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-chart-column mr-2 w-4"></i>Statistiques de l'accompagnement</a>
-                                {% endif %}
-                                <a href="{% url 'logement:papier_economise' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-leaf mr-2 w-4"></i>Papier économisé</a>
+                            <div id="acc-menu" class="hidden absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200 max-h-[80vh] overflow-y-auto">
+                                {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_insertion %}
+                                <div class="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">Logement</div>
                                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
-                                <a href="{% url 'logement:expulsion_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
-                                <a href="{% url 'logement:hebergement_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>
+                                <a href="{% url 'beneficiaire:annuaire' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house mr-2 w-4"></i>Demande logement (FSL, DALO, COPP)</a>
                                 <a href="{% url 'logement:indigne_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Logement indigne</a>
+                                <a href="{% url 'logement:hebergement_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>
+                                <a href="{% url 'logement:expulsion_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
+                                {% endif %}
+
+                                <div class="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">Insertion</div>
+                                {% if user|acces_insertion %}
+                                <a href="{% url 'insertion:accueil' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-file-signature mr-2 w-4"></i>RSA – Insertion</a>
                                 {% endif %}
                                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
                                 <a href="{% url 'connecteurs:inclusion_recherche' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-map-location-dot mr-2 w-4"></i>Trouver un service d'insertion</a>
                                 {% endif %}
+                                {% endif %}
+
                                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
-                                <a href="{% url 'core:aides_financieres' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-euro-sign mr-2 w-4"></i>Aides financières</a>
+                                <div class="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">Aides financières</div>
+                                <a href="{% url 'core:aides_financieres' %}?type=AFASE" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-euro-sign mr-2 w-4"></i>AFASE</a>
+                                <a href="{% url 'core:aides_financieres' %}?type=CAP" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-euro-sign mr-2 w-4"></i>Chèques service (CAP)</a>
+                                <a href="{% url 'core:aides_financieres' %}?type=REGIE" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-euro-sign mr-2 w-4"></i>Régie</a>
                                 {% endif %}
-                                {% if user|acces_insertion %}
-                                <a href="{% url 'insertion:accueil' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-file-signature mr-2 w-4"></i>RSA – Insertion</a>
-                                {% endif %}
+
+                                {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip %}
+                                <div class="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">Enfance et majeurs vulnérables</div>
                                 {% if user|acces_ip %}
                                 <a href="{% url 'protection_enfance:ip_liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>Informations préoccupantes</a>
                                 {% endif %}
-                                <a href="{% url 'core:module_a_venir' 'enfance' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-children mr-2 w-4"></i>Enfance <span class="text-xs text-gray-400">(à venir)</span></a>
+                                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                                <a href="{% url 'adultevul:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-user-shield mr-2 w-4"></i>Adultes vulnérables</a>
+                                {% endif %}
+                                {% endif %}
                             </div>
                         </div>
                         {% endif %}
@@ -273,6 +285,20 @@
            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
             🧭 Référentiel AFASE
         </a>
+        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase">
+            Suivi
+        </div>
+        {% if user.is_superuser or user|a_la_capacite:'peut_valider' or user|a_la_capacite:'stats_departement' or user|a_la_capacite:'peut_administrer' %}
+        <a href="{% url 'beneficiaire:statistiques_accompagnement' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            📈 Statistiques de l'accompagnement
+        </a>
+        {% endif %}
+        <a href="{% url 'logement:papier_economise' %}"
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            🌿 Papier économisé
+        </a>
+
         {% if user|a_la_capacite:'voir_journal_activite' %}
         <a href="{% url 'core:journal_activite' %}"
            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -359,22 +385,37 @@
 
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip or user|acces_insertion or user|a_la_capacite:'stats_departement' %}
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Accompagnement</p>
-                {% if user.is_superuser or user|a_la_capacite:'peut_valider' or user|a_la_capacite:'stats_departement' or user|a_la_capacite:'peut_administrer' %}<a href="{% url 'beneficiaire:statistiques_accompagnement' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-chart-column mr-2 w-4"></i>Statistiques de l'accompagnement</a>{% endif %}
-                <a href="{% url 'logement:papier_economise' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-leaf mr-2 w-4"></i>Papier économisé</a>
-                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}<a href="{% url 'logement:expulsion_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
-                <a href="{% url 'logement:indigne_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Logement indigne</a>
-                <a href="{% url 'logement:hebergement_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>{% endif %}
-                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}<a href="{% url 'connecteurs:inclusion_recherche' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-map-location-dot mr-2 w-4"></i>Trouver un service d'insertion</a>{% endif %}
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_insertion %}
+                <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Logement</p>
                 {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
-                <a href="{% url 'core:aides_financieres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-euro-sign mr-2 w-4"></i>Aides financières</a>
+                <a href="{% url 'beneficiaire:annuaire' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house mr-2 w-4"></i>Demande logement (FSL, DALO, COPP)</a>
+                <a href="{% url 'logement:indigne_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Logement indigne</a>
+                <a href="{% url 'logement:hebergement_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-bed mr-2 w-4"></i>Hébergement d'urgence</a>
+                <a href="{% url 'logement:expulsion_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-house-circle-exclamation mr-2 w-4"></i>Prévention des expulsions</a>
                 {% endif %}
+                <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Insertion</p>
                 {% if user|acces_insertion %}
                 <a href="{% url 'insertion:accueil' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-file-signature mr-2 w-4"></i>RSA – Insertion</a>
                 {% endif %}
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                <a href="{% url 'connecteurs:inclusion_recherche' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-map-location-dot mr-2 w-4"></i>Trouver un service d'insertion</a>
+                {% endif %}
+                {% endif %}
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Aides financières</p>
+                <a href="{% url 'core:aides_financieres' %}?type=AFASE" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-euro-sign mr-2 w-4"></i>AFASE</a>
+                <a href="{% url 'core:aides_financieres' %}?type=CAP" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-euro-sign mr-2 w-4"></i>Chèques service (CAP)</a>
+                <a href="{% url 'core:aides_financieres' %}?type=REGIE" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-euro-sign mr-2 w-4"></i>Régie</a>
+                {% endif %}
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' or user|acces_ip %}
+                <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Enfance et majeurs vulnérables</p>
                 {% if user|acces_ip %}
                 <a href="{% url 'protection_enfance:ip_liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-triangle-exclamation mr-2 w-4"></i>Informations préoccupantes</a>
                 {% endif %}
-                <a href="{% url 'core:module_a_venir' 'enfance' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-children mr-2 w-4"></i>Enfance <span class="text-xs text-blue-300">(à venir)</span></a>
+                {% if user.is_superuser or user|a_la_capacite:'peut_voir' %}
+                <a href="{% url 'adultevul:liste' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-user-shield mr-2 w-4"></i>Adultes vulnérables</a>
+                {% endif %}
+                {% endif %}
                 {% endif %}
 
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase">Planning</p>
@@ -424,6 +465,10 @@
 
                 {% if user|a_la_capacite:'peut_decider' or user|a_la_capacite:'peut_valider_cheque_aidfi' %}
                 <p class="px-3 pt-3 pb-1 text-xs font-semibold text-blue-300 uppercase text-yellow-200">Cadre</p>
+                {% if user.is_superuser or user|a_la_capacite:'peut_valider' or user|a_la_capacite:'stats_departement' or user|a_la_capacite:'peut_administrer' %}
+                <a href="{% url 'beneficiaire:statistiques_accompagnement' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-chart-column mr-2 w-4"></i>Statistiques de l'accompagnement</a>
+                {% endif %}
+                <a href="{% url 'logement:papier_economise' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white"><i class="fas fa-leaf mr-2 w-4"></i>Papier économisé</a>
                 <a href="{% url 'AidFi:dashboard_cadre' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">⚖️ AFASE et CAP à traiter</a>
                 {% if user|a_la_capacite:'rgpd_archiver' %}<a href="{% url 'beneficiaire:rgpd_archivage' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">🗄️ Archivage RGPD</a>{% endif %}
                 <a href="{% url 'AidFi:cap_coffres' %}" class="block px-3 py-2 rounded-md text-sm text-blue-100 hover:bg-blue-700 hover:text-white">🔐 Coffre CAP</a>
