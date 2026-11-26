@@ -58,14 +58,14 @@
                     <th class="px-3 py-2">Motif</th>
                     <th class="px-3 py-2">Lieu</th>
                     <th class="px-3 py-2">Agent</th>
-                    <th class="px-3 py-2">Issue</th>
+                    <th class="px-3 py-2">Présence</th>
                 </tr>
             </thead>
             <tbody>
                 {% for l in lignes %}
                 <tr class="border-t align-top">
                     <td class="px-3 py-2 font-semibold">{{ l.heure }}</td>
-                    <td class="px-3 py-2">{{ l.code }}</td>
+                    <td class="px-3 py-2"><a href="{% url 'beneficiaire:detail_beneficiaire' code_interne=l.code %}" class="underline text-blue-700">{{ l.code }}</a></td>
                     <td class="px-3 py-2">{{ l.nom }}</td>
                     <td class="px-3 py-2">{{ l.naissance }}</td>
                     <td class="px-3 py-2">{{ l.adresse }}<br>{{ l.cp_ville }}</td>

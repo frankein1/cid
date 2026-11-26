@@ -20,7 +20,7 @@ from planning.models import CreneauRdv
 JOUR = date(2026, 11, 27)
 
 
-class PermanencesDuJourTests(TestCase):
+class _Donnees(TestCase):
     def setUp(self):
         for cmd in ("init_capacites", "init_profils"):
             call_command(cmd, stdout=StringIO())
@@ -56,6 +56,7 @@ class PermanencesDuJourTests(TestCase):
                                          salle=salle, mds=salle.mds, beneficiaire=usager, agent=self.accueil,
                                          statut=statut)
 
+class PermanencesDuJourTests(_Donnees):
     def test_liste_limitee_a_la_mds_et_masque_les_traites(self):
         r = self.client_accueil.get(f"/planning/permanences-du-jour/{JOUR.isoformat()}/")
         self.assertEqual(r.status_code, 200)
@@ -108,3 +109,53 @@ class PermanencesDuJourTests(TestCase):
     def test_envoi_mail_adresse_incorrecte_refusee(self):
         self.client_accueil.post(f"/planning/permanences-du-jour/{JOUR.isoformat()}/mail/", {'email': 'pas-une-adresse'})
         self.assertEqual(len(mail.outbox), 0)
+
+
+class IssueAccueilEtReferentTests(_Donnees):
+    def test_accueil_ne_peut_pas_noter_venu_non_recu(self):
+        ts = self.utilisateur("ts0", self.mds)
+        self.rdv_a_traiter.agent = ts   # l'accueil n'est pas l'agent du rendez-vous
+        self.rdv_a_traiter.save(update_fields=['agent'])
+        r = self.client_accueil.post(f"/planning/rdv/{self.rdv_a_traiter.pk}/issue/", {'statut': 'VENU_NON_RECU'})
+        self.assertEqual(r.status_code, 403)
+        self.rdv_a_traiter.refresh_from_db()
+        self.assertEqual(self.rdv_a_traiter.statut, 'RESERVE')
+
+    def test_absent_retire_le_referent_si_jamais_recu(self):
+        ts = self.utilisateur("ts3", self.mds)
+        self.rdv_a_traiter.agent = ts
+        self.rdv_a_traiter.save(update_fields=['agent'])
+        self.usager.referent_mds = ts
+        self.usager.save(update_fields=['referent_mds'])
+        c = Client()
+        c.force_login(ts)
+        c.post(f"/planning/rdv/{self.rdv_a_traiter.pk}/issue/", {'statut': 'ABSENT'})
+        self.usager.refresh_from_db()
+        self.assertIsNone(self.usager.referent_mds)
+
+    def test_venu_non_recu_retire_le_referent_si_jamais_recu(self):
+        ts = self.utilisateur("ts", self.mds)
+        self.rdv_a_traiter.agent = ts
+        self.rdv_a_traiter.save(update_fields=['agent'])
+        self.usager.referent_mds = ts
+        self.usager.save(update_fields=['referent_mds'])
+        c = Client()
+        c.force_login(ts)
+        c.post(f"/planning/rdv/{self.rdv_a_traiter.pk}/issue/", {'statut': 'VENU_NON_RECU'})
+        self.usager.refresh_from_db()
+        self.assertIsNone(self.usager.referent_mds)
+
+    def test_venu_non_recu_garde_le_referent_s_il_a_deja_recu(self):
+        ts = self.utilisateur("ts2", self.mds)
+        self.usager.referent_mds = ts
+        self.usager.save(update_fields=['referent_mds'])
+        CreneauRdv.objects.create(date=date(2026, 11, 20), heure_debut=time(9), heure_fin=time(9, 30),
+                                  salle=self.salle, mds=self.mds, beneficiaire=self.usager, agent=ts,
+                                  statut='VENU_RECU')
+        self.rdv_a_traiter.agent = ts
+        self.rdv_a_traiter.save(update_fields=['agent'])
+        c = Client()
+        c.force_login(ts)
+        c.post(f"/planning/rdv/{self.rdv_a_traiter.pk}/issue/", {'statut': 'VENU_NON_RECU'})
+        self.usager.refresh_from_db()
+        self.assertEqual(self.usager.referent_mds_id, ts.pk)

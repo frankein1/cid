@@ -24,7 +24,8 @@ from planning.models import CreneauRdv
 
 STATUTS_TRAITES = ['VENU_RECU', 'VENU_NON_RECU', 'ABSENT', 'VAD_ABSENT',
                    'ANNULE_USAGER', 'REPORT_USAGER', 'ANNULE_MDS', 'REPORT_MDS']
-ISSUES_ACCUEIL = [('VENU_RECU', 'Venu et reçu'), ('VENU_NON_RECU', 'Venu non reçu'), ('ABSENT', 'Absent')]
+ACCUEIL_ISSUES = ['VENU_RECU', 'ABSENT']
+ISSUES_ACCUEIL = [('VENU_RECU', 'Venu'), ('ABSENT', 'Absent')]
 
 
 def mds_de_l_agent(user):
