@@ -109,9 +109,13 @@ def _pieces_et_documents(demande):
 
 
 def _adresses_uagaf():
-    """Adresses de l'UAGAF : AFASE_UAGAF_EMAILS (variable d'environnement), sinon les agents du service de contrôle."""
+    """Adresses de l'UAGAF : destinataires actifs saisis ou importés dans l'administration ; à défaut, la variable
+    d'environnement AFASE_UAGAF_EMAILS, puis les agents du service de contrôle."""
     from django.conf import settings
     from core.models import User
+    from AidFi.services.destinataires_uagaf import adresses_actives
+    if adresses_actives():
+        return adresses_actives()
     if getattr(settings, 'AFASE_UAGAF_EMAILS', None):
         return list(settings.AFASE_UAGAF_EMAILS)
     return list(User.objects.filter(is_active=True, profils__code='SERVICE_CONTROLE_AFASE', profils__actif=True)
@@ -128,7 +132,7 @@ def _envoyer_dossier(demande, user, mode):
             raise CircuitErreur("La messagerie de CID n'est pas réglée : choisissez l'envoi imprimé.")
         destinataires = _adresses_uagaf()
         if not destinataires:
-            raise CircuitErreur("Aucune adresse de l'UAGAF n'est réglée (variable AFASE_UAGAF_EMAILS).")
+            raise CircuitErreur("Aucune adresse de l'UAGAF n'est réglée (administration : Destinataires de l'UAGAF).")
         d = demande.decision
         objet = envoi.objet_mail(demande.mds, f"AFASE n° {demande.pk}", demande.beneficiaire)
         message = (f"Dossier AFASE complet, transmis par {user.get_full_name() or user.username}.\n"

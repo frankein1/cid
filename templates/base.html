@@ -138,6 +138,9 @@
     <a href="{% url 'mds:mes_demi_journees' %}" class="block px-4 py-2 text-sm text-blue-700 font-bold hover:bg-blue-50">
         <i class="fas fa-user-clock mr-2 w-4"></i>Mes jours de permanence
     </a>
+    <a href="#" class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
+        <i class="fas fa-calendar-day mr-2 w-4"></i>Mon planning
+    </a>
     <a href="{% url 'partenaires:liste' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
         <i class="fas fa-address-book mr-2 w-4"></i>Annuaire des partenaires
     </a>
@@ -313,12 +316,6 @@
         </a>
         {% endif %}
 
-        {# Placeholder futur #}
-        <a href="#"
-           class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
-            🏦 Régie (à venir)
-        </a>
-        
     </div>
 </div>
 {% endif %}
