@@ -14,6 +14,7 @@ import random
 from datetime import datetime, timedelta, time, date
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from .agenda import salle_occupee
 from .models import CreneauRdv, JourBloque
 from mds.models import DemiJourneeReception, MDSReception, UserMDSProfile
 
@@ -168,6 +169,7 @@ def generer_creneaux_permanences(
     date_debut, nombre_semaines, mds, type_rdv='PERMANENCE'
 ):
     creneaux_crees = []
+    non_couvertes = []
     salles = list(MDSReception.objects.filter(mds=mds, actif=True))
 
 
@@ -215,6 +217,7 @@ def generer_creneaux_permanences(
                 salles_disponibles = [
                     s for s in salles
                     if salle_est_disponible(s, current_date)
+                    and not salle_occupee(s, current_date, dj['heure_debut'], dj['heure_fin'], 'HORS_PERMANENCE')
                     and [
                         s.disponible_lundi, s.disponible_mardi,
                         s.disponible_mercredi, s.disponible_jeudi,
@@ -222,6 +225,7 @@ def generer_creneaux_permanences(
                     ][current_date.weekday()]
                 ]
                 if not salles_disponibles:
+                    non_couvertes.append((current_date, dj['heure_debut'], dj['heure_fin'], agent))
                     continue
                 salle_utilisee = random.choice(salles_disponibles)
             else:
@@ -242,6 +246,8 @@ def generer_creneaux_permanences(
                     )
                 )
 
+    if non_couvertes:
+        alerter_salles_non_couvertes(mds, non_couvertes)
     return creneaux_crees
 
 
@@ -282,3 +288,29 @@ def est_jour_ferie(date_val):
         paques + timedelta(days=39),
         paques + timedelta(days=50)
     }
+
+
+def cadres_de_mds(mds):
+    """Agents de la MDS ayant la capacité de gestion (directeur, responsable) : destinataires des alertes de salles."""
+    return [
+        u for u in User.objects.filter(profils_mds__mds=mds, profils_mds__actif=True, is_active=True).distinct()
+        if u.email and u.a_la_capacite('planning_bloquer')
+    ]
+
+
+def alerter_salles_non_couvertes(mds, non_couvertes):
+    """Mail aux cadres : des demi-journées de permanence n'ont aucune salle libre. Rien n'est envoyé si la messagerie
+    de CID n'est pas réglée (le cadre doit alors être prévenu autrement)."""
+    from logement.services import envoi
+    destinataires = [u.email for u in cadres_de_mds(mds)]
+    if not destinataires or not envoi.mail_configure():
+        return False
+    lignes = "\n".join(
+        f"- {jour:%d/%m/%Y} de {debut:%H:%M} à {fin:%H:%M} (agent : {agent.get_full_name() or agent.username})"
+        for jour, debut, fin, agent in sorted(non_couvertes, key=lambda x: (x[0], x[1]))
+    )
+    message = (f"Bonjour,\n\nLes demi-journées de permanence ci-dessous n'ont aucune salle de réception libre. "
+               f"Elles ne sont pas ouvertes en permanence. Merci de voir avec les agents concernés.\n\n"
+               f"{lignes}\n\nMDS : {mds.nom}")
+    envoi.envoyer_mail(destinataires, f"Permanences sans salle libre – {mds.nom}", message, None, None, [])
+    return True

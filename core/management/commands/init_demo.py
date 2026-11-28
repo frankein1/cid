@@ -1210,15 +1210,19 @@ class Command(BaseCommand):
                        date_premier_rendez_vous=j + timedelta(days=5), heure_premier_rendez_vous="09:30",
                        elements_declaratifs=texte["elements_declaratifs"], evaluation_sociale=texte["evaluation_sociale"])
         RelanceRU.objects.create(demande=retard, date_relance=j - timedelta(days=3), commentaire="Relance par téléphone (fictive)", effectuee_par=sas)
+        from ru.rendez_vous import poser_rdv_ru
+        poser_rdv_ru(retard, 1, ts)
         # 3. Évaluation soumise, en attente du visa du cadre
-        creer("ROUX", "Amina", "Demande de secours exceptionnel", D.Statut.A_VALIDER_CADRE, D.Circuit.MDS,
+        roux = creer("ROUX", "Amina", "Demande de secours exceptionnel", D.Statut.A_VALIDER_CADRE, D.Circuit.MDS,
               j - timedelta(days=8), notif=j - timedelta(days=8), agent=ts, date_premier_rendez_vous=j + timedelta(days=10),
               heure_premier_rendez_vous="14:00", date_soumission_mds=timezone.now(), **texte)
+        poser_rdv_ru(roux, 1, ts)
         # 4. Évaluation visée, à finaliser par le SAS
         valide = creer("LEFEBVRE", "Marc", "Demande d'information sur les droits", D.Statut.A_VALIDER_SAS, D.Circuit.MDS,
               j - timedelta(days=9), notif=j - timedelta(days=9), agent=ts, date_premier_rendez_vous=j + timedelta(days=3),
               heure_premier_rendez_vous="10:00", date_soumission_mds=timezone.now(), validee_par=cadre,
               initiales_signature_cadre="CM", date_validation_mds=timezone.now(), **texte)
+        poser_rdv_ru(valide, 1, ts)
         HistoriqueRU.objects.create(demande=valide, action="TRANSMISSION_SAS_MDS", acteur=sas, detail="Envoyée à Agent Social 1 – MDS TEST 01")
         HistoriqueRU.objects.create(demande=valide, action="VALIDATION_CADRE_MDS", acteur=cadre, detail="Signature CM")
         # 5. Réponse directe du SAS, clôturée
@@ -1603,7 +1607,7 @@ class Command(BaseCommand):
                                 (14, "FAM4-NOL", "RESERVE"), (15, None, "DISPONIBLE")]:
             CreneauRdv.objects.get_or_create(
                 date=jour, heure_debut=time(h), agent=self.ts, defaults={
-                    "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
+                    "heure_fin": time(h, 30), "duree_minutes": 30, "salle": salle, "mds": self.mds1,
                     "beneficiaire": self.b.get(code) if code else None, "statut": statut, "type_rdv": "PERMANENCE",
                     "nature": "PERMANENCE", "domaine": "SOCIAL", "notes_internes": "[démo] rendez-vous fictif",
                     "cree_par": self.ts, "reserve_par": self.u("aa1_mds1") if code else None,
@@ -1613,7 +1617,15 @@ class Command(BaseCommand):
         for h in (9, 10, 11, 14, 15):
             CreneauRdv.objects.get_or_create(
                 date=semaine, heure_debut=time(h), agent=self.ts, defaults={
-                    "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
+                    "heure_fin": time(h, 30), "duree_minutes": 30, "salle": salle, "mds": self.mds1,
                     "statut": "DISPONIBLE", "type_rdv": "PERMANENCE", "nature": "PERMANENCE", "domaine": "SOCIAL",
                     "notes_internes": "[démo] créneau fictif", "cree_par": self.ts})
+        # Rendez-vous hors des heures de la MDS : le lieu est un tiers lieu (mémo), pas la MDS
+        CreneauRdv.objects.get_or_create(
+            date=jour, heure_debut=time(17, 30), agent=self.ts, defaults={
+                "heure_fin": time(18, 0), "duree_minutes": 30, "mds": self.mds1, "statut": "RESERVE",
+                "nature": "HORS_PERMANENCE", "type_rdv": "HORS_PERMANENCE", "domaine": "SOCIAL",
+                "lieu_precis": "Tiers lieu : Maison des associations (fictif), Port-de-Bouc",
+                "notes_internes": "[démo] rendez-vous fictif hors des heures de la MDS",
+                "cree_par": self.ts, "modalite": "AUTRE"})
         self.stdout.write(f"✅ Planning : permanences d'Agent Social 1 le {jour:%d/%m/%Y} et le {semaine:%d/%m/%Y}")

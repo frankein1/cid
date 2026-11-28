@@ -21,9 +21,15 @@ def _etape(dossier, type_etape, user, commentaire=""):
 
 
 # ------------------------------------------------------------------------------------------------- convocations
-def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=45, passage=None):
+class ConvocationImpossible(ValueError):
+    """Une convocation ne part pas sans rendez-vous posé dans l'agenda (horaire, salle)."""
+
+
+def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=40, passage=None, salle=None):
     """1re convocation, ou 2e et dernière si une première est restée sans réponse. Le rendez-vous est posé dans
     l'agenda de l'agent qui reçoit (planning de CID). Avec `passage` : convocation avant une commission."""
+    from planning.agenda import salle_occupee
+    from planning.forms import memo_mds
     from planning.models import CreneauRdv
     if passage is not None:
         rang = C.COM_2 if passage.convocations.exists() else C.COM_1
@@ -31,11 +37,22 @@ def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=45, passage=No
         rang = C.DSF_2 if dossier.convocations.filter(type_convocation=C.DSF_1).exists() else C.DSF_1
     agent = agent or dossier.referent or user
     local = timezone.localtime(date_rdv)
+    debut, fin = local.time(), (local + timedelta(minutes=duree)).time()
+    if duree % 10 or local.minute % 10:
+        raise ConvocationImpossible("Les horaires se posent par pas de 10 minutes.")
+    if salle is not None and salle_occupee(salle, local.date(), debut, fin, 'HORS_PERMANENCE'):
+        raise ConvocationImpossible(f"{salle.nom} est réservée sur cet horaire : choisissez une autre salle "
+                                    f"ou un autre horaire. La convocation n'est pas partie.")
+    lieu = (lieu or '').strip() or memo_mds(dossier.mds, salle)
+    from planning.agenda import dans_heures_ouverture
+    if lieu.startswith('MDS :') and not dans_heures_ouverture(debut, fin):
+        raise ConvocationImpossible("À la MDS, les rendez-vous se prennent aux heures d'ouverture (9 h - 12 h, "
+                                    "13 h 30 - 17 h) : indiquez un autre lieu.")
     rdv = CreneauRdv.objects.create(
-        date=local.date(), heure_debut=local.time(), heure_fin=(local + timedelta(minutes=duree)).time(),
-        duree_minutes=duree, mds=dossier.mds, agent=agent, beneficiaire=dossier.beneficiaire,
+        date=local.date(), heure_debut=debut, heure_fin=fin,
+        duree_minutes=duree, mds=dossier.mds, agent=agent, beneficiaire=dossier.beneficiaire, salle=salle,
         nature='HORS_PERMANENCE', domaine='SOCIAL', type_rdv='HORS_PERMANENCE', statut='RESERVE',
-        modalite='MDS' if not lieu else 'AUTRE', lieu_precis=lieu[:200],
+        modalite='MDS' if lieu.startswith('MDS :') else 'AUTRE', lieu_precis=lieu[:200],
         description=f"Prévention des expulsions – {'commission' if passage else 'diagnostic social et financier'} "
                     f"({dossier.numero}, {dossier.nom_complet})", cree_par=user, reserve_par=user,
         date_reservation=timezone.now())

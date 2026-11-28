@@ -118,6 +118,10 @@ class TransmissionMDSForm(forms.Form):
 
 
 class TraitementRUForm(forms.ModelForm):
+    # Salles de réception réservées pour les rendez-vous posés dans l'agenda (hors modèle)
+    salle_premier_rdv = forms.ModelChoiceField(queryset=None, required=False, label="Salle (1er rendez-vous)")
+    salle_second_rdv = forms.ModelChoiceField(queryset=None, required=False, label="Salle (2e rendez-vous)")
+
     class Meta:
         model = DemandeRelationUsager
         fields = [
@@ -151,6 +155,11 @@ class TraitementRUForm(forms.ModelForm):
         ).values_list("user_id", flat=True) if instance.mds_id else []
         self.fields["agent_assigne"].queryset = User.objects.filter(id__in=worker_ids).order_by("last_name", "first_name")
         self.user = user
+        from mds.models import MDSReception
+        salles = MDSReception.objects.filter(mds=instance.mds, actif=True) if instance.mds_id else MDSReception.objects.none()
+        for nom in ("salle_premier_rdv", "salle_second_rdv"):
+            self.fields[nom].queryset = salles
+            self.fields[nom].label_from_instance = lambda s: s.nom
         _style_fields(self)
         if not (user.is_superuser or user.a_la_capacite("peut_valider")):
             self.fields.pop("agent_assigne")

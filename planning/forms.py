@@ -279,6 +279,25 @@ class PermanenceExterneForm(SaisieHoraire, forms.ModelForm):
 # AGENDA UNIFIÉ : rendez-vous hors permanence (VAD, hors permanence, partenaire…)
 # =============================================================================
 
+TYPES_LIEU = [
+    ('', "Saisie libre (partenaire, structure, autre)"),
+    ('DOMICILE', "Domicile de l'usager (adresse de la fiche)"),
+    ('MDS', "MDS (adresse de la MDS, salle de réception réservée)"),
+]
+
+
+def memo_domicile(beneficiaire, precision=''):
+    """Mémo de lieu : adresse de la fiche usager, précision facultative (bâtiment, étage)."""
+    adresse = f"Domicile : {beneficiaire.adresse}, {beneficiaire.code_postal} {beneficiaire.ville}".strip()
+    return f"{adresse} – {precision.strip()}" if (precision or '').strip() else adresse
+
+
+def memo_mds(mds, salle=None):
+    """Mémo de lieu : adresse de la MDS. La salle, si elle est réservée, reste un lien à part : elle n'apparaît
+    pas sur les courriers."""
+    return f"MDS : {mds.adresse}, {mds.code_postal} {mds.ville}".strip()
+
+
 class RdvAgentForm(SaisieHoraire, forms.Form):
     """
     Rendez-vous noté par un agent social ou d'accueil dans l'agenda unifié.
@@ -290,8 +309,13 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
     heure_debut = forms.TimeField(label="Début", widget=forms.TimeInput(attrs={'type': 'time'}))
     heure_fin = forms.TimeField(label="Fin", widget=forms.TimeInput(attrs={'type': 'time'}))
     beneficiaire_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
-    lieu_precis = forms.CharField(label="Lieu", required=False, max_length=200,
-                                  help_text="Adresse de la VAD, structure du partenaire…")
+    lieu_type = forms.ChoiceField(label="Lieu", choices=TYPES_LIEU, required=False, initial='')
+    lieu_precision = forms.CharField(label="Précision du domicile", required=False, max_length=120,
+                                     help_text="Bâtiment, étage… (facultatif)")
+    lieu_precis = forms.CharField(label="Lieu (saisie libre)", required=False, max_length=200,
+                                  help_text="Structure du partenaire, autre lieu…")
+    salle = forms.ModelChoiceField(queryset=None, required=False, label="Salle de réception",
+                                   help_text="Réserve la salle sur l'horaire, marge de 30 min comprise.")
     co_intervenants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), required=False,
                                                      label="Co-intervenants")
     partenaires = forms.ModelMultipleChoiceField(queryset=None, required=False, label="Partenaires",
@@ -308,6 +332,9 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
         self.fields['motif'].choices = choix_motifs()
         from partenaires.models import Partenaire
         self.fields['partenaires'].queryset = Partenaire.objects.filter(actif=True)
+        from mds.models import MDSReception
+        self.fields['salle'].queryset = MDSReception.objects.filter(mds=mds, actif=True) if mds else MDSReception.objects.none()
+        self.fields['salle'].label_from_instance = lambda s: s.nom
         agents = User.objects.filter(profils_mds__mds=mds, profils_mds__actif=True, is_active=True)\
             .distinct().order_by('last_name', 'first_name')
         self.fields['agent'].queryset = agents
@@ -334,18 +361,45 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
                 self.add_error(None, "Usager introuvable dans votre MDS.")
         if nature == 'VAD' and not data.get('beneficiaire'):
             self.add_error(None, "Une visite à domicile concerne un usager : sélectionnez-le.")
-        lieu, erreur = lieu_du_rendez_vous(nature, data.get('beneficiaire'), data.get('lieu_precis'))
+        type_lieu = data.get('lieu_type') or ('DOMICILE' if nature == 'VAD' else '')
+        erreur = None
+        if type_lieu == 'DOMICILE':
+            if not data.get('beneficiaire') or not (data['beneficiaire'].adresse or '').strip():
+                erreur = "Adresse du domicile absente de la fiche : complétez-la avant la visite."
+                lieu = ''
+            else:
+                lieu = memo_domicile(data['beneficiaire'], data.get('lieu_precision'))
+        elif type_lieu == 'MDS':
+            lieu = memo_mds(self.mds, data.get('salle'))
+        else:
+            lieu, erreur = lieu_du_rendez_vous(nature, data.get('beneficiaire'), data.get('lieu_precis'))
         if erreur:
-            self.add_error('lieu_precis' if nature == 'HORS_PERMANENCE' else None, erreur)
+            self.add_error(None, erreur)
         data['lieu_precis'] = lieu
+        # Heures d'ouverture : uniquement quand le lieu est la MDS. Hors de ces heures, il faut un autre lieu
+        # (domicile, tiers lieu comme une maison des associations).
+        if debut and fin and debut < fin and lieu.startswith('MDS :'):
+            from .agenda import dans_heures_ouverture
+            if not dans_heures_ouverture(debut, fin):
+                self.add_error(None, "À la MDS, les rendez-vous se prennent aux heures d'ouverture : 9 h - 12 h "
+                                     "ou 13 h 30 - 17 h. Pour un autre horaire, indiquez un autre lieu "
+                                     "(domicile, tiers lieu).")
         agent, date = data.get('agent'), data.get('date')
         if agent and date and debut and fin and not self.errors:
-            from .agenda import conflits_agent
+            from .agenda import conflits_agent, salle_occupee
             conflit = conflits_agent(agent, date, debut, fin).first()
             if conflit:
                 self.add_error(None, f"{agent.get_full_name() or agent.username} est déjà pris(e) de "
                                      f"{conflit.heure_debut:%H:%M} à {conflit.heure_fin:%H:%M} "
                                      f"({conflit.get_nature_display().lower()}).")
+            salle = data.get('salle')
+            if salle and not conflit:
+                occupations = salle_occupee(salle, date, debut, fin, nature)
+                if occupations:
+                    autre = occupations[0]
+                    self.add_error('salle', f"{salle.nom} est réservée de {autre.heure_debut:%H:%M} à "
+                                            f"{autre.heure_fin:%H:%M} ({autre.get_nature_display().lower()}). "
+                                            f"Choisissez une autre salle ou un autre horaire.")
         return data
 
 

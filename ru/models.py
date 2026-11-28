@@ -89,6 +89,14 @@ class DemandeRelationUsager(AuditedMixin):
     heure_premier_rendez_vous = models.TimeField("Heure du 1er rendez-vous", null=True, blank=True)
     absence_premier_rendez_vous = models.BooleanField("Ne s'est pas présentée au 1er rendez-vous", default=False)
     courrier_premier_rdv_genere_le = models.DateTimeField("Courrier de 1er rendez-vous généré le", null=True, blank=True)
+    creneau_premier_rdv = models.ForeignKey(
+        "planning.CreneauRdv", on_delete=models.SET_NULL, null=True, blank=True, related_name="demandes_ru_rdv1",
+        verbose_name="Rendez-vous de l'agenda (1er)",
+    )
+    creneau_second_rdv = models.ForeignKey(
+        "planning.CreneauRdv", on_delete=models.SET_NULL, null=True, blank=True, related_name="demandes_ru_rdv2",
+        verbose_name="Rendez-vous de l'agenda (2e)",
+    )
     date_second_rendez_vous = models.DateField("Date du 2e rendez-vous", null=True, blank=True)
     heure_second_rendez_vous = models.TimeField("Heure du 2e rendez-vous", null=True, blank=True)
     absence_second_rendez_vous = models.BooleanField("Ne s'est pas présentée au 2e rendez-vous", default=False)

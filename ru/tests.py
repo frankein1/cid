@@ -119,7 +119,7 @@ class TraitementRefusTests(TestCase):
             a_la_capacite=lambda code: False,
         )
         demande = SimpleNamespace(pk=7, est_cloturee=False, agent_assigne=None)
-        updated = mock.Mock(agent_assigne=None)
+        updated = mock.Mock(agent_assigne=None, date_premier_rendez_vous=None, date_second_rendez_vous=None)
         form = mock.Mock(is_valid=mock.Mock(return_value=True))
         form.save.return_value = updated
         request = RequestFactory().post("/ru/7/traitement/", {"action": "soumettre"})

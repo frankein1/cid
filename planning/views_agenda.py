@@ -63,7 +63,7 @@ def nouveau_rdv(request):
         if form.is_valid():
             d = form.cleaned_data
             rdv = CreneauRdv.objects.create(
-                salle=None, mds=mds, agent=d['agent'], beneficiaire=d['beneficiaire'],
+                salle=d.get('salle'), mds=mds, agent=d['agent'], beneficiaire=d['beneficiaire'],
                 date=d['date'], heure_debut=d['heure_debut'], heure_fin=d['heure_fin'],
                 nature=d['nature'], domaine=d['domaine'], type_rdv=ANCIEN_TYPE.get(d['nature'], 'AUTRE'),
                 modalite='VAD' if d['nature'] == 'VAD' else 'AUTRE',

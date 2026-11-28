@@ -174,8 +174,9 @@ def rendre_courrier_rdv(demande, rang, destination):
         rendez_vous += f" à {heure_rdv.strftime('%H:%M')}"
     else:
         rendez_vous += " (heure à confirmer par la MDS)"
-    mds = demande.mds
-    lieu = f"{mds.nom}\n{mds.adresse}\n{mds.code_postal} {mds.ville}" if mds else "Maison départementale de la solidarité"
+    rdv = demande.creneau_premier_rdv if rang == 1 else demande.creneau_second_rdv
+    lieu = (rdv.lieu_precis if rdv and rdv.lieu_precis else
+            f"{demande.mds.nom}\n{demande.mds.adresse}\n{demande.mds.code_postal} {demande.mds.ville}")
     contenu = [
         Paragraph("DÉPARTEMENT DES BOUCHES-DU-RHÔNE", styles["titre"]),
         Paragraph("DGAS / DITAS / DAAS · Service action sociale", styles["petit"]),
