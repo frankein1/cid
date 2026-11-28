@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import MDS, UserMDSProfile, MDSReception
 from core.models.profil import Profil
+from core.horaires import TexteHoraire
 
 User = get_user_model()
 
@@ -170,8 +171,8 @@ class MDSReceptionForm(forms.ModelForm):
             'est_externe',
         ]
         widgets = {
-            'horaire_debut': forms.TimeInput(attrs={'type': 'time'}),
-            'horaire_fin': forms.TimeInput(attrs={'type': 'time'}),
+            'horaire_debut': TexteHoraire(),
+            'horaire_fin': TexteHoraire(),
             'est_externe': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
 

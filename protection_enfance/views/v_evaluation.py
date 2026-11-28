@@ -5,6 +5,7 @@
 # =============================================================================
 # protection_enfance/views/v_evaluation.py
 """Évaluation : démarches (courriers, LRAR, rendez-vous…), rapport, synthèse et visas, saisine du procureur."""
+from core.horaires import lire_date_heure
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse
@@ -117,9 +118,7 @@ def audition_relance(request, action_id):
         return _refus()
     ids = [int(i) for i in request.POST.getlist('convoques') if i.isdigit()]
     convoques = list(ConvoqueIP.objects.filter(action=action, pk__in=ids, suite__isnull=True))
-    quand = parse_datetime(request.POST.get('date') or '')
-    if quand and timezone.is_naive(quand):
-        quand = timezone.make_aware(quand)
+    quand = lire_date_heure(request.POST.get('date'))
     if not quand:
         messages.error(request, "Indiquez la nouvelle date et l'heure.")
         return _retour(ip, "#demarches")
@@ -289,9 +288,7 @@ def saisine_effectuee(request, saisine_id):
     s = get_object_or_404(SaisineIP.objects.select_related('ip'), pk=saisine_id)
     if not (s.ip.peut_piloter(request.user) or request.user.a_la_capacite('ip_pief')):
         return _refus()
-    quand = parse_datetime(request.POST.get('date') or '')
-    if quand and timezone.is_naive(quand):
-        quand = timezone.make_aware(quand)
+    quand = lire_date_heure(request.POST.get('date'))
     try:
         circuit.saisine_effectuee(s, request.user, quand, (request.POST.get('reference') or '').strip()[:100])
         messages.success(request, "Saisine du procureur enregistrée.")

@@ -10,6 +10,7 @@ VERSION FINALE AVEC RECHERCHE BÉNÉFICIAIRE
 """
 
 from django import forms
+from core.horaires import TexteHoraire, TexteDateHeure, verifier_pas_de_dix
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 
@@ -20,12 +21,6 @@ from beneficiaire.models import Beneficiaire
 User = get_user_model()
 
 
-class TexteHoraire(forms.TimeInput):
-    """Champ d'heure en texte (pas le sélecteur natif, qui dépend de l'appareil), affiché en HH:MM."""
-    input_type = 'text'
-
-    def __init__(self, attrs=None):
-        super().__init__(attrs=attrs, format='%H:%M')
 
 
 class SaisieHoraire:
@@ -244,8 +239,8 @@ class PermanenceExterneForm(SaisieHoraire, forms.ModelForm):
         widgets = {
             'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border rounded-lg'}),
             'date_fin': forms.DateInput(attrs={'type': 'date', 'class': 'w-full px-3 py-2 border rounded-lg'}),
-            'heure_debut': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full px-3 py-2 border rounded-lg'}),
-            'heure_fin': forms.TimeInput(attrs={'type': 'time', 'class': 'w-full px-3 py-2 border rounded-lg'}),
+            'heure_debut': TexteHoraire(attrs={'class': 'w-full px-3 py-2 border rounded-lg'}),
+            'heure_fin': TexteHoraire(attrs={'class': 'w-full px-3 py-2 border rounded-lg'}),
             'jour_semaine': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-lg'}),
             'recurrence': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-lg'}),
             'agent': forms.Select(attrs={'class': 'w-full px-3 py-2 border rounded-lg'}),
@@ -306,8 +301,8 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
     motif = forms.ChoiceField(label="Motif")
     agent = forms.ModelChoiceField(queryset=User.objects.none(), label="Agent")
     date = forms.DateField(label="Date", widget=forms.DateInput(attrs={'type': 'date'}))
-    heure_debut = forms.TimeField(label="Début", widget=forms.TimeInput(attrs={'type': 'time'}))
-    heure_fin = forms.TimeField(label="Fin", widget=forms.TimeInput(attrs={'type': 'time'}))
+    heure_debut = forms.TimeField(label="Début", widget=TexteHoraire())
+    heure_fin = forms.TimeField(label="Fin", widget=TexteHoraire())
     beneficiaire_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     lieu_type = forms.ChoiceField(label="Lieu", choices=TYPES_LIEU, required=False, initial='')
     lieu_precision = forms.CharField(label="Précision du domicile", required=False, max_length=120,
@@ -425,8 +420,8 @@ class ReunionForm(SaisieHoraire, forms.Form):
                                help_text="Visible des seuls participants. Ex. : Synthèse IP, réunion d'équipe…")
     domaine = forms.ChoiceField(label="Domaine", initial='INSTITUTIONNEL')
     date = forms.DateField(label="Date", widget=forms.DateInput(attrs={'type': 'date'}))
-    heure_debut = forms.TimeField(label="Début", widget=forms.TimeInput(attrs={'type': 'time'}))
-    heure_fin = forms.TimeField(label="Fin", widget=forms.TimeInput(attrs={'type': 'time'}))
+    heure_debut = forms.TimeField(label="Début", widget=TexteHoraire())
+    heure_fin = forms.TimeField(label="Fin", widget=TexteHoraire())
     lieu_precis = forms.CharField(label="Lieu", max_length=200, required=False, initial="Salle de réunion")
     ordre_du_jour = forms.CharField(label="Ordre du jour", required=False, widget=forms.Textarea(attrs={'rows': 3}))
     participants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), label="Participants",

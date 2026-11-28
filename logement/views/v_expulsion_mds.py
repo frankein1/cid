@@ -9,6 +9,7 @@ financier (Cerfa) ou bordereau de carence, visa du cadre en un clic. L'envoi pas
 « Imprimer pour envoi » (v_envoi.py), qui alimente le compteur de papier économisé."""
 from datetime import datetime, timedelta
 
+from core.horaires import lire_heure
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseForbidden
@@ -42,7 +43,7 @@ def expulsion_convoquer(request, pk):
     d = get_object_or_404(D, pk=pk)
     if not _ecriture(request, d):
         return HttpResponseForbidden(REFUS)
-    jour, heure = parse_date(request.POST.get('date') or ''), parse_time(request.POST.get('heure') or '')
+    jour, heure = parse_date(request.POST.get('date') or ''), lire_heure(request.POST.get('heure'))
     if not jour or not heure:
         messages.error(request, "Indiquez la date et l'heure du rendez-vous.")
         return redirect('logement:expulsion_detail', pk=d.pk)

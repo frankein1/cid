@@ -160,7 +160,7 @@
                             <details class="mt-1"><summary class="text-xs text-red-700 cursor-pointer">Reconvoquer : {% for cv in g.convoques %}{{ cv.personne.prenom }}{% if not forloop.last %}, {% endif %}{% endfor %} (courrier à {{ g.destinataire.nom_complet|default:"?" }})</summary>
                                 <form method="post" action="{% url 'protection_enfance:audition_relance' a.pk %}" class="mt-1 space-y-1 text-xs border rounded p-2">{% csrf_token %}
                                     {% for cv in g.convoques %}<label class="flex items-center gap-1"><input type="checkbox" name="convoques" value="{{ cv.pk }}" checked> {{ cv.personne.prenom }} {{ cv.personne.nom|upper }} ({{ cv.get_presence_display|lower }})</label>{% endfor %}
-                                    <label class="block">Nouvelle date et heure <input type="datetime-local" name="date" class="border rounded px-1" required></label>
+                                    <label class="block">Nouvelle date et heure <input type="text" inputmode="numeric" placeholder="JJ/MM/AAAA HH:MM" pattern="\d{2}/\d{2}/\d{4} ([01]\d|2[0-3]):[0-5]\d" maxlength="16" autocomplete="off" name="date" class="border rounded px-1" required></label>
                                     <label class="flex items-center gap-1"><input type="radio" name="mode" value="report" checked> Absence justifiée : date convenue avec la famille</label>
                                     <input type="text" name="motif" placeholder="Motif et accord trouvé (obligatoire pour un report)" class="w-full px-1 py-0.5 border rounded">
                                     {% if g.lrar_possible %}<label class="flex items-center gap-1"><input type="radio" name="mode" value="lrar"> Absence non justifiée : LRAR</label>
@@ -279,7 +279,7 @@
                     <a href="{% url 'protection_enfance:saisine_pdf' s.pk %}" target="_blank" class="inline-block mt-2 text-xs text-blue-600 hover:underline"><i class="fas fa-print mr-1"></i>Imprimer le courrier de saisine</a>{% endif %}
                     {% if s.statut == 'VALIDEE_PIEF' and peut_piloter or s.statut == 'VALIDEE_PIEF' and est_pief %}
                     <form method="post" action="{% url 'protection_enfance:saisine_effectuee' s.pk %}" class="mt-2 flex flex-wrap gap-2 items-center">{% csrf_token %}
-                        <input type="datetime-local" name="date" class="px-2 py-1 border rounded text-xs">
+                        <input type="text" inputmode="numeric" placeholder="JJ/MM/AAAA HH:MM" pattern="\d{2}/\d{2}/\d{4} ([01]\d|2[0-3]):[0-5]\d" maxlength="16" autocomplete="off" name="date" class="px-2 py-1 border rounded text-xs">
                         <input type="text" name="reference" placeholder="Référence / mode d'envoi" class="px-2 py-1 border rounded text-xs">
                         <button class="px-2 py-1 rounded bg-emerald-600 text-white text-xs">Saisine envoyée</button>
                     </form>{% endif %}

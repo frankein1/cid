@@ -4,6 +4,7 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 # insertion/forms.py
+from core.horaires import TexteHoraire
 from django import forms
 
 from django.db.models import Q
@@ -353,7 +354,7 @@ class CommissionForm(forms.ModelForm):
     class Meta:
         model = CommissionReorientation
         fields = ['date', 'heure', 'lieu']
-        widgets = {'date': DATE, 'heure': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M')}
+        widgets = {'date': DATE, 'heure': TexteHoraire()}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -364,7 +365,7 @@ class ParticipantsForm(forms.ModelForm):
     class Meta:
         model = CommissionReorientation
         fields = ['date', 'heure', 'lieu', 'participants', 'participants_externes', 'observations']
-        widgets = {'date': DATE, 'heure': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+        widgets = {'date': DATE, 'heure': TexteHoraire(),
                    'participants': forms.CheckboxSelectMultiple,
                    'participants_externes': forms.Textarea(attrs={'rows': 2}),
                    'observations': forms.Textarea(attrs={'rows': 3})}
