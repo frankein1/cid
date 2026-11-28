@@ -292,6 +292,8 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
     beneficiaire_id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     lieu_precis = forms.CharField(label="Lieu", required=False, max_length=200,
                                   help_text="Adresse de la VAD, structure du partenaire…")
+    salle = forms.ModelChoiceField(queryset=None, required=False, label="Salle de réception",
+                                   help_text="Réserve la salle sur l'horaire, marge de 30 min comprise.")
     co_intervenants = forms.ModelMultipleChoiceField(queryset=User.objects.none(), required=False,
                                                      label="Co-intervenants")
     partenaires = forms.ModelMultipleChoiceField(queryset=None, required=False, label="Partenaires",
@@ -308,6 +310,9 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
         self.fields['motif'].choices = choix_motifs()
         from partenaires.models import Partenaire
         self.fields['partenaires'].queryset = Partenaire.objects.filter(actif=True)
+        from mds.models import MDSReception
+        self.fields['salle'].queryset = MDSReception.objects.filter(mds=mds, actif=True) if mds else MDSReception.objects.none()
+        self.fields['salle'].label_from_instance = lambda s: s.nom
         agents = User.objects.filter(profils_mds__mds=mds, profils_mds__actif=True, is_active=True)\
             .distinct().order_by('last_name', 'first_name')
         self.fields['agent'].queryset = agents
@@ -340,12 +345,20 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
         data['lieu_precis'] = lieu
         agent, date = data.get('agent'), data.get('date')
         if agent and date and debut and fin and not self.errors:
-            from .agenda import conflits_agent
+            from .agenda import conflits_agent, salle_occupee
             conflit = conflits_agent(agent, date, debut, fin).first()
             if conflit:
                 self.add_error(None, f"{agent.get_full_name() or agent.username} est déjà pris(e) de "
                                      f"{conflit.heure_debut:%H:%M} à {conflit.heure_fin:%H:%M} "
                                      f"({conflit.get_nature_display().lower()}).")
+            salle = data.get('salle')
+            if salle and not conflit:
+                occupations = salle_occupee(salle, date, debut, fin, nature)
+                if occupations:
+                    autre = occupations[0]
+                    self.add_error('salle', f"{salle.nom} est réservée de {autre.heure_debut:%H:%M} à "
+                                            f"{autre.heure_fin:%H:%M} ({autre.get_nature_display().lower()}). "
+                                            f"Choisissez une autre salle ou un autre horaire.")
         return data
 
 

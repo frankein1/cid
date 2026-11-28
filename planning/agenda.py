@@ -158,6 +158,34 @@ def est_premiere_fois(beneficiaire, mds, exclure_id=None):
     return not any(r.agent and r.agent.a_la_capacite('peut_instruire') for r in deja)
 
 
+# Marge bloquée après un rendez-vous hors permanence (au cas où il déborde).
+MARGE_HORS_PERMANENCE_MINUTES = 30
+
+
+def _minutes(heure):
+    return heure.hour * 60 + heure.minute
+
+
+def salle_occupee(salle, date, debut, fin, nature, exclure_id=None):
+    """Rendez-vous qui empêchent d'utiliser la salle sur cet horaire.
+    Priorité aux permanences : une permanence ne se heurte qu'aux autres permanences ;
+    un rendez-vous hors permanence se heurte à tout, marge de 30 minutes comprise (de part et d'autre)."""
+    if salle is None:
+        return []
+    marge = 0 if nature == 'PERMANENCE' else MARGE_HORS_PERMANENCE_MINUTES
+    debut_min, fin_min = _minutes(debut), _minutes(fin) + marge
+    candidats = (CreneauRdv.objects.filter(salle=salle, date=date)
+                 .exclude(statut__in=STATUTS_ANNULES).exclude(pk=exclure_id))
+    if nature == 'PERMANENCE':
+        candidats = candidats.filter(nature='PERMANENCE')
+    conflits = []
+    for rdv in candidats:
+        marge_rdv = 0 if rdv.nature == 'PERMANENCE' else MARGE_HORS_PERMANENCE_MINUTES
+        if _minutes(rdv.heure_debut) < fin_min and _minutes(rdv.heure_fin) + marge_rdv > debut_min:
+            conflits.append(rdv)
+    return conflits
+
+
 def conflits_agent(agent, date, debut, fin, exclure_id=None):
     """Rendez-vous ou permanences déjà prévus pour l'agent sur cet horaire (annulés exclus)."""
     return (CreneauRdv.objects
