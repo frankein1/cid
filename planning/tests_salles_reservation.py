@@ -67,3 +67,35 @@ class SalleOccupeeTests(TestCase):
 
     def test_sans_salle_aucun_conflit(self):
         self.assertEqual(salle_occupee(None, JOUR, time(9), time(9, 30), 'HORS_PERMANENCE'), [])
+
+
+class MemoLieuEtHorairesTests(TestCase):
+    """Mémo de lieu (domicile / MDS) et heures d'ouverture. Données fictives."""
+
+    def setUp(self):
+        from beneficiaire.models import Beneficiaire
+        self.mds = MDS.objects.create(code_mds="TL1", nom="MDS ESSAI LIEU", adresse="4 rue F", code_postal="13110",
+                                      ville="Port-de-Bouc")
+        self.salle = MDSReception.objects.create(mds=self.mds, nom="Salle F")
+        self.usager = Beneficiaire.objects.create(
+            code_interne="AT-L1", civilite="MME", nom="BARBIER", prenom="Sofia", date_naissance=date(1980, 2, 2),
+            adresse="5 rue G", code_postal="13500", ville="Martigues", telephone_mobile="0600000001")
+
+    def test_memo_domicile_avec_precision(self):
+        from planning.forms import memo_domicile
+        self.assertEqual(memo_domicile(self.usager), "Domicile : 5 rue G, 13500 Martigues")
+        self.assertEqual(memo_domicile(self.usager, " 2e étage "),
+                         "Domicile : 5 rue G, 13500 Martigues – 2e étage")
+
+    def test_memo_mds_avec_salle(self):
+        from planning.forms import memo_mds
+        self.assertEqual(memo_mds(self.mds), "MDS : 4 rue F, 13110 Port-de-Bouc")
+        self.assertEqual(memo_mds(self.mds, self.salle), "MDS : 4 rue F, 13110 Port-de-Bouc – salle Salle F")
+
+    def test_heures_ouverture(self):
+        from planning.agenda import dans_heures_ouverture
+        self.assertTrue(dans_heures_ouverture(time(9), time(9, 40)))
+        self.assertTrue(dans_heures_ouverture(time(13, 30), time(17)))
+        self.assertFalse(dans_heures_ouverture(time(2, 1), time(2, 41)))
+        self.assertFalse(dans_heures_ouverture(time(11, 50), time(12, 20)))
+        self.assertFalse(dans_heures_ouverture(time(17), time(17, 30)))

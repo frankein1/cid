@@ -166,6 +166,14 @@ def _minutes(heure):
     return heure.hour * 60 + heure.minute
 
 
+def dans_heures_ouverture(debut, fin):
+    """Rendez-vous entièrement dans la matinée (9 h - 12 h) ou dans l'après-midi (13 h 30 - 17 h)."""
+    from .utils import (HEURE_DEBUT_APRES_MIDI, HEURE_DEBUT_MATIN, HEURE_FIN_APRES_MIDI, HEURE_FIN_MATIN)
+    matin = HEURE_DEBUT_MATIN <= debut and fin <= HEURE_FIN_MATIN
+    apres_midi = HEURE_DEBUT_APRES_MIDI <= debut and fin <= HEURE_FIN_APRES_MIDI
+    return matin or apres_midi
+
+
 def salle_occupee(salle, date, debut, fin, nature, exclure_id=None):
     """Rendez-vous qui empêchent d'utiliser la salle sur cet horaire.
     Priorité aux permanences : une permanence ne se heurte qu'aux autres permanences ;
