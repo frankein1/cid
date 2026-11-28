@@ -83,7 +83,7 @@ def draw_page_template(canvas, doc):
         canvas.line(1.5 * cm, A4[1] - 3.2 * cm, A4[0] - 1.5 * cm, A4[1] - 3.2 * cm)
         
         canvas.setFont("Helvetica", 8)
-        date_gen = timezone.now().strftime("%d/%m/%Y à %H:%M")
+        date_gen = timezone.localtime(timezone.now()).strftime("%d/%m/%Y à %H:%M")
         canvas.drawString(1.5 * cm, 1 * cm, f"SI DITAS - Document Officiel - Généré le {date_gen}")
         canvas.drawRightString(A4[0] - 1.5 * cm, 1 * cm, f"Page {doc.page}")
     
@@ -289,12 +289,12 @@ def generer_pdf_afase_v1(demande: DemandeAFASE):
 
         ts = demande.cree_par
         ts_nom = f"{ts.first_name} {ts.last_name}".strip() or ts.username or "Non renseigné"
-        date_depot = demande.date_creation.strftime("%d/%m/%Y à %H:%M") if demande.date_creation else "Date inconnue"
+        date_depot = timezone.localtime(demande.date_creation).strftime("%d/%m/%Y à %H:%M") if demande.date_creation else "Date inconnue"
 
         decideur = decision.decide_par
         if decideur:
             nom_complet = libelle_signature(decideur)
-            date_decision = decision.date_decision.strftime("%d/%m/%Y à %H:%M") if decision.date_decision else "Date inconnue"
+            date_decision = timezone.localtime(decision.date_decision).strftime("%d/%m/%Y à %H:%M") if decision.date_decision else "Date inconnue"
         else:
             nom_complet = "Non renseigné"
             date_decision = "Date inconnue"

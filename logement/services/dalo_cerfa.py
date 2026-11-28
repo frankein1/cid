@@ -14,6 +14,7 @@ qui aide le requérant est rubrique 9."""
 import io
 import re
 from datetime import date
+from django.utils import timezone
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
@@ -110,7 +111,7 @@ def valeurs(r):
         '9. Code postal': r.assistant_code_postal, '9. Commune': r.assistant_commune,
         '9. Tel pro': r.assistant_telephone,
         '10. Argumentaire libre 2': r.argumentaire,
-        '11. Fait à': r.assistant_commune, '11. Fait le': date.today().strftime('%d/%m/%Y'),
+        '11. Fait à': r.assistant_commune, '11. Fait le': timezone.localdate().strftime('%d/%m/%Y'),
     }
     for cle in ('1. Date de naissance', '1. Téléphone domicile', '1. Téléphone portable', '9. Tel pro',
                 '8. Date d\'entrée structure'):

@@ -58,8 +58,8 @@
     <form method="post" action="{% url 'logement:indigne_action' s.pk %}" class="flex flex-wrap items-end gap-3">{% csrf_token %}
       <input type="hidden" name="action" value="creer_rdv_vad">
       <label>Date <input type="date" name="date" required class="px-2 py-1 border rounded"></label>
-      <label>De <input type="time" name="heure_debut" value="09:00" required class="px-2 py-1 border rounded"></label>
-      <label>À <input type="time" name="heure_fin" value="09:30" required class="px-2 py-1 border rounded"></label>
+      <label>De <input type="text" name="heure_debut" value="09:00" required placeholder="HH:MM" pattern="([01]\d|2[0-3]):[0-5]\d" maxlength="5" inputmode="numeric" class="px-2 py-1 border rounded"></label>
+      <label>À <input type="text" name="heure_fin" value="09:30" required placeholder="HH:MM" pattern="([01]\d|2[0-3]):[0-5]\d" maxlength="5" inputmode="numeric" class="px-2 py-1 border rounded"></label>
       <button class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold">Prendre rendez-vous VAD</button>
     </form>
     <p class="text-xs text-gray-500">Le rendez-vous est créé dans le planning, au nom de l'agent, avec les règles du planning (9h–17h, pas de date passée, pas de conflit).</p>

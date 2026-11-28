@@ -20,6 +20,53 @@ from beneficiaire.models import Beneficiaire
 User = get_user_model()
 
 
+class TexteHoraire(forms.TimeInput):
+    """Champ d'heure en texte (pas le sélecteur natif, qui dépend de l'appareil), affiché en HH:MM."""
+    input_type = 'text'
+
+    def __init__(self, attrs=None):
+        super().__init__(attrs=attrs, format='%H:%M')
+
+
+class SaisieHoraire:
+    """Horaires saisis en 24 h (HH:MM) quel que soit l'appareil, et par pas de 10 minutes (00, 10, 20…)."""
+    CHAMPS_HORAIRES = ('heure_debut', 'heure_fin')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nom in self.CHAMPS_HORAIRES:
+            if nom in self.fields:
+                self.fields[nom].widget = TexteHoraire(attrs={
+                    'placeholder': 'HH:MM', 'pattern': r'([01]\d|2[0-3]):[0-5]\d', 'maxlength': '5',
+                    'autocomplete': 'off', 'inputmode': 'numeric',
+                    'class': 'w-full px-3 py-2 border rounded-lg'})
+                self.fields[nom].input_formats = ['%H:%M']
+
+    def _pas_de_dix_minutes(self, nom):
+        valeur = self.cleaned_data.get(nom)
+        if valeur and valeur.minute % 10:
+            raise ValidationError("Les horaires se saisissent par pas de 10 minutes (00, 10, 20, 30, 40 ou 50).")
+        return valeur
+
+    def clean_heure_debut(self):
+        return self._pas_de_dix_minutes('heure_debut')
+
+    def clean_heure_fin(self):
+        return self._pas_de_dix_minutes('heure_fin')
+
+
+def lieu_du_rendez_vous(nature, beneficiaire, lieu_saisi):
+    """Lieu enregistré pour un rendez-vous. Une VAD se fait au domicile de l'usager (adresse de la fiche) ;
+    un rendez-vous hors permanence doit indiquer son lieu. Retourne (lieu, message d'erreur ou None)."""
+    if nature == 'VAD':
+        if beneficiaire is None or not (beneficiaire.adresse or '').strip():
+            return '', "Adresse du domicile absente de la fiche : complétez-la avant la visite."
+        return f"Domicile : {beneficiaire.adresse}, {beneficiaire.code_postal} {beneficiaire.ville}".strip(), None
+    if nature == 'HORS_PERMANENCE' and not (lieu_saisi or '').strip():
+        return '', "Indiquez le lieu du rendez-vous hors permanence (MDS, structure, autre)."
+    return (lieu_saisi or '').strip(), None
+
+
 class RdvForm(forms.ModelForm):
     # Champ de recherche pour le bénéficiaire
     beneficiaire_recherche = forms.CharField(
@@ -147,7 +194,7 @@ class GenererCreneauxForm(forms.Form):
     )
 
 
-class JourBloqueForm(forms.ModelForm):
+class JourBloqueForm(SaisieHoraire, forms.ModelForm):
     class Meta:
         model = JourBloque
         fields = ['date', 'raison', 'raison_detail', 'salle', 'agent', 'heure_debut', 'heure_fin']
@@ -188,7 +235,7 @@ class JourBloqueForm(forms.ModelForm):
         return cleaned_data
 
 
-class PermanenceExterneForm(forms.ModelForm):
+class PermanenceExterneForm(SaisieHoraire, forms.ModelForm):
     class Meta:
         from .models import PermanenceExterne
         model = PermanenceExterne
@@ -232,7 +279,7 @@ class PermanenceExterneForm(forms.ModelForm):
 # AGENDA UNIFIÉ : rendez-vous hors permanence (VAD, hors permanence, partenaire…)
 # =============================================================================
 
-class RdvAgentForm(forms.Form):
+class RdvAgentForm(SaisieHoraire, forms.Form):
     """
     Rendez-vous noté par un agent social ou d'accueil dans l'agenda unifié.
     Contrairement aux permanences : pas de salle, horaires libres, saisie a posteriori possible.
@@ -287,6 +334,10 @@ class RdvAgentForm(forms.Form):
                 self.add_error(None, "Usager introuvable dans votre MDS.")
         if nature == 'VAD' and not data.get('beneficiaire'):
             self.add_error(None, "Une visite à domicile concerne un usager : sélectionnez-le.")
+        lieu, erreur = lieu_du_rendez_vous(nature, data.get('beneficiaire'), data.get('lieu_precis'))
+        if erreur:
+            self.add_error('lieu_precis' if nature == 'HORS_PERMANENCE' else None, erreur)
+        data['lieu_precis'] = lieu
         agent, date = data.get('agent'), data.get('date')
         if agent and date and debut and fin and not self.errors:
             from .agenda import conflits_agent
@@ -315,7 +366,7 @@ ISSUES_RDV = [
 # RÉUNIONS (lot 2) : convocation par le cadre ou l'agent administratif
 # =============================================================================
 
-class ReunionForm(forms.Form):
+class ReunionForm(SaisieHoraire, forms.Form):
     intitule = forms.CharField(label="Intitulé", max_length=120,
                                help_text="Visible des seuls participants. Ex. : Synthèse IP, réunion d'équipe…")
     domaine = forms.ChoiceField(label="Domaine", initial='INSTITUTIONNEL')
