@@ -195,20 +195,27 @@ def designer_binome(ip, u1, u2, cadre, forcer=False, motif=""):
 # 3. ACTIONS D'ÉVALUATION (tout est enregistré)
 # =============================================================================
 
-def _creneau_agenda(action, user):
-    """Une réunion, un rendez-vous, une audition ou une VAD prend place dans l'agenda (domaine IP)."""
+def _creneau_agenda(action, user, salle=None):
+    """Une réunion, un rendez-vous, une audition ou une VAD prend place dans l'agenda (domaine IP).
+    La salle choisie est réservée : un conflit bloque l'enregistrement (CircuitError)."""
+    from planning.agenda import salle_occupee
     from planning.models import CreneauRdv, HistoriqueCreneau
     nature = TYPES_AGENDA.get(action.type_action)
     if not nature:
         return None
     debut = timezone.localtime(action.date)
     fin = debut + timedelta(minutes=action.duree_minutes or 60)
+    if salle is not None and salle_occupee(salle, debut.date(), debut.time(), fin.time(), nature):
+        raise CircuitError(f"{salle.nom} est réservée sur cet horaire : choisissez une autre salle ou un autre "
+                           f"horaire. Rien n'a été enregistré.")
     participants = list(action.participants.all())
     creneau = CreneauRdv.objects.create(
-        salle=None, mds=action.ip.mds, agent=participants[0] if participants and nature != 'REUNION' else None,
+        salle=salle, mds=action.ip.mds, agent=participants[0] if participants and nature != 'REUNION' else None,
         date=debut.date(), heure_debut=debut.time(), heure_fin=fin.time(),
         duree_minutes=action.duree_minutes or 60, nature=nature, domaine='IP', type_rdv='IP',
         modalite='VAD' if nature == 'VAD' else 'MDS', beneficiaire=action.ip.famille,
+        lieu_precis=f"MDS : {action.ip.mds.adresse}, {action.ip.mds.code_postal} {action.ip.mds.ville}"[:200]
+        if action.ip.mds and nature != 'VAD' else '',
         description=f"IP {action.ip.numero} – {action.get_type_action_display()}",
         statut='RESERVE', cree_par=user,
     )
@@ -219,11 +226,11 @@ def _creneau_agenda(action, user):
 
 
 @transaction.atomic
-def enregistrer_action(ip, user, cleaned, participants=(), agenda=True):
+def enregistrer_action(ip, user, cleaned, participants=(), agenda=True, salle=None):
     action = ActionIP.objects.create(ip=ip, auteur=user, **cleaned)
     action.participants.set(participants)
     if agenda and action.resultat in ('PREVU', 'REALISE'):
-        action.creneau = _creneau_agenda(action, user)
+        action.creneau = _creneau_agenda(action, user, salle=salle)
         if action.creneau:
             action.save(update_fields=['creneau'])
     journal(ip, user, f"{action.get_type_action_display()} ({action.get_resultat_display().lower()})",

@@ -90,7 +90,7 @@ class MemoLieuEtHorairesTests(TestCase):
     def test_memo_mds_avec_salle(self):
         from planning.forms import memo_mds
         self.assertEqual(memo_mds(self.mds), "MDS : 4 rue F, 13110 Port-de-Bouc")
-        self.assertEqual(memo_mds(self.mds, self.salle), "MDS : 4 rue F, 13110 Port-de-Bouc – salle Salle F")
+        self.assertEqual(memo_mds(self.mds, self.salle), "MDS : 4 rue F, 13110 Port-de-Bouc")
 
     def test_heures_ouverture(self):
         from planning.agenda import dans_heures_ouverture

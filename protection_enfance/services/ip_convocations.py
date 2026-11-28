@@ -39,13 +39,15 @@ def destinataires_enfants(enfants):
 
 @transaction.atomic
 def programmer_audition(ip, user, type_action, date, duree, adultes=(), enfants=(), professionnels=(),
-                        agenda=True, lrar_numeros=None, report_convenu=False, precision=""):
+                        agenda=True, lrar_numeros=None, report_convenu=False, precision="", salle=None):
     """
     Crée l'audition (prévue, inscrite à l'agenda), une ligne par personne convoquée et les courriers.
     lrar_numeros : {adulte destinataire: n° de LRAR} pour une relance en recommandé.
     """
     if type_action not in TYPES_AUDITION:
         raise CircuitError("Type d'audition inconnu.")
+    if not agenda:
+        raise CircuitError("Une convocation ne part pas sans rendez-vous posé à l'agenda.")
     adultes, enfants = list(adultes), list(enfants)
     if type_action == 'AUDITION_PARENTS' and not adultes:
         raise CircuitError("Cochez au moins un adulte à convoquer.")
@@ -62,7 +64,7 @@ def programmer_audition(ip, user, type_action, date, duree, adultes=(), enfants=
     action = enregistrer_action(ip, user, {
         'type_action': type_action, 'date': date, 'duree_minutes': duree or 60, 'resultat': 'PREVU',
         'personnes': _noms(concernes), 'compte_rendu': precision,
-    }, professionnels, agenda=agenda)
+    }, professionnels, agenda=agenda, salle=salle)
     action.adultes_concernes.set(adultes)
     action.enfants_concernes.set(enfants)
     for a in adultes:

@@ -112,10 +112,16 @@ class AuditionForm(forms.Form):
                                                   widget=forms.CheckboxSelectMultiple)
     ajouter_agenda = forms.BooleanField(label="Inscrire dans l'agenda des professionnels", required=False,
                                         initial=True)
+    salle = forms.ModelChoiceField(label="Salle de réception (réservée, n'apparaît pas sur le courrier)",
+                                   queryset=None, required=False)
 
     def __init__(self, *args, ip=None, professionnels=None, **kwargs):
         super().__init__(*args, **kwargs)
         from core.models import User
+        from mds.models import MDSReception
+        self.fields['salle'].queryset = (MDSReception.objects.filter(mds=ip.mds, actif=True)
+                                         if ip.mds_id else MDSReception.objects.none())
+        self.fields['salle'].label_from_instance = lambda s: s.nom
         self.fields['adultes'].queryset = ip.adultes.all()
         self.fields['enfants'].queryset = ip.enfants.all()
         self.fields['participants'].queryset = User.objects.filter(

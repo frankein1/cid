@@ -84,7 +84,7 @@ def audition_programmer(request, ip_id):
             ip, request.user, cd['type_action'], cd['date'], cd['duree_minutes'],
             cd['adultes'] if cd['type_action'] == 'AUDITION_PARENTS' else [],
             cd['enfants'] if cd['type_action'] == 'AUDITION_ENFANT' else [],
-            cd['participants'], agenda=cd['ajouter_agenda'])
+            cd['participants'], agenda=cd['ajouter_agenda'], salle=cd.get('salle'))
         messages.success(request, f"{action.get_type_action_display()} programmée : {len(courriers)} courrier(s) "
                                   f"de convocation prêt(s) à imprimer (bouton « PDF » de chaque courrier).")
     except CircuitError as e:

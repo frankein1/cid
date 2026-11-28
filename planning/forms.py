@@ -293,9 +293,9 @@ def memo_domicile(beneficiaire, precision=''):
 
 
 def memo_mds(mds, salle=None):
-    """Mémo de lieu : adresse de la MDS, avec la salle de réception réservée si elle est choisie."""
-    adresse = f"MDS : {mds.adresse}, {mds.code_postal} {mds.ville}".strip()
-    return f"{adresse} – salle {salle.nom}" if salle else adresse
+    """Mémo de lieu : adresse de la MDS. La salle, si elle est réservée, reste un lien à part : elle n'apparaît
+    pas sur les courriers."""
+    return f"MDS : {mds.adresse}, {mds.code_postal} {mds.ville}".strip()
 
 
 class RdvAgentForm(SaisieHoraire, forms.Form):
@@ -350,11 +350,6 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
         debut, fin = data.get('heure_debut'), data.get('heure_fin')
         if debut and fin and debut >= fin:
             self.add_error('heure_fin', "L'heure de fin doit être après l'heure de début.")
-        elif debut and fin:
-            from .agenda import dans_heures_ouverture
-            if not dans_heures_ouverture(debut, fin):
-                self.add_error(None, "Les rendez-vous se prennent aux heures d'ouverture : 9 h - 12 h ou "
-                                     "13 h 30 - 17 h (pas de rendez-vous à cheval sur la pause).")
         nature, _, domaine = (data.get('motif') or '').partition('|')
         data['nature'], data['domaine'] = nature, domaine
         if nature == 'PARTENAIRE' and not data.get('lieu_precis') and not data.get('partenaires'):
@@ -381,6 +376,14 @@ class RdvAgentForm(SaisieHoraire, forms.Form):
         if erreur:
             self.add_error(None, erreur)
         data['lieu_precis'] = lieu
+        # Heures d'ouverture : uniquement quand le lieu est la MDS. Hors de ces heures, il faut un autre lieu
+        # (domicile, tiers lieu comme une maison des associations).
+        if debut and fin and debut < fin and lieu.startswith('MDS :'):
+            from .agenda import dans_heures_ouverture
+            if not dans_heures_ouverture(debut, fin):
+                self.add_error(None, "À la MDS, les rendez-vous se prennent aux heures d'ouverture : 9 h - 12 h "
+                                     "ou 13 h 30 - 17 h. Pour un autre horaire, indiquez un autre lieu "
+                                     "(domicile, tiers lieu).")
         agent, date = data.get('agent'), data.get('date')
         if agent and date and debut and fin and not self.errors:
             from .agenda import conflits_agent, salle_occupee

@@ -237,6 +237,17 @@ def traitement(request, pk):
         if not peut_cadre:
             updated.agent_assigne = demande.agent_assigne
         updated.save()
+        from .rendez_vous import poser_rdv_ru
+        for rang, nom_salle in ((1, 'salle_premier_rdv'), (2, 'salle_second_rdv')):
+            date_rdv = updated.date_premier_rendez_vous if rang == 1 else updated.date_second_rendez_vous
+            if not date_rdv:
+                continue
+            try:
+                poser_rdv_ru(updated, rang, request.user, salle=form.cleaned_data.get(nom_salle))
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                messages.error(request, str(exc))
+                return redirect("ru:detail", pk=demande.pk)
         if action == "affecter":
             try:
                 affecter_a_un_travailleur(demande, updated.agent_assigne, request.user)
@@ -374,6 +385,10 @@ def courrier_rdv_pdf(request, pk, rang):
     date_rdv = demande.date_premier_rendez_vous if rang == 1 else demande.date_second_rendez_vous
     if not date_rdv:
         messages.error(request, "Renseignez la date du rendez-vous avant de générer son courrier PDF.")
+        return redirect("ru:detail", pk=demande.pk)
+    if not (demande.creneau_premier_rdv if rang == 1 else demande.creneau_second_rdv):
+        messages.error(request, "Enregistrez d'abord le traitement : le rendez-vous est posé dans l'agenda, "
+                                "puis le courrier peut partir.")
         return redirect("ru:detail", pk=demande.pk)
     if rang == 2 and not demande.absence_premier_rendez_vous:
         messages.error(request, "Le second courrier est disponible après l'absence au premier rendez-vous.")

@@ -118,8 +118,11 @@ def _convocation_audition_pdf(action):
         el.append(Paragraph(f"<b>Lettre recommandée avec accusé de réception"
                             f"{' n° ' + escape(action.numero_lrar) if action.numero_lrar else ''}</b>", st["Normal"]))
     from core.courriers import modele_texte, rendu
-    lieu = (f"{ip.mds.nom}, {ip.mds.adresse}, {ip.mds.code_postal} {ip.mds.ville}"
-            if ip.mds else "la Maison départementale de la solidarité")
+    # Lieu : le mémo du rendez-vous lié à l'audition (MDS par défaut, ou domicile / autre choisi à la saisie)
+    rdv_agenda = action.rdv.creneau if action.rdv_id and action.rdv and action.rdv.creneau_id else None
+    memo = rdv_agenda.lieu_precis if rdv_agenda else ''
+    lieu = memo or (f"{ip.mds.nom}, {ip.mds.adresse}, {ip.mds.code_postal} {ip.mds.ville}"
+                    if ip.mds else "la Maison départementale de la solidarité")
     noms_enfants = ", ".join(f"{e.prenom} {e.nom.upper()}" for e in enfants)
     pluriel = len(enfants) > 1
     # Date de la convocation précédente, pour une LRAR ou un report

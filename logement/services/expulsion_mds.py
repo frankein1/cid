@@ -44,6 +44,10 @@ def convoquer(dossier, user, date_rdv, agent=None, lieu="", duree=40, passage=No
         raise ConvocationImpossible(f"{salle.nom} est réservée sur cet horaire : choisissez une autre salle "
                                     f"ou un autre horaire. La convocation n'est pas partie.")
     lieu = (lieu or '').strip() or memo_mds(dossier.mds, salle)
+    from planning.agenda import dans_heures_ouverture
+    if lieu.startswith('MDS :') and not dans_heures_ouverture(debut, fin):
+        raise ConvocationImpossible("À la MDS, les rendez-vous se prennent aux heures d'ouverture (9 h - 12 h, "
+                                    "13 h 30 - 17 h) : indiquez un autre lieu.")
     rdv = CreneauRdv.objects.create(
         date=local.date(), heure_debut=debut, heure_fin=fin,
         duree_minutes=duree, mds=dossier.mds, agent=agent, beneficiaire=dossier.beneficiaire, salle=salle,
