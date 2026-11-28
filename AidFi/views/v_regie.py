@@ -11,6 +11,7 @@ Le versement se fait en espèces ou à un tiers (facture et RIB joints, montant 
 """
 from decimal import Decimal, InvalidOperation
 
+from core.horaires import lire_date_heure
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -150,8 +151,8 @@ def regie_versement(request, demande_id):
     if montant <= 0 or montant > d.montant_accorde:
         messages.error(request, "Le montant versé doit être positif et ne pas dépasser le montant accordé.")
         return redirect("AidFi:regie_detail", demande_id=d.pk)
-    quand = parse_datetime(request.POST.get("date") or "")
-    d.date_versement = timezone.make_aware(quand) if quand and timezone.is_naive(quand) else (quand or timezone.now())
+    quand = lire_date_heure(request.POST.get("date"))
+    d.date_versement = quand or timezone.now()
     d.montant_verse, d.verse_par = montant, request.user
     d.reference_comptable = (request.POST.get("reference_comptable") or "").strip()[:60]
     d.statut, d._acteur = 'CLOTUREE', request.user

@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from mds.models import MDS, UserMDSProfile
 from .models import DemandeRelationUsager, FicheRetourSAS
+from core.horaires import TexteHoraire, verifier_pas_de_dix
 
 
 STYLE = "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -122,6 +123,12 @@ class TraitementRUForm(forms.ModelForm):
     salle_premier_rdv = forms.ModelChoiceField(queryset=None, required=False, label="Salle (1er rendez-vous)")
     salle_second_rdv = forms.ModelChoiceField(queryset=None, required=False, label="Salle (2e rendez-vous)")
 
+    def clean_heure_premier_rendez_vous(self):
+        return verifier_pas_de_dix(self.cleaned_data.get('heure_premier_rendez_vous'))
+
+    def clean_heure_second_rendez_vous(self):
+        return verifier_pas_de_dix(self.cleaned_data.get('heure_second_rendez_vous'))
+
     class Meta:
         model = DemandeRelationUsager
         fields = [
@@ -134,9 +141,9 @@ class TraitementRUForm(forms.ModelForm):
         ]
         widgets = {
             "date_premier_rendez_vous": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "heure_premier_rendez_vous": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "heure_premier_rendez_vous": TexteHoraire(),
             "date_second_rendez_vous": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "heure_second_rendez_vous": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
+            "heure_second_rendez_vous": TexteHoraire(),
             "date_aide_financiere": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "elements_declaratifs": forms.Textarea(attrs={"rows": 3}),
             "evaluation_sociale": forms.Textarea(attrs={"rows": 4}),

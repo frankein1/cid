@@ -31,7 +31,7 @@
           {% empty %}<li class="text-gray-400">Aucun.</li>{% endfor %}</ul>
         {% if peut_ecrire and convocations|length < 2 and p.statut != 'TRANSMISE' %}
         <form method="post" action="{% url 'logement:passage_action' p.pk %}" class="grid grid-cols-2 gap-2">{% csrf_token %}
-          <input type="date" name="date" class="border rounded px-2 py-1"><input type="time" name="heure" class="border rounded px-2 py-1">
+          <input type="date" name="date" class="border rounded px-2 py-1"><input type="text" inputmode="numeric" placeholder="HH:MM" pattern="([01]\d|2[0-3]):[0-5]\d" maxlength="5" autocomplete="off" name="heure" class="border rounded px-2 py-1">
           <select name="agent" class="border rounded px-2 py-1 col-span-2">{% for r in referents %}<option value="{{ r.pk }}" {% if r.pk == d.referent_id %}selected{% endif %}>{{ r.get_full_name|default:r.username }}</option>{% endfor %}</select>
           <button name="action" value="convoquer" class="col-span-2 px-3 py-1.5 border rounded">{% if convocations %}Relance{% else %}Convoquer{% endif %}</button></form>{% endif %}
       </div>

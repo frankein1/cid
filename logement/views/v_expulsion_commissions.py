@@ -9,6 +9,7 @@ jour, actualisation par la MDS (visa du cadre, envoi), avis. Passerelles vers le
 logement depuis le dossier."""
 from datetime import datetime
 
+from core.horaires import lire_heure
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -199,7 +200,7 @@ def passage_action(request, pk):
         if request.POST.get('retour') == 'commission':
             return redirect('logement:commission_detail', pk=p.commission_id)
     elif action == 'convoquer' and ecrire:
-        jour, heure = parse_date(request.POST.get('date') or ''), parse_time(request.POST.get('heure') or '')
+        jour, heure = parse_date(request.POST.get('date') or ''), lire_heure(request.POST.get('heure'))
         if not jour or not heure:
             messages.error(request, "Indiquez la date et l'heure du rendez-vous.")
         else:

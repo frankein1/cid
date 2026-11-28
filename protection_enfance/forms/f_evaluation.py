@@ -4,6 +4,7 @@
 # Interdiction de réutilisation commerciale
 # =============================================================================
 # protection_enfance/forms/f_evaluation.py
+from core.horaires import TexteDateHeure, verifier_pas_de_dix_date_heure
 from django import forms
 
 from protection_enfance.forms.f_ip import CSS, _styler
@@ -20,11 +21,17 @@ class ActionForm(forms.ModelForm):
         fields = ['type_action', 'date', 'duree_minutes', 'resultat', 'enfant', 'personnes', 'participants',
                   'date_rdv_propose', 'numero_lrar', 'compte_rendu']
         widgets = {
-            'date': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
-            'date_rdv_propose': forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+            'date': TexteDateHeure(),
+            'date_rdv_propose': TexteDateHeure(),
             'participants': forms.CheckboxSelectMultiple,
             'compte_rendu': forms.Textarea(attrs={'rows': 3}),
         }
+
+    def clean_date(self):
+        return verifier_pas_de_dix_date_heure(self.cleaned_data.get('date'))
+
+    def clean_date_rdv_propose(self):
+        return verifier_pas_de_dix_date_heure(self.cleaned_data.get('date_rdv_propose'))
 
     def __init__(self, *args, ip=None, professionnels=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,7 +98,7 @@ def _libelle_adulte(a):
 
 
 def _datetime_widget():
-    return forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M')
+    return TexteDateHeure()
 
 
 class AuditionForm(forms.Form):
@@ -102,7 +109,8 @@ class AuditionForm(forms.Form):
     type_action = forms.ChoiceField(label="Audition", choices=[
         ('AUDITION_PARENTS', "Audition des parents"),
         ('AUDITION_ENFANT', "Audition des enfants (même heure, reçus un par un)")])
-    date = forms.DateTimeField(label="Date et heure", widget=_datetime_widget())
+    date = forms.DateTimeField(label="Date et heure (JJ/MM/AAAA HH:MM)", widget=_datetime_widget(),
+                               input_formats=['%d/%m/%Y %H:%M'])
     duree_minutes = forms.IntegerField(label="Durée (min)", min_value=10, initial=60)
     adultes = forms.ModelMultipleChoiceField(label="Adultes convoqués", queryset=None, required=False,
                                              widget=forms.CheckboxSelectMultiple)

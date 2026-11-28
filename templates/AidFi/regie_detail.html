@@ -91,7 +91,7 @@
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label class="block text-sm text-gray-700">Date et heure du versement
-                        <input type="datetime-local" name="date" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"></label>
+                        <input type="text" inputmode="numeric" placeholder="JJ/MM/AAAA HH:MM" pattern="\d{2}/\d{2}/\d{4} ([01]\d|2[0-3]):[0-5]\d" maxlength="16" autocomplete="off" name="date" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"></label>
                     <label class="block text-sm text-gray-700">Montant versé (€)
                         <input type="text" name="montant" value="{{ demande.montant_accorde }}" inputmode="decimal"
                                class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"></label>

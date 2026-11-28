@@ -25,6 +25,7 @@ from .budget import membres_du_foyer
 from .models import Beneficiaire
 from .models_journal import EntretienSocial, NotePersonnelle, TypeAccompagnement
 from .views import user_peut_agir_sur_beneficiaire
+from core.horaires import TexteHoraire
 
 CHAMP = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm'
 CORRESPONDANCE_MODE = {'VAD': EntretienSocial.VAD, 'TELEPHONIQUE': EntretienSocial.TELEPHONE,
@@ -39,7 +40,7 @@ class EntretienForm(forms.ModelForm):
                   'orientation_precision']
         widgets = {'date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'echeance': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-                   'heure': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
+                   'heure': TexteHoraire(),
                    'types': forms.CheckboxSelectMultiple, 'personnes_presentes': forms.CheckboxSelectMultiple,
                    'synthese': forms.Textarea(attrs={'rows': 6}), 'synthese_privee': forms.Textarea(attrs={'rows': 3})}
 
