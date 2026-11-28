@@ -263,10 +263,16 @@ def _creer_rdv_vad(request, s):
     date, debut, fin = _date(p.get('date')), _heure(p.get('heure_debut')), _heure(p.get('heure_fin'))
     if not (date and debut and fin):
         return "Date et heures du rendez-vous à renseigner."
+    if debut.minute % 10 or fin.minute % 10:
+        return "Les horaires se saisissent par pas de 10 minutes (00, 10, 20, 30, 40 ou 50)."
+    from planning.forms import lieu_du_rendez_vous
+    lieu, erreur_lieu = lieu_du_rendez_vous('VAD', s.beneficiaire, '')
+    if erreur_lieu:
+        return erreur_lieu
     if s.date_saisine and date < s.date_saisine:
         return "Le rendez-vous ne peut pas précéder la saisine de la MDS."
     rdv = CreneauRdv(date=date, heure_debut=debut, heure_fin=fin, beneficiaire=s.beneficiaire, mds=s.mds,
-                     agent=request.user, nature='VAD', domaine='SOCIAL', modalite='VAD', statut='RESERVE',
+                     agent=request.user, nature='VAD', domaine='SOCIAL', modalite='VAD', lieu_precis=lieu, statut='RESERVE',
                      cree_par=request.user, reserve_par=request.user, date_reservation=timezone.now())
     try:
         rdv.full_clean(exclude=['salle', 'agent', 'beneficiaire', 'mds'])

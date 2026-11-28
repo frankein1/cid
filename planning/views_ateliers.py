@@ -45,14 +45,15 @@ def _peut_gerer(u, seance=None):
     return u.a_la_capacite('peut_creer') and _peut_voir(u, seance)
 
 
-class SeanceForm(forms.ModelForm):
+from .forms import SaisieHoraire
+
+
+class SeanceForm(SaisieHoraire, forms.ModelForm):
     class Meta:
         model = SeanceAtelier
         fields = ['atelier', 'mds', 'intitule', 'date', 'heure_debut', 'heure_fin', 'lieu', 'animateur', 'partenaire',
                   'action_insertion', 'places', 'condition_age', 'age_limite', 'payant', 'tarif', 'description']
         widgets = {'date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-                   'heure_debut': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
-                   'heure_fin': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
                    'description': forms.Textarea(attrs={'rows': 3})}
 
     def __init__(self, *args, user=None, **kwargs):
