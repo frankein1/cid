@@ -1603,7 +1603,7 @@ class Command(BaseCommand):
                                 (14, "FAM4-NOL", "RESERVE"), (15, None, "DISPONIBLE")]:
             CreneauRdv.objects.get_or_create(
                 date=jour, heure_debut=time(h), agent=self.ts, defaults={
-                    "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
+                    "heure_fin": time(h, 30), "duree_minutes": 30, "salle": salle, "mds": self.mds1,
                     "beneficiaire": self.b.get(code) if code else None, "statut": statut, "type_rdv": "PERMANENCE",
                     "nature": "PERMANENCE", "domaine": "SOCIAL", "notes_internes": "[démo] rendez-vous fictif",
                     "cree_par": self.ts, "reserve_par": self.u("aa1_mds1") if code else None,
@@ -1613,7 +1613,7 @@ class Command(BaseCommand):
         for h in (9, 10, 11, 14, 15):
             CreneauRdv.objects.get_or_create(
                 date=semaine, heure_debut=time(h), agent=self.ts, defaults={
-                    "heure_fin": time(h, 45), "duree_minutes": 45, "salle": salle, "mds": self.mds1,
+                    "heure_fin": time(h, 30), "duree_minutes": 30, "salle": salle, "mds": self.mds1,
                     "statut": "DISPONIBLE", "type_rdv": "PERMANENCE", "nature": "PERMANENCE", "domaine": "SOCIAL",
                     "notes_internes": "[démo] créneau fictif", "cree_par": self.ts})
         self.stdout.write(f"✅ Planning : permanences d'Agent Social 1 le {jour:%d/%m/%Y} et le {semaine:%d/%m/%Y}")

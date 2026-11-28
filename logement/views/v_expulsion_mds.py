@@ -48,7 +48,14 @@ def expulsion_convoquer(request, pk):
         return redirect('logement:expulsion_detail', pk=d.pk)
     agent = X.referents_possibles(d).filter(pk=request.POST.get('agent')).first()
     quand = timezone.make_aware(datetime.combine(jour, heure))
-    conv = M.convoquer(d, request.user, quand, agent=agent, lieu=(request.POST.get('lieu') or '').strip())
+    from mds.models import MDSReception
+    salle = MDSReception.objects.filter(pk=request.POST.get('salle') or None, mds=d.mds).first()
+    try:
+        conv = M.convoquer(d, request.user, quand, agent=agent, lieu=(request.POST.get('lieu') or '').strip(),
+                           salle=salle)
+    except M.ConvocationImpossible as e:
+        messages.error(request, str(e))
+        return redirect('logement:expulsion_detail', pk=d.pk)
     qui = conv.agent.get_full_name() if conv.agent else "l'agent"
     messages.success(request, f"{conv.get_type_convocation_display()} enregistrée et posée dans l'agenda de {qui}. "
                               "Le courrier s'ouvre pour l'impression.")

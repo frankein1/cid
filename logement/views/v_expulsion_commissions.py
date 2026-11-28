@@ -204,8 +204,14 @@ def passage_action(request, pk):
             messages.error(request, "Indiquez la date et l'heure du rendez-vous.")
         else:
             agent = X.referents_possibles(p.dossier).filter(pk=request.POST.get('agent')).first()
-            conv = M.convoquer(p.dossier, user, timezone.make_aware(datetime.combine(jour, heure)), agent=agent,
-                               lieu=(request.POST.get('lieu') or '').strip(), passage=p)
+            from mds.models import MDSReception
+            salle = MDSReception.objects.filter(pk=request.POST.get('salle') or None, mds=p.dossier.mds).first()
+            try:
+                conv = M.convoquer(p.dossier, user, timezone.make_aware(datetime.combine(jour, heure)), agent=agent,
+                                   lieu=(request.POST.get('lieu') or '').strip(), passage=p, salle=salle)
+            except M.ConvocationImpossible as e:
+                messages.error(request, str(e))
+                return redirect(reverse('logement:passage_detail', args=[p.pk]))
             messages.success(request, f"{conv.get_type_convocation_display()} : rendez-vous posé dans l'agenda.")
             return redirect(reverse('logement:passage_detail', args=[p.pk]) + f"?courrier={conv.pk}")
     elif action == 'retirer' and (ecrire or S.peut_gerer(user, p.commission)) and not p.avis:
